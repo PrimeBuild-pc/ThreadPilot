@@ -1,0 +1,344 @@
+<UserControl x:Class="ThreadPilot.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ThreadPilot.Views"
+             xmlns:vm="clr-namespace:ThreadPilot.ViewModels"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
+    </UserControl.Resources>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <TextBlock Grid.Row="0" 
+                   Text="Application Settings" 
+                   FontSize="18" 
+                   FontWeight="SemiBold" 
+                   Margin="0,0,0,15"/>
+        
+        <!-- Settings Scroll Area -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- Startup Settings -->
+                <Border Background="{DynamicResource ControlBackgroundBrush}" 
+                        CornerRadius="4" 
+                        Padding="15"
+                        Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="Startup Settings" 
+                                   FontWeight="SemiBold" 
+                                   FontSize="16"
+                                   Margin="0,0,0,10"/>
+                        
+                        <!-- Start with Windows -->
+                        <Grid Margin="0,5,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Start with Windows" 
+                                           FontWeight="Medium"/>
+                                <TextBlock Text="Launch ThreadPilot automatically when Windows starts" 
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                            
+                            <ToggleSwitch Grid.Column="1" 
+                                          IsChecked="{Binding StartWithWindows, Mode=TwoWay}" 
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+                        
+                        <!-- Start Minimized -->
+                        <Grid Margin="0,5,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Start Minimized" 
+                                           FontWeight="Medium"/>
+                                <TextBlock Text="Start ThreadPilot minimized to the system tray" 
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                            
+                            <ToggleSwitch Grid.Column="1" 
+                                          IsChecked="{Binding StartMinimized, Mode=TwoWay}" 
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                
+                <!-- UI Settings -->
+                <Border Background="{DynamicResource ControlBackgroundBrush}" 
+                        CornerRadius="4" 
+                        Padding="15"
+                        Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="UI Settings" 
+                                   FontWeight="SemiBold" 
+                                   FontSize="16"
+                                   Margin="0,0,0,10"/>
+                        
+                        <!-- Minimize to Tray -->
+                        <Grid Margin="0,5,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Minimize to Tray" 
+                                           FontWeight="Medium"/>
+                                <TextBlock Text="Send ThreadPilot to the system tray when minimized" 
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                            
+                            <ToggleSwitch Grid.Column="1" 
+                                          IsChecked="{Binding MinimizeToTray, Mode=TwoWay}" 
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+                        
+                        <!-- Close to Tray -->
+                        <Grid Margin="0,5,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Close to Tray" 
+                                           FontWeight="Medium"/>
+                                <TextBlock Text="Keep ThreadPilot running in the system tray when closed" 
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                            
+                            <ToggleSwitch Grid.Column="1" 
+                                          IsChecked="{Binding CloseToTray, Mode=TwoWay}" 
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+                        
+                        <!-- Dark Theme -->
+                        <Grid Margin="0,5,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Dark Theme" 
+                                           FontWeight="Medium"/>
+                                <TextBlock Text="Use dark mode for ThreadPilot interface" 
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                            
+                            <ToggleSwitch Grid.Column="1" 
+                                          IsChecked="{Binding IsDarkTheme, Mode=TwoWay}" 
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Notification Settings -->
+                <Border Background="{DynamicResource ControlBackgroundBrush}" 
+                        CornerRadius="4" 
+                        Padding="15"
+                        Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="Notification Settings" 
+                                   FontWeight="SemiBold" 
+                                   FontSize="16"
+                                   Margin="0,0,0,10"/>
+                        
+                        <!-- Show Process Notifications -->
+                        <Grid Margin="0,5,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Show Process Notifications" 
+                                           FontWeight="Medium"/>
+                                <TextBlock Text="Show notifications when process settings are changed" 
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                            
+                            <ToggleSwitch Grid.Column="1" 
+                                          IsChecked="{Binding ShowProcessNotifications, Mode=TwoWay}" 
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+                        
+                        <!-- Check for Updates -->
+                        <Grid Margin="0,5,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Check for Updates" 
+                                           FontWeight="Medium"/>
+                                <TextBlock Text="Check for ThreadPilot updates automatically" 
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                            
+                            <ToggleSwitch Grid.Column="1" 
+                                          IsChecked="{Binding CheckUpdatesAutomatically, Mode=TwoWay}" 
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Performance Settings -->
+                <Border Background="{DynamicResource ControlBackgroundBrush}" 
+                        CornerRadius="4" 
+                        Padding="15"
+                        Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="Performance Settings" 
+                                   FontWeight="SemiBold" 
+                                   FontSize="16"
+                                   Margin="0,0,0,10"/>
+                        
+                        <!-- Refresh Interval -->
+                        <Grid Margin="0,5,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Process Refresh Interval" 
+                                           FontWeight="Medium"/>
+                                <TextBlock Text="How often to refresh the process list (in seconds)" 
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                            
+                            <ComboBox Grid.Column="1" 
+                                      ItemsSource="{Binding RefreshIntervals}"
+                                      SelectedItem="{Binding RefreshInterval, Mode=TwoWay}"
+                                      Width="100"
+                                      Style="{StaticResource ComboBoxStyle}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding StringFormat={}{0} sec}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                
+                <!-- About -->
+                <Border Background="{DynamicResource ControlBackgroundBrush}" 
+                        CornerRadius="4" 
+                        Padding="15">
+                    <StackPanel>
+                        <TextBlock Text="About ThreadPilot" 
+                                   FontWeight="SemiBold" 
+                                   FontSize="16"
+                                   Margin="0,0,0,10"/>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
+                            <Path Data="{StaticResource ThreadPilotIconGeometry}" 
+                                  Fill="{DynamicResource AccentBrush}" 
+                                  Width="48" 
+                                  Height="48"
+                                  Margin="0,0,15,0"/>
+                            
+                            <StackPanel>
+                                <TextBlock Text="ThreadPilot" 
+                                           FontWeight="SemiBold" 
+                                           FontSize="18"/>
+                                <TextBlock Text="Version 1.0.0" 
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           Margin="0,5,0,0"/>
+                                <TextBlock Text="© 2023 ThreadPilot Contributors" 
+                                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                           Margin="0,5,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                        
+                        <TextBlock Text="ThreadPilot is a CPU affinity and process priority management tool for Windows, designed to help you optimize system performance." 
+                                   TextWrapping="Wrap"
+                                   Margin="0,10,0,0"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+        
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="2" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right"
+                    Margin="0,15,0,0">
+            <Button Content="Reset to Default" 
+                    Command="{Binding ResetSettingsCommand}"
+                    Style="{StaticResource OutlineButtonStyle}"
+                    Margin="0,0,10,0"/>
+            
+            <Button Content="Save Settings" 
+                    Command="{Binding SaveSettingsCommand}"
+                    Style="{StaticResource PrimaryButtonStyle}">
+                <Button.ContentTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource SaveIconGeometry}" 
+                                  Fill="{DynamicResource PrimaryButtonForegroundBrush}" 
+                                  Width="16" 
+                                  Height="16"
+                                  Margin="0,0,8,0"/>
+                            <TextBlock Text="Save Settings" />
+                        </StackPanel>
+                    </DataTemplate>
+                </Button.ContentTemplate>
+            </Button>
+        </StackPanel>
+        
+        <!-- Status Bar -->
+        <Border Grid.Row="3" 
+                Background="{DynamicResource ControlBackgroundBrush}"
+                Padding="10,5"
+                Margin="0,15,0,0"
+                CornerRadius="4">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0" 
+                           Text="{Binding StatusMessage}"
+                           VerticalAlignment="Center"/>
+                
+                <ProgressBar Grid.Column="1" 
+                             IsIndeterminate="True"
+                             Width="20"
+                             Height="20"
+                             Style="{StaticResource CircularProgressBarStyle}"
+                             Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisConverter}}"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,34 @@
+modules = ["dotnet", "dotnet-8.0"]
+
+[nix]
+channel = "stable-24_05"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "ThreadPilot"
+
+[[workflows.workflow]]
+name = "ThreadPilot"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "dotnet run --project ThreadPilot"
+waitForPort = 5000
+
+[deployment]
+run = ["sh", "-c", "dotnet run --project ThreadPilot"]

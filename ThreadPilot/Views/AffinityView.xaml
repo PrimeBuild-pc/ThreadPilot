@@ -1,0 +1,238 @@
+<UserControl x:Class="ThreadPilot.Views.AffinityView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ThreadPilot.Views"
+             xmlns:vm="clr-namespace:ThreadPilot.ViewModels"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
+    </UserControl.Resources>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header with Process Info -->
+        <Border Grid.Row="0" 
+                Background="{DynamicResource ControlBackgroundBrush}" 
+                CornerRadius="4" 
+                Padding="15"
+                Margin="0,0,0,15"
+                Visibility="{Binding SelectedProcess, Converter={StaticResource BoolToVisConverter}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Image Width="24" Height="24" Margin="0,0,10,0">
+                        <Image.Source>
+                            <Binding Path="SelectedProcess.IconData">
+                                <Binding.TargetNullValue>
+                                    <DrawingImage>
+                                        <DrawingImage.Drawing>
+                                            <GeometryDrawing Brush="{DynamicResource AccentBrush}" Geometry="{StaticResource ProcessIconGeometry}"/>
+                                        </DrawingImage.Drawing>
+                                    </DrawingImage>
+                                </Binding.TargetNullValue>
+                            </Binding>
+                        </Image.Source>
+                    </Image>
+                    
+                    <StackPanel>
+                        <TextBlock Text="{Binding SelectedProcess.Name}" 
+                                   FontWeight="SemiBold" 
+                                   FontSize="16"/>
+                        <TextBlock Text="{Binding SelectedProcess.Pid, StringFormat=PID: {0}}" 
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                   FontSize="12"/>
+                    </StackPanel>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <TextBlock Text="{Binding SelectedProcess.CpuUsage, StringFormat={}{0:F1}% CPU}" 
+                               VerticalAlignment="Center"
+                               Margin="0,0,15,0"/>
+                    <TextBlock Text="{Binding SelectedProcess.MemoryUsage, StringFormat={}{0:F1} MB RAM}" 
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+        
+        <!-- Quick Select Options -->
+        <StackPanel Grid.Row="1" 
+                    Orientation="Horizontal" 
+                    Margin="0,0,0,15"
+                    Visibility="{Binding SelectedProcess, Converter={StaticResource BoolToVisConverter}}">
+            <Button Content="Select All Cores" 
+                    Command="{Binding SelectAllCoresCommand}"
+                    Style="{StaticResource OutlineButtonStyle}"
+                    Margin="0,0,8,0"/>
+            <Button Content="Deselect All" 
+                    Command="{Binding DeselectAllCoresCommand}"
+                    Style="{StaticResource OutlineButtonStyle}"
+                    Margin="0,0,8,0"/>
+            <Button Content="Even Cores" 
+                    Command="{Binding SelectEvenCoresCommand}"
+                    Style="{StaticResource OutlineButtonStyle}"
+                    Margin="0,0,8,0"/>
+            <Button Content="Odd Cores" 
+                    Command="{Binding SelectOddCoresCommand}"
+                    Style="{StaticResource OutlineButtonStyle}"
+                    Margin="0,0,8,0"/>
+            <Button Content="First Half" 
+                    Command="{Binding SelectFirstHalfCommand}"
+                    Style="{StaticResource OutlineButtonStyle}"
+                    Margin="0,0,8,0"/>
+            <Button Content="Second Half" 
+                    Command="{Binding SelectSecondHalfCommand}"
+                    Style="{StaticResource OutlineButtonStyle}"/>
+        </StackPanel>
+        
+        <!-- Core Affinity Map -->
+        <ScrollViewer Grid.Row="2" 
+                      VerticalScrollBarVisibility="Auto"
+                      Visibility="{Binding SelectedProcess, Converter={StaticResource BoolToVisConverter}}">
+            <ItemsControl ItemsSource="{Binding Cores}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Width="80" 
+                                Height="80" 
+                                Margin="5"
+                                CornerRadius="8"
+                                Background="{Binding IsSelected, Converter={StaticResource BoolToBackgroundConverter}, ConverterParameter=Selected}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                Cursor="Hand">
+                            <Border.InputBindings>
+                                <MouseBinding MouseAction="LeftClick" 
+                                              Command="{Binding DataContext.ToggleCoreCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                              CommandParameter="{Binding}"/>
+                            </Border.InputBindings>
+                            <Grid>
+                                <StackPanel VerticalAlignment="Center">
+                                    <Path Data="{StaticResource CpuIconGeometry}" 
+                                          Width="24" 
+                                          Height="24"
+                                          Fill="{Binding IsSelected, Converter={StaticResource BoolToForegroundConverter}, ConverterParameter=Selected}"
+                                          HorizontalAlignment="Center"
+                                          Margin="0,0,0,5"/>
+                                    <TextBlock Text="{Binding CoreNumber, StringFormat=Core {0}}" 
+                                               HorizontalAlignment="Center"
+                                               FontWeight="SemiBold"
+                                               Foreground="{Binding IsSelected, Converter={StaticResource BoolToForegroundConverter}, ConverterParameter=Selected}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+        
+        <!-- Placeholder when no process selected -->
+        <Border Grid.Row="2" 
+                Background="{DynamicResource ControlBackgroundBrush}"
+                CornerRadius="8"
+                Padding="20"
+                Visibility="{Binding SelectedProcess, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Path Data="{StaticResource CpuIconGeometry}" 
+                      Width="64" 
+                      Height="64"
+                      Fill="{DynamicResource SecondaryForegroundBrush}"
+                      Margin="0,0,0,15"/>
+                <TextBlock Text="No Process Selected" 
+                           FontSize="18" 
+                           FontWeight="SemiBold" 
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="Select a process from the Processes tab to manage its CPU affinity" 
+                           TextWrapping="Wrap" 
+                           TextAlignment="Center"
+                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                           MaxWidth="400"
+                           Margin="0,10,0,0"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- Apply Button -->
+        <Button Grid.Row="3" 
+                Content="Apply CPU Affinity" 
+                Command="{Binding ApplyAffinityCommand}"
+                Style="{StaticResource PrimaryButtonStyle}"
+                HorizontalAlignment="Right"
+                Margin="0,15,0,0"
+                Padding="15,8"
+                Visibility="{Binding SelectedProcess, Converter={StaticResource BoolToVisConverter}}">
+            <Button.ContentTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="{StaticResource CheckIconGeometry}" 
+                              Fill="{DynamicResource PrimaryButtonForegroundBrush}" 
+                              Width="16" 
+                              Height="16"
+                              Margin="0,0,8,0"/>
+                        <TextBlock Text="Apply CPU Affinity" />
+                    </StackPanel>
+                </DataTemplate>
+            </Button.ContentTemplate>
+        </Button>
+        
+        <!-- Status Bar -->
+        <Border Grid.Row="4" 
+                Background="{DynamicResource ControlBackgroundBrush}"
+                Padding="10,5"
+                Margin="0,15,0,0"
+                CornerRadius="4"
+                Visibility="{Binding SelectedProcess, Converter={StaticResource BoolToVisConverter}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0" 
+                           Text="{Binding StatusMessage}"
+                           VerticalAlignment="Center"/>
+                
+                <ProgressBar Grid.Column="1" 
+                             IsIndeterminate="True"
+                             Width="20"
+                             Height="20"
+                             Style="{StaticResource CircularProgressBarStyle}"
+                             Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisConverter}}"/>
+            </Grid>
+        </Border>
+        
+        <!-- Loading Overlay -->
+        <Grid Grid.Row="0" Grid.RowSpan="5" 
+              Background="{DynamicResource OverlayBrush}"
+              Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisConverter}}">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <ProgressBar IsIndeterminate="True" 
+                             Width="40" 
+                             Height="40" 
+                             Style="{StaticResource CircularProgressBarStyle}"/>
+                <TextBlock Text="Applying affinity..." 
+                           Margin="0,10,0,0" 
+                           FontSize="14"
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>
