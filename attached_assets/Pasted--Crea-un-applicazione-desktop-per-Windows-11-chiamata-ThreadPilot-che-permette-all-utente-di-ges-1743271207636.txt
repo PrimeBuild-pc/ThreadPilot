@@ -1,0 +1,155 @@
+> Crea un'applicazione desktop per Windows 11 chiamata  ThreadPilot , che permette all'utente di gestire  l’affinità dei core  e la  priorità dei processi  in maniera semplice e automatizzata. L'applicazione deve avere un  design minimale ed elegante , rimanere  eseguita in background  e apparire nella  tray icon di Windows . Deve interagire a  basso livello con il sistema operativo , in modo da poter leggere ed eventualmente modificare l'affinità e la priorità dei processi selezionati.
+
+---
+
+### 🛠️  Tecnologie consigliate 
+
+-  Linguaggio di sviluppo:   
+  👉  C# con .NET 6 o superiore   
+  Motivi: integrazione nativa con le API di Windows, supporto a WinForms/WPF, ottima documentazione e supporto della community.  
+  In alternativa:  C++ con Win32 API  (più complesso, ma massimo controllo), o  Rust  (per massima efficienza e sicurezza, ma più impegnativo per GUI).
+
+-  Librerie e strumenti utili: 
+  - `System.Diagnostics` per gestire processi e priorità
+  - `P/Invoke` o `Windows API Code Pack` per settare affinità dei core
+  - `Hardcodet.Wpf.TaskbarNotification` (per WPF) o `NotifyIcon` (per WinForms) per tray icon
+  - `Windows Management Instrumentation (WMI)` per recuperare info di sistema
+
+---
+
+### 🧩  Funzionalità base dell’app 
+
+1.  Interfaccia grafica minimale 
+   - Lista dei processi attivi (nome + PID + icona)
+   - Selezione rapida del processo da gestire
+   - UI con tema chiaro/scuro, possibilità di ridurre a tray
+
+2.  Gestione affinità dei core 
+   - Mappa grafica dei core disponibili
+   - Selezione dei core da assegnare per ogni processo
+   - Pulsante "Applica" per forzare l’affinità
+
+3.  Gestione della priorità 
+   - Dropdown per impostare priorità: `Idle`, `Below Normal`, `Normal`, `Above Normal`, `High`, `Realtime`
+   - Visualizzazione della priorità attuale del processo
+
+4.  Profili automatici (opzionale) 
+   - Salvataggio di profili personalizzati (es. per giochi, software di editing, etc.)
+   - Avvio automatico dei profili all’avvio del processo target
+
+5.  Tray icon 
+   - App eseguita in background
+   - Menù contestuale (tasto destro) con opzioni: apri app, esci, profili rapidi
+
+6.  Notifiche opzionali 
+   - Notifica di modifica riuscita (affinità o priorità)
+   - Notifica se un processo non consente la modifica
+
+---
+
+### 🎨  Design UI (minimale e funzionale) 
+
+- UI in stile Fluent Design (trasparenze, angoli arrotondati)
+- Uso di  font moderni  come Segoe UI o Inter
+- Colori neutri con accenti pastello per lo stato dei processi
+- Modalità scura e chiara, adattiva
+- Animazioni leggere e fluide (solo se con WPF o Avalonia)
+
+---
+
+### 📝 Esempio di nome e repo GitHub
+
+- Repo: `https://github.com/PrimeBuild-pc/ThreadPilot`
+
+
+oltre la gestione di affinità e priorità, ci sono diversi  settaggi avanzati che possono migliorare le prestazioni del sistema, soprattutto in contesti come gaming, workstation o editing audio/video.
+
+Ecco un elenco di  settaggi di sistema avanzati  che potresti integrare nella tua app, con una breve descrizione e come interagirci (via registro, API, ecc.):
+
+---
+
+### ⚙️  Settaggi avanzati consigliati 
+
+---
+
+#### 1.  Core Parking 
+-  Cosa fa:  Disattiva temporaneamente i core inattivi per risparmiare energia, ma può causare micro-lag nei carichi pesanti.
+-  Perché ottimizzarlo:  Disabilitarlo garantisce che tutti i core siano sempre pronti, utile per gaming o app in tempo reale.
+-  Come modificarlo:   
+  Via  registro di sistema  o usando  PowerCfg :
+  ```bash
+  powercfg -setacvalueindex SCHEME_CURRENT SUB_PROCESSOR CPMINCORES 100
+  powercfg -setactive SCHEME_CURRENT
+  ```
+
+---
+
+#### 2.  Processor Performance Boost Mode 
+-  Cosa fa:  Imposta il comportamento del boost della CPU (Turbo Boost/Precision Boost, ecc.)
+-  Impostazioni:  `Disabled`, `Enabled`, `Aggressive`, `Efficient Aggressive`
+-  Come modificarlo: 
+  ```bash
+  powercfg -setacvalueindex SCHEME_CURRENT SUB_PROCESSOR PERFBOOSTMODE 0
+  ```
+
+---
+
+#### 3.  SystemResponsiveness (MMCSS) 
+-  Cosa fa:  Priorità alle app in background (audio/video) vs foreground
+-  Valore consigliato:   
+  -  0  per ottimizzare giochi / app foreground  
+  -  20  (default) per sistema bilanciato
+-  Chiave Registro: 
+  ```
+  HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile
+  "SystemResponsiveness"=dword:00000000
+  ```
+
+---
+
+#### 4.  Network Throttling Index 
+-  Cosa fa:  Limita il throughput di rete per risparmiare risorse
+-  Disabilitazione (per ottimizzazione gaming/streaming): 
+  ```
+  HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile
+  "NetworkThrottlingIndex"=dword:ffffffff
+  ```
+
+---
+
+#### 5.  WindowsSeparation (Separation di input/output) 
+-  Cosa fa:  Imposta separazione tra thread di input/output per stabilità vs prestazioni
+-  Valori comuni:  `True` (default) o `False`
+-  Registro: 
+  ```
+  HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\PriorityControl
+  "Win32PrioritySeparation"=dword:00000026
+  ```
+
+---
+
+#### 6.  Game Mode / GameBar / Hibernation / Visual Effects 
+- Disattivare elementi inutili o invasivi per prestazioni:
+  - GameBar
+  - GameDVR
+  - Hibernation
+  - Animazioni / Trasparenze (per PC con HW debole)
+
+---
+
+### 🧠  Modalità di applicazione: 
+
+- Usa  PowerCfg.exe  per modificare profili energetici
+-  Modifica diretta del Registro di sistema  (con privilegi elevati)
+- Usa  WMI  o  Windows API  per query/modifiche soft
+
+consenti anche l'applicazione di profili energetici personalizzati di per windows. usa la cartella allegata coi i file .pow giá creati
+
+---
+
+### 💡 Interfaccia consigliata per questi settaggi
+
+- Tab dedicata: “⚙️ Ottimizzazioni di sistema”
+- Checkbox per abilitare/disabilitare ogni funzione
+- Tooltip descrittivo accanto a ogni opzione
+- Pulsanti di ripristino (reset ai valori di default di Windows)
