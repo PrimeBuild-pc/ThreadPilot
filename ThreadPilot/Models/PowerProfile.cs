@@ -4,53 +4,88 @@ using System.Collections.Generic;
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Represents a power profile configuration
+    /// Represents a power profile with performance and power settings
     /// </summary>
     public class PowerProfile
     {
         /// <summary>
+        /// Gets or sets the profile GUID
+        /// </summary>
+        public Guid Id { get; set; }
+        
+        /// <summary>
         /// Gets or sets the profile name
         /// </summary>
-        public string Name { get; set; } = string.Empty;
+        public string Name { get; set; }
         
         /// <summary>
         /// Gets or sets the profile description
         /// </summary>
-        public string Description { get; set; } = string.Empty;
+        public string Description { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the profile creator
+        /// </summary>
+        public string Creator { get; set; }
         
         /// <summary>
         /// Gets or sets the profile category
         /// </summary>
-        public string Category { get; set; } = "Custom";
+        public string Category { get; set; }
         
         /// <summary>
         /// Gets or sets the profile creation date
         /// </summary>
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreationDate { get; set; }
         
         /// <summary>
-        /// Gets or sets a value indicating whether the profile is a system default
+        /// Gets or sets the profile version
         /// </summary>
-        public bool IsSystemDefault { get; set; }
+        public string Version { get; set; }
         
         /// <summary>
-        /// Gets or sets the Windows power plan to use
+        /// Gets or sets whether the profile is a system profile
         /// </summary>
-        public string WindowsPowerPlan { get; set; } = string.Empty;
+        public bool IsSystemProfile { get; set; }
         
         /// <summary>
-        /// Gets or sets a value indicating whether to park unused cores
+        /// Gets or sets whether the profile is hidden
         /// </summary>
-        public bool ParkUnusedCores { get; set; }
+        public bool IsHidden { get; set; }
         
         /// <summary>
-        /// Gets or sets the maximum number of active cores (0 = all cores)
+        /// Gets or sets whether the profile is the active profile
         /// </summary>
-        public int MaxActiveCores { get; set; }
+        public bool IsActive { get; set; }
         
         /// <summary>
-        /// Gets or sets process affinity rules
+        /// Gets or sets the profile icon name
         /// </summary>
-        public List<ProcessAffinityRule> AffinityRules { get; set; } = new List<ProcessAffinityRule>();
+        public string IconName { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the profile settings (key-value pairs)
+        /// </summary>
+        public Dictionary<string, object> Settings { get; set; } = new Dictionary<string, object>();
+        
+        /// <summary>
+        /// Gets or sets the binary data for the profile
+        /// </summary>
+        public byte[] BinaryData { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the profile file path
+        /// </summary>
+        public string FilePath { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether the profile is a bundled profile
+        /// </summary>
+        public bool IsBundled { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether the profile is modified
+        /// </summary>
+        public bool IsModified { get; set; }
     }
 }

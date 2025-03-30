@@ -1,47 +1,100 @@
+using System;
 using System.Collections.Generic;
 using ThreadPilot.Models;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Service for retrieving system information
+    /// Interface for system information operations
     /// </summary>
     public interface ISystemInfoService
     {
         /// <summary>
-        /// Get current system information
+        /// Gets the system information
         /// </summary>
-        /// <returns>System information</returns>
+        /// <returns>The system information</returns>
         SystemInfo GetSystemInfo();
         
         /// <summary>
-        /// Get information about CPU cores
+        /// Gets the list of CPU cores
         /// </summary>
-        /// <returns>List of CPU cores</returns>
+        /// <returns>A list of CPU cores</returns>
         List<CpuCore> GetCpuCores();
         
         /// <summary>
-        /// Get current memory usage
+        /// Gets the CPU utilization per core
         /// </summary>
-        /// <returns>Memory usage in MB and percentage</returns>
-        (double TotalMB, double UsedMB, double UsagePercent) GetMemoryUsage();
+        /// <returns>A dictionary mapping core indices to utilization percentages</returns>
+        Dictionary<int, double> GetCpuCoreUtilization();
         
         /// <summary>
-        /// Get current CPU usage percentage
+        /// Gets the overall CPU utilization
         /// </summary>
-        /// <returns>CPU usage percentage</returns>
-        double GetCpuUsagePercentage();
+        /// <returns>The overall CPU utilization percentage</returns>
+        double GetOverallCpuUtilization();
         
         /// <summary>
-        /// Get active CPU cores count (not parked)
+        /// Gets the memory utilization
         /// </summary>
-        /// <returns>Number of active cores</returns>
-        int GetActiveCoresCount();
+        /// <returns>The memory utilization percentage</returns>
+        double GetMemoryUtilization();
         
         /// <summary>
-        /// Get the total number of CPU cores
+        /// Gets the CPU frequency per core
         /// </summary>
-        /// <returns>Total number of cores</returns>
-        int GetTotalCoresCount();
+        /// <returns>A dictionary mapping core indices to frequencies in MHz</returns>
+        Dictionary<int, int> GetCpuCoreFrequency();
+        
+        /// <summary>
+        /// Gets the CPU temperature per core
+        /// </summary>
+        /// <returns>A dictionary mapping core indices to temperatures in Celsius</returns>
+        Dictionary<int, double> GetCpuCoreTemperature();
+        
+        /// <summary>
+        /// Gets the overall CPU temperature
+        /// </summary>
+        /// <returns>The overall CPU temperature in Celsius</returns>
+        double GetOverallCpuTemperature();
+        
+        /// <summary>
+        /// Gets the system uptime
+        /// </summary>
+        /// <returns>The system uptime</returns>
+        TimeSpan GetSystemUptime();
+        
+        /// <summary>
+        /// Gets the operating system version
+        /// </summary>
+        /// <returns>The operating system version</returns>
+        string GetOsVersion();
+        
+        /// <summary>
+        /// Gets whether the system is running on a laptop
+        /// </summary>
+        /// <returns>True if running on a laptop, false otherwise</returns>
+        bool IsLaptop();
+        
+        /// <summary>
+        /// Gets the current power profile name
+        /// </summary>
+        /// <returns>The current power profile name</returns>
+        string GetCurrentPowerProfileName();
+        
+        /// <summary>
+        /// Starts monitoring system information
+        /// </summary>
+        /// <param name="updateInterval">The update interval in milliseconds</param>
+        void StartMonitoring(int updateInterval = 1000);
+        
+        /// <summary>
+        /// Stops monitoring system information
+        /// </summary>
+        void StopMonitoring();
+        
+        /// <summary>
+        /// Occurs when system information is updated
+        /// </summary>
+        event EventHandler<SystemInfo> SystemInfoUpdated;
     }
 }

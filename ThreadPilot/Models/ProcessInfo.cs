@@ -1,34 +1,27 @@
+using System;
+using System.Collections.Generic;
+
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Represents information about a system process
+    /// Represents information about a process
     /// </summary>
     public class ProcessInfo
     {
         /// <summary>
         /// Gets or sets the process ID
         /// </summary>
-        public int ProcessId { get; set; }
+        public int Id { get; set; }
         
         /// <summary>
         /// Gets or sets the process name
         /// </summary>
-        public string Name { get; set; } = string.Empty;
+        public string Name { get; set; }
         
         /// <summary>
-        /// Gets or sets the CPU usage percentage
+        /// Gets or sets the process window title
         /// </summary>
-        public double CpuUsagePercent { get; set; }
-        
-        /// <summary>
-        /// Gets or sets the memory usage in MB
-        /// </summary>
-        public double MemoryUsageMB { get; set; }
-        
-        /// <summary>
-        /// Gets or sets the thread count
-        /// </summary>
-        public int ThreadCount { get; set; }
+        public string WindowTitle { get; set; }
         
         /// <summary>
         /// Gets or sets the process priority
@@ -41,44 +34,63 @@ namespace ThreadPilot.Models
         public long AffinityMask { get; set; }
         
         /// <summary>
-        /// Gets or sets a value indicating whether the process is a system process
+        /// Gets or sets the CPU usage percentage
+        /// </summary>
+        public double CpuUsage { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the memory usage in bytes
+        /// </summary>
+        public long MemoryUsage { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the process start time
+        /// </summary>
+        public DateTime StartTime { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the process path
+        /// </summary>
+        public string ExecutablePath { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the process description
+        /// </summary>
+        public string Description { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the process company name
+        /// </summary>
+        public string CompanyName { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the process is 64-bit flag
+        /// </summary>
+        public bool Is64Bit { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the list of associated module names
+        /// </summary>
+        public List<string> Modules { get; set; } = new List<string>();
+        
+        /// <summary>
+        /// Gets or sets the process threads count
+        /// </summary>
+        public int ThreadCount { get; set; }
+        
+        /// <summary>
+        /// Gets or sets whether the process is elevated (running as admin)
+        /// </summary>
+        public bool IsElevated { get; set; }
+        
+        /// <summary>
+        /// Gets or sets whether the process is a system process
         /// </summary>
         public bool IsSystemProcess { get; set; }
-    }
-    
-    /// <summary>
-    /// Represents process priority levels
-    /// </summary>
-    public enum ProcessPriority
-    {
-        /// <summary>
-        /// Idle priority class
-        /// </summary>
-        Idle = 64,
         
         /// <summary>
-        /// Below normal priority class
+        /// Gets or sets whether the process is responding
         /// </summary>
-        BelowNormal = 16384,
-        
-        /// <summary>
-        /// Normal priority class
-        /// </summary>
-        Normal = 32,
-        
-        /// <summary>
-        /// Above normal priority class
-        /// </summary>
-        AboveNormal = 32768,
-        
-        /// <summary>
-        /// High priority class
-        /// </summary>
-        High = 128,
-        
-        /// <summary>
-        /// Real-time priority class (use with caution)
-        /// </summary>
-        RealTime = 256
+        public bool IsResponding { get; set; }
     }
 }

@@ -1,9 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Input;
-using System.Windows.Threading;
+using ThreadPilot.Commands;
 using ThreadPilot.Models;
 using ThreadPilot.Services;
 
@@ -18,635 +18,439 @@ namespace ThreadPilot.ViewModels
         private readonly IProcessService _processService;
         private readonly IPowerProfileService _powerProfileService;
         private readonly INotificationService _notificationService;
-        private readonly IFileDialogService _fileDialogService;
         
-        private readonly DispatcherTimer _refreshTimer;
-        
-        private bool _isAutoRefreshEnabled;
-        private double _cpuUsagePercent;
-        private string _memoryUsage = string.Empty;
-        private double _memoryUsagePercent;
-        private string _cpuName = string.Empty;
-        private string _operatingSystem = string.Empty;
-        private string _currentPowerPlan = string.Empty;
-        private string _statusMessage = string.Empty;
-        
-        private PowerProfile? _selectedProfile;
-        private ProcessInfo? _selectedProcess;
+        private SystemInfo _systemInfo;
+        private ObservableCollection<ProcessInfo> _processes;
+        private ObservableCollection<PowerProfile> _powerProfiles;
+        private PowerProfile _selectedPowerProfile;
+        private string _selectedTabName = "Dashboard";
         
         /// <summary>
         /// Initializes a new instance of the <see cref="MainViewModel"/> class
         /// </summary>
         public MainViewModel()
         {
-            // Get services from ServiceLocator
+            // Get services
             _systemInfoService = ServiceLocator.GetService<ISystemInfoService>();
             _processService = ServiceLocator.GetService<IProcessService>();
             _powerProfileService = ServiceLocator.GetService<IPowerProfileService>();
             _notificationService = ServiceLocator.GetService<INotificationService>();
-            _fileDialogService = ServiceLocator.GetService<IFileDialogService>();
             
-            // Initialize collections
-            PowerProfiles = new ObservableCollection<PowerProfile>();
-            Processes = new ObservableCollection<ProcessInfo>();
-            CpuCores = new ObservableCollection<CpuCore>();
+            // Initialize properties
+            SystemInfo = _systemInfoService.GetSystemInfo();
+            Processes = new ObservableCollection<ProcessInfo>(_processService.GetRunningProcesses().OrderByDescending(p => p.CpuUsagePercent));
+            PowerProfiles = new ObservableCollection<PowerProfile>(_powerProfileService.GetAllProfiles());
+            SelectedPowerProfile = PowerProfiles.FirstOrDefault(p => p.Name == "High Performance") ?? PowerProfiles.FirstOrDefault();
             
             // Initialize commands
-            RefreshCommand = new RelayCommand(_ => RefreshData());
-            ApplyProfileCommand = new RelayCommand(_ => ApplySelectedProfile(), _ => SelectedProfile != null);
-            ImportProfileCommand = new RelayCommand(_ => ImportProfile());
-            ExportProfileCommand = new RelayCommand(_ => ExportSelectedProfile(), _ => SelectedProfile != null);
-            CreateProfileCommand = new RelayCommand(_ => CreateNewProfile());
-            DeleteProfileCommand = new RelayCommand(_ => DeleteSelectedProfile(), _ => SelectedProfile != null && !SelectedProfile.IsSystemDefault);
-            SetProcessAffinityCommand = new RelayCommand(_ => SetSelectedProcessAffinity(), _ => SelectedProcess != null);
-            SetProcessPriorityCommand = new RelayCommand(param => SetSelectedProcessPriority((ProcessPriority)param), _ => SelectedProcess != null);
-            TerminateProcessCommand = new RelayCommand(_ => TerminateSelectedProcess(), _ => SelectedProcess != null && !SelectedProcess.IsSystemProcess);
-            
-            // Setup auto-refresh timer
-            _refreshTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromSeconds(3)
-            };
-            _refreshTimer.Tick += (s, e) => RefreshData();
-            IsAutoRefreshEnabled = true;
-            
-            // Initial data load
-            LoadProfilesAsync();
-            RefreshData();
-            
-            StatusMessage = "Ready";
+            NavigateToTabCommand = new RelayCommand(ExecuteNavigateToTab);
+            ApplyPowerProfileCommand = new RelayCommand(ExecuteApplyPowerProfile);
+            RefreshDataCommand = new RelayCommand(ExecuteRefreshData);
+            CreatePowerProfileCommand = new RelayCommand(ExecuteCreatePowerProfile);
+            EditPowerProfileCommand = new RelayCommand(ExecuteEditPowerProfile);
+            DeletePowerProfileCommand = new RelayCommand(ExecuteDeletePowerProfile, CanExecuteDeletePowerProfile);
+            TerminateProcessCommand = new RelayCommand(ExecuteTerminateProcess);
+            SetProcessPriorityCommand = new RelayCommand(ExecuteSetProcessPriority);
+            SetProcessAffinityCommand = new RelayCommand(ExecuteSetProcessAffinity);
         }
         
         /// <summary>
-        /// Gets or sets a value indicating whether auto-refresh is enabled
+        /// Gets or sets the system information
         /// </summary>
-        public bool IsAutoRefreshEnabled
+        public SystemInfo SystemInfo
         {
-            get => _isAutoRefreshEnabled;
-            set
-            {
-                if (SetProperty(ref _isAutoRefreshEnabled, value))
-                {
-                    if (value)
-                    {
-                        _refreshTimer.Start();
-                    }
-                    else
-                    {
-                        _refreshTimer.Stop();
-                    }
-                }
-            }
+            get => _systemInfo;
+            set => SetProperty(ref _systemInfo, value);
         }
         
         /// <summary>
-        /// Gets or sets the CPU usage percentage
+        /// Gets or sets the collection of running processes
         /// </summary>
-        public double CpuUsagePercent
+        public ObservableCollection<ProcessInfo> Processes
         {
-            get => _cpuUsagePercent;
-            set => SetProperty(ref _cpuUsagePercent, value);
+            get => _processes;
+            set => SetProperty(ref _processes, value);
         }
         
         /// <summary>
-        /// Gets or sets the memory usage string
+        /// Gets or sets the collection of power profiles
         /// </summary>
-        public string MemoryUsage
+        public ObservableCollection<PowerProfile> PowerProfiles
         {
-            get => _memoryUsage;
-            set => SetProperty(ref _memoryUsage, value);
+            get => _powerProfiles;
+            set => SetProperty(ref _powerProfiles, value);
         }
-        
-        /// <summary>
-        /// Gets or sets the memory usage percentage
-        /// </summary>
-        public double MemoryUsagePercent
-        {
-            get => _memoryUsagePercent;
-            set => SetProperty(ref _memoryUsagePercent, value);
-        }
-        
-        /// <summary>
-        /// Gets or sets the CPU name
-        /// </summary>
-        public string CpuName
-        {
-            get => _cpuName;
-            set => SetProperty(ref _cpuName, value);
-        }
-        
-        /// <summary>
-        /// Gets or sets the operating system string
-        /// </summary>
-        public string OperatingSystem
-        {
-            get => _operatingSystem;
-            set => SetProperty(ref _operatingSystem, value);
-        }
-        
-        /// <summary>
-        /// Gets or sets the current power plan
-        /// </summary>
-        public string CurrentPowerPlan
-        {
-            get => _currentPowerPlan;
-            set => SetProperty(ref _currentPowerPlan, value);
-        }
-        
-        /// <summary>
-        /// Gets or sets the status message
-        /// </summary>
-        public string StatusMessage
-        {
-            get => _statusMessage;
-            set => SetProperty(ref _statusMessage, value);
-        }
-        
-        /// <summary>
-        /// Gets the power profiles collection
-        /// </summary>
-        public ObservableCollection<PowerProfile> PowerProfiles { get; }
-        
-        /// <summary>
-        /// Gets the processes collection
-        /// </summary>
-        public ObservableCollection<ProcessInfo> Processes { get; }
-        
-        /// <summary>
-        /// Gets the CPU cores collection
-        /// </summary>
-        public ObservableCollection<CpuCore> CpuCores { get; }
         
         /// <summary>
         /// Gets or sets the selected power profile
         /// </summary>
-        public PowerProfile? SelectedProfile
+        public PowerProfile SelectedPowerProfile
         {
-            get => _selectedProfile;
-            set
-            {
-                if (SetProperty(ref _selectedProfile, value))
-                {
-                    // Update commands availability
-                    (ApplyProfileCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                    (ExportProfileCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                    (DeleteProfileCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                }
-            }
+            get => _selectedPowerProfile;
+            set => SetProperty(ref _selectedPowerProfile, value);
         }
         
         /// <summary>
-        /// Gets or sets the selected process
+        /// Gets or sets the selected tab name
         /// </summary>
-        public ProcessInfo? SelectedProcess
+        public string SelectedTabName
         {
-            get => _selectedProcess;
-            set
-            {
-                if (SetProperty(ref _selectedProcess, value))
-                {
-                    // Update commands availability
-                    (SetProcessAffinityCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                    (SetProcessPriorityCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                    (TerminateProcessCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                }
-            }
+            get => _selectedTabName;
+            set => SetProperty(ref _selectedTabName, value);
         }
         
         /// <summary>
-        /// Gets the refresh command
+        /// Gets the command to navigate to a tab
         /// </summary>
-        public ICommand RefreshCommand { get; }
+        public ICommand NavigateToTabCommand { get; }
         
         /// <summary>
-        /// Gets the apply profile command
+        /// Gets the command to apply the selected power profile
         /// </summary>
-        public ICommand ApplyProfileCommand { get; }
+        public ICommand ApplyPowerProfileCommand { get; }
         
         /// <summary>
-        /// Gets the import profile command
+        /// Gets the command to refresh data
         /// </summary>
-        public ICommand ImportProfileCommand { get; }
+        public ICommand RefreshDataCommand { get; }
         
         /// <summary>
-        /// Gets the export profile command
+        /// Gets the command to create a new power profile
         /// </summary>
-        public ICommand ExportProfileCommand { get; }
+        public ICommand CreatePowerProfileCommand { get; }
         
         /// <summary>
-        /// Gets the create profile command
+        /// Gets the command to edit a power profile
         /// </summary>
-        public ICommand CreateProfileCommand { get; }
+        public ICommand EditPowerProfileCommand { get; }
         
         /// <summary>
-        /// Gets the delete profile command
+        /// Gets the command to delete a power profile
         /// </summary>
-        public ICommand DeleteProfileCommand { get; }
+        public ICommand DeletePowerProfileCommand { get; }
         
         /// <summary>
-        /// Gets the set process affinity command
-        /// </summary>
-        public ICommand SetProcessAffinityCommand { get; }
-        
-        /// <summary>
-        /// Gets the set process priority command
-        /// </summary>
-        public ICommand SetProcessPriorityCommand { get; }
-        
-        /// <summary>
-        /// Gets the terminate process command
+        /// Gets the command to terminate a process
         /// </summary>
         public ICommand TerminateProcessCommand { get; }
         
         /// <summary>
-        /// Refreshes all data
+        /// Gets the command to set process priority
         /// </summary>
-        private void RefreshData()
+        public ICommand SetProcessPriorityCommand { get; }
+        
+        /// <summary>
+        /// Gets the command to set process affinity
+        /// </summary>
+        public ICommand SetProcessAffinityCommand { get; }
+        
+        /// <summary>
+        /// Execute the navigate to tab command
+        /// </summary>
+        /// <param name="parameter">Tab name</param>
+        private void ExecuteNavigateToTab(object parameter)
+        {
+            if (parameter is string tabName)
+            {
+                SelectedTabName = tabName;
+            }
+        }
+        
+        /// <summary>
+        /// Execute the refresh data command
+        /// </summary>
+        /// <param name="parameter">Not used</param>
+        private void ExecuteRefreshData(object parameter)
         {
             try
             {
-                RefreshSystemInfo();
-                RefreshProcesses();
-                RefreshCpuCores();
+                SystemInfo = _systemInfoService.GetSystemInfo();
+                Processes = new ObservableCollection<ProcessInfo>(_processService.GetRunningProcesses().OrderByDescending(p => p.CpuUsagePercent));
+                PowerProfiles = new ObservableCollection<PowerProfile>(_powerProfileService.GetAllProfiles());
                 
-                CurrentPowerPlan = _powerProfileService.GetCurrentPowerPlan();
+                if (SelectedPowerProfile != null)
+                {
+                    // Update selected profile with fresh data
+                    string currentProfileName = SelectedPowerProfile.Name;
+                    SelectedPowerProfile = PowerProfiles.FirstOrDefault(p => p.Name == currentProfileName) ?? PowerProfiles.FirstOrDefault();
+                }
+                else
+                {
+                    SelectedPowerProfile = PowerProfiles.FirstOrDefault();
+                }
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Error refreshing data: {ex.Message}";
+                _notificationService.ShowError("Failed to refresh data", ex.Message);
             }
         }
         
         /// <summary>
-        /// Refreshes system information
+        /// Execute the apply power profile command
         /// </summary>
-        private void RefreshSystemInfo()
-        {
-            var systemInfo = _systemInfoService.GetSystemInfo();
-            CpuName = systemInfo.CpuName;
-            OperatingSystem = systemInfo.OperatingSystem;
-            
-            var memoryUsage = _systemInfoService.GetMemoryUsage();
-            MemoryUsage = $"{memoryUsage.UsedMB:N0} MB / {memoryUsage.TotalMB:N0} MB ({memoryUsage.UsagePercent:N1}%)";
-            MemoryUsagePercent = memoryUsage.UsagePercent;
-            
-            CpuUsagePercent = _systemInfoService.GetCpuUsagePercentage();
-        }
-        
-        /// <summary>
-        /// Refreshes the processes list
-        /// </summary>
-        private void RefreshProcesses()
-        {
-            var processes = _processService.GetRunningProcesses();
-            
-            // Remember the selected process ID
-            int? selectedProcessId = SelectedProcess?.ProcessId;
-            
-            Processes.Clear();
-            foreach (var process in processes.OrderByDescending(p => p.CpuUsagePercent))
-            {
-                Processes.Add(process);
-            }
-            
-            // Restore the selected process if it still exists
-            if (selectedProcessId.HasValue)
-            {
-                SelectedProcess = Processes.FirstOrDefault(p => p.ProcessId == selectedProcessId.Value);
-            }
-        }
-        
-        /// <summary>
-        /// Refreshes the CPU cores information
-        /// </summary>
-        private void RefreshCpuCores()
-        {
-            var cores = _systemInfoService.GetCpuCores();
-            
-            CpuCores.Clear();
-            foreach (var core in cores.OrderBy(c => c.CoreId))
-            {
-                CpuCores.Add(core);
-            }
-        }
-        
-        /// <summary>
-        /// Loads all power profiles
-        /// </summary>
-        private async Task LoadProfilesAsync()
+        /// <param name="parameter">Power profile (optional)</param>
+        private void ExecuteApplyPowerProfile(object parameter)
         {
             try
             {
-                await Task.Run(() =>
+                var profile = parameter as PowerProfile ?? SelectedPowerProfile;
+                
+                if (profile == null)
                 {
-                    var profiles = _powerProfileService.GetAllProfiles();
+                    _notificationService.ShowError("No profile selected", "Please select a power profile to apply.");
+                    return;
+                }
+                
+                bool success = _powerProfileService.ApplyProfile(profile);
+                
+                if (success)
+                {
+                    _notificationService.ShowSuccess($"Profile '{profile.Name}' applied successfully.");
+                }
+                else
+                {
+                    _notificationService.ShowError($"Failed to apply profile '{profile.Name}'.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError("Failed to apply profile", ex.Message);
+            }
+        }
+        
+        /// <summary>
+        /// Execute the create power profile command
+        /// </summary>
+        /// <param name="parameter">Not used</param>
+        private void ExecuteCreatePowerProfile(object parameter)
+        {
+            try
+            {
+                // In a real implementation, this would show a dialog to create a profile
+                var profile = _powerProfileService.CreateDefaultProfile("Custom Profile", "Custom");
+                
+                if (_powerProfileService.SaveProfile(profile))
+                {
+                    // Refresh profiles
+                    PowerProfiles = new ObservableCollection<PowerProfile>(_powerProfileService.GetAllProfiles());
+                    SelectedPowerProfile = PowerProfiles.FirstOrDefault(p => p.Name == profile.Name);
                     
-                    App.Current.Dispatcher.Invoke(() =>
+                    _notificationService.ShowSuccess($"Profile '{profile.Name}' created successfully.");
+                }
+                else
+                {
+                    _notificationService.ShowError("Failed to create profile.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError("Failed to create profile", ex.Message);
+            }
+        }
+        
+        /// <summary>
+        /// Execute the edit power profile command
+        /// </summary>
+        /// <param name="parameter">Power profile (optional)</param>
+        private void ExecuteEditPowerProfile(object parameter)
+        {
+            try
+            {
+                var profile = parameter as PowerProfile ?? SelectedPowerProfile;
+                
+                if (profile == null)
+                {
+                    _notificationService.ShowError("No profile selected", "Please select a power profile to edit.");
+                    return;
+                }
+                
+                // In a real implementation, this would show a dialog to edit the profile
+                _notificationService.ShowSuccess($"Profile '{profile.Name}' would be edited here (not implemented).");
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError("Failed to edit profile", ex.Message);
+            }
+        }
+        
+        /// <summary>
+        /// Determine whether the delete power profile command can execute
+        /// </summary>
+        /// <param name="parameter">Power profile (optional)</param>
+        /// <returns>True if the command can execute, false otherwise</returns>
+        private bool CanExecuteDeletePowerProfile(object parameter)
+        {
+            var profile = parameter as PowerProfile ?? SelectedPowerProfile;
+            return profile != null && !profile.IsSystemDefault;
+        }
+        
+        /// <summary>
+        /// Execute the delete power profile command
+        /// </summary>
+        /// <param name="parameter">Power profile (optional)</param>
+        private void ExecuteDeletePowerProfile(object parameter)
+        {
+            try
+            {
+                var profile = parameter as PowerProfile ?? SelectedPowerProfile;
+                
+                if (profile == null)
+                {
+                    _notificationService.ShowError("No profile selected", "Please select a power profile to delete.");
+                    return;
+                }
+                
+                if (profile.IsSystemDefault)
+                {
+                    _notificationService.ShowError("Cannot delete system profile", "System default profiles cannot be deleted.");
+                    return;
+                }
+                
+                // In a real implementation, this would show a confirmation dialog
+                if (_powerProfileService.DeleteProfile(profile.Name))
+                {
+                    // Refresh profiles
+                    PowerProfiles = new ObservableCollection<PowerProfile>(_powerProfileService.GetAllProfiles());
+                    SelectedPowerProfile = PowerProfiles.FirstOrDefault();
+                    
+                    _notificationService.ShowSuccess($"Profile '{profile.Name}' deleted successfully.");
+                }
+                else
+                {
+                    _notificationService.ShowError($"Failed to delete profile '{profile.Name}'.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError("Failed to delete profile", ex.Message);
+            }
+        }
+        
+        /// <summary>
+        /// Execute the terminate process command
+        /// </summary>
+        /// <param name="parameter">Process ID or ProcessInfo object</param>
+        private void ExecuteTerminateProcess(object parameter)
+        {
+            try
+            {
+                int processId = 0;
+                
+                if (parameter is ProcessInfo processInfo)
+                {
+                    processId = processInfo.ProcessId;
+                }
+                else if (parameter is int id)
+                {
+                    processId = id;
+                }
+                else if (parameter is string idStr && int.TryParse(idStr, out int parsedId))
+                {
+                    processId = parsedId;
+                }
+                
+                if (processId <= 0)
+                {
+                    _notificationService.ShowError("Invalid process ID", "Please select a valid process to terminate.");
+                    return;
+                }
+                
+                // In a real implementation, this would show a confirmation dialog
+                if (_processService.TerminateProcess(processId))
+                {
+                    // Refresh processes
+                    Processes = new ObservableCollection<ProcessInfo>(_processService.GetRunningProcesses().OrderByDescending(p => p.CpuUsagePercent));
+                    
+                    _notificationService.ShowSuccess($"Process (ID: {processId}) terminated successfully.");
+                }
+                else
+                {
+                    _notificationService.ShowError($"Failed to terminate process (ID: {processId}).");
+                }
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError("Failed to terminate process", ex.Message);
+            }
+        }
+        
+        /// <summary>
+        /// Execute the set process priority command
+        /// </summary>
+        /// <param name="parameter">Tuple of process ID and priority</param>
+        private void ExecuteSetProcessPriority(object parameter)
+        {
+            try
+            {
+                if (parameter is Tuple<int, ProcessPriority> tuple)
+                {
+                    int processId = tuple.Item1;
+                    ProcessPriority priority = tuple.Item2;
+                    
+                    if (_processService.SetProcessPriority(processId, priority))
                     {
-                        PowerProfiles.Clear();
-                        foreach (var profile in profiles)
+                        // Update process in collection
+                        var process = Processes.FirstOrDefault(p => p.ProcessId == processId);
+                        if (process != null)
                         {
-                            PowerProfiles.Add(profile);
+                            process.Priority = priority;
                         }
                         
-                        // Select the first profile if available
-                        if (PowerProfiles.Count > 0 && SelectedProfile == null)
+                        _notificationService.ShowSuccess($"Process priority set successfully.");
+                    }
+                    else
+                    {
+                        _notificationService.ShowError($"Failed to set process priority.");
+                    }
+                }
+                else
+                {
+                    _notificationService.ShowError("Invalid parameters", "Please provide valid process ID and priority.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError("Failed to set process priority", ex.Message);
+            }
+        }
+        
+        /// <summary>
+        /// Execute the set process affinity command
+        /// </summary>
+        /// <param name="parameter">Tuple of process ID and affinity mask</param>
+        private void ExecuteSetProcessAffinity(object parameter)
+        {
+            try
+            {
+                if (parameter is Tuple<int, long> tuple)
+                {
+                    int processId = tuple.Item1;
+                    long affinityMask = tuple.Item2;
+                    
+                    if (_processService.SetProcessAffinity(processId, affinityMask))
+                    {
+                        // Update process in collection
+                        var process = Processes.FirstOrDefault(p => p.ProcessId == processId);
+                        if (process != null)
                         {
-                            SelectedProfile = PowerProfiles[0];
+                            process.AffinityMask = affinityMask;
                         }
-                    });
-                });
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"Error loading profiles: {ex.Message}";
-            }
-        }
-        
-        /// <summary>
-        /// Applies the selected profile
-        /// </summary>
-        private void ApplySelectedProfile()
-        {
-            if (SelectedProfile == null)
-            {
-                return;
-            }
-            
-            try
-            {
-                StatusMessage = $"Applying profile '{SelectedProfile.Name}'...";
-                
-                bool success = _powerProfileService.ApplyProfile(SelectedProfile);
-                
-                if (success)
-                {
-                    _notificationService.ShowSuccess($"Profile '{SelectedProfile.Name}' applied successfully.");
-                    StatusMessage = $"Profile '{SelectedProfile.Name}' applied successfully.";
-                    
-                    // Refresh data to show changes
-                    RefreshData();
+                        
+                        _notificationService.ShowSuccess($"Process affinity set successfully.");
+                    }
+                    else
+                    {
+                        _notificationService.ShowError($"Failed to set process affinity.");
+                    }
                 }
                 else
                 {
-                    _notificationService.ShowError($"Failed to apply profile '{SelectedProfile.Name}'.");
-                    StatusMessage = $"Failed to apply profile '{SelectedProfile.Name}'.";
+                    _notificationService.ShowError("Invalid parameters", "Please provide valid process ID and affinity mask.");
                 }
             }
             catch (Exception ex)
             {
-                _notificationService.ShowError($"Error applying profile: {ex.Message}");
-                StatusMessage = $"Error: {ex.Message}";
-            }
-        }
-        
-        /// <summary>
-        /// Imports a profile from a file
-        /// </summary>
-        private void ImportProfile()
-        {
-            try
-            {
-                string? filePath = _fileDialogService.ShowOpenFileDialog(
-                    "Import Power Profile",
-                    "Power Profile (*.pow)|*.pow|All Files (*.*)|*.*");
-                
-                if (string.IsNullOrEmpty(filePath))
-                {
-                    return; // User canceled
-                }
-                
-                StatusMessage = $"Importing profile from {filePath}...";
-                
-                PowerProfile? profile = _powerProfileService.ImportProfile(filePath);
-                
-                if (profile != null)
-                {
-                    PowerProfiles.Add(profile);
-                    SelectedProfile = profile;
-                    
-                    _notificationService.ShowSuccess($"Profile '{profile.Name}' imported successfully.");
-                    StatusMessage = $"Profile '{profile.Name}' imported successfully.";
-                }
-                else
-                {
-                    _notificationService.ShowError("Failed to import profile.");
-                    StatusMessage = "Failed to import profile.";
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error importing profile: {ex.Message}");
-                StatusMessage = $"Error: {ex.Message}";
-            }
-        }
-        
-        /// <summary>
-        /// Exports the selected profile to a file
-        /// </summary>
-        private void ExportSelectedProfile()
-        {
-            if (SelectedProfile == null)
-            {
-                return;
-            }
-            
-            try
-            {
-                string? filePath = _fileDialogService.ShowSaveFileDialog(
-                    "Export Power Profile",
-                    "Power Profile (*.pow)|*.pow|All Files (*.*)|*.*",
-                    $"{SelectedProfile.Name}.pow");
-                
-                if (string.IsNullOrEmpty(filePath))
-                {
-                    return; // User canceled
-                }
-                
-                StatusMessage = $"Exporting profile to {filePath}...";
-                
-                bool success = _powerProfileService.ExportProfile(SelectedProfile, filePath);
-                
-                if (success)
-                {
-                    _notificationService.ShowSuccess($"Profile '{SelectedProfile.Name}' exported successfully.");
-                    StatusMessage = $"Profile '{SelectedProfile.Name}' exported successfully.";
-                }
-                else
-                {
-                    _notificationService.ShowError($"Failed to export profile '{SelectedProfile.Name}'.");
-                    StatusMessage = $"Failed to export profile '{SelectedProfile.Name}'.";
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error exporting profile: {ex.Message}");
-                StatusMessage = $"Error: {ex.Message}";
-            }
-        }
-        
-        /// <summary>
-        /// Creates a new power profile
-        /// </summary>
-        private void CreateNewProfile()
-        {
-            try
-            {
-                // Create a new default profile
-                var newProfile = _powerProfileService.CreateDefaultProfile("New Profile");
-                
-                // Add to list and select it
-                PowerProfiles.Add(newProfile);
-                SelectedProfile = newProfile;
-                
-                StatusMessage = "New profile created. Please customize and save it.";
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error creating new profile: {ex.Message}");
-                StatusMessage = $"Error: {ex.Message}";
-            }
-        }
-        
-        /// <summary>
-        /// Deletes the selected profile
-        /// </summary>
-        private void DeleteSelectedProfile()
-        {
-            if (SelectedProfile == null || SelectedProfile.IsSystemDefault)
-            {
-                return;
-            }
-            
-            try
-            {
-                string profileName = SelectedProfile.Name;
-                
-                StatusMessage = $"Deleting profile '{profileName}'...";
-                
-                bool success = _powerProfileService.DeleteProfile(profileName);
-                
-                if (success)
-                {
-                    PowerProfiles.Remove(SelectedProfile);
-                    SelectedProfile = PowerProfiles.FirstOrDefault();
-                    
-                    _notificationService.ShowSuccess($"Profile '{profileName}' deleted successfully.");
-                    StatusMessage = $"Profile '{profileName}' deleted successfully.";
-                }
-                else
-                {
-                    _notificationService.ShowError($"Failed to delete profile '{profileName}'.");
-                    StatusMessage = $"Failed to delete profile '{profileName}'.";
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error deleting profile: {ex.Message}");
-                StatusMessage = $"Error: {ex.Message}";
-            }
-        }
-        
-        /// <summary>
-        /// Sets the affinity for the selected process
-        /// </summary>
-        private void SetSelectedProcessAffinity()
-        {
-            if (SelectedProcess == null)
-            {
-                return;
-            }
-            
-            try
-            {
-                // TODO: Implement affinity dialog
-                StatusMessage = "Setting process affinity is not implemented yet.";
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error setting process affinity: {ex.Message}");
-                StatusMessage = $"Error: {ex.Message}";
-            }
-        }
-        
-        /// <summary>
-        /// Sets the priority for the selected process
-        /// </summary>
-        /// <param name="priority">The new priority</param>
-        private void SetSelectedProcessPriority(ProcessPriority priority)
-        {
-            if (SelectedProcess == null)
-            {
-                return;
-            }
-            
-            try
-            {
-                StatusMessage = $"Setting priority for process '{SelectedProcess.Name}' to {priority}...";
-                
-                bool success = _processService.SetProcessPriority(SelectedProcess.ProcessId, priority);
-                
-                if (success)
-                {
-                    // Update the process in the list
-                    SelectedProcess.Priority = priority;
-                    
-                    _notificationService.ShowSuccess($"Priority for process '{SelectedProcess.Name}' set to {priority}.");
-                    StatusMessage = $"Priority for process '{SelectedProcess.Name}' set to {priority}.";
-                    
-                    // Refresh to update the process list
-                    RefreshProcesses();
-                }
-                else
-                {
-                    _notificationService.ShowError($"Failed to set priority for process '{SelectedProcess.Name}'.");
-                    StatusMessage = $"Failed to set priority for process '{SelectedProcess.Name}'.";
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error setting process priority: {ex.Message}");
-                StatusMessage = $"Error: {ex.Message}";
-            }
-        }
-        
-        /// <summary>
-        /// Terminates the selected process
-        /// </summary>
-        private void TerminateSelectedProcess()
-        {
-            if (SelectedProcess == null || SelectedProcess.IsSystemProcess)
-            {
-                return;
-            }
-            
-            try
-            {
-                string processName = SelectedProcess.Name;
-                int processId = SelectedProcess.ProcessId;
-                
-                StatusMessage = $"Terminating process '{processName}'...";
-                
-                bool success = _processService.TerminateProcess(processId);
-                
-                if (success)
-                {
-                    _notificationService.ShowSuccess($"Process '{processName}' terminated successfully.");
-                    StatusMessage = $"Process '{processName}' terminated successfully.";
-                    
-                    // Refresh to update the process list
-                    RefreshProcesses();
-                }
-                else
-                {
-                    _notificationService.ShowError($"Failed to terminate process '{processName}'.");
-                    StatusMessage = $"Failed to terminate process '{processName}'.";
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error terminating process: {ex.Message}");
-                StatusMessage = $"Error: {ex.Message}";
+                _notificationService.ShowError("Failed to set process affinity", ex.Message);
             }
         }
     }

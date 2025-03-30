@@ -4,56 +4,62 @@ using System.Collections.Generic;
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// A simple service locator for managing application services
+    /// A simple service locator for dependency injection
     /// </summary>
     public static class ServiceLocator
     {
-        private static readonly Dictionary<Type, object> Services = new Dictionary<Type, object>();
-        private static bool _isInitialized;
+        private static readonly Dictionary<Type, object> _services = new Dictionary<Type, object>();
         
         /// <summary>
-        /// Initialize the service locator with all required services
+        /// Registers a service interface with its implementation
         /// </summary>
-        public static void Initialize()
+        /// <typeparam name="TInterface">The interface type</typeparam>
+        /// <typeparam name="TImplementation">The implementation type</typeparam>
+        /// <exception cref="ArgumentException">Thrown if the implementation does not implement the interface</exception>
+        public static void Register<TInterface, TImplementation>() 
+            where TInterface : class
+            where TImplementation : class, TInterface, new()
         {
-            if (_isInitialized)
+            if (!typeof(TInterface).IsAssignableFrom(typeof(TImplementation)))
             {
-                return;
+                throw new ArgumentException($"{typeof(TImplementation).Name} does not implement {typeof(TInterface).Name}");
             }
             
-            // Register all services
-            RegisterService<INotificationService>(new NotificationService());
-            RegisterService<IFileDialogService>(new FileDialogService());
-            RegisterService<ISystemInfoService>(new SystemInfoService());
-            RegisterService<IProcessService>(new ProcessService());
-            RegisterService<IPowerProfileService>(new PowerProfileService());
-            
-            _isInitialized = true;
+            _services[typeof(TInterface)] = new TImplementation();
         }
         
         /// <summary>
-        /// Register a service
+        /// Registers a specific instance as the implementation for an interface
         /// </summary>
-        /// <typeparam name="T">The service interface type</typeparam>
-        /// <param name="service">The service implementation</param>
-        public static void RegisterService<T>(T service) where T : class
+        /// <typeparam name="TInterface">The interface type</typeparam>
+        /// <param name="implementation">The implementation instance</param>
+        public static void RegisterInstance<TInterface>(TInterface implementation) where TInterface : class
         {
-            Services[typeof(T)] = service;
+            _services[typeof(TInterface)] = implementation;
         }
         
         /// <summary>
-        /// Get a registered service
+        /// Gets the service implementation for the specified interface
         /// </summary>
-        /// <typeparam name="T">The service interface type</typeparam>
+        /// <typeparam name="T">The interface type</typeparam>
         /// <returns>The service implementation</returns>
-        public static T GetService<T>() where T : class
+        /// <exception cref="InvalidOperationException">Thrown if the service is not registered</exception>
+        public static T Get<T>() where T : class
         {
-            if (Services.TryGetValue(typeof(T), out var service))
+            if (!_services.TryGetValue(typeof(T), out var service))
             {
-                return (T)service;
+                throw new InvalidOperationException($"Service of type {typeof(T).Name} is not registered");
             }
             
-            throw new InvalidOperationException($"Service of type {typeof(T).Name} is not registered");
+            return (T)service;
+        }
+        
+        /// <summary>
+        /// Clears all registered services
+        /// </summary>
+        public static void Clear()
+        {
+            _services.Clear();
         }
     }
 }

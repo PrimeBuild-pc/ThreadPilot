@@ -1,42 +1,75 @@
+using System.Collections.Generic;
+
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Represents a process affinity rule
+    /// Represents a rule for applying process affinity
     /// </summary>
     public class ProcessAffinityRule
     {
         /// <summary>
-        /// Gets or sets the process name pattern (supports wildcard *)
+        /// Gets or sets the rule ID
         /// </summary>
-        public string ProcessNamePattern { get; set; } = string.Empty;
+        public int Id { get; set; }
         
         /// <summary>
-        /// Gets or sets the CPU affinity mask (bit field)
+        /// Gets or sets the rule name
         /// </summary>
-        public long AffinityMask { get; set; }
+        public string Name { get; set; }
         
         /// <summary>
-        /// Gets or sets the process priority
+        /// Gets or sets the process name pattern to match
         /// </summary>
-        public ProcessPriority Priority { get; set; } = ProcessPriority.Normal;
+        public string ProcessNamePattern { get; set; }
         
         /// <summary>
-        /// Gets or sets a value indicating whether this rule is enabled
+        /// Gets or sets whether the rule is applied by exact match
+        /// </summary>
+        public bool ExactMatch { get; set; }
+        
+        /// <summary>
+        /// Gets or sets whether the rule is case sensitive
+        /// </summary>
+        public bool CaseSensitive { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the list of cores to include
+        /// </summary>
+        public List<int> IncludedCores { get; set; } = new List<int>();
+        
+        /// <summary>
+        /// Gets or sets the process priority to apply
+        /// </summary>
+        public ProcessPriority? Priority { get; set; }
+        
+        /// <summary>
+        /// Gets or sets whether the rule is enabled
         /// </summary>
         public bool IsEnabled { get; set; } = true;
         
         /// <summary>
-        /// Gets or sets the description
+        /// Gets or sets whether to include child processes
         /// </summary>
-        public string Description { get; set; } = string.Empty;
+        public bool IncludeChildren { get; set; }
         
         /// <summary>
-        /// Creates a string representation of the rule
+        /// Gets or sets the rule category for organization
         /// </summary>
-        /// <returns>A string representation</returns>
-        public override string ToString()
-        {
-            return $"{ProcessNamePattern} -> {AffinityMask:X} ({Priority})";
-        }
+        public string Category { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the rule description
+        /// </summary>
+        public string Description { get; set; }
+        
+        /// <summary>
+        /// Gets or sets whether the rule is applied only once
+        /// </summary>
+        public bool ApplyOnce { get; set; }
+        
+        /// <summary>
+        /// Gets or sets whether the rule has been applied
+        /// </summary>
+        public bool HasBeenApplied { get; set; }
     }
 }

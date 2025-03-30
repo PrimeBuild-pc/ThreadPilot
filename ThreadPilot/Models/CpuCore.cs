@@ -6,33 +6,63 @@ namespace ThreadPilot.Models
     public class CpuCore
     {
         /// <summary>
-        /// Gets or sets the core ID (0-based)
+        /// Gets or sets the core index
+        /// </summary>
+        public int Index { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the CPU package index
+        /// </summary>
+        public int PackageIndex { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the core ID
         /// </summary>
         public int CoreId { get; set; }
         
         /// <summary>
-        /// Gets or sets the processor ID (physical CPU number)
+        /// Gets or sets the logical processor ID
         /// </summary>
-        public int ProcessorId { get; set; }
+        public int LogicalProcessorIndex { get; set; }
         
         /// <summary>
-        /// Gets or sets a value indicating whether the core is parked
+        /// Gets or sets the current utilization percentage
         /// </summary>
-        public bool IsParked { get; set; }
-        
-        /// <summary>
-        /// Gets or sets the current usage percentage
-        /// </summary>
-        public double UsagePercent { get; set; }
+        public double Utilization { get; set; }
         
         /// <summary>
         /// Gets or sets the current frequency in MHz
         /// </summary>
-        public double CurrentFrequencyMhz { get; set; }
+        public int Frequency { get; set; }
         
         /// <summary>
-        /// Gets or sets the temperature in Celsius
+        /// Gets or sets the maximum frequency in MHz
         /// </summary>
-        public double TemperatureCelsius { get; set; }
+        public int MaxFrequency { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the current temperature in Celsius
+        /// </summary>
+        public double Temperature { get; set; }
+        
+        /// <summary>
+        /// Gets or sets whether the core is a hyperthreaded core (logical processor)
+        /// </summary>
+        public bool IsHyperthreaded { get; set; }
+        
+        /// <summary>
+        /// Gets or sets whether the core is part of an efficiency cluster (E-core)
+        /// </summary>
+        public bool IsEfficiencyCore { get; set; }
+        
+        /// <summary>
+        /// Gets or sets whether the core is part of a performance cluster (P-core)
+        /// </summary>
+        public bool IsPerformanceCore { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the friendly name for the core
+        /// </summary>
+        public string Name => $"Core {CoreId}{(IsHyperthreaded ? " (HT)" : "")} {(IsEfficiencyCore ? "E" : IsPerformanceCore ? "P" : "")}";
     }
 }

@@ -4,24 +4,18 @@ using System.Diagnostics;
 using System.Linq;
 using System.Management;
 using System.Runtime.InteropServices;
-using System.Threading;
+using Microsoft.Win32;
 using ThreadPilot.Models;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Implementation of the system information service
+    /// Service for retrieving system information
     /// </summary>
     public class SystemInfoService : ISystemInfoService
     {
-        // Performance counter for CPU usage
         private readonly PerformanceCounter _cpuCounter;
-        
-        // Cache for CPU core information (doesn't change often)
-        private List<CpuCore> _cpuCores;
-        
-        // For simulating core parking (in a real app, this would use Windows APIs)
-        private readonly Random _random = new Random();
+        private readonly PerformanceCounter _ramCounter;
         
         /// <summary>
         /// Initializes a new instance of the <see cref="SystemInfoService"/> class
@@ -31,336 +25,331 @@ namespace ThreadPilot.Services
             try
             {
                 _cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
-                _cpuCounter.NextValue(); // First call always returns 0, so we call it once and discard
+                _ramCounter = new PerformanceCounter("Memory", "Available MBytes");
+                
+                // First call to NextValue() always returns 0, so call it now and discard the result
+                _cpuCounter.NextValue();
+                _ramCounter.NextValue();
             }
-            catch
+            catch (Exception ex)
             {
-                // Performance counters might not be available; we'll use a different method
-                _cpuCounter = null;
+                Debug.WriteLine($"Error initializing performance counters: {ex.Message}");
+                throw;
             }
         }
         
         /// <summary>
-        /// Get current system information
+        /// Get system information
         /// </summary>
         /// <returns>System information</returns>
         public SystemInfo GetSystemInfo()
         {
-            var cpuUsage = GetCpuUsagePercentage();
-            var memoryUsage = GetMemoryUsage();
+            var systemInfo = new SystemInfo
+            {
+                OperatingSystem = GetOperatingSystemName(),
+                CpuModel = GetCpuModel(),
+                PhysicalCores = Environment.ProcessorCount / 2, // Simplified, not always accurate
+                LogicalCores = Environment.ProcessorCount,
+                CpuUsagePercent = GetCpuUsage(),
+                MemoryUsagePercent = GetMemoryUsage(),
+                TotalRam = GetTotalRam(),
+                AvailableRam = (long)_ramCounter.NextValue(),
+                ActivePowerPlanName = GetActivePowerPlanName(),
+                ActivePowerPlanGuid = GetActivePowerPlanGuid(),
+                Cores = GetCpuCoreInfo(),
+                CpuTemperature = 0, // Not implemented
+                GpuModel = GetGpuModel(),
+                GpuTemperature = 0, // Not implemented
+                GpuUsagePercent = 0, // Not implemented
+                GpuMemoryUsagePercent = 0, // Not implemented
+                RunningProcesses = Process.GetProcesses().Length
+            };
             
+            systemInfo.MemoryUsagePercent = 100f - ((float)systemInfo.AvailableRam / systemInfo.TotalRam * 100f);
+            
+            return systemInfo;
+        }
+        
+        /// <summary>
+        /// Retrieve the current CPU usage percentage
+        /// </summary>
+        /// <returns>CPU usage percentage (0-100)</returns>
+        public float GetCpuUsage()
+        {
             try
             {
-                string cpuName = "Unknown CPU";
-                string osName = "Windows";
-                int logicalProcessors = 0;
-                int physicalCores = 0;
-                
-                try
-                {
-                    using (var searcher = new ManagementObjectSearcher("select * from Win32_Processor"))
-                    {
-                        foreach (var item in searcher.Get())
-                        {
-                            cpuName = item["Name"].ToString();
-                            
-                            if (item["NumberOfCores"] != null)
-                            {
-                                physicalCores = Convert.ToInt32(item["NumberOfCores"]);
-                            }
-                            
-                            if (item["NumberOfLogicalProcessors"] != null)
-                            {
-                                logicalProcessors = Convert.ToInt32(item["NumberOfLogicalProcessors"]);
-                            }
-                        }
-                    }
-                }
-                catch
-                {
-                    // Fallback to Environment class if WMI fails
-                    logicalProcessors = Environment.ProcessorCount;
-                    physicalCores = Environment.ProcessorCount;
-                    cpuName = $"CPU with {logicalProcessors} logical processors";
-                }
-                
-                try
-                {
-                    using (var searcher = new ManagementObjectSearcher("select * from Win32_OperatingSystem"))
-                    {
-                        foreach (var item in searcher.Get())
-                        {
-                            osName = item["Caption"].ToString();
-                        }
-                    }
-                }
-                catch
-                {
-                    // Fallback if WMI fails
-                    osName = RuntimeInformation.OSDescription;
-                }
-                
-                var result = new SystemInfo
-                {
-                    CpuName = cpuName,
-                    CpuUsagePercent = cpuUsage,
-                    PhysicalCoreCount = physicalCores,
-                    LogicalProcessorCount = logicalProcessors,
-                    MemoryTotalMB = Math.Round(memoryUsage.TotalMB, 0),
-                    MemoryUsedMB = Math.Round(memoryUsage.UsedMB, 0),
-                    MemoryUsagePercent = Math.Round(memoryUsage.UsagePercent, 1),
-                    OperatingSystem = osName,
-                    ActiveCoresCount = GetActiveCoresCount(),
-                    TotalCoresCount = GetTotalCoresCount()
-                };
-                
-                return result;
+                return _cpuCounter.NextValue();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // If we can't get real system info, return some simulated data
-                return new SystemInfo
-                {
-                    CpuName = "Intel Core i7-10700K",
-                    CpuUsagePercent = cpuUsage,
-                    PhysicalCoreCount = 8,
-                    LogicalProcessorCount = 16,
-                    MemoryTotalMB = 16384,
-                    MemoryUsedMB = memoryUsage.UsedMB,
-                    MemoryUsagePercent = memoryUsage.UsagePercent,
-                    OperatingSystem = "Windows 11 Pro",
-                    ActiveCoresCount = 14,
-                    TotalCoresCount = 16
-                };
+                Debug.WriteLine($"Error getting CPU usage: {ex.Message}");
+                return 0;
             }
         }
         
         /// <summary>
-        /// Get information about CPU cores
+        /// Retrieve the current memory usage percentage
         /// </summary>
-        /// <returns>List of CPU cores</returns>
-        public List<CpuCore> GetCpuCores()
+        /// <returns>Memory usage percentage (0-100)</returns>
+        public float GetMemoryUsage()
         {
-            // Return cached value if available
-            if (_cpuCores != null)
+            try
             {
-                // Update usage values in the cached cores
-                UpdateCoreUsages(_cpuCores);
-                return _cpuCores;
+                long availableRam = (long)_ramCounter.NextValue();
+                long totalRam = GetTotalRam();
+                
+                return 100f - ((float)availableRam / totalRam * 100f);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting memory usage: {ex.Message}");
+                return 0;
+            }
+        }
+        
+        private string GetOperatingSystemName()
+        {
+            try
+            {
+                using var registryKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion");
+                
+                if (registryKey != null)
+                {
+                    string productName = registryKey.GetValue("ProductName") as string;
+                    string currentBuild = registryKey.GetValue("CurrentBuild") as string;
+                    string displayVersion = registryKey.GetValue("DisplayVersion") as string;
+                    
+                    if (!string.IsNullOrEmpty(displayVersion))
+                    {
+                        return $"{productName} ({displayVersion}) Build {currentBuild}";
+                    }
+                    
+                    return $"{productName} Build {currentBuild}";
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting OS info: {ex.Message}");
             }
             
+            return Environment.OSVersion.VersionString;
+        }
+        
+        private string GetCpuModel()
+        {
+            try
+            {
+                using var searcher = new ManagementObjectSearcher("SELECT Name FROM Win32_Processor");
+                
+                foreach (var obj in searcher.Get())
+                {
+                    return obj["Name"].ToString().Trim();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting CPU model: {ex.Message}");
+            }
+            
+            return "Unknown CPU";
+        }
+        
+        private string GetGpuModel()
+        {
+            try
+            {
+                using var searcher = new ManagementObjectSearcher("SELECT Name FROM Win32_VideoController");
+                
+                foreach (var obj in searcher.Get())
+                {
+                    string name = obj["Name"].ToString().Trim();
+                    
+                    // Filter out non-GPU controllers
+                    if (!name.Contains("Remote Desktop", StringComparison.OrdinalIgnoreCase) &&
+                        !name.Contains("RDP", StringComparison.OrdinalIgnoreCase) &&
+                        !name.Contains("Basic Display", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return name;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting GPU model: {ex.Message}");
+            }
+            
+            return "Unknown GPU";
+        }
+        
+        private long GetTotalRam()
+        {
+            try
+            {
+                using var searcher = new ManagementObjectSearcher("SELECT TotalPhysicalMemory FROM Win32_ComputerSystem");
+                
+                foreach (var obj in searcher.Get())
+                {
+                    ulong totalBytes = Convert.ToUInt64(obj["TotalPhysicalMemory"]);
+                    return (long)(totalBytes / (1024 * 1024)); // Convert to MB
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting total RAM: {ex.Message}");
+            }
+            
+            return 0;
+        }
+        
+        private string GetActivePowerPlanName()
+        {
+            try
+            {
+                Guid activePlanGuid = GetActivePowerPlanGuid();
+                
+                if (activePlanGuid != Guid.Empty)
+                {
+                    return GetPowerPlanName(activePlanGuid);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting active power plan name: {ex.Message}");
+            }
+            
+            return "Unknown";
+        }
+        
+        private Guid GetActivePowerPlanGuid()
+        {
+            try
+            {
+                // Get the active power plan GUID
+                IntPtr activeGuidPtr = IntPtr.Zero;
+                uint activeGuidSize = 16; // Size of a GUID
+                
+                uint result = PowerGetActiveScheme(IntPtr.Zero, ref activeGuidPtr);
+                
+                if (result == 0 && activeGuidPtr != IntPtr.Zero)
+                {
+                    Guid activeGuid = Marshal.PtrToStructure<Guid>(activeGuidPtr);
+                    LocalFree(activeGuidPtr);
+                    
+                    return activeGuid;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting active power plan GUID: {ex.Message}");
+            }
+            
+            return Guid.Empty;
+        }
+        
+        private string GetPowerPlanName(Guid guid)
+        {
+            try
+            {
+                IntPtr friendlyNamePtr = IntPtr.Zero;
+                uint friendlyNameSize = 0;
+                
+                uint result = PowerReadFriendlyName(IntPtr.Zero, ref guid, IntPtr.Zero, IntPtr.Zero, friendlyNamePtr, ref friendlyNameSize);
+                
+                if (result == 0 && friendlyNameSize > 0)
+                {
+                    friendlyNamePtr = Marshal.AllocHGlobal((int)friendlyNameSize);
+                    
+                    if (friendlyNamePtr != IntPtr.Zero)
+                    {
+                        result = PowerReadFriendlyName(IntPtr.Zero, ref guid, IntPtr.Zero, IntPtr.Zero, friendlyNamePtr, ref friendlyNameSize);
+                        
+                        if (result == 0)
+                        {
+                            string friendlyName = Marshal.PtrToStringUni(friendlyNamePtr);
+                            Marshal.FreeHGlobal(friendlyNamePtr);
+                            
+                            return friendlyName;
+                        }
+                        
+                        Marshal.FreeHGlobal(friendlyNamePtr);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting power plan name: {ex.Message}");
+            }
+            
+            return "Unknown";
+        }
+        
+        private List<CpuCore> GetCpuCoreInfo()
+        {
             var cores = new List<CpuCore>();
             
             try
             {
-                int coreCount = Environment.ProcessorCount;
+                // Get logical processor info
+                using var coreSearcher = new ManagementObjectSearcher("SELECT * FROM Win32_Processor");
+                var coreInfo = coreSearcher.Get().Cast<ManagementObject>().FirstOrDefault();
                 
-                // Try to get core information from WMI
-                bool hasWmiInfo = false;
-                
-                try
+                if (coreInfo != null)
                 {
-                    using (var searcher = new ManagementObjectSearcher("select * from Win32_Processor"))
-                    {
-                        foreach (var item in searcher.Get())
-                        {
-                            // Check if WMI can provide detailed info
-                            hasWmiInfo = item["NumberOfCores"] != null;
-                            break;
-                        }
-                    }
-                }
-                catch
-                {
-                    hasWmiInfo = false;
-                }
-                
-                // Create core objects
-                for (int i = 0; i < coreCount; i++)
-                {
-                    var core = new CpuCore
-                    {
-                        CoreId = i,
-                        Name = $"Core {i}",
-                        IsPhysical = true,  // Simplified; in reality this would be determined properly
-                        IsParked = _random.Next(10) == 0,  // Simulate occasional parked cores
-                        UsagePercent = _random.Next(70)
-                    };
+                    // Get the number of cores
+                    int physicalCores = Convert.ToInt32(coreInfo["NumberOfCores"]);
+                    int logicalCores = Convert.ToInt32(coreInfo["NumberOfLogicalProcessors"]);
                     
-                    cores.Add(core);
-                }
-                
-                _cpuCores = cores;
-                return cores;
-            }
-            catch (Exception)
-            {
-                // Fallback to simplified core information
-                int coreCount = Math.Max(4, Environment.ProcessorCount);
-                
-                for (int i = 0; i < coreCount; i++)
-                {
-                    var core = new CpuCore
-                    {
-                        CoreId = i,
-                        Name = $"Core {i}",
-                        IsPhysical = (i % 2 == 0),  // Simplified hyperthreading simulation
-                        IsParked = (i > coreCount - 3), // Simulate some cores parked
-                        UsagePercent = _random.Next(70)
-                    };
+                    // Get usage for each core
+                    var performanceCounters = new List<PerformanceCounter>();
                     
-                    cores.Add(core);
-                }
-                
-                _cpuCores = cores;
-                return cores;
-            }
-        }
-        
-        /// <summary>
-        /// Get current memory usage
-        /// </summary>
-        /// <returns>Memory usage in MB and percentage</returns>
-        public (double TotalMB, double UsedMB, double UsagePercent) GetMemoryUsage()
-        {
-            try
-            {
-                double totalMB = 0;
-                double availableMB = 0;
-                
-                using (var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_OperatingSystem"))
-                {
-                    foreach (var obj in searcher.Get())
+                    for (int i = 0; i < logicalCores; i++)
                     {
-                        totalMB = Convert.ToDouble(obj["TotalVisibleMemorySize"]) / 1024;
-                        availableMB = Convert.ToDouble(obj["FreePhysicalMemory"]) / 1024;
+                        var counter = new PerformanceCounter("Processor", "% Processor Time", i.ToString());
+                        counter.NextValue(); // First call to NextValue() always returns 0
+                        performanceCounters.Add(counter);
                     }
-                }
-                
-                double usedMB = totalMB - availableMB;
-                double usagePercent = (usedMB / totalMB) * 100;
-                
-                return (totalMB, usedMB, usagePercent);
-            }
-            catch
-            {
-                // Fallback to simulated memory data
-                double totalMB = 16384; // 16 GB
-                double usedMB = 5000 + (1000 * (_random.NextDouble() * 6));
-                double usagePercent = (usedMB / totalMB) * 100;
-                
-                return (totalMB, usedMB, usagePercent);
-            }
-        }
-        
-        /// <summary>
-        /// Get current CPU usage percentage
-        /// </summary>
-        /// <returns>CPU usage percentage</returns>
-        public double GetCpuUsagePercentage()
-        {
-            try
-            {
-                if (_cpuCounter != null)
-                {
-                    return Math.Round(_cpuCounter.NextValue(), 1);
-                }
-                
-                // If performance counters aren't available, try WMI
-                int cpuUsage = 0;
-                
-                using (var searcher = new ManagementObjectSearcher("select PercentProcessorTime from Win32_PerfFormattedData_PerfOS_Processor where Name='_Total'"))
-                {
-                    foreach (var obj in searcher.Get())
+                    
+                    // Wait a bit for the counters to collect data
+                    System.Threading.Thread.Sleep(100);
+                    
+                    for (int i = 0; i < logicalCores; i++)
                     {
-                        cpuUsage = Convert.ToInt32(obj["PercentProcessorTime"]);
-                        break;
-                    }
-                }
-                
-                return cpuUsage;
-            }
-            catch
-            {
-                // Fallback to simulated CPU usage
-                return Math.Min(100, Math.Max(0, 30 + (_random.NextDouble() * 50)));
-            }
-        }
-        
-        /// <summary>
-        /// Get active CPU cores count (not parked)
-        /// </summary>
-        /// <returns>Number of active cores</returns>
-        public int GetActiveCoresCount()
-        {
-            try
-            {
-                var cores = GetCpuCores();
-                return cores.Count(c => !c.IsParked);
-            }
-            catch
-            {
-                // Fallback
-                return Math.Max(1, Environment.ProcessorCount - 2);
-            }
-        }
-        
-        /// <summary>
-        /// Get the total number of CPU cores
-        /// </summary>
-        /// <returns>Total number of cores</returns>
-        public int GetTotalCoresCount()
-        {
-            return Environment.ProcessorCount;
-        }
-        
-        /// <summary>
-        /// Update core usage values
-        /// </summary>
-        /// <param name="cores">List of CPU cores to update</param>
-        private void UpdateCoreUsages(List<CpuCore> cores)
-        {
-            try
-            {
-                // Try to get per-core CPU usage via WMI
-                var usages = new Dictionary<int, float>();
-                
-                using (var searcher = new ManagementObjectSearcher("select Name, PercentProcessorTime from Win32_PerfFormattedData_PerfOS_Processor"))
-                {
-                    foreach (var obj in searcher.Get())
-                    {
-                        string name = obj["Name"].ToString();
-                        
-                        if (name != "_Total" && int.TryParse(name, out int coreId))
+                        cores.Add(new CpuCore
                         {
-                            float usage = Convert.ToSingle(obj["PercentProcessorTime"]);
-                            usages[coreId] = usage;
-                        }
-                    }
-                }
-                
-                // Apply the usage values to our cores
-                foreach (var core in cores)
-                {
-                    if (usages.TryGetValue(core.CoreId, out float usage))
-                    {
-                        core.UsagePercent = usage;
-                    }
-                    else
-                    {
-                        // If we don't have data for this core, use a simulated value
-                        core.UsagePercent = Math.Min(100, Math.Max(0, core.UsagePercent + ((_random.NextDouble() * 30) - 15)));
+                            CoreNumber = i / (logicalCores / physicalCores),
+                            ThreadNumber = i,
+                            IsPhysicalCore = i % (logicalCores / physicalCores) == 0,
+                            UsagePercent = performanceCounters[i].NextValue(),
+                            CurrentFrequency = 0, // Not implemented
+                            MaxFrequency = 0, // Not implemented
+                            MinFrequency = 0, // Not implemented
+                            Temperature = 0, // Not implemented
+                            Voltage = 0, // Not implemented
+                            Power = 0, // Not implemented
+                            IsParked = false // Not implemented
+                        });
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // If WMI fails, just update with simulated values
-                foreach (var core in cores)
-                {
-                    core.UsagePercent = Math.Min(100, Math.Max(0, core.UsagePercent + ((_random.NextDouble() * 30) - 15)));
-                }
+                Debug.WriteLine($"Error getting CPU core info: {ex.Message}");
             }
+            
+            return cores;
         }
+        
+        #region Native methods
+        
+        [DllImport("powrprof.dll")]
+        private static extern uint PowerGetActiveScheme(IntPtr UserRootPowerKey, ref IntPtr ActivePolicyGuid);
+        
+        [DllImport("powrprof.dll", CharSet = CharSet.Unicode)]
+        private static extern uint PowerReadFriendlyName(IntPtr RootPowerKey, ref Guid SchemeGuid, IntPtr SubGroupOfPowerSettingGuid, IntPtr PowerSettingGuid, IntPtr Buffer, ref uint BufferSize);
+        
+        [DllImport("kernel32.dll")]
+        private static extern IntPtr LocalFree(IntPtr hMem);
+        
+        #endregion
     }
 }
