@@ -1,6 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
-using System.IO;
+using System.Linq;
 using System.Windows.Input;
 using ThreadPilot.Commands;
 using ThreadPilot.Models;
@@ -9,508 +9,395 @@ using ThreadPilot.Services;
 namespace ThreadPilot.ViewModels
 {
     /// <summary>
-    /// View model for the power profile editor view
+    /// View model for the profile editor
     /// </summary>
     public class ProfileEditorViewModel : ViewModelBase
     {
-        #region Private Fields
+        private readonly IFileDialogService _fileDialogService;
+        private readonly IPowerProfileService _powerProfileService;
+        private readonly INotificationService _notificationService;
         
-        private ObservableCollection<PowerProfile> _availableProfiles;
-        private PowerProfile _selectedProfile;
-        private string _profileName = string.Empty;
-        private string _profileDescription = string.Empty;
-        private bool _isEditing = false;
-        private bool _isLoading = false;
-        
-        #endregion
-        
-        #region Properties
-        
-        /// <summary>
-        /// Collection of available power profiles
-        /// </summary>
-        public ObservableCollection<PowerProfile> AvailableProfiles
-        {
-            get => _availableProfiles;
-            set => SetProperty(ref _availableProfiles, value);
-        }
-        
-        /// <summary>
-        /// Currently selected power profile
-        /// </summary>
-        public PowerProfile SelectedProfile
-        {
-            get => _selectedProfile;
-            set => SetProperty(ref _selectedProfile, value, UpdateEditFields);
-        }
-        
-        /// <summary>
-        /// Name of the profile being edited
-        /// </summary>
-        public string ProfileName
-        {
-            get => _profileName;
-            set => SetProperty(ref _profileName, value);
-        }
-        
-        /// <summary>
-        /// Description of the profile being edited
-        /// </summary>
-        public string ProfileDescription
-        {
-            get => _profileDescription;
-            set => SetProperty(ref _profileDescription, value);
-        }
-        
-        /// <summary>
-        /// Whether the view model is in editing mode
-        /// </summary>
-        public bool IsEditing
-        {
-            get => _isEditing;
-            set => SetProperty(ref _isEditing, value);
-        }
-        
-        /// <summary>
-        /// Whether the view model is loading data
-        /// </summary>
-        public bool IsLoading
-        {
-            get => _isLoading;
-            set => SetProperty(ref _isLoading, value);
-        }
-        
-        #endregion
-        
-        #region Commands
-        
-        /// <summary>
-        /// Command to create a new power profile
-        /// </summary>
-        public ICommand NewProfileCommand { get; }
-        
-        /// <summary>
-        /// Command to edit the selected power profile
-        /// </summary>
-        public ICommand EditProfileCommand { get; }
-        
-        /// <summary>
-        /// Command to save the current power profile
-        /// </summary>
-        public ICommand SaveProfileCommand { get; }
-        
-        /// <summary>
-        /// Command to cancel editing
-        /// </summary>
-        public ICommand CancelEditCommand { get; }
-        
-        /// <summary>
-        /// Command to delete the selected power profile
-        /// </summary>
-        public ICommand DeleteProfileCommand { get; }
-        
-        /// <summary>
-        /// Command to import a power profile
-        /// </summary>
-        public ICommand ImportProfileCommand { get; }
-        
-        /// <summary>
-        /// Command to export the selected power profile
-        /// </summary>
-        public ICommand ExportProfileCommand { get; }
-        
-        /// <summary>
-        /// Command to apply the selected power profile
-        /// </summary>
-        public ICommand ApplyProfileCommand { get; }
-        
-        /// <summary>
-        /// Command to refresh the list of power profiles
-        /// </summary>
-        public ICommand RefreshProfilesCommand { get; }
-        
-        #endregion
+        private PowerProfile _currentProfile = new PowerProfile();
+        private ProcessAffinityRule? _selectedRule;
+        private string _newProcessPattern = string.Empty;
         
         /// <summary>
         /// Constructor
         /// </summary>
         public ProfileEditorViewModel()
         {
-            // Initialize collections
-            AvailableProfiles = new ObservableCollection<PowerProfile>();
+            _fileDialogService = ServiceLocator.Get<IFileDialogService>();
+            _powerProfileService = ServiceLocator.Get<IPowerProfileService>();
+            _notificationService = ServiceLocator.Get<INotificationService>();
             
             // Initialize commands
-            NewProfileCommand = new RelayCommand(NewProfile);
-            EditProfileCommand = new RelayCommand(EditProfile, CanEditProfile);
             SaveProfileCommand = new RelayCommand(SaveProfile, CanSaveProfile);
-            CancelEditCommand = new RelayCommand(CancelEdit, CanCancelEdit);
-            DeleteProfileCommand = new RelayCommand(DeleteProfile, CanDeleteProfile);
-            ImportProfileCommand = new RelayCommand(ImportProfile);
             ExportProfileCommand = new RelayCommand(ExportProfile, CanExportProfile);
+            AddRuleCommand = new RelayCommand(AddRule, CanAddRule);
+            RemoveRuleCommand = new RelayCommand(RemoveRule, CanRemoveRule);
+            MoveRuleUpCommand = new RelayCommand(MoveRuleUp, CanMoveRuleUp);
+            MoveRuleDownCommand = new RelayCommand(MoveRuleDown, CanMoveRuleDown);
             ApplyProfileCommand = new RelayCommand(ApplyProfile, CanApplyProfile);
-            RefreshProfilesCommand = new RelayCommand(RefreshProfiles);
-            
-            // Load initial data
-            LoadProfiles();
         }
         
         /// <summary>
-        /// Load power profiles
+        /// Command to save the profile
         /// </summary>
-        private void LoadProfiles()
+        public ICommand SaveProfileCommand { get; }
+        
+        /// <summary>
+        /// Command to export the profile
+        /// </summary>
+        public ICommand ExportProfileCommand { get; }
+        
+        /// <summary>
+        /// Command to add a rule
+        /// </summary>
+        public ICommand AddRuleCommand { get; }
+        
+        /// <summary>
+        /// Command to remove a rule
+        /// </summary>
+        public ICommand RemoveRuleCommand { get; }
+        
+        /// <summary>
+        /// Command to move a rule up
+        /// </summary>
+        public ICommand MoveRuleUpCommand { get; }
+        
+        /// <summary>
+        /// Command to move a rule down
+        /// </summary>
+        public ICommand MoveRuleDownCommand { get; }
+        
+        /// <summary>
+        /// Command to apply the profile
+        /// </summary>
+        public ICommand ApplyProfileCommand { get; }
+        
+        /// <summary>
+        /// Current profile being edited
+        /// </summary>
+        public PowerProfile CurrentProfile
         {
-            IsLoading = true;
+            get => _currentProfile;
+            private set => SetProperty(ref _currentProfile, value);
+        }
+        
+        /// <summary>
+        /// Selected rule in the rules list
+        /// </summary>
+        public ProcessAffinityRule? SelectedRule
+        {
+            get => _selectedRule;
+            set
+            {
+                if (SetProperty(ref _selectedRule, value))
+                {
+                    ((RelayCommand)RemoveRuleCommand).RaiseCanExecuteChanged();
+                    ((RelayCommand)MoveRuleUpCommand).RaiseCanExecuteChanged();
+                    ((RelayCommand)MoveRuleDownCommand).RaiseCanExecuteChanged();
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Process pattern for new rules
+        /// </summary>
+        public string NewProcessPattern
+        {
+            get => _newProcessPattern;
+            set
+            {
+                if (SetProperty(ref _newProcessPattern, value))
+                {
+                    ((RelayCommand)AddRuleCommand).RaiseCanExecuteChanged();
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Rules collection for the current profile
+        /// </summary>
+        public ObservableCollection<ProcessAffinityRule> Rules => new ObservableCollection<ProcessAffinityRule>(_currentProfile.ProcessRules);
+        
+        /// <summary>
+        /// Available process priorities
+        /// </summary>
+        public ProcessPriority[] Priorities => Enum.GetValues<ProcessPriority>();
+        
+        /// <summary>
+        /// Load a profile for editing
+        /// </summary>
+        /// <param name="profile">Profile to load</param>
+        public void LoadProfile(PowerProfile profile)
+        {
+            // Create a deep copy to avoid modifying the original
+            CurrentProfile = profile.Clone();
             
+            // Reset selection
+            SelectedRule = null;
+            NewProcessPattern = string.Empty;
+            
+            // Refresh command states
+            ((RelayCommand)SaveProfileCommand).RaiseCanExecuteChanged();
+            ((RelayCommand)ExportProfileCommand).RaiseCanExecuteChanged();
+            ((RelayCommand)ApplyProfileCommand).RaiseCanExecuteChanged();
+            
+            // Notify UI to refresh the rules collection
+            OnPropertyChanged(nameof(Rules));
+        }
+        
+        /// <summary>
+        /// Save the current profile
+        /// </summary>
+        private void SaveProfile()
+        {
             try
             {
-                // This is where we would retrieve power profiles from the power profile service
-                // For now, we'll create some sample data
-                
-                AvailableProfiles.Clear();
-                
-                // In the future, this will be retrieved from IPowerProfileService
-                // For example: AvailableProfiles = new ObservableCollection<PowerProfile>(ServiceLocator.Get<IPowerProfileService>().GetAllProfiles());
-                
-                // For now, let's add some sample profiles
-                AvailableProfiles.Add(new PowerProfile
+                if (string.IsNullOrWhiteSpace(CurrentProfile.Name))
                 {
-                    Id = Guid.NewGuid(),
-                    Name = "Power Saver",
-                    Description = "Conserves battery life by limiting CPU power"
-                });
-                
-                AvailableProfiles.Add(new PowerProfile
-                {
-                    Id = Guid.NewGuid(),
-                    Name = "Balanced",
-                    Description = "Balanced performance and energy efficiency"
-                });
-                
-                AvailableProfiles.Add(new PowerProfile
-                {
-                    Id = Guid.NewGuid(),
-                    Name = "High Performance",
-                    Description = "Maximizes system performance at the cost of higher power consumption"
-                });
-                
-                IsLoading = false;
-            }
-            catch (Exception ex)
-            {
-                IsLoading = false;
-                NotificationService.ShowError($"Error loading power profiles: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Refresh the list of power profiles
-        /// </summary>
-        private void RefreshProfiles(object parameter)
-        {
-            LoadProfiles();
-        }
-        
-        /// <summary>
-        /// Create a new power profile
-        /// </summary>
-        private void NewProfile(object parameter)
-        {
-            IsEditing = true;
-            SelectedProfile = null;
-            
-            // Reset edit fields
-            ProfileName = string.Empty;
-            ProfileDescription = string.Empty;
-        }
-        
-        /// <summary>
-        /// Edit the selected power profile
-        /// </summary>
-        private void EditProfile(object parameter)
-        {
-            if (SelectedProfile == null) return;
-            
-            IsEditing = true;
-            
-            // Copy profile data to edit fields
-            ProfileName = SelectedProfile.Name;
-            ProfileDescription = SelectedProfile.Description;
-        }
-        
-        /// <summary>
-        /// Check if the selected profile can be edited
-        /// </summary>
-        private bool CanEditProfile(object parameter)
-        {
-            return SelectedProfile != null && !IsEditing;
-        }
-        
-        /// <summary>
-        /// Save the current power profile
-        /// </summary>
-        private void SaveProfile(object parameter)
-        {
-            try
-            {
-                // Validate input
-                if (string.IsNullOrWhiteSpace(ProfileName))
-                {
-                    NotificationService.ShowError("Profile name cannot be empty");
+                    _notificationService.ShowError("Profile name cannot be empty");
                     return;
                 }
                 
-                if (SelectedProfile == null)
+                if (_powerProfileService.SaveProfile(CurrentProfile))
                 {
-                    // Create a new profile
-                    var newProfile = new PowerProfile
-                    {
-                        Id = Guid.NewGuid(),
-                        Name = ProfileName,
-                        Description = ProfileDescription
-                    };
-                    
-                    // Add to collection
-                    AvailableProfiles.Add(newProfile);
-                    
-                    // Select the new profile
-                    SelectedProfile = newProfile;
-                    
-                    NotificationService.ShowSuccess($"Profile '{newProfile.Name}' created successfully");
-                }
-                else
-                {
-                    // Update existing profile
-                    SelectedProfile.Name = ProfileName;
-                    SelectedProfile.Description = ProfileDescription;
-                    
-                    // Notify property changed for the selected profile
-                    OnPropertyChanged(nameof(SelectedProfile));
-                    
-                    NotificationService.ShowSuccess($"Profile '{SelectedProfile.Name}' updated successfully");
-                }
-                
-                // Exit editing mode
-                IsEditing = false;
-            }
-            catch (Exception ex)
-            {
-                NotificationService.ShowError($"Error saving profile: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Check if the current profile can be saved
-        /// </summary>
-        private bool CanSaveProfile(object parameter)
-        {
-            return IsEditing;
-        }
-        
-        /// <summary>
-        /// Cancel editing
-        /// </summary>
-        private void CancelEdit(object parameter)
-        {
-            IsEditing = false;
-            
-            // Reset edit fields
-            UpdateEditFields();
-        }
-        
-        /// <summary>
-        /// Check if editing can be canceled
-        /// </summary>
-        private bool CanCancelEdit(object parameter)
-        {
-            return IsEditing;
-        }
-        
-        /// <summary>
-        /// Delete the selected power profile
-        /// </summary>
-        private void DeleteProfile(object parameter)
-        {
-            if (SelectedProfile == null) return;
-            
-            try
-            {
-                // Show confirmation dialog
-                var result = System.Windows.MessageBox.Show(
-                    $"Are you sure you want to delete the profile '{SelectedProfile.Name}'?",
-                    "Confirm Profile Deletion",
-                    System.Windows.MessageBoxButton.YesNo,
-                    System.Windows.MessageBoxImage.Warning);
-                
-                if (result == System.Windows.MessageBoxResult.Yes)
-                {
-                    // Remove from collection
-                    AvailableProfiles.Remove(SelectedProfile);
-                    
-                    // Clear selection
-                    SelectedProfile = null;
-                    
-                    NotificationService.ShowSuccess("Profile deleted successfully");
+                    _notificationService.ShowSuccess($"Profile '{CurrentProfile.Name}' saved successfully");
                 }
             }
             catch (Exception ex)
             {
-                NotificationService.ShowError($"Error deleting profile: {ex.Message}");
+                _notificationService.ShowError($"Error saving profile: {ex.Message}");
             }
         }
         
         /// <summary>
-        /// Check if the selected profile can be deleted
+        /// Export the current profile
         /// </summary>
-        private bool CanDeleteProfile(object parameter)
-        {
-            return SelectedProfile != null && !IsEditing;
-        }
-        
-        /// <summary>
-        /// Import a power profile
-        /// </summary>
-        private void ImportProfile(object parameter)
+        private void ExportProfile()
         {
             try
             {
-                // Show file open dialog
-                string filePath = FileDialogService.OpenFile("Power Profiles (*.pow)|*.pow|All Files (*.*)|*.*");
+                string? filePath = _fileDialogService.ShowSaveFileDialog(
+                    "Export Power Profile",
+                    "JSON Files (*.json)|*.json|POW Files (*.pow)|*.pow|All Files (*.*)|*.*",
+                    $"{CurrentProfile.Name}.json");
                 
                 if (!string.IsNullOrEmpty(filePath))
                 {
-                    // This is where we would import a power profile from a file
-                    // For example: PowerProfile importedProfile = ServiceLocator.Get<IPowerProfileService>().ImportProfile(filePath);
-                    
-                    // For now, we'll just create a new profile with the file name
-                    var fileName = Path.GetFileNameWithoutExtension(filePath);
-                    var newProfile = new PowerProfile
+                    if (_powerProfileService.ExportProfile(CurrentProfile, filePath))
                     {
-                        Id = Guid.NewGuid(),
-                        Name = fileName,
-                        Description = $"Imported from {Path.GetFileName(filePath)}"
-                    };
-                    
-                    // Add to collection
-                    AvailableProfiles.Add(newProfile);
-                    
-                    // Select the new profile
-                    SelectedProfile = newProfile;
-                    
-                    NotificationService.ShowSuccess($"Profile '{newProfile.Name}' imported successfully");
+                        _notificationService.ShowSuccess($"Profile exported to {filePath}");
+                    }
                 }
             }
             catch (Exception ex)
             {
-                NotificationService.ShowError($"Error importing profile: {ex.Message}");
+                _notificationService.ShowError($"Error exporting profile: {ex.Message}");
             }
         }
         
         /// <summary>
-        /// Export the selected power profile
+        /// Add a new rule to the profile
         /// </summary>
-        private void ExportProfile(object parameter)
+        private void AddRule()
         {
-            if (SelectedProfile == null) return;
-            
             try
             {
-                // Show file save dialog
-                string defaultFileName = SanitizeFileName(SelectedProfile.Name) + ".pow";
-                string filePath = FileDialogService.SaveFile(
-                    "Power Profiles (*.pow)|*.pow|All Files (*.*)|*.*",
-                    defaultFileName);
-                
-                if (!string.IsNullOrEmpty(filePath))
+                var newRule = new ProcessAffinityRule
                 {
-                    // This is where we would export the power profile to a file
-                    // For example: ServiceLocator.Get<IPowerProfileService>().ExportProfile(SelectedProfile, filePath);
+                    ProcessNamePattern = NewProcessPattern,
+                    Priority = ProcessPriority.Normal
+                };
+                
+                CurrentProfile.ProcessRules.Add(newRule);
+                SelectedRule = newRule;
+                NewProcessPattern = string.Empty;
+                
+                // Notify UI to refresh the rules collection
+                OnPropertyChanged(nameof(Rules));
+                
+                _notificationService.ShowSuccess($"Rule for '{newRule.ProcessNamePattern}' added");
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError($"Error adding rule: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Remove the selected rule
+        /// </summary>
+        private void RemoveRule()
+        {
+            try
+            {
+                if (_selectedRule != null)
+                {
+                    string pattern = _selectedRule.ProcessNamePattern;
+                    CurrentProfile.ProcessRules.Remove(_selectedRule);
+                    SelectedRule = null;
                     
-                    // For now, we'll just show a notification
-                    NotificationService.ShowSuccess($"Profile '{SelectedProfile.Name}' exported successfully to {filePath}");
+                    // Notify UI to refresh the rules collection
+                    OnPropertyChanged(nameof(Rules));
+                    
+                    _notificationService.ShowSuccess($"Rule for '{pattern}' removed");
                 }
             }
             catch (Exception ex)
             {
-                NotificationService.ShowError($"Error exporting profile: {ex.Message}");
+                _notificationService.ShowError($"Error removing rule: {ex.Message}");
             }
         }
         
         /// <summary>
-        /// Check if the selected profile can be exported
+        /// Move the selected rule up in the list
         /// </summary>
-        private bool CanExportProfile(object parameter)
+        private void MoveRuleUp()
         {
-            return SelectedProfile != null && !IsEditing;
-        }
-        
-        /// <summary>
-        /// Apply the selected power profile
-        /// </summary>
-        private void ApplyProfile(object parameter)
-        {
-            if (SelectedProfile == null) return;
-            
             try
             {
-                // This is where we would apply the power profile to the system
-                // For example: bool success = ServiceLocator.Get<IPowerProfileService>().ApplyProfile(SelectedProfile);
-                
-                // For now, we'll just show a notification
-                NotificationService.ShowSuccess($"Profile '{SelectedProfile.Name}' applied successfully");
+                if (_selectedRule != null)
+                {
+                    int index = CurrentProfile.ProcessRules.IndexOf(_selectedRule);
+                    
+                    if (index > 0)
+                    {
+                        CurrentProfile.ProcessRules.RemoveAt(index);
+                        CurrentProfile.ProcessRules.Insert(index - 1, _selectedRule);
+                        
+                        // Notify UI to refresh the rules collection
+                        OnPropertyChanged(nameof(Rules));
+                        
+                        _notificationService.ShowSuccess("Rule moved up");
+                    }
+                }
             }
             catch (Exception ex)
             {
-                NotificationService.ShowError($"Error applying profile: {ex.Message}");
+                _notificationService.ShowError($"Error moving rule: {ex.Message}");
             }
         }
         
         /// <summary>
-        /// Check if the selected profile can be applied
+        /// Move the selected rule down in the list
         /// </summary>
-        private bool CanApplyProfile(object parameter)
+        private void MoveRuleDown()
         {
-            return SelectedProfile != null && !IsEditing;
+            try
+            {
+                if (_selectedRule != null)
+                {
+                    int index = CurrentProfile.ProcessRules.IndexOf(_selectedRule);
+                    
+                    if (index < CurrentProfile.ProcessRules.Count - 1)
+                    {
+                        CurrentProfile.ProcessRules.RemoveAt(index);
+                        CurrentProfile.ProcessRules.Insert(index + 1, _selectedRule);
+                        
+                        // Notify UI to refresh the rules collection
+                        OnPropertyChanged(nameof(Rules));
+                        
+                        _notificationService.ShowSuccess("Rule moved down");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError($"Error moving rule: {ex.Message}");
+            }
         }
         
         /// <summary>
-        /// Update the edit fields based on the selected profile
+        /// Apply the current profile
         /// </summary>
-        private void UpdateEditFields()
+        private void ApplyProfile()
         {
-            if (SelectedProfile != null)
+            try
             {
-                ProfileName = SelectedProfile.Name;
-                ProfileDescription = SelectedProfile.Description;
+                int ruleCount = _powerProfileService.ApplyProfile(CurrentProfile);
+                _notificationService.ShowSuccess($"Profile applied: {ruleCount} rules affected processes");
             }
-            else
+            catch (Exception ex)
             {
-                ProfileName = string.Empty;
-                ProfileDescription = string.Empty;
+                _notificationService.ShowError($"Error applying profile: {ex.Message}");
             }
         }
         
         /// <summary>
-        /// Sanitize a file name by removing invalid characters
+        /// Determine if the profile can be saved
         /// </summary>
-        /// <param name="fileName">File name to sanitize</param>
-        /// <returns>Sanitized file name</returns>
-        private string SanitizeFileName(string fileName)
+        /// <returns>True if the profile can be saved</returns>
+        private bool CanSaveProfile()
         {
-            if (string.IsNullOrEmpty(fileName))
+            return !string.IsNullOrWhiteSpace(CurrentProfile.Name);
+        }
+        
+        /// <summary>
+        /// Determine if the profile can be exported
+        /// </summary>
+        /// <returns>True if the profile can be exported</returns>
+        private bool CanExportProfile()
+        {
+            return !string.IsNullOrWhiteSpace(CurrentProfile.Name);
+        }
+        
+        /// <summary>
+        /// Determine if a rule can be added
+        /// </summary>
+        /// <returns>True if a rule can be added</returns>
+        private bool CanAddRule()
+        {
+            return !string.IsNullOrWhiteSpace(NewProcessPattern);
+        }
+        
+        /// <summary>
+        /// Determine if the selected rule can be removed
+        /// </summary>
+        /// <returns>True if the selected rule can be removed</returns>
+        private bool CanRemoveRule()
+        {
+            return SelectedRule != null;
+        }
+        
+        /// <summary>
+        /// Determine if the selected rule can be moved up
+        /// </summary>
+        /// <returns>True if the selected rule can be moved up</returns>
+        private bool CanMoveRuleUp()
+        {
+            if (SelectedRule == null)
             {
-                return "profile";
+                return false;
             }
             
-            // Remove invalid file name characters
-            char[] invalidChars = Path.GetInvalidFileNameChars();
-            string result = fileName;
-            
-            foreach (char c in invalidChars)
+            int index = CurrentProfile.ProcessRules.IndexOf(SelectedRule);
+            return index > 0;
+        }
+        
+        /// <summary>
+        /// Determine if the selected rule can be moved down
+        /// </summary>
+        /// <returns>True if the selected rule can be moved down</returns>
+        private bool CanMoveRuleDown()
+        {
+            if (SelectedRule == null)
             {
-                result = result.Replace(c, '_');
+                return false;
             }
             
-            return result;
+            int index = CurrentProfile.ProcessRules.IndexOf(SelectedRule);
+            return index < CurrentProfile.ProcessRules.Count - 1;
+        }
+        
+        /// <summary>
+        /// Determine if the current profile can be applied
+        /// </summary>
+        /// <returns>True if the current profile can be applied</returns>
+        private bool CanApplyProfile()
+        {
+            return CurrentProfile.ProcessRules.Count > 0;
         }
     }
 }

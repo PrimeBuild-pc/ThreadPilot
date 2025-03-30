@@ -1,80 +1,46 @@
-using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using ThreadPilot.Services;
 
 namespace ThreadPilot.ViewModels
 {
     /// <summary>
-    /// Base class for all view models
+    /// Base class for all ViewModels in the application
     /// </summary>
     public abstract class ViewModelBase : INotifyPropertyChanged
     {
         /// <summary>
-        /// Event fired when a property value changes
+        /// Event raised when a property changes
         /// </summary>
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
         
         /// <summary>
-        /// Notification service instance
-        /// </summary>
-        protected INotificationService NotificationService => ServiceLocator.Get<INotificationService>();
-        
-        /// <summary>
-        /// File dialog service instance
-        /// </summary>
-        protected IFileDialogService FileDialogService => ServiceLocator.Get<IFileDialogService>();
-        
-        /// <summary>
-        /// Raise the PropertyChanged event
-        /// </summary>
-        /// <param name="propertyName">Name of the property that changed</param>
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-        
-        /// <summary>
-        /// Set a property value and raise the PropertyChanged event if the value changed
+        /// Set a property value and raise PropertyChanged if the value changes
         /// </summary>
         /// <typeparam name="T">Property type</typeparam>
-        /// <param name="storage">Reference to the backing field</param>
+        /// <param name="field">Reference to the backing field</param>
         /// <param name="value">New value</param>
-        /// <param name="propertyName">Name of the property</param>
-        /// <returns>True if the value changed</returns>
-        protected virtual bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null)
+        /// <param name="propertyName">Property name (set automatically by compiler)</param>
+        /// <returns>True if the property was changed</returns>
+        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = "")
         {
-            if (EqualityComparer<T>.Default.Equals(storage, value))
+            if (EqualityComparer<T>.Default.Equals(field, value))
             {
                 return false;
             }
             
-            storage = value;
+            field = value;
             OnPropertyChanged(propertyName);
-            
             return true;
         }
         
         /// <summary>
-        /// Set a property value, raise the PropertyChanged event if the value changed,
-        /// and execute an action if the value changed
+        /// Raise the PropertyChanged event for a property
         /// </summary>
-        /// <typeparam name="T">Property type</typeparam>
-        /// <param name="storage">Reference to the backing field</param>
-        /// <param name="value">New value</param>
-        /// <param name="action">Action to execute if the value changed</param>
-        /// <param name="propertyName">Name of the property</param>
-        /// <returns>True if the value changed</returns>
-        protected virtual bool SetProperty<T>(ref T storage, T value, Action action, [CallerMemberName] string propertyName = null)
+        /// <param name="propertyName">Name of the property that changed</param>
+        protected void OnPropertyChanged([CallerMemberName] string propertyName = "")
         {
-            if (SetProperty(ref storage, value, propertyName))
-            {
-                action?.Invoke();
-                return true;
-            }
-            
-            return false;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }

@@ -1,36 +1,32 @@
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Service for displaying notifications to the user
+    /// Interface for notification service
     /// </summary>
     public interface INotificationService
     {
         /// <summary>
-        /// Show a success notification
+        /// Show an information message
         /// </summary>
-        /// <param name="message">Message to display</param>
-        /// <param name="title">Notification title</param>
-        void ShowSuccess(string message, string title = "Success");
+        /// <param name="message">Message to show</param>
+        void ShowInfo(string message);
         
         /// <summary>
-        /// Show an error notification
+        /// Show a success message
         /// </summary>
-        /// <param name="message">Message to display</param>
-        /// <param name="title">Notification title</param>
-        void ShowError(string message, string title = "Error");
+        /// <param name="message">Message to show</param>
+        void ShowSuccess(string message);
         
         /// <summary>
-        /// Show an information notification
+        /// Show a warning message
         /// </summary>
-        /// <param name="message">Message to display</param>
-        /// <param name="title">Notification title</param>
-        void ShowInfo(string message, string title = "Information");
+        /// <param name="message">Message to show</param>
+        void ShowWarning(string message);
         
         /// <summary>
-        /// Show a warning notification
+        /// Show an error message
         /// </summary>
-        /// <param name="message">Message to display</param>
-        /// <param name="title">Notification title</param>
-        void ShowWarning(string message, string title = "Warning");
+        /// <param name="message">Message to show</param>
+        void ShowError(string message);
     }
 }

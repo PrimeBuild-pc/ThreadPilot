@@ -1,65 +1,81 @@
-using System.Collections.Generic;
-
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Represents a CPU core (logical processor)
+    /// CPU core information
     /// </summary>
     public class CpuCore
     {
         /// <summary>
-        /// Core/Thread index (zero-based)
+        /// Core index
         /// </summary>
         public int Index { get; set; }
         
         /// <summary>
-        /// True if this is a physical core, false if it's a logical core (hyperthreading/SMT)
+        /// Physical core number
         /// </summary>
-        public bool IsPhysicalCore { get; set; }
+        public int PhysicalCore { get; set; }
         
         /// <summary>
-        /// Physical core number this logical core belongs to
+        /// Whether this is a logical core (hyperthreading)
         /// </summary>
-        public int PhysicalCoreIndex { get; set; }
+        public bool IsLogicalCore { get; set; }
         
         /// <summary>
-        /// Current utilization percentage
+        /// Whether this is an efficiency core (E-core)
         /// </summary>
-        public int UtilizationPercentage { get; set; }
+        public bool IsEfficiencyCore { get; set; }
         
         /// <summary>
-        /// Current frequency in MHz
+        /// Current CPU usage percentage
         /// </summary>
-        public int CurrentFrequency { get; set; }
+        public double CpuUsage { get; set; }
         
         /// <summary>
-        /// Current temperature in Celsius (if available)
+        /// Base clock speed in MHz
         /// </summary>
-        public float? Temperature { get; set; }
+        public int BaseClockMHz { get; set; }
         
         /// <summary>
-        /// List of processes currently assigned to this core
+        /// Current clock speed in MHz
         /// </summary>
-        public List<int> AssignedProcessIds { get; set; } = new List<int>();
+        public int CurrentClockMHz { get; set; }
         
         /// <summary>
-        /// True if core parking is active for this core (if available)
+        /// Maximum clock speed in MHz
+        /// </summary>
+        public int MaxClockMHz { get; set; }
+        
+        /// <summary>
+        /// Core power usage in watts
+        /// </summary>
+        public double PowerUsageWatts { get; set; }
+        
+        /// <summary>
+        /// Core temperature in Celsius
+        /// </summary>
+        public double TemperatureCelsius { get; set; }
+        
+        /// <summary>
+        /// Whether the core is parked
         /// </summary>
         public bool IsParked { get; set; }
         
         /// <summary>
-        /// NUMA node this core belongs to
+        /// Gets the core type string
         /// </summary>
-        public int NumaNode { get; set; }
+        public string CoreType => IsEfficiencyCore ? "E-Core" : "P-Core";
         
         /// <summary>
-        /// User-friendly name for display
+        /// Gets the core description
         /// </summary>
-        public string DisplayName => $"Core {Index}";
-        
-        /// <summary>
-        /// Detailed label for display
-        /// </summary>
-        public string DetailedLabel => $"Core {Index} ({(IsPhysicalCore ? "Physical" : "Logical")} - {UtilizationPercentage}%)";
+        public string CoreDescription
+        {
+            get
+            {
+                string coreType = IsEfficiencyCore ? "E" : "P";
+                string logicalInfo = IsLogicalCore ? " (HT)" : "";
+                return $"Core {Index} ({coreType}-Core{logicalInfo})";
+            }
+        }
     }
 }

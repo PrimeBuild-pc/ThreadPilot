@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Input;
 using ThreadPilot.Commands;
 using ThreadPilot.Models;
@@ -12,43 +13,72 @@ namespace ThreadPilot.ViewModels
     /// </summary>
     public class ProcessesViewModel : ViewModelBase
     {
-        #region Private Fields
-        
-        private ObservableCollection<ProcessInfo> _processes;
-        private ProcessInfo _selectedProcess;
-        private string _searchFilter = string.Empty;
+        private readonly IProcessService _processService;
+        private readonly INotificationService _notificationService;
+        private ProcessInfo? _selectedProcess;
+        private string _filterText = string.Empty;
         private bool _showSystemProcesses = false;
-        private bool _isLoading = false;
         
-        #endregion
-        
-        #region Properties
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        public ProcessesViewModel()
+        {
+            _processService = ServiceLocator.Get<IProcessService>();
+            _notificationService = ServiceLocator.Get<INotificationService>();
+            
+            // Initialize commands
+            RefreshProcessesCommand = new RelayCommand(RefreshProcesses);
+            SetPriorityCommand = new RelayCommand<ProcessPriority>(SetPriority);
+            SetAffinityCommand = new RelayCommand<long>(SetAffinity);
+            
+            // Initial load of processes
+            RefreshProcesses();
+        }
         
         /// <summary>
         /// Collection of processes
         /// </summary>
-        public ObservableCollection<ProcessInfo> Processes
-        {
-            get => _processes;
-            set => SetProperty(ref _processes, value);
-        }
+        public ObservableCollection<ProcessInfo> Processes { get; } = new ObservableCollection<ProcessInfo>();
+        
+        /// <summary>
+        /// Collection of processes after filtering
+        /// </summary>
+        public ObservableCollection<ProcessInfo> FilteredProcesses { get; } = new ObservableCollection<ProcessInfo>();
         
         /// <summary>
         /// Currently selected process
         /// </summary>
-        public ProcessInfo SelectedProcess
+        public ProcessInfo? SelectedProcess
         {
             get => _selectedProcess;
-            set => SetProperty(ref _selectedProcess, value);
+            set
+            {
+                if (SetProperty(ref _selectedProcess, value))
+                {
+                    OnPropertyChanged(nameof(IsProcessSelected));
+                }
+            }
         }
         
         /// <summary>
-        /// Search filter for processes
+        /// Whether a process is currently selected
         /// </summary>
-        public string SearchFilter
+        public bool IsProcessSelected => _selectedProcess != null;
+        
+        /// <summary>
+        /// Text used to filter the process list
+        /// </summary>
+        public string FilterText
         {
-            get => _searchFilter;
-            set => SetProperty(ref _searchFilter, value, ApplyFilter);
+            get => _filterText;
+            set
+            {
+                if (SetProperty(ref _filterText, value))
+                {
+                    ApplyFilter();
+                }
+            }
         }
         
         /// <summary>
@@ -57,21 +87,14 @@ namespace ThreadPilot.ViewModels
         public bool ShowSystemProcesses
         {
             get => _showSystemProcesses;
-            set => SetProperty(ref _showSystemProcesses, value, ApplyFilter);
+            set
+            {
+                if (SetProperty(ref _showSystemProcesses, value))
+                {
+                    ApplyFilter();
+                }
+            }
         }
-        
-        /// <summary>
-        /// Whether the view model is loading data
-        /// </summary>
-        public bool IsLoading
-        {
-            get => _isLoading;
-            set => SetProperty(ref _isLoading, value);
-        }
-        
-        #endregion
-        
-        #region Commands
         
         /// <summary>
         /// Command to refresh the process list
@@ -81,180 +104,133 @@ namespace ThreadPilot.ViewModels
         /// <summary>
         /// Command to set process priority
         /// </summary>
-        public ICommand SetProcessPriorityCommand { get; }
+        public ICommand SetPriorityCommand { get; }
         
         /// <summary>
         /// Command to set process affinity
         /// </summary>
-        public ICommand SetProcessAffinityCommand { get; }
-        
-        /// <summary>
-        /// Command to terminate a process
-        /// </summary>
-        public ICommand TerminateProcessCommand { get; }
-        
-        #endregion
-        
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        public ProcessesViewModel()
-        {
-            // Initialize collections
-            Processes = new ObservableCollection<ProcessInfo>();
-            
-            // Initialize commands
-            RefreshProcessesCommand = new RelayCommand(RefreshProcesses);
-            SetProcessPriorityCommand = new RelayCommand<ProcessPriority>(SetProcessPriority, CanSetProcessPriority);
-            SetProcessAffinityCommand = new RelayCommand(SetProcessAffinity, CanSetProcessAffinity);
-            TerminateProcessCommand = new RelayCommand(TerminateProcess, CanTerminateProcess);
-            
-            // Load initial data
-            LoadProcesses();
-        }
-        
-        /// <summary>
-        /// Load process data
-        /// </summary>
-        private void LoadProcesses()
-        {
-            IsLoading = true;
-            
-            try
-            {
-                // This is where we would retrieve processes from the process service
-                // For now, we'll create some sample data
-                
-                Processes.Clear();
-                
-                // In the future, this will be retrieved from IProcessService 
-                // For example: Processes = new ObservableCollection<ProcessInfo>(ServiceLocator.Get<IProcessService>().GetAllProcesses());
-                
-                // Set loading to false
-                IsLoading = false;
-            }
-            catch (Exception ex)
-            {
-                IsLoading = false;
-                NotificationService.ShowError($"Error loading processes: {ex.Message}");
-            }
-        }
+        public ICommand SetAffinityCommand { get; }
         
         /// <summary>
         /// Refresh the process list
         /// </summary>
-        public void RefreshProcesses(object parameter = null)
+        public void RefreshProcesses()
         {
-            LoadProcesses();
+            try
+            {
+                // Get all processes
+                var processes = _processService.GetProcesses();
+                
+                // Update the collection
+                Processes.Clear();
+                foreach (var process in processes)
+                {
+                    Processes.Add(process);
+                }
+                
+                // Apply filter
+                ApplyFilter();
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError($"Error refreshing processes: {ex.Message}");
+            }
         }
         
         /// <summary>
-        /// Apply the filter to the process list
+        /// Apply filter to the process list
         /// </summary>
         private void ApplyFilter()
         {
-            RefreshProcesses();
+            try
+            {
+                // Filter processes
+                var filtered = Processes.AsEnumerable();
+                
+                // Apply text filter if specified
+                if (!string.IsNullOrWhiteSpace(_filterText))
+                {
+                    filtered = filtered.Where(p =>
+                        p.Name.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
+                        p.Description.Contains(_filterText, StringComparison.OrdinalIgnoreCase));
+                }
+                
+                // Filter system processes if requested
+                if (!_showSystemProcesses)
+                {
+                    filtered = filtered.Where(p => !p.IsSystemProcess);
+                }
+                
+                // Sort by CPU usage
+                filtered = filtered.OrderByDescending(p => p.CpuUsage);
+                
+                // Update the filtered collection
+                FilteredProcesses.Clear();
+                foreach (var process in filtered)
+                {
+                    FilteredProcesses.Add(process);
+                }
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError($"Error applying filter: {ex.Message}");
+            }
         }
         
         /// <summary>
         /// Set the priority of the selected process
         /// </summary>
-        private void SetProcessPriority(ProcessPriority priority)
+        /// <param name="priority">New priority</param>
+        private void SetPriority(ProcessPriority priority)
         {
-            if (SelectedProcess == null) return;
+            if (_selectedProcess == null)
+            {
+                return;
+            }
             
             try
             {
-                // This is where we would set process priority using the process service
-                // For example: bool success = ServiceLocator.Get<IProcessService>().SetProcessPriority(SelectedProcess.Id, priority);
-                
-                // For now, we'll just update the model directly
-                SelectedProcess.Priority = priority;
-                
-                // Show notification
-                NotificationService.ShowSuccess($"Priority changed to {priority} for process {SelectedProcess.Name}");
+                if (_processService.SetProcessPriority(_selectedProcess.Id, priority))
+                {
+                    _notificationService.ShowSuccess($"Priority for {_selectedProcess.Name} set to {priority}");
+                    
+                    // Update the process info
+                    _selectedProcess.Priority = priority;
+                    OnPropertyChanged(nameof(SelectedProcess));
+                }
             }
             catch (Exception ex)
             {
-                NotificationService.ShowError($"Error setting process priority: {ex.Message}");
+                _notificationService.ShowError($"Error setting priority: {ex.Message}");
             }
-        }
-        
-        /// <summary>
-        /// Check if the priority of the selected process can be set
-        /// </summary>
-        private bool CanSetProcessPriority(ProcessPriority priority)
-        {
-            return SelectedProcess != null && SelectedProcess.CanModify;
         }
         
         /// <summary>
         /// Set the affinity of the selected process
         /// </summary>
-        private void SetProcessAffinity(object parameter)
+        /// <param name="affinityMask">New affinity mask</param>
+        private void SetAffinity(long affinityMask)
         {
-            if (SelectedProcess == null) return;
+            if (_selectedProcess == null)
+            {
+                return;
+            }
             
             try
             {
-                // This is where we would show a dialog to set process affinity
-                // For now, we'll just show a notification
-                NotificationService.ShowInfo("Process affinity dialog will be implemented in a future update", "Coming Soon");
-            }
-            catch (Exception ex)
-            {
-                NotificationService.ShowError($"Error setting process affinity: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Check if the affinity of the selected process can be set
-        /// </summary>
-        private bool CanSetProcessAffinity(object parameter)
-        {
-            return SelectedProcess != null && SelectedProcess.CanModify;
-        }
-        
-        /// <summary>
-        /// Terminate the selected process
-        /// </summary>
-        private void TerminateProcess(object parameter)
-        {
-            if (SelectedProcess == null) return;
-            
-            try
-            {
-                // Show confirmation dialog
-                var result = System.Windows.MessageBox.Show(
-                    $"Are you sure you want to terminate the process {SelectedProcess.Name}?",
-                    "Confirm Process Termination",
-                    System.Windows.MessageBoxButton.YesNo,
-                    System.Windows.MessageBoxImage.Warning);
-                
-                if (result == System.Windows.MessageBoxResult.Yes)
+                if (_processService.SetProcessAffinity(_selectedProcess.Id, affinityMask))
                 {
-                    // This is where we would terminate the process using the process service
-                    // For example: bool success = ServiceLocator.Get<IProcessService>().TerminateProcess(SelectedProcess.Id);
+                    _notificationService.ShowSuccess($"Affinity for {_selectedProcess.Name} updated");
                     
-                    // For now, we'll just show a notification
-                    NotificationService.ShowSuccess($"Process {SelectedProcess.Name} terminated successfully");
-                    
-                    // Refresh the process list
-                    RefreshProcesses();
+                    // Update the process info
+                    _selectedProcess.AffinityMask = affinityMask;
+                    OnPropertyChanged(nameof(SelectedProcess));
                 }
             }
             catch (Exception ex)
             {
-                NotificationService.ShowError($"Error terminating process: {ex.Message}");
+                _notificationService.ShowError($"Error setting affinity: {ex.Message}");
             }
-        }
-        
-        /// <summary>
-        /// Check if the selected process can be terminated
-        /// </summary>
-        private bool CanTerminateProcess(object parameter)
-        {
-            return SelectedProcess != null && SelectedProcess.CanModify && !SelectedProcess.IsSystemProcess;
         }
     }
 }

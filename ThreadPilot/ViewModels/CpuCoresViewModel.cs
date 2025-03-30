@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Input;
 using ThreadPilot.Commands;
 using ThreadPilot.Models;
@@ -12,189 +13,228 @@ namespace ThreadPilot.ViewModels
     /// </summary>
     public class CpuCoresViewModel : ViewModelBase
     {
-        #region Private Fields
-        
-        private ObservableCollection<CpuCore> _cores;
-        private CpuCore _selectedCore;
-        private bool _isLoading = false;
-        private string _cpuName;
-        private int _totalCores;
-        private int _totalThreads;
-        
-        #endregion
-        
-        #region Properties
-        
-        /// <summary>
-        /// Collection of CPU cores
-        /// </summary>
-        public ObservableCollection<CpuCore> Cores
-        {
-            get => _cores;
-            set => SetProperty(ref _cores, value);
-        }
-        
-        /// <summary>
-        /// Currently selected CPU core
-        /// </summary>
-        public CpuCore SelectedCore
-        {
-            get => _selectedCore;
-            set => SetProperty(ref _selectedCore, value);
-        }
-        
-        /// <summary>
-        /// Whether the view model is loading data
-        /// </summary>
-        public bool IsLoading
-        {
-            get => _isLoading;
-            set => SetProperty(ref _isLoading, value);
-        }
-        
-        /// <summary>
-        /// CPU name
-        /// </summary>
-        public string CpuName
-        {
-            get => _cpuName;
-            set => SetProperty(ref _cpuName, value);
-        }
-        
-        /// <summary>
-        /// Total number of physical cores
-        /// </summary>
-        public int TotalCores
-        {
-            get => _totalCores;
-            set => SetProperty(ref _totalCores, value);
-        }
-        
-        /// <summary>
-        /// Total number of logical processors (threads)
-        /// </summary>
-        public int TotalThreads
-        {
-            get => _totalThreads;
-            set => SetProperty(ref _totalThreads, value);
-        }
-        
-        #endregion
-        
-        #region Commands
-        
-        /// <summary>
-        /// Command to refresh core data
-        /// </summary>
-        public ICommand RefreshCoresCommand { get; }
-        
-        /// <summary>
-        /// Command to optimize core settings
-        /// </summary>
-        public ICommand OptimizeCoresCommand { get; }
-        
-        /// <summary>
-        /// Command to reset core settings to default
-        /// </summary>
-        public ICommand ResetCoresCommand { get; }
-        
-        #endregion
+        private readonly ISystemInfoService _systemInfoService;
+        private readonly INotificationService _notificationService;
+        private CpuCore? _selectedCore;
+        private bool _showEfficiencyCores = true;
+        private bool _showPerformanceCores = true;
         
         /// <summary>
         /// Constructor
         /// </summary>
         public CpuCoresViewModel()
         {
-            // Initialize collections
-            Cores = new ObservableCollection<CpuCore>();
+            _systemInfoService = ServiceLocator.Get<ISystemInfoService>();
+            _notificationService = ServiceLocator.Get<INotificationService>();
             
             // Initialize commands
-            RefreshCoresCommand = new RelayCommand(RefreshCores);
-            OptimizeCoresCommand = new RelayCommand(OptimizeCores);
-            ResetCoresCommand = new RelayCommand(ResetCores);
+            UpdateCoresCommand = new RelayCommand(UpdateCores);
+            ResetAllCoresCommand = new RelayCommand(ResetAllCores);
+            OptimizeCommand = new RelayCommand(OptimizeCores);
             
-            // Load initial data
-            LoadCores();
+            // Load cores
+            UpdateCores();
         }
         
         /// <summary>
-        /// Load CPU core data
+        /// Collection of CPU cores
         /// </summary>
-        private void LoadCores()
+        public ObservableCollection<CpuCore> Cores { get; } = new ObservableCollection<CpuCore>();
+        
+        /// <summary>
+        /// Collection of CPU cores after filtering
+        /// </summary>
+        public ObservableCollection<CpuCore> FilteredCores { get; } = new ObservableCollection<CpuCore>();
+        
+        /// <summary>
+        /// Selected CPU core
+        /// </summary>
+        public CpuCore? SelectedCore
         {
-            IsLoading = true;
-            
+            get => _selectedCore;
+            set
+            {
+                if (SetProperty(ref _selectedCore, value))
+                {
+                    OnPropertyChanged(nameof(IsCoreSelected));
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Whether a core is selected
+        /// </summary>
+        public bool IsCoreSelected => _selectedCore != null;
+        
+        /// <summary>
+        /// Whether to show efficiency cores
+        /// </summary>
+        public bool ShowEfficiencyCores
+        {
+            get => _showEfficiencyCores;
+            set
+            {
+                if (SetProperty(ref _showEfficiencyCores, value))
+                {
+                    ApplyFilter();
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Whether to show performance cores
+        /// </summary>
+        public bool ShowPerformanceCores
+        {
+            get => _showPerformanceCores;
+            set
+            {
+                if (SetProperty(ref _showPerformanceCores, value))
+                {
+                    ApplyFilter();
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Command to update cores
+        /// </summary>
+        public ICommand UpdateCoresCommand { get; }
+        
+        /// <summary>
+        /// Command to reset all cores
+        /// </summary>
+        public ICommand ResetAllCoresCommand { get; }
+        
+        /// <summary>
+        /// Command to optimize cores
+        /// </summary>
+        public ICommand OptimizeCommand { get; }
+        
+        /// <summary>
+        /// Update the CPU cores
+        /// </summary>
+        public void UpdateCores()
+        {
             try
             {
-                // This is where we would retrieve core information from the system info service
-                // For now, we'll create some sample data for demonstration
-                
-                // Clear existing cores
+                var cores = _systemInfoService.GetCpuCores();
+                UpdateCores(cores);
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError($"Error updating CPU cores: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Update the CPU cores with the provided collection
+        /// </summary>
+        /// <param name="cores">Collection of CPU cores</param>
+        public void UpdateCores(System.Collections.Generic.IEnumerable<CpuCore> cores)
+        {
+            try
+            {
+                // Update the collection
                 Cores.Clear();
+                foreach (var core in cores)
+                {
+                    Cores.Add(core);
+                }
                 
-                // Set CPU information
-                CpuName = "Intel Core i7-10700K";
-                TotalCores = 8;
-                TotalThreads = 16;
-                
-                // In the future, this will be retrieved from ISystemInfoService
-                // For example: 
-                // var cpuInfo = ServiceLocator.Get<ISystemInfoService>().GetCpuInfo();
-                // CpuName = cpuInfo.Name;
-                // TotalCores = cpuInfo.PhysicalCores;
-                // TotalThreads = cpuInfo.LogicalProcessors;
-                // Cores = new ObservableCollection<CpuCore>(cpuInfo.Cores);
-                
-                IsLoading = false;
+                // Apply filter
+                ApplyFilter();
             }
             catch (Exception ex)
             {
-                IsLoading = false;
-                NotificationService.ShowError($"Error loading CPU core information: {ex.Message}");
+                _notificationService.ShowError($"Error updating CPU cores: {ex.Message}");
             }
         }
         
         /// <summary>
-        /// Refresh the core data
+        /// Apply filter to the cores list
         /// </summary>
-        public void RefreshCores(object parameter = null)
-        {
-            LoadCores();
-        }
-        
-        /// <summary>
-        /// Optimize core settings
-        /// </summary>
-        private void OptimizeCores(object parameter)
+        private void ApplyFilter()
         {
             try
             {
-                // This is where we would apply optimized core settings
-                // For now, we'll just show a notification
+                // Filter cores
+                var filtered = Cores.AsEnumerable();
                 
-                NotificationService.ShowInfo("Core optimization will be implemented in a future update", "Coming Soon");
+                // Filter by core type
+                if (!_showEfficiencyCores)
+                {
+                    filtered = filtered.Where(c => !c.IsEfficiencyCore);
+                }
+                
+                if (!_showPerformanceCores)
+                {
+                    filtered = filtered.Where(c => c.IsEfficiencyCore);
+                }
+                
+                // Sort by index
+                filtered = filtered.OrderBy(c => c.Index);
+                
+                // Update the filtered collection
+                FilteredCores.Clear();
+                foreach (var core in filtered)
+                {
+                    FilteredCores.Add(core);
+                }
             }
             catch (Exception ex)
             {
-                NotificationService.ShowError($"Error optimizing cores: {ex.Message}");
+                _notificationService.ShowError($"Error applying filter: {ex.Message}");
             }
         }
         
         /// <summary>
-        /// Reset core settings to default
+        /// Reset all CPU cores to default settings
         /// </summary>
-        private void ResetCores(object parameter)
+        private void ResetAllCores()
         {
             try
             {
-                // This is where we would reset core settings to default
-                // For now, we'll just show a notification
+                var result = _systemInfoService.ResetCpuCores();
                 
-                NotificationService.ShowInfo("Core reset will be implemented in a future update", "Coming Soon");
+                if (result)
+                {
+                    _notificationService.ShowSuccess("All CPU cores reset to default settings");
+                    UpdateCores();
+                }
+                else
+                {
+                    _notificationService.ShowError("Failed to reset CPU cores");
+                }
             }
             catch (Exception ex)
             {
-                NotificationService.ShowError($"Error resetting cores: {ex.Message}");
+                _notificationService.ShowError($"Error resetting CPU cores: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Optimize the CPU cores
+        /// </summary>
+        private void OptimizeCores()
+        {
+            try
+            {
+                var result = _systemInfoService.OptimizeCpuCores();
+                
+                if (result)
+                {
+                    _notificationService.ShowSuccess("CPU cores optimized for best performance");
+                    UpdateCores();
+                }
+                else
+                {
+                    _notificationService.ShowError("Failed to optimize CPU cores");
+                }
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError($"Error optimizing CPU cores: {ex.Message}");
             }
         }
     }

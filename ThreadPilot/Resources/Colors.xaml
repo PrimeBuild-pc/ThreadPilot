@@ -1,83 +1,74 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     
-    <!-- Light Theme Colors -->
-    <Color x:Key="LightBackgroundColor">#F9F9F9</Color>
-    <Color x:Key="LightSurfaceColor">#FFFFFF</Color>
-    <Color x:Key="LightPrimaryColor">#0078D7</Color>
-    <Color x:Key="LightSecondaryColor">#2D7D9A</Color>
-    <Color x:Key="LightAccentColor">#6CCE21</Color>
-    <Color x:Key="LightTextPrimaryColor">#212121</Color>
-    <Color x:Key="LightTextSecondaryColor">#666666</Color>
-    <Color x:Key="LightBorderColor">#DDDDDD</Color>
+    <!-- Primary Colors -->
+    <Color x:Key="PrimaryColor">#1E88E5</Color>
+    <Color x:Key="PrimaryDarkColor">#1565C0</Color>
+    <Color x:Key="PrimaryLightColor">#64B5F6</Color>
     
-    <!-- Dark Theme Colors -->
-    <Color x:Key="DarkBackgroundColor">#202020</Color>
-    <Color x:Key="DarkSurfaceColor">#2D2D2D</Color>
-    <Color x:Key="DarkPrimaryColor">#209CEE</Color>
-    <Color x:Key="DarkSecondaryColor">#3B94B8</Color>
-    <Color x:Key="DarkAccentColor">#78D237</Color>
-    <Color x:Key="DarkTextPrimaryColor">#EFEFEF</Color>
-    <Color x:Key="DarkTextSecondaryColor">#BBBBBB</Color>
-    <Color x:Key="DarkBorderColor">#444444</Color>
+    <!-- Accent Colors -->
+    <Color x:Key="AccentColor">#FF4081</Color>
+    <Color x:Key="AccentDarkColor">#C2185B</Color>
+    <Color x:Key="AccentLightColor">#F48FB1</Color>
     
-    <!-- Status Colors (same for both themes) -->
+    <!-- Background Colors -->
+    <Color x:Key="WindowBackgroundColor">#F5F5F5</Color>
+    <Color x:Key="CardBackgroundColor">#FFFFFF</Color>
+    <Color x:Key="ToolbarBackgroundColor">#EEEEEE</Color>
+    
+    <!-- Text Colors -->
+    <Color x:Key="PrimaryTextColor">#212121</Color>
+    <Color x:Key="SecondaryTextColor">#757575</Color>
+    <Color x:Key="DisabledTextColor">#9E9E9E</Color>
+    <Color x:Key="InverseTextColor">#FFFFFF</Color>
+    
+    <!-- Status Colors -->
     <Color x:Key="SuccessColor">#4CAF50</Color>
-    <Color x:Key="WarningColor">#FF9800</Color>
+    <Color x:Key="WarningColor">#FFC107</Color>
     <Color x:Key="ErrorColor">#F44336</Color>
     <Color x:Key="InfoColor">#2196F3</Color>
     
-    <!-- Process Priority Colors -->
-    <Color x:Key="IdleColor">#607D8B</Color>
-    <Color x:Key="BelowNormalColor">#8BC34A</Color>
-    <Color x:Key="NormalColor">#03A9F4</Color>
-    <Color x:Key="AboveNormalColor">#FF9800</Color>
-    <Color x:Key="HighColor">#FF5722</Color>
-    <Color x:Key="RealtimeColor">#F44336</Color>
+    <!-- Performance Monitoring Colors -->
+    <Color x:Key="CpuColor">#3F51B5</Color>
+    <Color x:Key="MemoryColor">#009688</Color>
+    <Color x:Key="DiskColor">#FF9800</Color>
+    <Color x:Key="NetworkColor">#673AB7</Color>
+    <Color x:Key="GpuColor">#8BC34A</Color>
     
-    <!-- Brushes -->
+    <!-- Core Type Colors -->
+    <Color x:Key="PerformanceCoreColor">#F44336</Color>
+    <Color x:Key="EfficiencyCoreColor">#4CAF50</Color>
     
-    <!-- Light Theme Brushes -->
-    <SolidColorBrush x:Key="LightBackgroundBrush" Color="{StaticResource LightBackgroundColor}" />
-    <SolidColorBrush x:Key="LightSurfaceBrush" Color="{StaticResource LightSurfaceColor}" />
-    <SolidColorBrush x:Key="LightPrimaryBrush" Color="{StaticResource LightPrimaryColor}" />
-    <SolidColorBrush x:Key="LightSecondaryBrush" Color="{StaticResource LightSecondaryColor}" />
-    <SolidColorBrush x:Key="LightAccentBrush" Color="{StaticResource LightAccentColor}" />
-    <SolidColorBrush x:Key="LightTextPrimaryBrush" Color="{StaticResource LightTextPrimaryColor}" />
-    <SolidColorBrush x:Key="LightTextSecondaryBrush" Color="{StaticResource LightTextSecondaryColor}" />
-    <SolidColorBrush x:Key="LightBorderBrush" Color="{StaticResource LightBorderColor}" />
+    <!-- Solid Color Brushes -->
+    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}"/>
+    <SolidColorBrush x:Key="PrimaryDarkBrush" Color="{StaticResource PrimaryDarkColor}"/>
+    <SolidColorBrush x:Key="PrimaryLightBrush" Color="{StaticResource PrimaryLightColor}"/>
     
-    <!-- Dark Theme Brushes -->
-    <SolidColorBrush x:Key="DarkBackgroundBrush" Color="{StaticResource DarkBackgroundColor}" />
-    <SolidColorBrush x:Key="DarkSurfaceBrush" Color="{StaticResource DarkSurfaceColor}" />
-    <SolidColorBrush x:Key="DarkPrimaryBrush" Color="{StaticResource DarkPrimaryColor}" />
-    <SolidColorBrush x:Key="DarkSecondaryBrush" Color="{StaticResource DarkSecondaryColor}" />
-    <SolidColorBrush x:Key="DarkAccentBrush" Color="{StaticResource DarkAccentColor}" />
-    <SolidColorBrush x:Key="DarkTextPrimaryBrush" Color="{StaticResource DarkTextPrimaryColor}" />
-    <SolidColorBrush x:Key="DarkTextSecondaryBrush" Color="{StaticResource DarkTextSecondaryColor}" />
-    <SolidColorBrush x:Key="DarkBorderBrush" Color="{StaticResource DarkBorderColor}" />
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
+    <SolidColorBrush x:Key="AccentDarkBrush" Color="{StaticResource AccentDarkColor}"/>
+    <SolidColorBrush x:Key="AccentLightBrush" Color="{StaticResource AccentLightColor}"/>
     
-    <!-- Status Brushes -->
-    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
-    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
-    <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}" />
-    <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource InfoColor}" />
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="{StaticResource WindowBackgroundColor}"/>
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource CardBackgroundColor}"/>
+    <SolidColorBrush x:Key="ToolbarBackgroundBrush" Color="{StaticResource ToolbarBackgroundColor}"/>
     
-    <!-- Process Priority Brushes -->
-    <SolidColorBrush x:Key="IdleBrush" Color="{StaticResource IdleColor}" />
-    <SolidColorBrush x:Key="BelowNormalBrush" Color="{StaticResource BelowNormalColor}" />
-    <SolidColorBrush x:Key="NormalBrush" Color="{StaticResource NormalColor}" />
-    <SolidColorBrush x:Key="AboveNormalBrush" Color="{StaticResource AboveNormalColor}" />
-    <SolidColorBrush x:Key="HighBrush" Color="{StaticResource HighColor}" />
-    <SolidColorBrush x:Key="RealtimeBrush" Color="{StaticResource RealtimeColor}" />
+    <SolidColorBrush x:Key="PrimaryTextBrush" Color="{StaticResource PrimaryTextColor}"/>
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="{StaticResource SecondaryTextColor}"/>
+    <SolidColorBrush x:Key="DisabledTextBrush" Color="{StaticResource DisabledTextColor}"/>
+    <SolidColorBrush x:Key="InverseTextBrush" Color="{StaticResource InverseTextColor}"/>
     
-    <!-- Default Theme Resources -->
-    <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource LightBackgroundColor}" />
-    <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource LightSurfaceColor}" />
-    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource LightPrimaryColor}" />
-    <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource LightSecondaryColor}" />
-    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource LightAccentColor}" />
-    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource LightTextPrimaryColor}" />
-    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource LightTextSecondaryColor}" />
-    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource LightBorderColor}" />
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}"/>
+    <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}"/>
+    <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource InfoColor}"/>
+    
+    <SolidColorBrush x:Key="CpuBrush" Color="{StaticResource CpuColor}"/>
+    <SolidColorBrush x:Key="MemoryBrush" Color="{StaticResource MemoryColor}"/>
+    <SolidColorBrush x:Key="DiskBrush" Color="{StaticResource DiskColor}"/>
+    <SolidColorBrush x:Key="NetworkBrush" Color="{StaticResource NetworkColor}"/>
+    <SolidColorBrush x:Key="GpuBrush" Color="{StaticResource GpuColor}"/>
+    
+    <SolidColorBrush x:Key="PerformanceCoreBrush" Color="{StaticResource PerformanceCoreColor}"/>
+    <SolidColorBrush x:Key="EfficiencyCoreBrush" Color="{StaticResource EfficiencyCoreColor}"/>
+    
 </ResourceDictionary>

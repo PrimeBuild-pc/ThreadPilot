@@ -3,48 +3,60 @@ using System.Windows;
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Default implementation of the notification service
+    /// Implementation of notification service
     /// </summary>
     public class NotificationService : INotificationService
     {
         /// <summary>
-        /// Show a success notification
+        /// Show an information message
         /// </summary>
-        /// <param name="message">Message to display</param>
-        /// <param name="title">Notification title</param>
-        public void ShowSuccess(string message, string title = "Success")
+        /// <param name="message">Message to show</param>
+        public void ShowInfo(string message)
         {
-            MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(
+                message,
+                "Information",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
         }
         
         /// <summary>
-        /// Show an error notification
+        /// Show a success message
         /// </summary>
-        /// <param name="message">Message to display</param>
-        /// <param name="title">Notification title</param>
-        public void ShowError(string message, string title = "Error")
+        /// <param name="message">Message to show</param>
+        public void ShowSuccess(string message)
         {
-            MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(
+                message,
+                "Success",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
         }
         
         /// <summary>
-        /// Show an information notification
+        /// Show a warning message
         /// </summary>
-        /// <param name="message">Message to display</param>
-        /// <param name="title">Notification title</param>
-        public void ShowInfo(string message, string title = "Information")
+        /// <param name="message">Message to show</param>
+        public void ShowWarning(string message)
         {
-            MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(
+                message,
+                "Warning",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
         }
         
         /// <summary>
-        /// Show a warning notification
+        /// Show an error message
         /// </summary>
-        /// <param name="message">Message to display</param>
-        /// <param name="title">Notification title</param>
-        public void ShowWarning(string message, string title = "Warning")
+        /// <param name="message">Message to show</param>
+        public void ShowError(string message)
         {
-            MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(
+                message,
+                "Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
     }
 }

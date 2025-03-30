@@ -1,26 +1,33 @@
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Service for file open/save dialogs
+    /// Interface for file dialog service
     /// </summary>
     public interface IFileDialogService
     {
         /// <summary>
-        /// Opens a file dialog to select a file
+        /// Show an open file dialog
         /// </summary>
         /// <param name="title">Dialog title</param>
         /// <param name="filter">File filter</param>
-        /// <returns>The selected file path or null if canceled</returns>
-        string OpenFile(string title, string filter);
-
+        /// <param name="defaultExtension">Default file extension</param>
+        /// <returns>Selected file path or null if cancelled</returns>
+        string? ShowOpenFileDialog(string title, string filter, string defaultExtension);
+        
         /// <summary>
-        /// Opens a file dialog to save a file
+        /// Show a save file dialog
         /// </summary>
         /// <param name="title">Dialog title</param>
         /// <param name="filter">File filter</param>
-        /// <param name="initialDirectory">Initial directory to show</param>
         /// <param name="defaultFileName">Default file name</param>
-        /// <returns>The selected file path or null if canceled</returns>
-        string SaveFile(string title, string filter, string initialDirectory = null, string defaultFileName = null);
+        /// <returns>Selected file path or null if cancelled</returns>
+        string? ShowSaveFileDialog(string title, string filter, string defaultFileName);
+        
+        /// <summary>
+        /// Show a folder browser dialog
+        /// </summary>
+        /// <param name="title">Dialog title</param>
+        /// <returns>Selected folder path or null if cancelled</returns>
+        string? ShowFolderBrowserDialog(string title);
     }
 }

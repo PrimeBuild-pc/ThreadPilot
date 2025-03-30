@@ -1,7 +1,7 @@
 using System;
-using System.Windows;
+using System.Collections.ObjectModel;
+using System.Timers;
 using System.Windows.Input;
-using System.Windows.Media;
 using ThreadPilot.Commands;
 using ThreadPilot.Models;
 using ThreadPilot.Services;
@@ -13,34 +13,72 @@ namespace ThreadPilot.ViewModels
     /// </summary>
     public class MainViewModel : ViewModelBase
     {
-        #region Private Fields
+        private readonly ISystemInfoService _systemInfoService;
+        private readonly INotificationService _notificationService;
+        private readonly IFileDialogService _fileDialogService;
+        private readonly IPowerProfileService _powerProfileService;
         
-        private int _selectedTabIndex;
-        private string _statusMessage;
-        private Brush _statusColor;
-        private int _cpuUsage;
-        private int _memoryUsage;
-        private string _systemInfo;
-        private ProcessesViewModel _processesViewModel;
-        private CpuCoresViewModel _cpuCoresViewModel;
-        private ProfileEditorViewModel _profileEditorViewModel;
-        private bool _isBackgroundMode = false;
-        
-        #endregion
-        
-        #region Properties
+        private Timer _refreshTimer;
+        private string _statusMessage = "Ready";
+        private SystemInfo _systemInfo;
+        private PowerProfile? _selectedPowerProfile;
         
         /// <summary>
-        /// Current selected tab index
+        /// Constructor
         /// </summary>
-        public int SelectedTabIndex
+        public MainViewModel()
         {
-            get => _selectedTabIndex;
-            set => SetProperty(ref _selectedTabIndex, value);
+            // Get services from service locator
+            _systemInfoService = ServiceLocator.Get<ISystemInfoService>();
+            _notificationService = ServiceLocator.Get<INotificationService>();
+            _fileDialogService = ServiceLocator.Get<IFileDialogService>();
+            _powerProfileService = ServiceLocator.Get<IPowerProfileService>();
+            
+            // Initialize child view models
+            ProcessesViewModel = new ProcessesViewModel();
+            CpuCoresViewModel = new CpuCoresViewModel();
+            ProfileEditorViewModel = new ProfileEditorViewModel();
+            
+            // Initialize commands
+            RefreshDataCommand = new RelayCommand(RefreshData);
+            OpenSettingsCommand = new RelayCommand(OpenSettings);
+            ImportProfileCommand = new RelayCommand(ImportProfile);
+            CreateProfileCommand = new RelayCommand(CreateProfile);
+            ApplyProfileCommand = new RelayCommand<PowerProfile>(ApplyProfile);
+            EditProfileCommand = new RelayCommand<PowerProfile>(EditProfile);
+            
+            // Initialize system info
+            _systemInfo = _systemInfoService.GetSystemInfo();
+            
+            // Initialize power profiles
+            LoadPowerProfiles();
+            
+            // Set up refresh timer (refresh every 2 seconds)
+            _refreshTimer = new Timer(2000);
+            _refreshTimer.Elapsed += (s, e) => RefreshData();
+            _refreshTimer.Start();
+            
+            // Set initial status
+            StatusMessage = "Application started";
         }
         
         /// <summary>
-        /// Status message shown in the status bar
+        /// Processes view model
+        /// </summary>
+        public ProcessesViewModel ProcessesViewModel { get; }
+        
+        /// <summary>
+        /// CPU cores view model
+        /// </summary>
+        public CpuCoresViewModel CpuCoresViewModel { get; }
+        
+        /// <summary>
+        /// Profile editor view model
+        /// </summary>
+        public ProfileEditorViewModel ProfileEditorViewModel { get; }
+        
+        /// <summary>
+        /// Status message displayed in status bar
         /// </summary>
         public string StatusMessage
         {
@@ -49,229 +87,250 @@ namespace ThreadPilot.ViewModels
         }
         
         /// <summary>
-        /// Status bar message color
+        /// System information
         /// </summary>
-        public Brush StatusColor
-        {
-            get => _statusColor;
-            set => SetProperty(ref _statusColor, value);
-        }
-        
-        /// <summary>
-        /// Current CPU usage percentage
-        /// </summary>
-        public int CpuUsage
-        {
-            get => _cpuUsage;
-            set => SetProperty(ref _cpuUsage, value);
-        }
-        
-        /// <summary>
-        /// Current memory usage percentage
-        /// </summary>
-        public int MemoryUsage
-        {
-            get => _memoryUsage;
-            set => SetProperty(ref _memoryUsage, value);
-        }
-        
-        /// <summary>
-        /// Basic system information displayed in the status bar
-        /// </summary>
-        public string SystemInfo
+        public SystemInfo SystemInfo
         {
             get => _systemInfo;
-            set => SetProperty(ref _systemInfo, value);
+            private set => SetProperty(ref _systemInfo, value);
         }
         
         /// <summary>
-        /// Whether the application is running in background mode
+        /// Power profiles collection
         /// </summary>
-        public bool IsBackgroundMode
+        public ObservableCollection<PowerProfile> PowerProfiles { get; } = new ObservableCollection<PowerProfile>();
+        
+        /// <summary>
+        /// Selected power profile
+        /// </summary>
+        public PowerProfile? SelectedPowerProfile
         {
-            get => _isBackgroundMode;
-            set => SetProperty(ref _isBackgroundMode, value);
+            get => _selectedPowerProfile;
+            set => SetProperty(ref _selectedPowerProfile, value);
         }
         
         /// <summary>
-        /// View model for the processes view
+        /// Refresh data command
         /// </summary>
-        public ProcessesViewModel ProcessesViewModel
+        public ICommand RefreshDataCommand { get; }
+        
+        /// <summary>
+        /// Open settings command
+        /// </summary>
+        public ICommand OpenSettingsCommand { get; }
+        
+        /// <summary>
+        /// Import profile command
+        /// </summary>
+        public ICommand ImportProfileCommand { get; }
+        
+        /// <summary>
+        /// Create profile command
+        /// </summary>
+        public ICommand CreateProfileCommand { get; }
+        
+        /// <summary>
+        /// Apply profile command
+        /// </summary>
+        public ICommand ApplyProfileCommand { get; }
+        
+        /// <summary>
+        /// Edit profile command
+        /// </summary>
+        public ICommand EditProfileCommand { get; }
+        
+        /// <summary>
+        /// Refresh data
+        /// </summary>
+        private void RefreshData()
         {
-            get => _processesViewModel;
-            set => SetProperty(ref _processesViewModel, value);
+            // Update on UI thread
+            App.Current.Dispatcher.Invoke(() =>
+            {
+                // Update system info
+                SystemInfo = _systemInfoService.GetSystemInfo();
+                
+                // Update CPU cores
+                CpuCoresViewModel.UpdateCores(_systemInfoService.GetCpuCores());
+                
+                // Update processes (less frequently)
+                if (DateTime.Now.Second % 10 == 0)
+                {
+                    ProcessesViewModel.RefreshProcesses();
+                }
+            });
         }
         
         /// <summary>
-        /// View model for the CPU cores view
+        /// Open settings dialog
         /// </summary>
-        public CpuCoresViewModel CpuCoresViewModel
+        private void OpenSettings()
         {
-            get => _cpuCoresViewModel;
-            set => SetProperty(ref _cpuCoresViewModel, value);
+            StatusMessage = "Settings dialog opened";
+            _notificationService.ShowInfo("Settings functionality not implemented in this version.");
         }
         
         /// <summary>
-        /// View model for the profile editor view
+        /// Import a power profile
         /// </summary>
-        public ProfileEditorViewModel ProfileEditorViewModel
+        private void ImportProfile()
         {
-            get => _profileEditorViewModel;
-            set => SetProperty(ref _profileEditorViewModel, value);
+            string? filePath = _fileDialogService.ShowOpenFileDialog(
+                "Import Power Profile",
+                "Power Profiles (*.json;*.pow)|*.json;*.pow|All Files (*.*)|*.*",
+                ".json");
+            
+            if (!string.IsNullOrEmpty(filePath))
+            {
+                StatusMessage = $"Importing profile from {filePath}";
+                var profile = _powerProfileService.ImportProfile(filePath);
+                
+                if (profile != null)
+                {
+                    LoadPowerProfiles();
+                    SelectedPowerProfile = profile;
+                }
+            }
         }
         
-        #endregion
-        
-        #region Commands
+        /// <summary>
+        /// Create a new power profile
+        /// </summary>
+        private void CreateProfile()
+        {
+            StatusMessage = "Creating new profile";
+            
+            // Create a new profile with default values
+            var newProfile = new PowerProfile
+            {
+                Name = "New Profile",
+                Description = "Custom power profile",
+                Version = "1.0"
+            };
+            
+            // Switch to profile editor and load the new profile
+            ProfileEditorViewModel.LoadProfile(newProfile);
+            
+            // TODO: Switch to Profile Editor tab programmatically
+        }
         
         /// <summary>
-        /// Command to minimize the application to the system tray
+        /// Apply a power profile
         /// </summary>
-        public ICommand MinimizeToTrayCommand { get; }
+        /// <param name="profile">Profile to apply</param>
+        private void ApplyProfile(PowerProfile profile)
+        {
+            if (profile == null)
+            {
+                return;
+            }
+            
+            StatusMessage = $"Applying profile: {profile.Name}";
+            _powerProfileService.ApplyProfile(profile);
+        }
         
         /// <summary>
-        /// Command to show the settings dialog
+        /// Edit a power profile
         /// </summary>
-        public ICommand ShowSettingsCommand { get; }
+        /// <param name="profile">Profile to edit</param>
+        private void EditProfile(PowerProfile profile)
+        {
+            if (profile == null)
+            {
+                return;
+            }
+            
+            StatusMessage = $"Editing profile: {profile.Name}";
+            ProfileEditorViewModel.LoadProfile(profile);
+            
+            // TODO: Switch to Profile Editor tab programmatically
+        }
         
         /// <summary>
-        /// Command to exit the application
+        /// Load power profiles
         /// </summary>
-        public ICommand ExitApplicationCommand { get; }
+        private void LoadPowerProfiles()
+        {
+            PowerProfiles.Clear();
+            
+            foreach (var profile in _powerProfileService.GetProfiles())
+            {
+                PowerProfiles.Add(profile);
+            }
+            
+            StatusMessage = $"Loaded {PowerProfiles.Count} power profiles";
+        }
+    }
+    
+    /// <summary>
+    /// Generic RelayCommand with parameter
+    /// </summary>
+    /// <typeparam name="T">Parameter type</typeparam>
+    public class RelayCommand<T> : ICommand
+    {
+        private readonly Action<T> _execute;
+        private readonly Predicate<T>? _canExecute;
         
         /// <summary>
-        /// Command to refresh data
+        /// Event raised when the ability to execute the command changes
         /// </summary>
-        public ICommand RefreshCommand { get; }
-        
-        #endregion
+        public event EventHandler? CanExecuteChanged
+        {
+            add { CommandManager.RequerySuggested += value; }
+            remove { CommandManager.RequerySuggested -= value; }
+        }
         
         /// <summary>
         /// Constructor
         /// </summary>
-        public MainViewModel()
+        /// <param name="execute">Delegate to execute when command is invoked</param>
+        /// <param name="canExecute">Delegate to check if command can be executed (can be null)</param>
+        public RelayCommand(Action<T> execute, Predicate<T>? canExecute = null)
         {
-            // Initialize commands
-            MinimizeToTrayCommand = new RelayCommand(MinimizeToTray);
-            ShowSettingsCommand = new RelayCommand(ShowSettings);
-            ExitApplicationCommand = new RelayCommand(ExitApplication);
-            RefreshCommand = new RelayCommand(RefreshData);
-            
-            // Initialize view models
-            ProcessesViewModel = new ProcessesViewModel();
-            CpuCoresViewModel = new CpuCoresViewModel();
-            ProfileEditorViewModel = new ProfileEditorViewModel();
-            
-            // Set default values
-            StatusMessage = "Ready";
-            StatusColor = Brushes.Green;
-            CpuUsage = 0;
-            MemoryUsage = 0;
-            SystemInfo = "Loading system information...";
-            
-            // Start data update timer
-            StartDataUpdateTimer();
+            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+            _canExecute = canExecute;
         }
         
         /// <summary>
-        /// Start the timer for updating data
+        /// Determines if command can execute in its current state
         /// </summary>
-        private void StartDataUpdateTimer()
+        /// <param name="parameter">Data used by the command</param>
+        /// <returns>True if command can execute</returns>
+        public bool CanExecute(object? parameter)
         {
-            // In a real implementation, this would use a timer to update system info and status
-            // For now, we'll just set some placeholder values
+            if (_canExecute == null)
+            {
+                return true;
+            }
             
-            // This is temporary sample data as we don't have a real system info service yet
-            SystemInfo = "Intel Core i7-10700K | 16 Threads | 32 GB RAM | Windows 11";
+            if (parameter == null && typeof(T).IsValueType)
+            {
+                return _canExecute(default!);
+            }
             
-            // Note: in a real implementation, we would create a System.Threading.Timer to refresh data periodically
-        }
-        
-        /// <summary>
-        /// Refresh all data
-        /// </summary>
-        private void RefreshData(object parameter)
-        {
-            StatusMessage = "Refreshing data...";
+            if (parameter == null || parameter is T)
+            {
+                return _canExecute((T)parameter!);
+            }
             
-            try
-            {
-                // Update system information and usage statistics
-                // This will be implemented when we have actual service implementations
-                
-                // Update view models
-                ProcessesViewModel.RefreshProcesses();
-                CpuCoresViewModel.RefreshCores();
-                
-                StatusMessage = "Data refreshed successfully";
-                StatusColor = Brushes.Green;
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"Error refreshing data: {ex.Message}";
-                StatusColor = Brushes.Red;
-            }
+            return false;
         }
         
         /// <summary>
-        /// Minimize the application to the system tray
+        /// Execute the command
         /// </summary>
-        private void MinimizeToTray(object parameter)
+        /// <param name="parameter">Data passed to the command</param>
+        public void Execute(object? parameter)
         {
-            try
+            if (parameter == null && typeof(T).IsValueType)
             {
-                IsBackgroundMode = true;
-                
-                // Hide the main window
-                if (Application.Current.MainWindow != null)
-                {
-                    Application.Current.MainWindow.Hide();
-                }
-                
-                StatusMessage = "Application minimized to tray";
-                StatusColor = Brushes.Green;
-                
-                NotificationService.ShowInfo("ThreadPilot is now running in the background", "Application Minimized");
+                _execute(default!);
+                return;
             }
-            catch (Exception ex)
+            
+            if (parameter == null || parameter is T)
             {
-                StatusMessage = $"Error minimizing to tray: {ex.Message}";
-                StatusColor = Brushes.Red;
-            }
-        }
-        
-        /// <summary>
-        /// Show the settings dialog
-        /// </summary>
-        private void ShowSettings(object parameter)
-        {
-            // This will be implemented later
-            NotificationService.ShowInfo("Settings dialog will be implemented in a future update", "Coming Soon");
-        }
-        
-        /// <summary>
-        /// Exit the application
-        /// </summary>
-        private void ExitApplication(object parameter)
-        {
-            try
-            {
-                // Show confirmation dialog
-                MessageBoxResult result = MessageBox.Show(
-                    "Are you sure you want to exit ThreadPilot?",
-                    "Exit Confirmation",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question);
-                
-                if (result == MessageBoxResult.Yes)
-                {
-                    Application.Current.Shutdown();
-                }
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"Error exiting application: {ex.Message}";
-                StatusColor = Brushes.Red;
+                _execute((T)parameter!);
             }
         }
     }

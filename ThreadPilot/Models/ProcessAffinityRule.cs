@@ -3,116 +3,75 @@ using System.Collections.Generic;
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Represents a rule for automatically setting process affinity and priority
+    /// Rule for process affinity
     /// </summary>
     public class ProcessAffinityRule
     {
         /// <summary>
-        /// Rule name/identifier
+        /// Process name pattern (supports wildcards * and ?)
         /// </summary>
-        public string Name { get; set; } = string.Empty;
+        public string ProcessNamePattern { get; set; } = string.Empty;
         
         /// <summary>
-        /// Process executable name to match (without .exe extension)
+        /// Optional process description
         /// </summary>
-        public string ProcessName { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
         
         /// <summary>
-        /// Optional process file path for more specific matching
+        /// Process priority to set (if null, don't change priority)
         /// </summary>
-        public string ProcessPath { get; set; } = string.Empty;
+        public ProcessPriority? Priority { get; set; }
         
         /// <summary>
-        /// Whether to use process path for matching in addition to name
+        /// Affinity mask to set (if null, don't change affinity)
         /// </summary>
-        public bool MatchByPath { get; set; }
+        public long? AffinityMask { get; set; }
         
         /// <summary>
-        /// Whether this rule is enabled
+        /// Whether this is an exclude list rather than an include list
         /// </summary>
-        public bool IsEnabled { get; set; } = true;
+        public bool IsExcludeList { get; set; }
         
         /// <summary>
-        /// List of core indices to assign to matched processes
+        /// The list of cores to include or exclude
         /// </summary>
-        public List<int> AssignedCores { get; set; } = new List<int>();
+        public List<int> CoreList { get; set; } = new List<int>();
         
         /// <summary>
-        /// Process priority to set for matched processes
+        /// Create affinity mask from core list
         /// </summary>
-        public ProcessPriority Priority { get; set; } = ProcessPriority.Normal;
-        
-        /// <summary>
-        /// Whether to set process priority
-        /// </summary>
-        public bool SetPriority { get; set; } = true;
-        
-        /// <summary>
-        /// Whether to set process affinity
-        /// </summary>
-        public bool SetAffinity { get; set; } = true;
-        
-        /// <summary>
-        /// Whether to apply rule on process startup
-        /// </summary>
-        public bool ApplyOnStartup { get; set; } = true;
-        
-        /// <summary>
-        /// Whether to reapply rule periodically
-        /// </summary>
-        public bool ReapplyPeriodically { get; set; }
-        
-        /// <summary>
-        /// Reapplication interval in seconds (if periodic reapplication is enabled)
-        /// </summary>
-        public int ReapplyIntervalSeconds { get; set; } = 60;
-        
-        /// <summary>
-        /// Check if a process matches this rule
-        /// </summary>
-        /// <param name="processInfo">Process to check</param>
-        /// <returns>True if process matches this rule</returns>
-        public bool MatchesProcess(ProcessInfo processInfo)
-        {
-            // First check if rule is enabled
-            if (!IsEnabled)
-            {
-                return false;
-            }
-            
-            // Check if process name matches (case-insensitive)
-            bool nameMatches = !string.IsNullOrEmpty(ProcessName) && 
-                              processInfo.Name.Equals(ProcessName, System.StringComparison.OrdinalIgnoreCase);
-            
-            // If not matching by path, name match is sufficient
-            if (!MatchByPath)
-            {
-                return nameMatches;
-            }
-            
-            // If matching by path, check both name and path
-            bool pathMatches = !string.IsNullOrEmpty(ProcessPath) && 
-                              processInfo.Path.StartsWith(ProcessPath, System.StringComparison.OrdinalIgnoreCase);
-            
-            return nameMatches && pathMatches;
-        }
-        
-        /// <summary>
-        /// Gets the CPU affinity mask based on the assigned cores
-        /// </summary>
-        public long GetAffinityMask()
+        /// <returns>Computed affinity mask</returns>
+        public long ComputeAffinityMask()
         {
             long mask = 0;
             
-            foreach (int coreIndex in AssignedCores)
+            foreach (int core in CoreList)
             {
-                if (coreIndex >= 0 && coreIndex < 64)
-                {
-                    mask |= (1L << coreIndex);
-                }
+                mask |= 1L << core;
             }
             
             return mask;
+        }
+        
+        /// <summary>
+        /// Create a deep copy of this rule
+        /// </summary>
+        /// <returns>A new rule with the same properties</returns>
+        public ProcessAffinityRule Clone()
+        {
+            var clone = new ProcessAffinityRule
+            {
+                ProcessNamePattern = ProcessNamePattern,
+                Description = Description,
+                Priority = Priority,
+                AffinityMask = AffinityMask,
+                IsExcludeList = IsExcludeList
+            };
+            
+            // Copy core list
+            clone.CoreList.AddRange(CoreList);
+            
+            return clone;
         }
     }
 }

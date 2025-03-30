@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Represents a Windows power profile/plan with settings
+    /// Power and affinity profile
     /// </summary>
     public class PowerProfile
     {
@@ -20,173 +19,86 @@ namespace ThreadPilot.Models
         public string Description { get; set; } = string.Empty;
         
         /// <summary>
-        /// Profile GUID (for Windows power plans)
+        /// Profile version
         /// </summary>
-        public Guid Guid { get; set; } = Guid.Empty;
+        public string Version { get; set; } = "1.0";
         
         /// <summary>
-        /// Power profile settings key-value pairs
+        /// Profile creation date
         /// </summary>
-        public Dictionary<string, string> Settings { get; set; } = new Dictionary<string, string>();
+        public string CreationDate { get; set; } = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
         
         /// <summary>
-        /// File path to the .pow file
+        /// Profile last modified date
         /// </summary>
-        public string FilePath { get; set; } = string.Empty;
+        public string LastModifiedDate { get; set; } = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
         
         /// <summary>
-        /// Category/tag for the profile (e.g., Gaming, Productivity, etc.)
+        /// Optional icon name
         /// </summary>
-        public string Category { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
         
         /// <summary>
-        /// The author/creator of the profile
+        /// Windows power scheme name to apply (if any)
         /// </summary>
-        public string Author { get; set; } = string.Empty;
+        public string WindowsPowerScheme { get; set; } = string.Empty;
         
         /// <summary>
-        /// Creation date of the profile
+        /// Source file path (if imported)
         /// </summary>
-        public DateTime CreatedDate { get; set; } = DateTime.Now;
+        public string SourceFilePath { get; set; } = string.Empty;
         
         /// <summary>
-        /// Last modified date of the profile
+        /// Import date (if imported)
         /// </summary>
-        public DateTime ModifiedDate { get; set; } = DateTime.Now;
+        public string ImportDate { get; set; } = string.Empty;
         
         /// <summary>
-        /// Whether this profile is a system default one
+        /// Whether this is a system default profile
         /// </summary>
         public bool IsSystemDefault { get; set; }
         
         /// <summary>
-        /// Whether this is currently the active profile
+        /// Collection of process rules
         /// </summary>
-        public bool IsActive { get; set; }
+        public List<ProcessAffinityRule> ProcessRules { get; set; } = new List<ProcessAffinityRule>();
         
         /// <summary>
-        /// Whether this profile is a built-in Windows power plan
+        /// Create a deep copy of this profile
         /// </summary>
-        public bool IsBuiltIn { get; set; }
-        
-        /// <summary>
-        /// Whether core parking is disabled in this profile
-        /// </summary>
-        public bool IsCoreParkingDisabled 
-        { 
-            get 
-            {
-                if (Settings.TryGetValue("CoreParkingDisabled", out string value) && 
-                    bool.TryParse(value, out bool result))
-                {
-                    return result;
-                }
-                
-                return false;
-            }
-            set
-            {
-                Settings["CoreParkingDisabled"] = value.ToString();
-            }
-        }
-        
-        /// <summary>
-        /// Processor performance boost mode setting
-        /// 0 = Disabled, 1 = Enabled, 2 = Aggressive, 3 = Efficient Aggressive
-        /// </summary>
-        public int ProcessorBoostMode
+        /// <returns>A new profile with the same properties</returns>
+        public PowerProfile Clone()
         {
-            get
+            var clone = new PowerProfile
             {
-                if (Settings.TryGetValue("ProcessorBoostMode", out string value) && 
-                    int.TryParse(value, out int result))
-                {
-                    return result;
-                }
-                
-                return 1; // Default to Enabled
-            }
-            set 
-            {
-                Settings["ProcessorBoostMode"] = value.ToString();
-            }
-        }
-        
-        /// <summary>
-        /// System responsiveness value (0-100)
-        /// 0 = Optimize for foreground, 100 = Optimize for background
-        /// </summary>
-        public int SystemResponsiveness
-        {
-            get
-            {
-                if (Settings.TryGetValue("SystemResponsiveness", out string value) && 
-                    int.TryParse(value, out int result))
-                {
-                    return result;
-                }
-                
-                return 20; // Windows default
-            }
-            set
-            {
-                Settings["SystemResponsiveness"] = value.ToString();
-            }
-        }
-        
-        /// <summary>
-        /// Network throttling index (0 - disabled, 10-70 normal values)
-        /// </summary>
-        public int NetworkThrottlingIndex
-        {
-            get
-            {
-                if (Settings.TryGetValue("NetworkThrottlingIndex", out string value) && 
-                    int.TryParse(value, out int result))
-                {
-                    return result;
-                }
-                
-                return 10; // Some reasonable default
-            }
-            set
-            {
-                Settings["NetworkThrottlingIndex"] = value.ToString();
-            }
-        }
-        
-        /// <summary>
-        /// Gets the filename that should be used when saving this profile
-        /// </summary>
-        public string GetSafeFileName()
-        {
-            return SanitizeFileName(Name) + ".pow";
-        }
-        
-        /// <summary>
-        /// Creates a sanitized filename from the provided input
-        /// </summary>
-        private static string SanitizeFileName(string fileName)
-        {
-            // Replace invalid characters with underscores
-            char[] invalidChars = Path.GetInvalidFileNameChars();
-            string sanitized = fileName;
+                Name = Name,
+                Description = Description,
+                Version = Version,
+                CreationDate = CreationDate,
+                LastModifiedDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                Icon = Icon,
+                WindowsPowerScheme = WindowsPowerScheme,
+                SourceFilePath = SourceFilePath,
+                ImportDate = ImportDate,
+                IsSystemDefault = IsSystemDefault
+            };
             
-            foreach (char c in invalidChars)
+            // Clone process rules
+            foreach (var rule in ProcessRules)
             {
-                sanitized = sanitized.Replace(c, '_');
+                clone.ProcessRules.Add(rule.Clone());
             }
             
-            // Remove any leading or trailing periods or spaces
-            sanitized = sanitized.Trim('.', ' ');
-            
-            // Ensure we have a valid filename by providing a default if empty
-            if (string.IsNullOrWhiteSpace(sanitized))
-            {
-                sanitized = "PowerProfile";
-            }
-            
-            return sanitized;
+            return clone;
+        }
+        
+        /// <summary>
+        /// Get a compact string representation of this profile
+        /// </summary>
+        /// <returns>Profile summary</returns>
+        public override string ToString()
+        {
+            return $"{Name} ({ProcessRules.Count} rules)";
         }
     }
 }

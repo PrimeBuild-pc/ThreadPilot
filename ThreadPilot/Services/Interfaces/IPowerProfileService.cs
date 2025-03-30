@@ -1,37 +1,72 @@
 using System.Collections.Generic;
+using ThreadPilot.Models;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Service for interacting with Windows Power Profiles directly
+    /// Interface for power profile service
     /// </summary>
     public interface IPowerProfileService
     {
         /// <summary>
-        /// Gets the active power profile GUID
+        /// Get all power profiles
         /// </summary>
-        /// <returns>The GUID of the active power profile</returns>
-        string GetActiveProfileGuid();
-
+        /// <returns>List of power profiles</returns>
+        List<PowerProfile> GetProfiles();
+        
         /// <summary>
-        /// Sets the active power profile
+        /// Get a power profile by name
         /// </summary>
-        /// <param name="guid">The GUID of the profile to activate</param>
-        /// <returns>True if successful, false otherwise</returns>
-        bool SetActiveProfile(string guid);
-
+        /// <param name="name">Profile name</param>
+        /// <returns>Power profile or null if not found</returns>
+        PowerProfile? GetProfile(string name);
+        
         /// <summary>
-        /// Gets information about a power profile
+        /// Create a new power profile
         /// </summary>
-        /// <param name="guid">The GUID of the profile</param>
-        /// <returns>Dictionary of profile settings</returns>
-        Dictionary<string, string> GetProfileInfo(string guid);
-
+        /// <param name="profile">Profile to create</param>
+        /// <returns>True if successful</returns>
+        bool CreateProfile(PowerProfile profile);
+        
         /// <summary>
-        /// Deletes a power profile
+        /// Update a power profile
         /// </summary>
-        /// <param name="guid">The GUID of the profile to delete</param>
-        /// <returns>True if successful, false otherwise</returns>
-        bool DeleteProfile(string guid);
+        /// <param name="profile">Updated profile</param>
+        /// <returns>True if successful</returns>
+        bool UpdateProfile(PowerProfile profile);
+        
+        /// <summary>
+        /// Delete a power profile
+        /// </summary>
+        /// <param name="name">Profile name</param>
+        /// <returns>True if successful</returns>
+        bool DeleteProfile(string name);
+        
+        /// <summary>
+        /// Apply a power profile
+        /// </summary>
+        /// <param name="profile">Profile to apply</param>
+        /// <returns>True if successful</returns>
+        bool ApplyProfile(PowerProfile profile);
+        
+        /// <summary>
+        /// Import a power profile from a file
+        /// </summary>
+        /// <returns>Imported profile or null if failed</returns>
+        PowerProfile? ImportProfile();
+        
+        /// <summary>
+        /// Export a power profile to a file
+        /// </summary>
+        /// <param name="profile">Profile to export</param>
+        /// <returns>True if successful</returns>
+        bool ExportProfile(PowerProfile profile);
+        
+        /// <summary>
+        /// Make a copy of a power profile
+        /// </summary>
+        /// <param name="profile">Profile to copy</param>
+        /// <returns>Copied profile</returns>
+        PowerProfile CloneProfile(PowerProfile profile);
     }
 }

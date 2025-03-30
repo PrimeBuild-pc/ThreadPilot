@@ -1,99 +1,380 @@
 using System;
-using System.Collections.Generic;
+using System.ComponentModel;
 
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Represents system hardware and OS information
+    /// System information model
     /// </summary>
-    public class SystemInfo
+    public class SystemInfo : INotifyPropertyChanged
     {
-        /// <summary>
-        /// CPU model name
-        /// </summary>
-        public string CpuName { get; set; } = string.Empty;
+        private string _operatingSystem = string.Empty;
+        private string _osVersion = string.Empty;
+        private string _processorName = string.Empty;
+        private int _processorCores;
+        private int _processorLogicalCores;
+        private int _performanceCoreCount;
+        private int _efficiencyCoreCount;
+        private bool _supportsThreadDirector;
+        private double _cpuUsage;
+        private double _totalMemoryGB;
+        private double _availableMemoryGB;
+        private TimeSpan _upTime;
+        private bool _isOnBattery;
+        private double? _batteryChargePercent;
+        private string _currentPowerProfile = string.Empty;
+        private string _gpuName = string.Empty;
+        private double _gpuUsage;
         
         /// <summary>
-        /// Number of physical CPU cores
+        /// Operating system name
         /// </summary>
-        public int PhysicalCores { get; set; }
+        public string OperatingSystem
+        {
+            get => _operatingSystem;
+            set
+            {
+                if (_operatingSystem != value)
+                {
+                    _operatingSystem = value;
+                    OnPropertyChanged(nameof(OperatingSystem));
+                }
+            }
+        }
         
         /// <summary>
-        /// Number of logical CPU cores/threads
+        /// OS version
         /// </summary>
-        public int LogicalCores { get; set; }
+        public string OsVersion
+        {
+            get => _osVersion;
+            set
+            {
+                if (_osVersion != value)
+                {
+                    _osVersion = value;
+                    OnPropertyChanged(nameof(OsVersion));
+                }
+            }
+        }
         
         /// <summary>
-        /// Base CPU clock speed in MHz
+        /// Processor name
         /// </summary>
-        public int BaseCpuSpeed { get; set; }
+        public string ProcessorName
+        {
+            get => _processorName;
+            set
+            {
+                if (_processorName != value)
+                {
+                    _processorName = value;
+                    OnPropertyChanged(nameof(ProcessorName));
+                }
+            }
+        }
         
         /// <summary>
-        /// Current CPU clock speed in MHz (if available)
+        /// Number of processor cores
         /// </summary>
-        public int CurrentCpuSpeed { get; set; }
+        public int ProcessorCores
+        {
+            get => _processorCores;
+            set
+            {
+                if (_processorCores != value)
+                {
+                    _processorCores = value;
+                    OnPropertyChanged(nameof(ProcessorCores));
+                    OnPropertyChanged(nameof(ProcessorDescription));
+                }
+            }
+        }
         
         /// <summary>
-        /// CPU temperature in Celsius (if available)
+        /// Number of logical processor cores
         /// </summary>
-        public float? CpuTemperature { get; set; }
+        public int ProcessorLogicalCores
+        {
+            get => _processorLogicalCores;
+            set
+            {
+                if (_processorLogicalCores != value)
+                {
+                    _processorLogicalCores = value;
+                    OnPropertyChanged(nameof(ProcessorLogicalCores));
+                    OnPropertyChanged(nameof(ProcessorDescription));
+                }
+            }
+        }
         
         /// <summary>
-        /// CPU architecture (x64, ARM64, etc.)
+        /// Number of performance cores
         /// </summary>
-        public string CpuArchitecture { get; set; } = string.Empty;
+        public int PerformanceCoreCount
+        {
+            get => _performanceCoreCount;
+            set
+            {
+                if (_performanceCoreCount != value)
+                {
+                    _performanceCoreCount = value;
+                    OnPropertyChanged(nameof(PerformanceCoreCount));
+                    OnPropertyChanged(nameof(IsHybridProcessor));
+                    OnPropertyChanged(nameof(ProcessorDescription));
+                }
+            }
+        }
         
         /// <summary>
-        /// Total system RAM in MB
+        /// Number of efficiency cores
         /// </summary>
-        public long TotalRam { get; set; }
+        public int EfficiencyCoreCount
+        {
+            get => _efficiencyCoreCount;
+            set
+            {
+                if (_efficiencyCoreCount != value)
+                {
+                    _efficiencyCoreCount = value;
+                    OnPropertyChanged(nameof(EfficiencyCoreCount));
+                    OnPropertyChanged(nameof(IsHybridProcessor));
+                    OnPropertyChanged(nameof(ProcessorDescription));
+                }
+            }
+        }
         
         /// <summary>
-        /// Available system RAM in MB
+        /// Whether the processor supports thread director
         /// </summary>
-        public long AvailableRam { get; set; }
+        public bool SupportsThreadDirector
+        {
+            get => _supportsThreadDirector;
+            set
+            {
+                if (_supportsThreadDirector != value)
+                {
+                    _supportsThreadDirector = value;
+                    OnPropertyChanged(nameof(SupportsThreadDirector));
+                }
+            }
+        }
         
         /// <summary>
-        /// RAM usage percentage
+        /// CPU usage percentage
         /// </summary>
-        public int RamUsagePercentage { get; set; }
+        public double CpuUsage
+        {
+            get => _cpuUsage;
+            set
+            {
+                if (Math.Abs(_cpuUsage - value) > 0.1)
+                {
+                    _cpuUsage = value;
+                    OnPropertyChanged(nameof(CpuUsage));
+                }
+            }
+        }
         
         /// <summary>
-        /// CPU usage percentage (average across all cores)
+        /// Total memory in GB
         /// </summary>
-        public int CpuUsagePercentage { get; set; }
+        public double TotalMemoryGB
+        {
+            get => _totalMemoryGB;
+            set
+            {
+                if (Math.Abs(_totalMemoryGB - value) > 0.1)
+                {
+                    _totalMemoryGB = value;
+                    OnPropertyChanged(nameof(TotalMemoryGB));
+                    OnPropertyChanged(nameof(MemoryUsagePercent));
+                    OnPropertyChanged(nameof(MemoryDescription));
+                }
+            }
+        }
         
         /// <summary>
-        /// CPU usage per core as percentage
+        /// Available memory in GB
         /// </summary>
-        public List<int> CpuCoreUsagePercentages { get; set; } = new List<int>();
+        public double AvailableMemoryGB
+        {
+            get => _availableMemoryGB;
+            set
+            {
+                if (Math.Abs(_availableMemoryGB - value) > 0.1)
+                {
+                    _availableMemoryGB = value;
+                    OnPropertyChanged(nameof(AvailableMemoryGB));
+                    OnPropertyChanged(nameof(MemoryUsagePercent));
+                    OnPropertyChanged(nameof(MemoryDescription));
+                }
+            }
+        }
         
         /// <summary>
-        /// Windows OS version
+        /// Memory usage percent
         /// </summary>
-        public string OsVersion { get; set; } = string.Empty;
+        public double MemoryUsagePercent
+        {
+            get
+            {
+                if (TotalMemoryGB > 0)
+                {
+                    return 100.0 * (TotalMemoryGB - AvailableMemoryGB) / TotalMemoryGB;
+                }
+                
+                return 0;
+            }
+        }
         
         /// <summary>
-        /// Current active power plan/profile name
+        /// Memory usage in GB
         /// </summary>
-        public string CurrentPowerPlan { get; set; } = string.Empty;
+        public double MemoryUsageGB => TotalMemoryGB - AvailableMemoryGB;
+        
+        /// <summary>
+        /// Memory description
+        /// </summary>
+        public string MemoryDescription
+        {
+            get
+            {
+                return $"{MemoryUsageGB:F1} GB / {TotalMemoryGB:F1} GB";
+            }
+        }
         
         /// <summary>
         /// System uptime
         /// </summary>
-        public TimeSpan Uptime { get; set; }
-        
-        /// <summary>
-        /// Current date and time when the information was retrieved
-        /// </summary>
-        public DateTime Timestamp { get; set; } = DateTime.Now;
-        
-        /// <summary>
-        /// Returns a formatted brief description of the system
-        /// </summary>
-        public string GetSystemSummary()
+        public TimeSpan UpTime
         {
-            return $"{CpuName} | {LogicalCores} Threads | {TotalRam / 1024} GB RAM | {OsVersion}";
+            get => _upTime;
+            set
+            {
+                if (_upTime != value)
+                {
+                    _upTime = value;
+                    OnPropertyChanged(nameof(UpTime));
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Whether the system is running on battery
+        /// </summary>
+        public bool IsOnBattery
+        {
+            get => _isOnBattery;
+            set
+            {
+                if (_isOnBattery != value)
+                {
+                    _isOnBattery = value;
+                    OnPropertyChanged(nameof(IsOnBattery));
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Battery charge percent
+        /// </summary>
+        public double? BatteryChargePercent
+        {
+            get => _batteryChargePercent;
+            set
+            {
+                if (_batteryChargePercent != value)
+                {
+                    _batteryChargePercent = value;
+                    OnPropertyChanged(nameof(BatteryChargePercent));
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Current power profile
+        /// </summary>
+        public string CurrentPowerProfile
+        {
+            get => _currentPowerProfile;
+            set
+            {
+                if (_currentPowerProfile != value)
+                {
+                    _currentPowerProfile = value;
+                    OnPropertyChanged(nameof(CurrentPowerProfile));
+                }
+            }
+        }
+        
+        /// <summary>
+        /// GPU name
+        /// </summary>
+        public string GpuName
+        {
+            get => _gpuName;
+            set
+            {
+                if (_gpuName != value)
+                {
+                    _gpuName = value;
+                    OnPropertyChanged(nameof(GpuName));
+                }
+            }
+        }
+        
+        /// <summary>
+        /// GPU usage percentage
+        /// </summary>
+        public double GpuUsage
+        {
+            get => _gpuUsage;
+            set
+            {
+                if (Math.Abs(_gpuUsage - value) > 0.1)
+                {
+                    _gpuUsage = value;
+                    OnPropertyChanged(nameof(GpuUsage));
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Whether the processor is a hybrid processor
+        /// </summary>
+        public bool IsHybridProcessor => EfficiencyCoreCount > 0;
+        
+        /// <summary>
+        /// Processor description
+        /// </summary>
+        public string ProcessorDescription
+        {
+            get
+            {
+                if (IsHybridProcessor)
+                {
+                    return $"{ProcessorCores} cores ({PerformanceCoreCount}P + {EfficiencyCoreCount}E), {ProcessorLogicalCores} threads";
+                }
+                else
+                {
+                    return $"{ProcessorCores} cores, {ProcessorLogicalCores} threads";
+                }
+            }
+        }
+        
+        /// <summary>
+        /// PropertyChanged event
+        /// </summary>
+        public event PropertyChangedEventHandler? PropertyChanged;
+        
+        /// <summary>
+        /// Raise PropertyChanged event
+        /// </summary>
+        /// <param name="propertyName">Property name</param>
+        protected virtual void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }

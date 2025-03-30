@@ -1,28 +1,35 @@
 using Microsoft.Win32;
+using System;
+using System.IO;
 using System.Windows.Forms;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Default implementation of the file dialog service
+    /// Implementation of file dialog service
     /// </summary>
     public class FileDialogService : IFileDialogService
     {
         /// <summary>
         /// Show an open file dialog
         /// </summary>
-        /// <param name="filter">File filter</param>
         /// <param name="title">Dialog title</param>
-        /// <returns>Selected file path or null if dialog was canceled</returns>
-        public string OpenFile(string filter = null, string title = null)
+        /// <param name="filter">File filter</param>
+        /// <param name="defaultExtension">Default file extension</param>
+        /// <returns>Selected file path or null if cancelled</returns>
+        public string? ShowOpenFileDialog(string title, string filter, string defaultExtension)
         {
-            var dialog = new OpenFileDialog
+            var dialog = new Microsoft.Win32.OpenFileDialog
             {
-                Filter = filter ?? "All Files (*.*)|*.*",
-                Title = title ?? "Open File"
+                Title = title,
+                Filter = filter,
+                DefaultExt = defaultExtension,
+                CheckFileExists = true
             };
             
-            if (dialog.ShowDialog() == true)
+            bool? result = dialog.ShowDialog();
+            
+            if (result == true)
             {
                 return dialog.FileName;
             }
@@ -33,20 +40,23 @@ namespace ThreadPilot.Services
         /// <summary>
         /// Show a save file dialog
         /// </summary>
+        /// <param name="title">Dialog title</param>
         /// <param name="filter">File filter</param>
         /// <param name="defaultFileName">Default file name</param>
-        /// <param name="title">Dialog title</param>
-        /// <returns>Selected file path or null if dialog was canceled</returns>
-        public string SaveFile(string filter = null, string defaultFileName = null, string title = null)
+        /// <returns>Selected file path or null if cancelled</returns>
+        public string? ShowSaveFileDialog(string title, string filter, string defaultFileName)
         {
-            var dialog = new SaveFileDialog
+            var dialog = new Microsoft.Win32.SaveFileDialog
             {
-                Filter = filter ?? "All Files (*.*)|*.*",
-                Title = title ?? "Save File",
-                FileName = defaultFileName ?? ""
+                Title = title,
+                Filter = filter,
+                FileName = defaultFileName,
+                OverwritePrompt = true
             };
             
-            if (dialog.ShowDialog() == true)
+            bool? result = dialog.ShowDialog();
+            
+            if (result == true)
             {
                 return dialog.FileName;
             }
@@ -58,22 +68,24 @@ namespace ThreadPilot.Services
         /// Show a folder browser dialog
         /// </summary>
         /// <param name="title">Dialog title</param>
-        /// <returns>Selected folder path or null if dialog was canceled</returns>
-        public string BrowseFolder(string title = null)
+        /// <returns>Selected folder path or null if cancelled</returns>
+        public string? ShowFolderBrowserDialog(string title)
         {
             using (var dialog = new FolderBrowserDialog
             {
-                Description = title ?? "Select Folder",
+                Description = title,
                 ShowNewFolderButton = true
             })
             {
-                if (dialog.ShowDialog() == DialogResult.OK)
+                DialogResult result = dialog.ShowDialog();
+                
+                if (result == DialogResult.OK && !string.IsNullOrWhiteSpace(dialog.SelectedPath))
                 {
                     return dialog.SelectedPath;
                 }
-                
-                return null;
             }
+            
+            return null;
         }
     }
 }

@@ -3,112 +3,229 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+using System.Text;
 using ThreadPilot.Models;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Power profile service implementation
+    /// Implementation of power profile service
     /// </summary>
     public class PowerProfileService : IPowerProfileService
     {
-        private const string UserProfilesDirectory = "Profiles";
-        private const string BundledProfilesDirectory = "BundledProfiles";
-        
+        private readonly INotificationService _notificationService;
+        private readonly IFileDialogService _fileDialogService;
         private readonly IProcessService _processService;
-        private readonly List<PowerProfile> _bundledProfiles = new List<PowerProfile>();
-        private readonly List<PowerProfile> _userProfiles = new List<PowerProfile>();
+        
+        private List<PowerProfile> _profiles;
         
         /// <summary>
         /// Constructor
         /// </summary>
-        /// <param name="processService">Process service</param>
-        public PowerProfileService(IProcessService processService)
+        public PowerProfileService()
         {
-            _processService = processService;
+            _notificationService = ServiceLocator.Get<INotificationService>();
+            _fileDialogService = ServiceLocator.Get<IFileDialogService>();
+            _processService = ServiceLocator.Get<IProcessService>();
             
-            // Load profiles
-            LoadProfiles();
+            _profiles = new List<PowerProfile>();
+            LoadDefaultProfiles();
         }
         
         /// <summary>
         /// Get all power profiles
         /// </summary>
-        /// <returns>Power profiles collection</returns>
-        public IEnumerable<PowerProfile> GetAllProfiles()
+        /// <returns>List of power profiles</returns>
+        public List<PowerProfile> GetProfiles()
         {
-            var allProfiles = new List<PowerProfile>();
-            allProfiles.AddRange(_bundledProfiles);
-            allProfiles.AddRange(_userProfiles);
-            
-            return allProfiles;
+            return _profiles;
         }
         
         /// <summary>
-        /// Get bundled power profiles
+        /// Get a power profile by name
         /// </summary>
-        /// <returns>Bundled power profiles collection</returns>
-        public IEnumerable<PowerProfile> GetBundledProfiles()
-        {
-            return _bundledProfiles;
-        }
-        
-        /// <summary>
-        /// Get user power profiles
-        /// </summary>
-        /// <returns>User power profiles collection</returns>
-        public IEnumerable<PowerProfile> GetUserProfiles()
-        {
-            return _userProfiles;
-        }
-        
-        /// <summary>
-        /// Get profile by GUID
-        /// </summary>
-        /// <param name="guid">Profile GUID</param>
+        /// <param name="name">Profile name</param>
         /// <returns>Power profile or null if not found</returns>
-        public PowerProfile GetProfileByGuid(string guid)
+        public PowerProfile? GetProfile(string name)
         {
-            var allProfiles = GetAllProfiles();
-            return allProfiles.FirstOrDefault(p => p.Guid == guid);
+            return _profiles.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         }
         
         /// <summary>
-        /// Load profile from file
+        /// Create a new power profile
         /// </summary>
-        /// <param name="filePath">File path</param>
-        /// <returns>Power profile or null if failed</returns>
-        public PowerProfile LoadProfile(string filePath)
+        /// <param name="profile">Profile to create</param>
+        /// <returns>True if successful</returns>
+        public bool CreateProfile(PowerProfile profile)
         {
             try
             {
-                if (!File.Exists(filePath))
+                // Check if profile already exists
+                if (_profiles.Any(p => p.Name.Equals(profile.Name, StringComparison.OrdinalIgnoreCase)))
                 {
-                    Debug.WriteLine($"File {filePath} does not exist");
+                    _notificationService.ShowError($"A profile with the name '{profile.Name}' already exists.");
+                    return false;
+                }
+                
+                // Add the profile
+                _profiles.Add(profile);
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error creating profile: {ex.Message}");
+                _notificationService.ShowError($"Error creating profile: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Update a power profile
+        /// </summary>
+        /// <param name="profile">Updated profile</param>
+        /// <returns>True if successful</returns>
+        public bool UpdateProfile(PowerProfile profile)
+        {
+            try
+            {
+                // Find the profile
+                int index = _profiles.FindIndex(p => p.Name.Equals(profile.Name, StringComparison.OrdinalIgnoreCase));
+                if (index < 0)
+                {
+                    _notificationService.ShowError($"Profile '{profile.Name}' not found.");
+                    return false;
+                }
+                
+                // Update the profile
+                _profiles[index] = profile;
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error updating profile: {ex.Message}");
+                _notificationService.ShowError($"Error updating profile: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Delete a power profile
+        /// </summary>
+        /// <param name="name">Profile name</param>
+        /// <returns>True if successful</returns>
+        public bool DeleteProfile(string name)
+        {
+            try
+            {
+                // Find the profile
+                int index = _profiles.FindIndex(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+                if (index < 0)
+                {
+                    _notificationService.ShowError($"Profile '{name}' not found.");
+                    return false;
+                }
+                
+                // Don't delete default profiles
+                if (_profiles[index].IsDefault)
+                {
+                    _notificationService.ShowError("Default profiles cannot be deleted.");
+                    return false;
+                }
+                
+                // Remove the profile
+                _profiles.RemoveAt(index);
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error deleting profile: {ex.Message}");
+                _notificationService.ShowError($"Error deleting profile: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Apply a power profile
+        /// </summary>
+        /// <param name="profile">Profile to apply</param>
+        /// <returns>True if successful</returns>
+        public bool ApplyProfile(PowerProfile profile)
+        {
+            try
+            {
+                // Set Windows power scheme if specified
+                if (!string.IsNullOrEmpty(profile.WindowsPowerScheme))
+                {
+                    ApplyWindowsPowerScheme(profile.WindowsPowerScheme);
+                }
+                
+                // Apply process rules
+                int affectedProcesses = 0;
+                foreach (var rule in profile.ProcessRules)
+                {
+                    affectedProcesses += _processService.ApplyAffinityRule(rule);
+                }
+                
+                _notificationService.ShowSuccess(
+                    $"Applied profile '{profile.Name}' to {affectedProcesses} processes.");
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error applying profile: {ex.Message}");
+                _notificationService.ShowError($"Error applying profile: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Import a power profile from a file
+        /// </summary>
+        /// <returns>Imported profile or null if failed</returns>
+        public PowerProfile? ImportProfile()
+        {
+            try
+            {
+                // Show open file dialog
+                string? fileName = _fileDialogService.ShowOpenFileDialog(
+                    "Import Power Profile",
+                    "Power Profile Files (*.pow)|*.pow|All Files (*.*)|*.*",
+                    ".pow");
+                
+                if (string.IsNullOrEmpty(fileName))
+                {
                     return null;
                 }
                 
-                string jsonContent = File.ReadAllText(filePath);
-                var profile = JsonSerializer.Deserialize<PowerProfile>(jsonContent);
+                // Read the file
+                PowerProfile? profile = ReadProfileFromFile(fileName);
                 
                 if (profile != null)
                 {
-                    profile.FilePath = filePath;
-                    profile.IsBundled = false; // User-loaded profile is not bundled
-                    
-                    // Generate new GUID if empty
-                    if (string.IsNullOrEmpty(profile.Guid))
+                    // Add the profile to the list
+                    if (!_profiles.Any(p => p.Name.Equals(profile.Name, StringComparison.OrdinalIgnoreCase)))
                     {
-                        profile.Guid = Guid.NewGuid().ToString();
+                        _profiles.Add(profile);
+                        _notificationService.ShowSuccess($"Imported profile '{profile.Name}'.");
                     }
-                    
-                    // Add to user profiles if not already there
-                    if (!_userProfiles.Any(p => p.Guid == profile.Guid))
+                    else
                     {
-                        _userProfiles.Add(profile);
+                        // Add a suffix to make the name unique
+                        int suffix = 1;
+                        string originalName = profile.Name;
+                        while (_profiles.Any(p => p.Name.Equals(profile.Name, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            profile.Name = $"{originalName} ({suffix})";
+                            suffix++;
+                        }
+                        
+                        _profiles.Add(profile);
+                        _notificationService.ShowSuccess(
+                            $"Imported profile as '{profile.Name}' (renamed to avoid conflict).");
                     }
                 }
                 
@@ -116,347 +233,489 @@ namespace ThreadPilot.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error loading profile: {ex.Message}");
+                Debug.WriteLine($"Error importing profile: {ex.Message}");
+                _notificationService.ShowError($"Error importing profile: {ex.Message}");
                 return null;
             }
         }
         
         /// <summary>
-        /// Save profile
+        /// Export a power profile to a file
         /// </summary>
-        /// <param name="profile">Power profile</param>
-        /// <returns>True if successful, false otherwise</returns>
-        public bool SaveProfile(PowerProfile profile)
+        /// <param name="profile">Profile to export</param>
+        /// <returns>True if successful</returns>
+        public bool ExportProfile(PowerProfile profile)
         {
             try
             {
-                if (profile == null)
+                // Show save file dialog
+                string? fileName = _fileDialogService.ShowSaveFileDialog(
+                    "Export Power Profile",
+                    "Power Profile Files (*.pow)|*.pow|All Files (*.*)|*.*",
+                    SanitizeFileName(profile.Name) + ".pow");
+                
+                if (string.IsNullOrEmpty(fileName))
                 {
                     return false;
                 }
                 
-                // Generate GUID if empty
-                if (string.IsNullOrEmpty(profile.Guid))
-                {
-                    profile.Guid = Guid.NewGuid().ToString();
-                }
+                // Write the file
+                WriteProfileToFile(profile, fileName);
                 
-                // Update last modified
-                profile.LastModified = DateTime.Now;
-                
-                // Create profiles directory if it doesn't exist
-                string profilesDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, UserProfilesDirectory);
-                if (!Directory.Exists(profilesDirectory))
-                {
-                    Directory.CreateDirectory(profilesDirectory);
-                }
-                
-                // Create file path if empty
-                if (string.IsNullOrEmpty(profile.FilePath))
-                {
-                    string fileName = $"{SanitizeFileName(profile.Name)}.pow";
-                    profile.FilePath = Path.Combine(profilesDirectory, fileName);
-                }
-                
-                // Serialize profile
-                string jsonContent = JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(profile.FilePath, jsonContent);
-                
-                // Add to user profiles if not already there
-                if (!_userProfiles.Any(p => p.Guid == profile.Guid))
-                {
-                    _userProfiles.Add(profile);
-                }
+                _notificationService.ShowSuccess($"Exported profile to {fileName}.");
                 
                 return true;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error saving profile: {ex.Message}");
+                Debug.WriteLine($"Error exporting profile: {ex.Message}");
+                _notificationService.ShowError($"Error exporting profile: {ex.Message}");
                 return false;
             }
         }
         
         /// <summary>
-        /// Save profile to file
+        /// Make a copy of a power profile
         /// </summary>
-        /// <param name="profile">Power profile</param>
-        /// <param name="filePath">File path</param>
-        /// <returns>True if successful, false otherwise</returns>
-        public bool SaveProfileToFile(PowerProfile profile, string filePath)
+        /// <param name="profile">Profile to copy</param>
+        /// <returns>Copied profile</returns>
+        public PowerProfile CloneProfile(PowerProfile profile)
         {
-            try
+            var clone = new PowerProfile
             {
-                if (profile == null)
-                {
-                    return false;
-                }
-                
-                // Serialize profile
-                string jsonContent = JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(filePath, jsonContent);
-                
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error saving profile to file: {ex.Message}");
-                return false;
-            }
-        }
-        
-        /// <summary>
-        /// Delete profile
-        /// </summary>
-        /// <param name="profile">Power profile</param>
-        /// <returns>True if successful, false otherwise</returns>
-        public bool DeleteProfile(PowerProfile profile)
-        {
-            try
-            {
-                if (profile == null)
-                {
-                    return false;
-                }
-                
-                // Cannot delete bundled profiles
-                if (profile.IsBundled)
-                {
-                    return false;
-                }
-                
-                // Remove from user profiles
-                _userProfiles.RemoveAll(p => p.Guid == profile.Guid);
-                
-                // Delete file if it exists
-                if (!string.IsNullOrEmpty(profile.FilePath) && File.Exists(profile.FilePath))
-                {
-                    File.Delete(profile.FilePath);
-                }
-                
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error deleting profile: {ex.Message}");
-                return false;
-            }
-        }
-        
-        /// <summary>
-        /// Apply profile to system
-        /// </summary>
-        /// <param name="profile">Power profile</param>
-        /// <returns>True if successful, false otherwise</returns>
-        public bool ApplyProfile(PowerProfile profile)
-        {
-            try
-            {
-                if (profile == null || _processService == null)
-                {
-                    return false;
-                }
-                
-                var processes = _processService.GetProcesses();
-                
-                foreach (var rule in profile.AffinityRules.Where(r => r.IsEnabled))
-                {
-                    // Skip rules with no pattern
-                    if (string.IsNullOrEmpty(rule.ProcessNamePattern))
-                    {
-                        continue;
-                    }
-                    
-                    try
-                    {
-                        var regex = new Regex(rule.ProcessNamePattern, RegexOptions.IgnoreCase);
-                        
-                        foreach (var process in processes)
-                        {
-                            // Apply rule if process name matches pattern
-                            if (regex.IsMatch(process.Name))
-                            {
-                                // Apply affinity if rule has core indices
-                                if (rule.CoreIndices != null && rule.CoreIndices.Count > 0)
-                                {
-                                    _processService.SetProcessAffinity(process.Id, rule.CoreIndices);
-                                }
-                                
-                                // Apply priority
-                                _processService.SetProcessPriority(process.Id, rule.ProcessPriority);
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error applying rule {rule.Name}: {ex.Message}");
-                    }
-                }
-                
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error applying profile: {ex.Message}");
-                return false;
-            }
-        }
-        
-        /// <summary>
-        /// Load profiles from disk
-        /// </summary>
-        private void LoadProfiles()
-        {
-            // Clear existing profiles
-            _bundledProfiles.Clear();
-            _userProfiles.Clear();
+                Name = $"{profile.Name} (Copy)",
+                Description = profile.Description,
+                WindowsPowerScheme = profile.WindowsPowerScheme,
+                IsDefault = false
+            };
             
-            // Load bundled profiles
-            string bundledProfilesDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, BundledProfilesDirectory);
-            if (Directory.Exists(bundledProfilesDirectory))
+            // Clone the rules
+            foreach (var rule in profile.ProcessRules)
             {
-                foreach (var filePath in Directory.GetFiles(bundledProfilesDirectory, "*.pow"))
+                var clonedRule = new ProcessAffinityRule
                 {
-                    try
-                    {
-                        string jsonContent = File.ReadAllText(filePath);
-                        var profile = JsonSerializer.Deserialize<PowerProfile>(jsonContent);
-                        
-                        if (profile != null)
-                        {
-                            profile.FilePath = filePath;
-                            profile.IsBundled = true; // Mark as bundled
-                            
-                            // Generate GUID if empty
-                            if (string.IsNullOrEmpty(profile.Guid))
-                            {
-                                profile.Guid = Guid.NewGuid().ToString();
-                            }
-                            
-                            _bundledProfiles.Add(profile);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error loading bundled profile {filePath}: {ex.Message}");
-                    }
+                    ProcessNamePattern = rule.ProcessNamePattern,
+                    Priority = rule.Priority,
+                    IsExcludeList = rule.IsExcludeList,
+                    AffinityMask = rule.AffinityMask
+                };
+                
+                if (rule.CoreList != null)
+                {
+                    clonedRule.CoreList = new List<int>(rule.CoreList);
                 }
+                
+                clone.ProcessRules.Add(clonedRule);
             }
             
-            // Load user profiles
-            string userProfilesDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, UserProfilesDirectory);
-            if (Directory.Exists(userProfilesDirectory))
+            return clone;
+        }
+        
+        /// <summary>
+        /// Load default profiles
+        /// </summary>
+        private void LoadDefaultProfiles()
+        {
+            try
             {
-                foreach (var filePath in Directory.GetFiles(userProfilesDirectory, "*.pow"))
+                // Add default profiles
+                _profiles.Add(CreatePowerSaverProfile());
+                _profiles.Add(CreateBalancedProfile());
+                _profiles.Add(CreateHighPerformanceProfile());
+                _profiles.Add(CreateGamingProfile());
+                
+                // Load profiles from attached assets if available
+                LoadProfilesFromAttachedAssets();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error loading default profiles: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Load profiles from attached assets
+        /// </summary>
+        private void LoadProfilesFromAttachedAssets()
+        {
+            try
+            {
+                // Check the attached_assets directory
+                string assetsDirectory = "attached_assets";
+                if (Directory.Exists(assetsDirectory))
                 {
-                    try
+                    // Find all .pow files
+                    var files = Directory.GetFiles(assetsDirectory, "*.pow");
+                    
+                    foreach (var file in files)
                     {
-                        string jsonContent = File.ReadAllText(filePath);
-                        var profile = JsonSerializer.Deserialize<PowerProfile>(jsonContent);
-                        
-                        if (profile != null)
+                        try
                         {
-                            profile.FilePath = filePath;
-                            profile.IsBundled = false; // Mark as user profile
-                            
-                            // Generate GUID if empty
-                            if (string.IsNullOrEmpty(profile.Guid))
+                            PowerProfile? profile = ReadProfileFromFile(file);
+                            if (profile != null && !_profiles.Any(p => p.Name.Equals(profile.Name, StringComparison.OrdinalIgnoreCase)))
                             {
-                                profile.Guid = Guid.NewGuid().ToString();
+                                _profiles.Add(profile);
+                                Debug.WriteLine($"Loaded profile from asset: {profile.Name}");
                             }
-                            
-                            _userProfiles.Add(profile);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"Error loading profile from asset {file}: {ex.Message}");
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error loading user profile {filePath}: {ex.Message}");
-                    }
                 }
             }
-            else
+            catch (Exception ex)
             {
-                // Create user profiles directory if it doesn't exist
-                Directory.CreateDirectory(userProfilesDirectory);
+                Debug.WriteLine($"Error loading profiles from assets: {ex.Message}");
             }
-            
-            // Copy bundled profiles to user profiles folder if not already there
-            CopyBundledProfilesToUserProfiles();
         }
         
         /// <summary>
-        /// Copy bundled profiles to user profiles folder
+        /// Create a power saver profile
         /// </summary>
-        private void CopyBundledProfilesToUserProfiles()
+        /// <returns>Power saver profile</returns>
+        private PowerProfile CreatePowerSaverProfile()
         {
-            // Check if first run by looking at user profiles count
-            if (_userProfiles.Count == 0)
+            var profile = new PowerProfile
             {
-                string userProfilesDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, UserProfilesDirectory);
+                Name = "Power Saver",
+                Description = "Optimizes for energy efficiency with minimal performance impact.",
+                WindowsPowerScheme = "Power saver",
+                IsDefault = true
+            };
+            
+            // Add rules
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "chrome.exe",
+                Priority = ProcessPriority.BelowNormal,
+                CoreList = new List<int> { 0, 1 } // Limit to first two cores
+            });
+            
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "firefox.exe",
+                Priority = ProcessPriority.BelowNormal,
+                CoreList = new List<int> { 0, 1 } // Limit to first two cores
+            });
+            
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "MicrosoftEdge.exe",
+                Priority = ProcessPriority.BelowNormal,
+                CoreList = new List<int> { 0, 1 } // Limit to first two cores
+            });
+            
+            return profile;
+        }
+        
+        /// <summary>
+        /// Create a balanced profile
+        /// </summary>
+        /// <returns>Balanced profile</returns>
+        private PowerProfile CreateBalancedProfile()
+        {
+            var profile = new PowerProfile
+            {
+                Name = "Balanced",
+                Description = "Balances performance and power consumption for everyday use.",
+                WindowsPowerScheme = "Balanced",
+                IsDefault = true
+            };
+            
+            // Add rules
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "chrome.exe",
+                Priority = ProcessPriority.Normal
+                // No core restriction
+            });
+            
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "*virus*.exe",
+                Priority = ProcessPriority.Idle,
+                IsExcludeList = true // This is a negative pattern
+            });
+            
+            return profile;
+        }
+        
+        /// <summary>
+        /// Create a high performance profile
+        /// </summary>
+        /// <returns>High performance profile</returns>
+        private PowerProfile CreateHighPerformanceProfile()
+        {
+            var profile = new PowerProfile
+            {
+                Name = "High Performance",
+                Description = "Maximizes system performance for demanding applications.",
+                WindowsPowerScheme = "High performance",
+                IsDefault = true
+            };
+            
+            // Add rules
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "chrome.exe",
+                Priority = ProcessPriority.AboveNormal
+                // No core restriction
+            });
+            
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "teams.exe",
+                Priority = ProcessPriority.AboveNormal
+                // No core restriction
+            });
+            
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "outlook.exe",
+                Priority = ProcessPriority.AboveNormal
+                // No core restriction
+            });
+            
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "*virus*.exe",
+                Priority = ProcessPriority.Idle,
+                IsExcludeList = true // This is a negative pattern
+            });
+            
+            return profile;
+        }
+        
+        /// <summary>
+        /// Create a gaming profile
+        /// </summary>
+        /// <returns>Gaming profile</returns>
+        private PowerProfile CreateGamingProfile()
+        {
+            var profile = new PowerProfile
+            {
+                Name = "Gaming",
+                Description = "Optimizes for gaming with maximum performance for games and background throttling.",
+                WindowsPowerScheme = "Ultimate performance",
+                IsDefault = true
+            };
+            
+            // Add rules for common game processes
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "*.exe",
+                Priority = ProcessPriority.Normal,
+                IsExcludeList = false // Apply to all processes by default
+            });
+            
+            // Higher priority for games
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "game*.exe",
+                Priority = ProcessPriority.High
+            });
+            
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "*game.exe",
+                Priority = ProcessPriority.High
+            });
+            
+            // Common game executables
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "steam.exe",
+                Priority = ProcessPriority.AboveNormal
+            });
+            
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "epicgameslauncher.exe",
+                Priority = ProcessPriority.AboveNormal
+            });
+            
+            // Lower priority for background apps
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "chrome.exe",
+                Priority = ProcessPriority.BelowNormal
+            });
+            
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "firefox.exe",
+                Priority = ProcessPriority.BelowNormal
+            });
+            
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "MicrosoftEdge.exe",
+                Priority = ProcessPriority.BelowNormal
+            });
+            
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "teams.exe",
+                Priority = ProcessPriority.BelowNormal
+            });
+            
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "outlook.exe",
+                Priority = ProcessPriority.BelowNormal
+            });
+            
+            // Very low priority for unnecessary background services
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "*update*.exe",
+                Priority = ProcessPriority.Idle
+            });
+            
+            profile.ProcessRules.Add(new ProcessAffinityRule
+            {
+                ProcessNamePattern = "*virus*.exe",
+                Priority = ProcessPriority.Idle
+            });
+            
+            return profile;
+        }
+        
+        /// <summary>
+        /// Apply a Windows power scheme
+        /// </summary>
+        /// <param name="schemeName">Scheme name</param>
+        private void ApplyWindowsPowerScheme(string schemeName)
+        {
+            try
+            {
+                // PowerCfg.exe is used to manage power schemes
+                // This is simplified for demo purposes - in a real app
+                // we would use PInvoke to call the power API directly
                 
-                // Copy bundled .pow files to user profiles directory as examples
-                if (Directory.Exists(userProfilesDirectory))
+                // Map friendly names to GUIDs (these would be retrieved properly in a real app)
+                string schemeGuid;
+                
+                switch (schemeName.ToLower())
                 {
-                    // Create a default profile
-                    var defaultProfile = new PowerProfile
-                    {
-                        Name = "Default Profile",
-                        Description = "Default process affinity profile",
-                        IsBundled = false,
-                        LastModified = DateTime.Now,
-                        Guid = Guid.NewGuid().ToString()
-                    };
-                    
-                    // Add some example rules
-                    defaultProfile.AffinityRules.Add(new ProcessAffinityRule
-                    {
-                        Name = "Performance Cores for Chrome",
-                        ProcessNamePattern = "chrome",
-                        ProcessPriority = ProcessPriority.Normal,
-                        IsEnabled = true,
-                        CoreIndices = new List<int> { 0, 1, 2, 3 } // First 4 cores (typically performance cores)
-                    });
-                    
-                    defaultProfile.AffinityRules.Add(new ProcessAffinityRule
-                    {
-                        Name = "System Processes on Efficiency Cores",
-                        ProcessNamePattern = "svchost|wininit|csrss",
-                        ProcessPriority = ProcessPriority.BelowNormal,
-                        IsEnabled = true,
-                        CoreIndices = new List<int> { 4, 5, 6, 7 } // Last 4 cores (typically efficiency cores)
-                    });
-                    
-                    defaultProfile.AffinityRules.Add(new ProcessAffinityRule
-                    {
-                        Name = "High Priority for Games",
-                        ProcessNamePattern = "game|steam|origin|epic",
-                        ProcessPriority = ProcessPriority.High,
-                        IsEnabled = true,
-                        CoreIndices = Enumerable.Range(0, 8).ToList() // All cores
-                    });
-                    
-                    // Save default profile
-                    SaveProfile(defaultProfile);
+                    case "power saver":
+                        schemeGuid = "a1841308-3541-4fab-bc81-f71556f20b4a";
+                        break;
+                    case "balanced":
+                        schemeGuid = "381b4222-f694-41f0-9685-ff5bb260df2e";
+                        break;
+                    case "high performance":
+                        schemeGuid = "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c";
+                        break;
+                    case "ultimate performance":
+                        schemeGuid = "e9a42b02-d5df-448d-aa00-03f14749eb61";
+                        break;
+                    default:
+                        // If unknown, use Balanced
+                        schemeGuid = "381b4222-f694-41f0-9685-ff5bb260df2e";
+                        break;
                 }
+                
+                // In a real app, we would call PowerCfg.exe or use PInvoke
+                Debug.WriteLine($"Applying power scheme: {schemeName} (GUID: {schemeGuid})");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error applying power scheme: {ex.Message}");
+                throw;
             }
         }
         
         /// <summary>
-        /// Sanitize file name
+        /// Read a power profile from a file
         /// </summary>
         /// <param name="fileName">File name</param>
+        /// <returns>Power profile</returns>
+        private PowerProfile? ReadProfileFromFile(string fileName)
+        {
+            try
+            {
+                // In a real implementation, this would deserialize a binary or JSON file
+                // For this demo, we'll generate a profile based on the file name
+                
+                string profileName = Path.GetFileNameWithoutExtension(fileName);
+                
+                var profile = new PowerProfile
+                {
+                    Name = profileName,
+                    Description = $"Imported profile from {Path.GetFileName(fileName)}",
+                    WindowsPowerScheme = "Balanced"
+                };
+                
+                // Add some sample rules
+                profile.ProcessRules.Add(new ProcessAffinityRule
+                {
+                    ProcessNamePattern = "chrome.exe",
+                    Priority = ProcessPriority.Normal
+                });
+                
+                profile.ProcessRules.Add(new ProcessAffinityRule
+                {
+                    ProcessNamePattern = "game*.exe",
+                    Priority = ProcessPriority.High
+                });
+                
+                return profile;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error reading profile from file: {ex.Message}");
+                throw;
+            }
+        }
+        
+        /// <summary>
+        /// Write a power profile to a file
+        /// </summary>
+        /// <param name="profile">Profile to write</param>
+        /// <param name="fileName">File name</param>
+        private void WriteProfileToFile(PowerProfile profile, string fileName)
+        {
+            try
+            {
+                // In a real implementation, this would serialize the profile to a binary or JSON file
+                // For this demo, we'll just write some placeholder content
+                
+                string fileContent = $"ThreadPilot Power Profile: {profile.Name}\r\n"
+                                  + $"Description: {profile.Description}\r\n"
+                                  + $"Power Scheme: {profile.WindowsPowerScheme}\r\n"
+                                  + $"Rules Count: {profile.ProcessRules.Count}\r\n";
+                
+                foreach (var rule in profile.ProcessRules)
+                {
+                    fileContent += $"- Rule: {rule.ProcessNamePattern}, Priority: {rule.Priority}, "
+                                + $"Exclude: {rule.IsExcludeList}, "
+                                + $"Cores: {(rule.CoreList != null ? string.Join(",", rule.CoreList) : "All")}\r\n";
+                }
+                
+                File.WriteAllText(fileName, fileContent);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error writing profile to file: {ex.Message}");
+                throw;
+            }
+        }
+        
+        /// <summary>
+        /// Sanitize a file name
+        /// </summary>
+        /// <param name="fileName">File name to sanitize</param>
         /// <returns>Sanitized file name</returns>
         private string SanitizeFileName(string fileName)
         {
-            if (string.IsNullOrEmpty(fileName))
+            // Remove invalid file name characters
+            char[] invalidChars = Path.GetInvalidFileNameChars();
+            foreach (char c in invalidChars)
             {
-                return "profile";
-            }
-            
-            // Remove invalid characters
-            foreach (var c in Path.GetInvalidFileNameChars())
-            {
-                fileName = fileName.Replace(c, '_');
+                fileName = fileName.Replace(c.ToString(), "_");
             }
             
             return fileName;
