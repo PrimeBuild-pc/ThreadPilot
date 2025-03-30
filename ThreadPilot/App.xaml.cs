@@ -1,8 +1,7 @@
 using System;
-using System.Windows;
-using System.Threading.Tasks;
 using System.IO;
-using System.Windows.Media;
+using System.Windows;
+using System.Windows.Threading;
 using ThreadPilot.Services;
 
 namespace ThreadPilot
@@ -12,126 +11,105 @@ namespace ThreadPilot
     /// </summary>
     public partial class App : Application
     {
-        // Service container for the application
-        public static ServiceContainer Services { get; private set; }
-
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
             
-            // Initialize the service container
+            // Initialize service locator
             InitializeServices();
             
-            // Ensure the required directories are created
+            // Check and create application directories
             EnsureApplicationDirectories();
-            
-            // Check if the application is running with admin rights
-            CheckAdminRights();
         }
-
+        
         private void InitializeServices()
         {
-            // Create and configure all services
-            Services = new ServiceContainer();
+            // Initialize service locator with services
+            var fileDialogService = new FileDialogService();
+            ServiceLocator.RegisterService<IFileDialogService>(fileDialogService);
             
-            // Register all services
-            Services.Register<INotificationService>(new NotificationService());
-            Services.Register<IFileDialogService>(new FileDialogService());
-            Services.Register<IPowerProfileService>(new PowerProfileService());
-            Services.Register<IBundledPowerProfilesService>(new BundledPowerProfilesService());
-            Services.Register<IProcessService>(new ProcessService());
-            Services.Register<IAffinityService>(new AffinityService());
-            Services.Register<ISystemOptimizationService>(new SystemOptimizationService());
-            Services.Register<ISettingsService>(new SettingsService());
+            var powerProfileService = new PowerProfileService();
+            ServiceLocator.RegisterService<IPowerProfileService>(powerProfileService);
             
-            // Log service registration completion
-            Console.WriteLine("All services have been registered.");
+            var bundledPowerProfilesService = new BundledPowerProfilesService();
+            ServiceLocator.RegisterService<IBundledPowerProfilesService>(bundledPowerProfilesService);
+            
+            // Additional services will be registered here as needed
         }
-
+        
         private void EnsureApplicationDirectories()
         {
-            string appDataPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "ThreadPilot");
-            
-            // Create application directories if they don't exist
-            if (!Directory.Exists(appDataPath))
+            try
             {
-                Directory.CreateDirectory(appDataPath);
+                // Get application data directory
+                string appDataPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "ThreadPilot");
+                
+                // Create main application directory if it doesn't exist
+                if (!Directory.Exists(appDataPath))
+                {
+                    Directory.CreateDirectory(appDataPath);
+                }
+                
+                // Create profiles directory
+                string profilesPath = Path.Combine(appDataPath, "Profiles");
+                if (!Directory.Exists(profilesPath))
+                {
+                    Directory.CreateDirectory(profilesPath);
+                }
+                
+                // Create settings directory
+                string settingsPath = Path.Combine(appDataPath, "Settings");
+                if (!Directory.Exists(settingsPath))
+                {
+                    Directory.CreateDirectory(settingsPath);
+                }
+                
+                // Create logs directory
+                string logsPath = Path.Combine(appDataPath, "Logs");
+                if (!Directory.Exists(logsPath))
+                {
+                    Directory.CreateDirectory(logsPath);
+                }
             }
-            
-            string profilesDir = Path.Combine(appDataPath, "Profiles");
-            if (!Directory.Exists(profilesDir))
+            catch (Exception ex)
             {
-                Directory.CreateDirectory(profilesDir);
-            }
-            
-            string settingsDir = Path.Combine(appDataPath, "Settings");
-            if (!Directory.Exists(settingsDir))
-            {
-                Directory.CreateDirectory(settingsDir);
-            }
-            
-            string logsDir = Path.Combine(appDataPath, "Logs");
-            if (!Directory.Exists(logsDir))
-            {
-                Directory.CreateDirectory(logsDir);
-            }
-        }
-
-        private void CheckAdminRights()
-        {
-            bool isAdmin = new AdminRightsChecker().IsRunningAsAdmin();
-            
-            if (!isAdmin)
-            {
-                MessageBox.Show(
-                    "ThreadPilot is running without administrative privileges. " +
-                    "Some features may not work correctly.\n\n" +
-                    "To access all features, please restart the application by right-clicking it and selecting 'Run as administrator'.",
-                    "Limited Functionality",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show($"Error creating application directories: {ex.Message}", 
+                    "ThreadPilot", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         
-        // Simple service container implementation
-        public class ServiceContainer
+        private void Application_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
-            private readonly System.Collections.Generic.Dictionary<Type, object> _services = 
-                new System.Collections.Generic.Dictionary<Type, object>();
-
-            public void Register<T>(T service) where T : class
-            {
-                _services[typeof(T)] = service;
-            }
-
-            public T Resolve<T>() where T : class
-            {
-                if (_services.TryGetValue(typeof(T), out object service))
-                {
-                    return (T)service;
-                }
-
-                throw new InvalidOperationException($"Service of type {typeof(T).Name} is not registered.");
-            }
+            // Log the error
+            string errorMessage = $"An unhandled exception occurred: {e.Exception.Message}";
+            LogError(errorMessage, e.Exception);
+            
+            // Show error message to user
+            MessageBox.Show($"An unexpected error occurred. Please restart the application.\n\nError details: {e.Exception.Message}",
+                "ThreadPilot Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            
+            // Mark as handled to prevent application crash
+            e.Handled = true;
         }
         
-        // Helper class to check admin rights
-        private class AdminRightsChecker
+        private void LogError(string message, Exception ex)
         {
-            public bool IsRunningAsAdmin()
+            try
             {
-                try
-                {
-                    System.Security.Principal.WindowsIdentity identity = System.Security.Principal.WindowsIdentity.GetCurrent();
-                    System.Security.Principal.WindowsPrincipal principal = new System.Security.Principal.WindowsPrincipal(identity);
-                    return principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
-                }
-                catch
-                {
-                    return false;
-                }
+                string logPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "ThreadPilot", "Logs", "error.log");
+                
+                string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                string errorDetails = $"{timestamp} - {message}\n{ex}\n\n";
+                
+                File.AppendAllText(logPath, errorDetails);
+            }
+            catch
+            {
+                // If logging itself fails, there's not much we can do
             }
         }
     }

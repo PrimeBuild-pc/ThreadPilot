@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using ThreadPilot.Models;
@@ -5,47 +6,53 @@ using ThreadPilot.Models;
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Service for managing bundled power profiles (.pow files)
+    /// Interface for bundled power profile services
     /// </summary>
     public interface IBundledPowerProfilesService
     {
         /// <summary>
         /// Gets all bundled power profiles
         /// </summary>
-        /// <returns>A list of bundled power profiles</returns>
-        Task<List<BundledPowerProfile>> GetBundledProfilesAsync();
-        
+        /// <returns>List of bundled power profiles</returns>
+        Task<List<BundledPowerProfile>> GetAllBundledProfiles();
+
         /// <summary>
-        /// Imports a bundled power profile
+        /// Gets a bundled power profile by ID
         /// </summary>
-        /// <param name="profile">The profile to import</param>
-        /// <returns>True if import was successful, false otherwise</returns>
-        Task<bool> ImportProfileAsync(BundledPowerProfile profile);
-        
+        /// <param name="id">The ID of the profile</param>
+        /// <returns>The bundled power profile or null if not found</returns>
+        Task<BundledPowerProfile> GetProfileById(Guid id);
+
         /// <summary>
-        /// Activates a bundled power profile
+        /// Applies a bundled power profile to the system
         /// </summary>
-        /// <param name="profile">The profile to activate</param>
-        /// <returns>True if activation was successful, false otherwise</returns>
-        Task<bool> ActivateProfileAsync(BundledPowerProfile profile);
-        
+        /// <param name="id">The ID of the profile to apply</param>
+        /// <returns>True if successful, otherwise false</returns>
+        Task<bool> ApplyProfile(Guid id);
+
         /// <summary>
-        /// Imports an external .pow file and adds it to the bundled profiles
+        /// Exports a bundled power profile
         /// </summary>
-        /// <param name="filePath">Path to the .pow file</param>
-        /// <returns>The imported profile if successful, null otherwise</returns>
-        Task<BundledPowerProfile> ImportExternalProfileAsync(string filePath);
-        
+        /// <param name="id">The ID of the profile to export</param>
+        /// <returns>True if successful, otherwise false</returns>
+        Task<bool> ExportProfile(Guid id);
+
         /// <summary>
-        /// Refreshes the status of bundled profiles (checks which ones are active)
+        /// Deletes a bundled power profile
         /// </summary>
-        /// <returns>A task representing the asynchronous operation</returns>
-        Task RefreshProfileStatusAsync();
-        
+        /// <param name="id">The ID of the profile to delete</param>
+        /// <returns>True if successful, otherwise false</returns>
+        Task<bool> DeleteProfile(Guid id);
+
         /// <summary>
-        /// Gets all power profiles imported into Windows
+        /// Creates a new bundled power profile
         /// </summary>
-        /// <returns>A dictionary of profile GUIDs and their names</returns>
-        Task<Dictionary<string, string>> GetWindowsPowerProfilesAsync();
+        /// <param name="name">Name of the profile</param>
+        /// <param name="description">Description of the profile</param>
+        /// <param name="category">Category of the profile</param>
+        /// <param name="author">Author of the profile</param>
+        /// <param name="isDefault">Whether this profile should be the default</param>
+        /// <returns>The ID of the created profile, or null if creation failed</returns>
+        Task<Guid?> CreateProfile(string name, string description, string category, string author, bool isDefault = false);
     }
 }

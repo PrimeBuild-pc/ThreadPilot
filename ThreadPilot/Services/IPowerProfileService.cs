@@ -1,78 +1,66 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using ThreadPilot.Models;
 
 namespace ThreadPilot.Services
 {
+    /// <summary>
+    /// Interface for power profile services
+    /// </summary>
     public interface IPowerProfileService
     {
         /// <summary>
-        /// Gets the currently active power profile
+        /// Gets a power profile by ID
         /// </summary>
-        /// <returns>The active power profile GUID</returns>
-        string GetActivePowerProfile();
-
-        /// <summary>
-        /// Gets information about a power profile
-        /// </summary>
-        /// <param name="guid">The power profile GUID</param>
-        /// <returns>Name of the power profile</returns>
-        string GetPowerProfileName(string guid);
+        /// <param name="id">The ID of the power profile</param>
+        /// <returns>The power profile or null if not found</returns>
+        Task<BundledPowerProfile> GetProfileById(Guid id);
 
         /// <summary>
         /// Gets all available power profiles
         /// </summary>
-        /// <returns>List of power profile GUIDs</returns>
-        IEnumerable<string> GetAllPowerProfiles();
+        /// <returns>Dictionary of power profiles with their IDs</returns>
+        Task<Dictionary<Guid, string>> GetAllProfiles();
 
         /// <summary>
-        /// Sets the active power profile
+        /// Applies a power profile to the system
         /// </summary>
-        /// <param name="guid">The power profile GUID to activate</param>
-        /// <returns>True if successful</returns>
-        bool SetActivePowerProfile(string guid);
+        /// <param name="id">The ID of the power profile to apply</param>
+        /// <returns>True if successful, otherwise false</returns>
+        Task<bool> ApplyProfile(Guid id);
 
         /// <summary>
-        /// Imports a power profile from a .pow file
+        /// Imports a power profile from a file
         /// </summary>
-        /// <param name="filePath">Path to the .pow file</param>
-        /// <returns>GUID of the imported profile, or null if import failed</returns>
-        string ImportPowerProfile(string filePath);
+        /// <param name="filePath">Path to the power profile file</param>
+        /// <returns>The ID of the imported profile, or null if import failed</returns>
+        Task<Guid?> ImportProfile(string filePath);
 
         /// <summary>
-        /// Exports a power profile to a .pow file
+        /// Exports a power profile to a file
         /// </summary>
-        /// <param name="guid">The power profile GUID to export</param>
-        /// <param name="filePath">Path to save the .pow file</param>
-        /// <returns>True if successful</returns>
-        bool ExportPowerProfile(string guid, string filePath);
+        /// <param name="id">The ID of the power profile to export</param>
+        /// <param name="filePath">Path to save the power profile file</param>
+        /// <returns>True if successful, otherwise false</returns>
+        Task<bool> ExportProfile(Guid id, string filePath);
 
         /// <summary>
         /// Deletes a power profile
         /// </summary>
-        /// <param name="guid">The power profile GUID to delete</param>
-        /// <returns>True if successful</returns>
-        bool DeletePowerProfile(string guid);
+        /// <param name="id">The ID of the power profile to delete</param>
+        /// <returns>True if successful, otherwise false</returns>
+        Task<bool> DeleteProfile(Guid id);
 
         /// <summary>
-        /// Creates an optimized power profile for gaming
+        /// Creates a new power profile from system settings
         /// </summary>
-        /// <param name="name">Name for the new profile</param>
-        /// <returns>GUID of the created profile, or null if creation failed</returns>
-        string CreateGamingProfile(string name);
-
-        /// <summary>
-        /// Creates an optimized power profile for content creation
-        /// </summary>
-        /// <param name="name">Name for the new profile</param>
-        /// <returns>GUID of the created profile, or null if creation failed</returns>
-        string CreateContentCreationProfile(string name);
-
-        /// <summary>
-        /// Creates an optimized power profile for battery saving
-        /// </summary>
-        /// <param name="name">Name for the new profile</param>
-        /// <returns>GUID of the created profile, or null if creation failed</returns>
-        string CreateBatterySavingProfile(string name);
+        /// <param name="name">Name of the profile</param>
+        /// <param name="description">Description of the profile</param>
+        /// <param name="category">Category of the profile</param>
+        /// <param name="author">Author of the profile</param>
+        /// <param name="isDefault">Whether this profile should be the default</param>
+        /// <returns>The ID of the created profile, or null if creation failed</returns>
+        Task<Guid?> CreateProfileFromCurrentSettings(string name, string description, string category, string author, bool isDefault = false);
     }
 }

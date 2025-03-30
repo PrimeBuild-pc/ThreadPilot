@@ -1,87 +1,49 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
     
-    <!-- Power Profile Icon -->
-    <Geometry x:Key="WindowsProfileIcon">
-        M48,4L48,44L16,44L16,4L48,4 M52,0L12,0C10.9,0 10,0.9 10,2L10,46C10,47.1 10.9,48 12,48L52,48C53.1,48 54,47.1 54,46L54,2C54,0.9 53.1,0 52,0L52,0Z 
-        M42,38L22,38L22,36L42,36L42,38L42,38Z 
-        M42,30L22,30L22,28L42,28L42,30L42,30Z 
-        M42,22L22,22L22,20L42,20L42,22L42,22Z 
-        M42,14L22,14L22,12L42,12L42,14L42,14Z
-    </Geometry>
+    <!-- Dashboard Icons -->
+    <sys:String x:Key="IconDashboard">&#xE80F;</sys:String>
+    <sys:String x:Key="IconCPU">&#xE950;</sys:String>
+    <sys:String x:Key="IconProcesses">&#xE7EE;</sys:String>
+    <sys:String x:Key="IconMemory">&#xE946;</sys:String>
+    <sys:String x:Key="IconPower">&#xE945;</sys:String>
+    <sys:String x:Key="IconOptimize">&#xE90F;</sys:String>
     
-    <!-- Import Icon -->
-    <Geometry x:Key="ImportIcon">
-        M19,9h-4V3H9v6H5l7,7L19,9z M5,18v2h14v-2H5z
-    </Geometry>
+    <!-- Navigation and Actions -->
+    <sys:String x:Key="IconSettings">&#xE713;</sys:String>
+    <sys:String x:Key="IconInfo">&#xE946;</sys:String>
+    <sys:String x:Key="IconRefresh">&#xE72C;</sys:String>
+    <sys:String x:Key="IconNotifications">&#xE7E7;</sys:String>
+    <sys:String x:Key="IconSun">&#xE706;</sys:String>
+    <sys:String x:Key="IconMoon">&#xE708;</sys:String>
+    <sys:String x:Key="IconSearch">&#xE721;</sys:String>
     
-    <!-- Export Icon -->
-    <Geometry x:Key="ExportIcon">
-        M19,12v7H5v-7H3v7c0,1.1,0.9,2,2,2h14c1.1,0,2-0.9,2-2v-7H19z M13,12.67l2.59-2.58L17,11.5l-5,5l-5-5l1.41-1.41L11,12.67V3h2V12.67z
-    </Geometry>
+    <!-- Action Icons -->
+    <sys:String x:Key="IconAdd">&#xE710;</sys:String>
+    <sys:String x:Key="IconRemove">&#xE711;</sys:String>
+    <sys:String x:Key="IconEdit">&#xE70F;</sys:String>
+    <sys:String x:Key="IconSave">&#xE74E;</sys:String>
+    <sys:String x:Key="IconCancel">&#xE711;</sys:String>
+    <sys:String x:Key="IconConfirm">&#xE73E;</sys:String>
+    <sys:String x:Key="IconStart">&#xE768;</sys:String>
+    <sys:String x:Key="IconStop">&#xE71A;</sys:String>
+    <sys:String x:Key="IconPause">&#xE769;</sys:String>
+    <sys:String x:Key="IconReset">&#xE72C;</sys:String>
+    <sys:String x:Key="IconImport">&#xE8B5;</sys:String>
+    <sys:String x:Key="IconExport">&#xE74D;</sys:String>
+    <sys:String x:Key="IconApply">&#xE73E;</sys:String>
     
-    <!-- Delete Icon -->
-    <Geometry x:Key="DeleteIcon">
-        M6,19c0,1.1,0.9,2,2,2h8c1.1,0,2-0.9,2-2V7H6V19z M19,4h-3.5l-1-1h-5l-1,1H5v2h14V4z
-    </Geometry>
+    <!-- Status Icons -->
+    <sys:String x:Key="IconSuccess">&#xE73E;</sys:String>
+    <sys:String x:Key="IconWarning">&#xE7BA;</sys:String>
+    <sys:String x:Key="IconError">&#xE783;</sys:String>
+    <sys:String x:Key="IconInfo">&#xE946;</sys:String>
     
-    <!-- Refresh Icon -->
-    <Geometry x:Key="RefreshIcon">
-        M17.65,6.35C16.2,4.9,14.21,4,12,4c-4.42,0-7.99,3.58-7.99,8s3.57,8,7.99,8c3.73,0,6.84-2.55,7.73-6h-2.08c-0.82,2.33-3.04,4-5.65,4c-3.31,0-6-2.69-6-6s2.69-6,6-6c1.66,0,3.14,0.69,4.22,1.78L13,11h7V4L17.65,6.35z
-    </Geometry>
+    <!-- Specific Icons -->
+    <sys:String x:Key="IconAffinity">&#xE7EE;</sys:String>
+    <sys:String x:Key="IconPriority">&#xE7C0;</sys:String>
+    <sys:String x:Key="IconProfile">&#xE77B;</sys:String>
+    <sys:String x:Key="IconThread">&#xE8FA;</sys:String>
     
-    <!-- CPU Icon -->
-    <Geometry x:Key="CpuIcon">
-        M9,3V5H7C5.9,5 5,5.9 5,7v2H3v2h2v2H3v2h2v2c0,1.1 0.9,2 2,2h2v2h2v-2h2v2h2v-2h2c1.1,0 2-0.9 2-2v-2h2v-2h-2v-2h2V9h-2V7c0-1.1-0.9-2-2-2h-2V3H13v2h-2V3H9z M7,7h10v10H7V7z M9,9v6h6V9H9z
-    </Geometry>
-    
-    <!-- Process Icon -->
-    <Geometry x:Key="ProcessIcon">
-        M4,6H2v14c0,1.1,0.9,2,2,2h14v-2H4V6z M20,2H8C6.9,2,6,2.9,6,4v12c0,1.1,0.9,2,2,2h12c1.1,0,2-0.9,2-2V4C22,2.9,21.1,2,20,2z M20,16H8V4h12V16z M13,14.5h-2v-2h2V14.5z M13,9.5h-2v-2h2V9.5z M17,14.5h-2v-2h2V14.5z M17,9.5h-2v-2h2V9.5z
-    </Geometry>
-    
-    <!-- Battery Icon -->
-    <Geometry x:Key="BatteryIcon">
-        M15.67,4H14V2h-4v2H8.33C7.6,4,7,4.6,7,5.33v15.33C7,21.4,7.6,22,8.33,22h7.33c0.74,0,1.34-0.6,1.34-1.33V5.33C17,4.6,16.4,4,15.67,4z M13,18h-2v-2h2V18z M13,14h-2V9h2V14z
-    </Geometry>
-    
-    <!-- Settings Icon -->
-    <Geometry x:Key="SettingsIcon">
-        M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z
-    </Geometry>
-    
-    <!-- Dashboard Icon -->
-    <Geometry x:Key="DashboardIcon">
-        M3,13h8V3H3V13z M3,21h8v-6H3V21z M13,21h8V11h-8V21z M13,3v6h8V3H13z
-    </Geometry>
-    
-    <!-- Memory Icon -->
-    <Geometry x:Key="MemoryIcon">
-        M15,9H9v6h6V9z M13,13h-2v-2h2V13z M21,11V9h-2V7c0-1.1-0.9-2-2-2h-2V3h-2v2h-2V3H9v2H7c-1.1,0-2,0.9-2,2v2H3v2h2v2H3v2h2v2 c0,1.1,0.9,2,2,2h2v2h2v-2h2v2h2v-2h2c1.1,0,2-0.9,2-2v-2h2v-2h-2v-2H21z M17,17H7V7h10V17z
-    </Geometry>
-    
-    <!-- System Icon -->
-    <Geometry x:Key="SystemIcon">
-        M21,2H3C1.9,2,1,2.9,1,4v12c0,1.1,0.9,2,2,2h7v2H8v2h8v-2h-2v-2h7c1.1,0,2-0.9,2-2V4C23,2.9,22.1,2,21,2z M21,16H3V4h18V16z
-    </Geometry>
-    
-    <!-- Stop Icon -->
-    <Geometry x:Key="StopIcon">
-        M6,6h12v12H6V6z
-    </Geometry>
-    
-    <!-- Start Icon -->
-    <Geometry x:Key="StartIcon">
-        M8,5v14l11-7L8,5z
-    </Geometry>
-    
-    <!-- Priority Icon -->
-    <Geometry x:Key="PriorityIcon">
-        M12,19m-2,0a2,2 0,1 1,4 0a2,2 0,1 1,-4 0 M10,3h4v12h-4z
-    </Geometry>
-    
-    <!-- Affinity Icon -->
-    <Geometry x:Key="AffinityIcon">
-        M7,5h10v2h2V3c0-1.1-0.9-2-2-2H7C5.9,1,5,1.9,5,3v4h2V5z M15.41,16.59L20,12l-4.59-4.59L14,8.83L17.17,12L14,15.17L15.41,16.59z M10,15.17L6.83,12L10,8.83L8.59,7.41L4,12l4.59,4.59L10,15.17z M17,19H7v-2H5v4c0,1.1,0.9,2,2,2h10c1.1,0,2-0.9,2-2v-4h-2V19z
-    </Geometry>
 </ResourceDictionary>

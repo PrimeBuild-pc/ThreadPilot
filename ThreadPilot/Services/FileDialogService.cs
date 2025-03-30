@@ -1,57 +1,124 @@
 using System;
-using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Windows;
+using Microsoft.Win32;
+using System.Windows.Forms;
+using System.IO;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Interface for file dialog service
-    /// </summary>
-    public interface IFileDialogService
-    {
-        /// <summary>
-        /// Shows an open file dialog
-        /// </summary>
-        Task<string> ShowOpenFileDialogAsync(string title, string filter);
-        
-        /// <summary>
-        /// Shows a save file dialog
-        /// </summary>
-        Task<string> ShowSaveFileDialogAsync(string title, string filter, string defaultExtension);
-    }
-    
-    /// <summary>
-    /// Service for showing file dialogs
+    /// Implementation of IFileDialogService
     /// </summary>
     public class FileDialogService : IFileDialogService
     {
+        private readonly Window _mainWindow;
+
         /// <summary>
-        /// Shows an open file dialog
+        /// Constructs a new instance of the FileDialogService
         /// </summary>
-        public async Task<string> ShowOpenFileDialogAsync(string title, string filter)
+        /// <param name="mainWindow">The main window to anchor dialogs to</param>
+        public FileDialogService(Window mainWindow)
         {
-            // In the real application, this would show an actual file open dialog
-            // using Microsoft.Win32.OpenFileDialog or similar
-            
-            // For our Replit demo, we'll just return a simulated file path
-            await Task.Delay(1); // Simulate async operation
-            
-            // Return a simulated file path for demonstration
-            return "C:\\Users\\User\\Documents\\ThreadPilot\\PowerProfiles\\profile.pow";
+            _mainWindow = mainWindow ?? throw new ArgumentNullException(nameof(mainWindow));
         }
-        
+
         /// <summary>
-        /// Shows a save file dialog
+        /// Opens a file dialog to select a file
         /// </summary>
-        public async Task<string> ShowSaveFileDialogAsync(string title, string filter, string defaultExtension)
+        /// <param name="filter">The file filter (e.g., "Power Profile|*.pow")</param>
+        /// <param name="title">The title of the dialog</param>
+        /// <returns>The selected file path, or null if cancelled</returns>
+        public string OpenFileDialog(string filter, string title = "Select a file")
         {
-            // In the real application, this would show an actual file save dialog
-            // using Microsoft.Win32.SaveFileDialog or similar
-            
-            // For our Replit demo, we'll just return a simulated file path
-            await Task.Delay(1); // Simulate async operation
-            
-            // Return a simulated file path for demonstration
-            return $"C:\\Users\\User\\Documents\\ThreadPilot\\PowerProfiles\\profile.{defaultExtension}";
+            var dialog = new OpenFileDialog
+            {
+                Filter = filter,
+                Title = title,
+                CheckFileExists = true,
+                CheckPathExists = true
+            };
+
+            if (dialog.ShowDialog(_mainWindow) == true)
+            {
+                return dialog.FileName;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Opens a file dialog to save a file
+        /// </summary>
+        /// <param name="filter">The file filter (e.g., "Power Profile|*.pow")</param>
+        /// <param name="defaultFileName">The default file name</param>
+        /// <param name="title">The title of the dialog</param>
+        /// <returns>The selected file path, or null if cancelled</returns>
+        public string SaveFileDialog(string filter, string defaultFileName = "", string title = "Save file")
+        {
+            var dialog = new SaveFileDialog
+            {
+                Filter = filter,
+                Title = title,
+                FileName = defaultFileName,
+                OverwritePrompt = true
+            };
+
+            if (dialog.ShowDialog(_mainWindow) == true)
+            {
+                return dialog.FileName;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Opens a folder browser dialog
+        /// </summary>
+        /// <param name="title">The title of the dialog</param>
+        /// <returns>The selected folder path, or null if cancelled</returns>
+        public string OpenFolderBrowserDialog(string title = "Select a folder")
+        {
+            using (var dialog = new FolderBrowserDialog
+            {
+                Description = title,
+                ShowNewFolderButton = true
+            })
+            {
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    return dialog.SelectedPath;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Gets the extension filters for power profile files
+        /// </summary>
+        /// <returns>Power profile file filter string</returns>
+        public string GetPowerProfileFilter()
+        {
+            return "Power Profile (*.pow)|*.pow|All Files (*.*)|*.*";
+        }
+
+        /// <summary>
+        /// Gets common file dialog filters
+        /// </summary>
+        /// <returns>Dictionary of file type names and their filter strings</returns>
+        public Dictionary<string, string> GetCommonFileFilters()
+        {
+            return new Dictionary<string, string>
+            {
+                { "Power Profile", "Power Profile (*.pow)|*.pow" },
+                { "Text Files", "Text Files (*.txt)|*.txt" },
+                { "All Files", "All Files (*.*)|*.*" },
+                { "Executables", "Executable (*.exe)|*.exe" },
+                { "XML Files", "XML Files (*.xml)|*.xml" },
+                { "JSON Files", "JSON Files (*.json)|*.json" },
+                { "Config Files", "Config Files (*.config)|*.config" }
+            };
         }
     }
 }

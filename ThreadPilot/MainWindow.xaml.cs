@@ -1,9 +1,9 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using ThreadPilot.Services;
-using ThreadPilot.ViewModels;
 using ThreadPilot.Views;
 
 namespace ThreadPilot
@@ -13,107 +13,135 @@ namespace ThreadPilot
     /// </summary>
     public partial class MainWindow : Window
     {
+        private DispatcherTimer _notificationTimer;
+        private NotificationService _notificationService;
+
         public MainWindow()
         {
             InitializeComponent();
             
-            // Set the initial view
-            NavigateToPage("Dashboard");
+            _notificationTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(5)
+            };
+            _notificationTimer.Tick += NotificationTimer_Tick;
+            
+            // Register notification service
+            _notificationService = new NotificationService(ShowNotification);
+            ServiceLocator.RegisterService<INotificationService>(_notificationService);
+            
+            // Set initial page
+            LoadPageContent("Dashboard");
         }
 
-        private void NavigationMenu_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void NavigationButton_Click(object sender, RoutedEventArgs e)
         {
-            if (NavigationMenu.SelectedItem != null)
+            if (sender is RadioButton radioButton)
             {
-                var selectedItem = (ListBoxItem)NavigationMenu.SelectedItem;
-                string tag = selectedItem.Tag.ToString();
-                
-                NavigateToPage(tag);
+                // Extract the page name from RadioButton name (remove "Nav" suffix)
+                string pageName = radioButton.Name.Replace("Nav", "");
+                LoadPageContent(pageName);
             }
         }
 
-        private void NavigateToPage(string pageName)
+        private void LoadPageContent(string pageName)
         {
+            UserControl pageContent = null;
+            
             // Update the page title
             PageTitle.Text = pageName;
             
-            // Clear the current content
-            ContentFrame.Content = null;
-            
-            // Create and navigate to the selected page
+            // Create the appropriate user control based on the page name
             switch (pageName)
             {
                 case "Dashboard":
-                    ContentFrame.Content = new DashboardView();
+                    pageContent = new DashboardView();
                     break;
                 case "Processes":
-                    ContentFrame.Content = new ProcessesView();
+                    pageContent = new ProcessesView();
+                    break;
+                case "AffinityOptimization":
+                    pageContent = new AffinityOptimizationView();
                     break;
                 case "PowerProfiles":
-                    ContentFrame.Content = new PowerProfilesView();
+                    pageContent = new PowerProfilesView();
                     break;
-                case "ThreadOptimizer":
-                    ContentFrame.Content = new ThreadOptimizerView();
+                case "AutomationRules":
+                    pageContent = new AutomationRulesView();
                     break;
                 case "Settings":
-                    ContentFrame.Content = new SettingsView();
+                    pageContent = new SettingsView();
                     break;
                 default:
-                    ContentFrame.Content = new DashboardView();
+                    pageContent = new DashboardView();
                     break;
             }
-        }
-
-        private void ThemeToggle_Checked(object sender, RoutedEventArgs e)
-        {
-            ApplyTheme(true); // Dark theme
-        }
-
-        private void ThemeToggle_Unchecked(object sender, RoutedEventArgs e)
-        {
-            ApplyTheme(false); // Light theme
-        }
-
-        private void ApplyTheme(bool isDarkTheme)
-        {
-            ResourceDictionary resources = Application.Current.Resources;
             
-            // Update all brushes with the appropriate theme
-            if (isDarkTheme)
+            // Set the content
+            PageContent.Content = pageContent;
+        }
+
+        private void HelpButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Show help window or dialog
+            MessageBox.Show("ThreadPilot Help\n\nThis application allows you to manage and optimize CPU thread allocation, process affinity, and power profiles. For more detailed help on specific features, please refer to the documentation.", 
+                "ThreadPilot Help", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        
+        // Called by the NotificationService
+        public void ShowNotification(string message, bool isError = false)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
             {
-                // Dark theme
-                resources["PrimaryBrush"] = resources["DarkPrimaryBrush"];
-                resources["SecondaryBrush"] = resources["DarkSecondaryBrush"];
-                resources["AccentBrush"] = resources["DarkAccentBrush"];
-                resources["AppBackgroundBrush"] = resources["DarkBackgroundBrush"];
-                resources["CardBackgroundBrush"] = resources["DarkCardBackgroundBrush"];
-                resources["SidebarBackgroundBrush"] = resources["DarkSidebarBackgroundBrush"];
-                resources["PrimaryTextBrush"] = resources["DarkPrimaryTextBrush"];
-                resources["SecondaryTextBrush"] = resources["DarkSecondaryTextBrush"];
-                resources["DisabledTextBrush"] = resources["DarkDisabledTextBrush"];
-                resources["BorderBrush"] = resources["DarkBorderBrush"];
-                resources["HoverBrush"] = resources["DarkHoverBrush"];
-                resources["SeparatorBrush"] = resources["DarkSeparatorBrush"];
-            }
-            else
-            {
-                // Light theme
-                resources["PrimaryBrush"] = resources["LightPrimaryBrush"];
-                resources["SecondaryBrush"] = resources["LightSecondaryBrush"];
-                resources["AccentBrush"] = resources["LightAccentBrush"];
-                resources["AppBackgroundBrush"] = resources["LightBackgroundBrush"];
-                resources["CardBackgroundBrush"] = resources["LightCardBackgroundBrush"];
-                resources["SidebarBackgroundBrush"] = resources["LightSidebarBackgroundBrush"];
-                resources["PrimaryTextBrush"] = resources["LightPrimaryTextBrush"];
-                resources["SecondaryTextBrush"] = resources["LightSecondaryTextBrush"];
-                resources["DisabledTextBrush"] = resources["LightDisabledTextBrush"];
-                resources["BorderBrush"] = resources["LightBorderBrush"];
-                resources["HoverBrush"] = resources["LightHoverBrush"];
-                resources["SeparatorBrush"] = resources["LightSeparatorBrush"];
-            }
+                // Update notification text
+                NotificationText.Text = message;
+                
+                // Set color based on notification type
+                NotificationPanel.Background = isError 
+                    ? System.Windows.Media.Brushes.Firebrick 
+                    : System.Windows.Media.Brushes.ForestGreen;
+                
+                // Show the notification panel
+                NotificationPanel.Visibility = Visibility.Visible;
+                
+                // Start the timer to hide notification
+                _notificationTimer.Stop();
+                _notificationTimer.Start();
+                
+                // Animate notification
+                DoubleAnimation animation = new DoubleAnimation
+                {
+                    From = 0,
+                    To = 1,
+                    Duration = TimeSpan.FromMilliseconds(300)
+                };
+                NotificationPanel.BeginAnimation(UIElement.OpacityProperty, animation);
+            });
+        }
+        
+        private void NotificationTimer_Tick(object sender, EventArgs e)
+        {
+            // Stop the timer
+            _notificationTimer.Stop();
             
-            // Save the theme preference to settings
-            // SettingsService.Current.SaveThemePreference(isDarkTheme);
+            // Fade out animation
+            DoubleAnimation animation = new DoubleAnimation
+            {
+                From = 1,
+                To = 0,
+                Duration = TimeSpan.FromMilliseconds(300)
+            };
+            animation.Completed += (s, _) => NotificationPanel.Visibility = Visibility.Collapsed;
+            NotificationPanel.BeginAnimation(UIElement.OpacityProperty, animation);
+        }
+        
+        private void CloseNotification_Click(object sender, RoutedEventArgs e)
+        {
+            // Stop the timer if it's running
+            _notificationTimer.Stop();
+            
+            // Immediately hide the notification panel
+            NotificationPanel.Visibility = Visibility.Collapsed;
         }
     }
 }
