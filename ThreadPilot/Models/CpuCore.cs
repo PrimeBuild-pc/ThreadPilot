@@ -1,7 +1,7 @@
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Represents information about a CPU core
+    /// Represents a CPU core
     /// </summary>
     public class CpuCore
     {
@@ -11,9 +11,9 @@ namespace ThreadPilot.Models
         public int Index { get; set; }
         
         /// <summary>
-        /// Gets or sets the CPU package index
+        /// Gets or sets the logical processor index
         /// </summary>
-        public int PackageIndex { get; set; }
+        public int LogicalProcessorIndex { get; set; }
         
         /// <summary>
         /// Gets or sets the core ID
@@ -21,12 +21,22 @@ namespace ThreadPilot.Models
         public int CoreId { get; set; }
         
         /// <summary>
-        /// Gets or sets the logical processor ID
+        /// Gets or sets a value indicating whether the core is hyperthreaded
         /// </summary>
-        public int LogicalProcessorIndex { get; set; }
+        public bool IsHyperthreaded { get; set; }
         
         /// <summary>
-        /// Gets or sets the current utilization percentage
+        /// Gets or sets a value indicating whether the core is a performance core
+        /// </summary>
+        public bool IsPerformanceCore { get; set; }
+        
+        /// <summary>
+        /// Gets or sets a value indicating whether the core is an efficiency core
+        /// </summary>
+        public bool IsEfficiencyCore { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the current utilization in percent
         /// </summary>
         public double Utilization { get; set; }
         
@@ -36,33 +46,46 @@ namespace ThreadPilot.Models
         public int Frequency { get; set; }
         
         /// <summary>
-        /// Gets or sets the maximum frequency in MHz
-        /// </summary>
-        public int MaxFrequency { get; set; }
-        
-        /// <summary>
         /// Gets or sets the current temperature in Celsius
         /// </summary>
         public double Temperature { get; set; }
         
         /// <summary>
-        /// Gets or sets whether the core is a hyperthreaded core (logical processor)
+        /// Gets or sets a value indicating whether the core is enabled
         /// </summary>
-        public bool IsHyperthreaded { get; set; }
+        public bool IsEnabled { get; set; } = true;
         
         /// <summary>
-        /// Gets or sets whether the core is part of an efficiency cluster (E-core)
+        /// Gets or sets a value indicating whether the core is parked
         /// </summary>
-        public bool IsEfficiencyCore { get; set; }
+        public bool IsParked { get; set; }
         
         /// <summary>
-        /// Gets or sets whether the core is part of a performance cluster (P-core)
+        /// Gets the core type (Performance, Efficiency, Normal)
         /// </summary>
-        public bool IsPerformanceCore { get; set; }
+        public string CoreType
+        {
+            get
+            {
+                if (IsPerformanceCore)
+                    return "Performance";
+                    
+                if (IsEfficiencyCore)
+                    return "Efficiency";
+                    
+                return "Normal";
+            }
+        }
         
         /// <summary>
-        /// Gets or sets the friendly name for the core
+        /// Gets the display name of the core
         /// </summary>
-        public string Name => $"Core {CoreId}{(IsHyperthreaded ? " (HT)" : "")} {(IsEfficiencyCore ? "E" : IsPerformanceCore ? "P" : "")}";
+        public string DisplayName
+        {
+            get
+            {
+                return $"Core {CoreId} ({CoreType})";
+            }
+        }
     }
 }

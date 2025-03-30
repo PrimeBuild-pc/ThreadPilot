@@ -4,129 +4,110 @@ using System.Windows.Input;
 namespace ThreadPilot.Commands
 {
     /// <summary>
-    /// Implementation of ICommand that wraps a method delegate
+    /// Implementation of ICommand that wraps an Action delegate.
     /// </summary>
     public class RelayCommand : ICommand
     {
-        private readonly Action<object> _execute;
-        private readonly Predicate<object> _canExecute;
-        
+        private readonly Action _execute;
+        private readonly Func<bool>? _canExecute;
+
         /// <summary>
-        /// Occurs when changes occur that affect whether or not the command should execute
+        /// Initializes a new instance of RelayCommand.
         /// </summary>
-        public event EventHandler CanExecuteChanged
-        {
-            add { CommandManager.RequerySuggested += value; }
-            remove { CommandManager.RequerySuggested -= value; }
-        }
-        
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RelayCommand"/> class 
-        /// that can always execute
-        /// </summary>
-        /// <param name="execute">The execution logic</param>
-        public RelayCommand(Action<object> execute) : this(execute, null)
-        {
-        }
-        
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RelayCommand"/> class
-        /// </summary>
-        /// <param name="execute">The execution logic</param>
-        /// <param name="canExecute">The execution status logic</param>
-        public RelayCommand(Action<object> execute, Predicate<object> canExecute)
+        /// <param name="execute">The execution logic.</param>
+        /// <param name="canExecute">The execution status logic (optional).</param>
+        public RelayCommand(Action execute, Func<bool>? canExecute = null)
         {
             _execute = execute ?? throw new ArgumentNullException(nameof(execute));
             _canExecute = canExecute;
         }
-        
+
         /// <summary>
-        /// Determines whether this command can execute in its current state
+        /// Occurs when changes occur that affect whether or not the command should execute.
         /// </summary>
-        /// <param name="parameter">Data used by the command</param>
-        /// <returns>True if this command can be executed; otherwise, false</returns>
-        public bool CanExecute(object parameter)
+        public event EventHandler? CanExecuteChanged
         {
-            return _canExecute == null || _canExecute(parameter);
+            add => CommandManager.RequerySuggested += value;
+            remove => CommandManager.RequerySuggested -= value;
         }
-        
+
         /// <summary>
-        /// Executes the command
+        /// Determines whether the command can execute in its current state.
         /// </summary>
-        /// <param name="parameter">Data used by the command</param>
-        public void Execute(object parameter)
+        /// <param name="parameter">Data used by the command. Not used in this implementation.</param>
+        /// <returns>True if this command can be executed; otherwise, false.</returns>
+        public bool CanExecute(object? parameter)
         {
-            _execute(parameter);
+            return _canExecute == null || _canExecute();
         }
-        
+
         /// <summary>
-        /// Forces a re-check of the CanExecute status
+        /// Executes the command.
+        /// </summary>
+        /// <param name="parameter">Data used by the command. Not used in this implementation.</param>
+        public void Execute(object? parameter)
+        {
+            _execute();
+        }
+
+        /// <summary>
+        /// Method to raise the CanExecuteChanged event to force a CanExecute update.
         /// </summary>
         public void RaiseCanExecuteChanged()
         {
             CommandManager.InvalidateRequerySuggested();
         }
     }
-    
+
     /// <summary>
-    /// Generic implementation of ICommand that wraps a method delegate
+    /// Generic implementation of ICommand that wraps an Action delegate with a parameter.
     /// </summary>
-    /// <typeparam name="T">The type of the command parameter</typeparam>
     public class RelayCommand<T> : ICommand
     {
-        private readonly Action<T> _execute;
-        private readonly Predicate<T> _canExecute;
-        
+        private readonly Action<T?> _execute;
+        private readonly Predicate<T?>? _canExecute;
+
         /// <summary>
-        /// Occurs when changes occur that affect whether or not the command should execute
+        /// Initializes a new instance of RelayCommand.
         /// </summary>
-        public event EventHandler CanExecuteChanged
-        {
-            add { CommandManager.RequerySuggested += value; }
-            remove { CommandManager.RequerySuggested -= value; }
-        }
-        
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RelayCommand{T}"/> class
-        /// that can always execute
-        /// </summary>
-        /// <param name="execute">The execution logic</param>
-        public RelayCommand(Action<T> execute) : this(execute, null)
-        {
-        }
-        
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RelayCommand{T}"/> class
-        /// </summary>
-        /// <param name="execute">The execution logic</param>
-        /// <param name="canExecute">The execution status logic</param>
-        public RelayCommand(Action<T> execute, Predicate<T> canExecute)
+        /// <param name="execute">The execution logic with a parameter.</param>
+        /// <param name="canExecute">The execution status logic with a parameter (optional).</param>
+        public RelayCommand(Action<T?> execute, Predicate<T?>? canExecute = null)
         {
             _execute = execute ?? throw new ArgumentNullException(nameof(execute));
             _canExecute = canExecute;
         }
-        
+
         /// <summary>
-        /// Determines whether this command can execute in its current state
+        /// Occurs when changes occur that affect whether or not the command should execute.
         /// </summary>
-        /// <param name="parameter">Data used by the command</param>
-        /// <returns>True if this command can be executed; otherwise, false</returns>
-        public bool CanExecute(object parameter)
+        public event EventHandler? CanExecuteChanged
         {
-            return _canExecute == null || _canExecute((T)parameter);
+            add => CommandManager.RequerySuggested += value;
+            remove => CommandManager.RequerySuggested -= value;
         }
-        
+
         /// <summary>
-        /// Executes the command
+        /// Determines whether the command can execute in its current state.
         /// </summary>
-        /// <param name="parameter">Data used by the command</param>
-        public void Execute(object parameter)
+        /// <param name="parameter">Data used by the command.</param>
+        /// <returns>True if this command can be executed; otherwise, false.</returns>
+        public bool CanExecute(object? parameter)
         {
-            _execute((T)parameter);
+            return _canExecute == null || _canExecute(parameter == null ? default : (T)parameter);
         }
-        
+
         /// <summary>
-        /// Forces a re-check of the CanExecute status
+        /// Executes the command.
+        /// </summary>
+        /// <param name="parameter">Data used by the command.</param>
+        public void Execute(object? parameter)
+        {
+            _execute(parameter == null ? default : (T)parameter);
+        }
+
+        /// <summary>
+        /// Method to raise the CanExecuteChanged event to force a CanExecute update.
         /// </summary>
         public void RaiseCanExecuteChanged()
         {

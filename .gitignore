@@ -1,19 +1,17 @@
-# .NET build artifacts
+# .NET build files
 bin/
 obj/
-.vs/
 *.user
 *.suo
-*.userprefs
-*.lock.json
-*.nuget.props
-*.nuget.targets
+*.vscode/
+*.vs/
 
 # Build results
 [Dd]ebug/
 [Rr]elease/
 x64/
 x86/
+[Ww][Ii][Nn]32/
 [Aa][Rr][Mm]/
 [Aa][Rr][Mm]64/
 bld/
@@ -22,48 +20,45 @@ bld/
 [Ll]og/
 [Ll]ogs/
 
-# Visual Studio cache/options directory
+# Visual Studio files
 .vs/
 .vscode/
+*.suo
+*.user
+*.sln.docstates
+*.userprefs
 
-# MSTest test Results
-[Tt]est[Rr]esult*/
-[Bb]uild[Ll]og.*
-
-# .NET Core
-project.lock.json
-project.fragment.lock.json
-artifacts/
+# ReSharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
 
 # NuGet Packages
 *.nupkg
-# NuGet Symbol Packages
-*.snupkg
 # The packages folder can be ignored because of Package Restore
-**/[Pp]ackages/*
+**/packages/*
 # except build/, which is used as an MSBuild target.
-!**/[Pp]ackages/build/
-# NuGet v3's project.json files produces more ignorable files
-*.nuget.props
-*.nuget.targets
+!**/packages/build/
 
-# Backup files
-*~
-*.bak
-*.swp
+# Config and local settings
+appsettings.*.json
+appsettings.local.json
+!appsettings.example.json
 
-# Rider
-.idea/
-*.sln.iml
+# Replit files
+*.replit
+replit.nix
 
-# User-specific files
-*.rsuser
-*.suo
-*.user
-*.userosscache
-*.sln.docstates
+# Logs
+logs/
+*.log
 
-# Windows-specific files
+# OS specific files
+.DS_Store
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp

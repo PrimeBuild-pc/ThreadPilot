@@ -4,46 +4,55 @@ ThreadPilot is a Windows desktop application designed to provide advanced system
 
 ## Features
 
-- **CPU Core Optimization**: Fine-tune which CPU cores your applications use for maximum performance
-- **Power Profile Management**: Import, export, and apply power profiles to optimize your system
-- **Process Priority Control**: Adjust process priorities to ensure your important applications get the resources they need
-- **Real-time System Monitoring**: View detailed information about your system's performance
-- **Automatic Optimization**: Apply optimizations automatically based on process type and system state
+- **System Monitoring**: Real-time CPU, memory, and temperature monitoring
+- **Process Management**: Adjust process priority and affinity for optimal performance
+- **Power Profiles**: Apply or create custom power profiles for different usage scenarios
+- **Optimization Rules**: Create rules to automatically optimize specific applications
 
 ## Requirements
 
-- Windows 10 or Windows 11
-- .NET 6.0 or later
-- Administrator privileges (required for modifying process affinities and power profiles)
+- Windows 10/11
+- .NET 6.0 or higher
+- Administrator privileges (required for process and power management)
 
 ## Installation
 
-1. Download the latest release from the Releases section
-2. Run the installer and follow the prompts
-3. Launch ThreadPilot from the Start menu
+1. Download the latest release from the [Releases](https://github.com/PrimeBuild-pc/ThreadPilot/releases) page
+2. Run the installer and follow the on-screen instructions
+3. Launch ThreadPilot after installation
 
 ## Building from Source
 
-1. Clone the repository
-2. Open the solution in Visual Studio 2022 or later
-3. Build the solution
-4. Run the application
+### Prerequisites
+- Visual Studio 2022 (or later)
+- .NET 6.0 SDK
 
-```bash
-git clone https://github.com/PrimeBuild-pc/ThreadPilot.git
-cd ThreadPilot
-dotnet build
-dotnet run --project ThreadPilot
+### Steps
+1. Clone the repository
 ```
+git clone https://github.com/PrimeBuild-pc/ThreadPilot.git
+```
+
+2. Open the solution file `ThreadPilot.sln` in Visual Studio
+3. Build the solution (F6 or Build > Build Solution)
+4. Run the application (F5 or Debug > Start Debugging)
 
 ## Usage
 
-1. Launch ThreadPilot with administrator privileges
-2. The Dashboard shows an overview of your system's performance
-3. Navigate to the Processes tab to view and manage running processes
-4. Use the CPU Cores tab to view core usage and set affinity rules
-5. Power Profiles allow you to import, export, and apply Windows power profiles
+1. **Dashboard**: View system information and monitor CPU core utilization
+2. **Processes**: Manage running processes, adjust priority and affinity settings
+3. **Power Profiles**: Apply predefined profiles or create custom ones
+4. **Settings**: Configure application settings and monitoring preferences
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Built by the ThreadPilot team
+- Special thanks to all contributors

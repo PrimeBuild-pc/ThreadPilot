@@ -5,128 +5,130 @@ using ThreadPilot.Models;
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Interface for power profile operations
+    /// Interface for the power profile service.
     /// </summary>
     public interface IPowerProfileService
     {
         /// <summary>
-        /// Gets all available power profiles
+        /// Gets all available power profiles.
         /// </summary>
-        /// <returns>A list of power profiles</returns>
+        /// <returns>A list of PowerProfile objects.</returns>
         List<PowerProfile> GetAllProfiles();
-        
+
         /// <summary>
-        /// Gets a power profile by ID
+        /// Gets the bundled power profiles.
         /// </summary>
-        /// <param name="id">The profile ID</param>
-        /// <returns>The power profile or null if not found</returns>
-        PowerProfile GetProfileById(Guid id);
-        
-        /// <summary>
-        /// Gets a power profile by name
-        /// </summary>
-        /// <param name="name">The profile name</param>
-        /// <returns>The power profile or null if not found</returns>
-        PowerProfile GetProfileByName(string name);
-        
-        /// <summary>
-        /// Gets the active power profile
-        /// </summary>
-        /// <returns>The active power profile</returns>
-        PowerProfile GetActiveProfile();
-        
-        /// <summary>
-        /// Sets the active power profile
-        /// </summary>
-        /// <param name="id">The profile ID</param>
-        /// <returns>True if successful, false otherwise</returns>
-        bool SetActiveProfile(Guid id);
-        
-        /// <summary>
-        /// Sets the active power profile by name
-        /// </summary>
-        /// <param name="name">The profile name</param>
-        /// <returns>True if successful, false otherwise</returns>
-        bool SetActiveProfileByName(string name);
-        
-        /// <summary>
-        /// Creates a new power profile
-        /// </summary>
-        /// <param name="profile">The profile to create</param>
-        /// <returns>The created profile with assigned ID</returns>
-        PowerProfile CreateProfile(PowerProfile profile);
-        
-        /// <summary>
-        /// Updates a power profile
-        /// </summary>
-        /// <param name="profile">The profile to update</param>
-        /// <returns>True if successful, false otherwise</returns>
-        bool UpdateProfile(PowerProfile profile);
-        
-        /// <summary>
-        /// Deletes a power profile
-        /// </summary>
-        /// <param name="id">The profile ID</param>
-        /// <returns>True if successful, false otherwise</returns>
-        bool DeleteProfile(Guid id);
-        
-        /// <summary>
-        /// Exports a power profile to a file
-        /// </summary>
-        /// <param name="id">The profile ID</param>
-        /// <param name="filePath">The file path</param>
-        /// <returns>True if successful, false otherwise</returns>
-        bool ExportProfile(Guid id, string filePath);
-        
-        /// <summary>
-        /// Imports a power profile from a file
-        /// </summary>
-        /// <param name="filePath">The file path</param>
-        /// <returns>The imported profile or null if failed</returns>
-        PowerProfile ImportProfile(string filePath);
-        
-        /// <summary>
-        /// Gets the bundled power profiles
-        /// </summary>
-        /// <returns>A list of bundled power profiles</returns>
+        /// <returns>A list of PowerProfile objects that are bundled with the application.</returns>
         List<PowerProfile> GetBundledProfiles();
-        
+
         /// <summary>
-        /// Creates a power profile from binary data
+        /// Gets the user-created power profiles.
         /// </summary>
-        /// <param name="data">The binary data</param>
-        /// <returns>The created profile or null if failed</returns>
-        PowerProfile CreateProfileFromBinary(byte[] data);
-        
+        /// <returns>A list of PowerProfile objects that are created by the user.</returns>
+        List<PowerProfile> GetUserProfiles();
+
         /// <summary>
-        /// Saves changes to all modified profiles
+        /// Gets a power profile by its file path.
         /// </summary>
-        /// <returns>True if all profiles were saved successfully, false otherwise</returns>
-        bool SaveChanges();
-        
+        /// <param name="filePath">The file path to the power profile.</param>
+        /// <returns>The PowerProfile object, or null if not found.</returns>
+        PowerProfile? GetProfileByPath(string filePath);
+
         /// <summary>
-        /// Refreshes the list of profiles
+        /// Gets a power profile by its name.
         /// </summary>
-        void RefreshProfiles();
-        
+        /// <param name="name">The name of the power profile.</param>
+        /// <returns>The PowerProfile object, or null if not found.</returns>
+        PowerProfile? GetProfileByName(string name);
+
         /// <summary>
-        /// Occurs when a profile is created
+        /// Creates a new power profile.
         /// </summary>
-        event EventHandler<PowerProfile> ProfileCreated;
-        
+        /// <param name="profile">The PowerProfile object to create.</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        bool CreateProfile(PowerProfile profile);
+
         /// <summary>
-        /// Occurs when a profile is updated
+        /// Updates an existing power profile.
         /// </summary>
-        event EventHandler<PowerProfile> ProfileUpdated;
-        
+        /// <param name="profile">The PowerProfile object to update.</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        bool UpdateProfile(PowerProfile profile);
+
         /// <summary>
-        /// Occurs when a profile is deleted
+        /// Deletes a power profile.
         /// </summary>
-        event EventHandler<Guid> ProfileDeleted;
-        
+        /// <param name="profile">The PowerProfile object to delete.</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        bool DeleteProfile(PowerProfile profile);
+
         /// <summary>
-        /// Occurs when the active profile is changed
+        /// Deletes a power profile by its file path.
         /// </summary>
-        event EventHandler<PowerProfile> ActiveProfileChanged;
+        /// <param name="filePath">The file path to the power profile.</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        bool DeleteProfileByPath(string filePath);
+
+        /// <summary>
+        /// Imports a power profile from a file.
+        /// </summary>
+        /// <param name="filePath">The file path to import from.</param>
+        /// <returns>The imported PowerProfile object, or null if import failed.</returns>
+        PowerProfile? ImportProfile(string filePath);
+
+        /// <summary>
+        /// Exports a power profile to a file.
+        /// </summary>
+        /// <param name="profile">The PowerProfile object to export.</param>
+        /// <param name="filePath">The file path to export to.</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        bool ExportProfile(PowerProfile profile, string filePath);
+
+        /// <summary>
+        /// Applies a power profile.
+        /// </summary>
+        /// <param name="profile">The PowerProfile object to apply.</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        bool ApplyProfile(PowerProfile profile);
+
+        /// <summary>
+        /// Gets the active power profile.
+        /// </summary>
+        /// <returns>The active PowerProfile object, or null if none is active.</returns>
+        PowerProfile? GetActiveProfile();
+
+        /// <summary>
+        /// Sets the active power profile.
+        /// </summary>
+        /// <param name="profile">The PowerProfile object to set as active.</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        bool SetActiveProfile(PowerProfile profile);
+
+        /// <summary>
+        /// Clears the active power profile.
+        /// </summary>
+        /// <returns>True if successful, false otherwise.</returns>
+        bool ClearActiveProfile();
+
+        /// <summary>
+        /// Resets the system to default power settings.
+        /// </summary>
+        /// <returns>True if successful, false otherwise.</returns>
+        bool ResetToDefault();
+
+        /// <summary>
+        /// Event that is raised when the active power profile changes.
+        /// </summary>
+        event EventHandler<PowerProfile?>? ActiveProfileChanged;
+
+        /// <summary>
+        /// Event that is raised when a power profile is applied.
+        /// </summary>
+        event EventHandler<PowerProfile>? ProfileApplied;
+
+        /// <summary>
+        /// Event that is raised when a power profile is created, updated, or deleted.
+        /// </summary>
+        event EventHandler<PowerProfile>? ProfileModified;
     }
 }

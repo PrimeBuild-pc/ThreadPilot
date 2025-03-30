@@ -3,26 +3,31 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net6.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>AppIcon.ico</ApplicationIcon>
+    <ApplicationIcon>Resources\Images\logo.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="System.Management" Version="6.0.0" />
-    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="6.0.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="BundledProfiles\*.pow">
+    <None Remove="Resources\Images\logo.png" />
+    <None Remove="Resources\Images\logo.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\Images\logo.png" />
+    <Resource Include="Resources\Images\logo.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="BundledProfiles\**\*.pow">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Resource Include="AppIcon.ico" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="PowerProfiles\" />
-    <Folder Include="Logs\" />
+    </None>
   </ItemGroup>
 
 </Project>

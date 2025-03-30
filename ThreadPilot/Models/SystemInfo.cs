@@ -4,118 +4,114 @@ using System.Collections.Generic;
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Represents information about the system
+    /// Represents information about the system.
     /// </summary>
     public class SystemInfo
     {
         /// <summary>
-        /// Gets or sets the CPU name
+        /// Gets or sets the processor name.
         /// </summary>
-        public string CpuName { get; set; }
-        
+        public string ProcessorName { get; set; } = string.Empty;
+
         /// <summary>
-        /// Gets or sets the CPU vendor
+        /// Gets or sets the number of physical cores.
         /// </summary>
-        public string CpuVendor { get; set; }
-        
+        public int PhysicalCores { get; set; }
+
         /// <summary>
-        /// Gets or sets the number of physical cores
+        /// Gets or sets the number of logical cores.
         /// </summary>
-        public int PhysicalCoreCount { get; set; }
-        
+        public int LogicalCores { get; set; }
+
         /// <summary>
-        /// Gets or sets the number of logical processors
+        /// Gets or sets the CPU utilization percentage.
         /// </summary>
-        public int LogicalProcessorCount { get; set; }
-        
+        public float CpuUtilization { get; set; }
+
         /// <summary>
-        /// Gets or sets the list of core information
+        /// Gets or sets the CPU temperature in degrees Celsius.
+        /// </summary>
+        public float CpuTemperature { get; set; }
+
+        /// <summary>
+        /// Gets or sets the CPU cores information.
         /// </summary>
         public List<CpuCore> Cores { get; set; } = new List<CpuCore>();
-        
+
         /// <summary>
-        /// Gets or sets the CPU socket count
+        /// Gets or sets the total RAM in GB.
         /// </summary>
-        public int CpuSocketCount { get; set; }
-        
+        public float TotalRam { get; set; }
+
         /// <summary>
-        /// Gets or sets the total system memory in bytes
+        /// Gets or sets the used RAM in GB.
         /// </summary>
-        public long TotalMemory { get; set; }
-        
+        public float UsedRam { get; set; }
+
         /// <summary>
-        /// Gets or sets the available system memory in bytes
+        /// Gets or sets the RAM utilization percentage.
         /// </summary>
-        public long AvailableMemory { get; set; }
-        
+        public float RamUtilization { get; set; }
+
         /// <summary>
-        /// Gets or sets the CPU architecture
+        /// Gets or sets the battery percentage (if applicable).
         /// </summary>
-        public string CpuArchitecture { get; set; }
-        
+        public float? BatteryPercentage { get; set; }
+
         /// <summary>
-        /// Gets or sets the operating system name
+        /// Gets or sets a value indicating whether the system has a battery.
         /// </summary>
-        public string OsName { get; set; }
-        
+        public bool HasBattery { get; set; }
+
         /// <summary>
-        /// Gets or sets the operating system version
+        /// Gets or sets a value indicating whether the system is on AC power.
         /// </summary>
-        public string OsVersion { get; set; }
-        
+        public bool IsOnAcPower { get; set; }
+
         /// <summary>
-        /// Gets or sets whether the system has multiple CPU packages
+        /// Gets or sets the operating system name.
         /// </summary>
-        public bool HasMultiplePackages { get; set; }
-        
+        public string OperatingSystem { get; set; } = string.Empty;
+
         /// <summary>
-        /// Gets or sets whether the system has hybrid cores (P-cores and E-cores)
+        /// Gets or sets the current power scheme GUID.
         /// </summary>
-        public bool HasHybridCores { get; set; }
-        
+        public Guid CurrentPowerScheme { get; set; }
+
         /// <summary>
-        /// Gets or sets the system uptime
+        /// Gets or sets the timestamp of the last update.
         /// </summary>
-        public TimeSpan Uptime { get; set; }
-        
+        public DateTime LastUpdateTimestamp { get; set; }
+    }
+
+    /// <summary>
+    /// Represents information about a CPU core.
+    /// </summary>
+    public class CpuCore
+    {
         /// <summary>
-        /// Gets or sets the overall CPU utilization percentage
+        /// Gets or sets the core index.
         /// </summary>
-        public double CpuUtilization { get; set; }
-        
+        public int Index { get; set; }
+
         /// <summary>
-        /// Gets or sets the memory utilization percentage
+        /// Gets or sets a value indicating whether this is a logical or physical core.
         /// </summary>
-        public double MemoryUtilization { get; set; }
-        
+        public bool IsLogical { get; set; }
+
         /// <summary>
-        /// Gets or sets the current maximum CPU frequency in MHz
+        /// Gets or sets the core utilization percentage.
         /// </summary>
-        public int MaxCpuFrequency { get; set; }
-        
+        public float Utilization { get; set; }
+
         /// <summary>
-        /// Gets or sets the current CPU package temperature in Celsius
+        /// Gets or sets the core frequency in MHz.
         /// </summary>
-        public double CpuTemperature { get; set; }
-        
+        public float Frequency { get; set; }
+
         /// <summary>
-        /// Gets or sets the system manufacturer
+        /// Gets or sets the core temperature in degrees Celsius.
         /// </summary>
-        public string SystemManufacturer { get; set; }
-        
-        /// <summary>
-        /// Gets or sets the system model
-        /// </summary>
-        public string SystemModel { get; set; }
-        
-        /// <summary>
-        /// Gets or sets whether the system is a laptop
-        /// </summary>
-        public bool IsLaptop { get; set; }
-        
-        /// <summary>
-        /// Gets or sets the current power profile name
-        /// </summary>
-        public string CurrentPowerProfileName { get; set; }
+        public float? Temperature { get; set; }
     }
 }

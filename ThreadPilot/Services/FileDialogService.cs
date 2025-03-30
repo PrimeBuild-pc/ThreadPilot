@@ -1,84 +1,105 @@
-using Microsoft.Win32;
 using System;
-using System.IO;
 using System.Windows;
+using Microsoft.Win32;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Service for handling file dialogs
+    /// Implementation of file dialog operations
     /// </summary>
     public class FileDialogService : IFileDialogService
     {
         /// <summary>
-        /// Show an open file dialog
+        /// Shows an open file dialog
         /// </summary>
-        /// <param name="title">Dialog title</param>
-        /// <param name="filter">File filter</param>
-        /// <param name="defaultExtension">Default file extension</param>
-        /// <returns>Selected file path or null if canceled</returns>
-        public string ShowOpenFileDialog(string title, string filter, string defaultExtension)
+        /// <param name="filter">The file filter</param>
+        /// <param name="title">The dialog title</param>
+        /// <param name="initialDirectory">The initial directory</param>
+        /// <returns>The selected file path or null if canceled</returns>
+        public string ShowOpenFileDialog(string filter, string title = "Open File", string initialDirectory = null)
         {
-            try
+            var dialog = new OpenFileDialog
             {
-                var dialog = new OpenFileDialog
-                {
-                    Title = title,
-                    Filter = filter,
-                    DefaultExt = defaultExtension,
-                    CheckFileExists = true
-                };
-                
-                bool? result = dialog.ShowDialog();
-                
-                if (result == true)
-                {
-                    return dialog.FileName;
-                }
-            }
-            catch (Exception ex)
+                Filter = filter,
+                Title = title,
+                CheckFileExists = true,
+                CheckPathExists = true,
+                Multiselect = false
+            };
+            
+            if (!string.IsNullOrWhiteSpace(initialDirectory))
             {
-                MessageBox.Show($"Error showing open file dialog: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                dialog.InitialDirectory = initialDirectory;
             }
             
-            return null;
+            var result = dialog.ShowDialog();
+            return result == true ? dialog.FileName : null;
         }
         
         /// <summary>
-        /// Show a save file dialog
+        /// Shows a save file dialog
         /// </summary>
-        /// <param name="title">Dialog title</param>
-        /// <param name="filter">File filter</param>
-        /// <param name="defaultExtension">Default file extension</param>
-        /// <param name="defaultFileName">Default file name</param>
-        /// <returns>Selected file path or null if canceled</returns>
-        public string ShowSaveFileDialog(string title, string filter, string defaultExtension, string defaultFileName)
+        /// <param name="filter">The file filter</param>
+        /// <param name="title">The dialog title</param>
+        /// <param name="initialDirectory">The initial directory</param>
+        /// <param name="defaultFileName">The default file name</param>
+        /// <returns>The selected file path or null if canceled</returns>
+        public string ShowSaveFileDialog(string filter, string title = "Save File", string initialDirectory = null, string defaultFileName = null)
         {
-            try
+            var dialog = new SaveFileDialog
             {
-                var dialog = new SaveFileDialog
-                {
-                    Title = title,
-                    Filter = filter,
-                    DefaultExt = defaultExtension,
-                    FileName = defaultFileName,
-                    AddExtension = true,
-                    CreatePrompt = false,
-                    OverwritePrompt = true
-                };
-                
-                bool? result = dialog.ShowDialog();
-                
-                if (result == true)
-                {
-                    return dialog.FileName;
-                }
-            }
-            catch (Exception ex)
+                Filter = filter,
+                Title = title,
+                CheckPathExists = true,
+                OverwritePrompt = true
+            };
+            
+            if (!string.IsNullOrWhiteSpace(initialDirectory))
             {
-                MessageBox.Show($"Error showing save file dialog: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                dialog.InitialDirectory = initialDirectory;
             }
             
+            if (!string.IsNullOrWhiteSpace(defaultFileName))
+            {
+                dialog.FileName = defaultFileName;
+            }
+            
+            var result = dialog.ShowDialog();
+            return result == true ? dialog.FileName : null;
+        }
+        
+        /// <summary>
+        /// Shows a folder browser dialog
+        /// </summary>
+        /// <param name="title">The dialog title</param>
+        /// <param name="initialDirectory">The initial directory</param>
+        /// <returns>The selected folder path or null if canceled</returns>
+        public string ShowFolderBrowserDialog(string title = "Select Folder", string initialDirectory = null)
+        {
+            using (var dialog = new System.Windows.Forms.FolderBrowserDialog())
+            {
+                dialog.Description = title;
+                dialog.ShowNewFolderButton = true;
+                
+                if (!string.IsNullOrWhiteSpace(initialDirectory))
+                {
+                    dialog.SelectedPath = initialDirectory;
+                }
+                
+                var result = dialog.ShowDialog();
+                return result == System.Windows.Forms.DialogResult.OK ? dialog.SelectedPath : null;
+            }
+        }
+        
+        /// <summary>
+        /// Shows a custom file dialog
+        /// </summary>
+        /// <param name="options">The dialog options</param>
+        /// <returns>The dialog result</returns>
+        public object ShowCustomFileDialog(object options)
+        {
+            // This method would be implemented for more complex file dialog scenarios
+            // For now, just return null
             return null;
         }
     }

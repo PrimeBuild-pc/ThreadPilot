@@ -1,16 +1,16 @@
-using System.Collections.Generic;
+using System;
 
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Represents a rule for applying process affinity
+    /// Represents a process affinity rule
     /// </summary>
     public class ProcessAffinityRule
     {
         /// <summary>
         /// Gets or sets the rule ID
         /// </summary>
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
         
         /// <summary>
         /// Gets or sets the rule name
@@ -18,58 +18,87 @@ namespace ThreadPilot.Models
         public string Name { get; set; }
         
         /// <summary>
-        /// Gets or sets the process name pattern to match
+        /// Gets or sets the process name pattern (supports wildcards * and ?)
         /// </summary>
         public string ProcessNamePattern { get; set; }
         
         /// <summary>
-        /// Gets or sets whether the rule is applied by exact match
+        /// Gets or sets the process affinity mask
         /// </summary>
-        public bool ExactMatch { get; set; }
+        public long Affinity { get; set; }
         
         /// <summary>
-        /// Gets or sets whether the rule is case sensitive
+        /// Gets or sets the process priority
         /// </summary>
-        public bool CaseSensitive { get; set; }
+        public ProcessPriority Priority { get; set; } = ProcessPriority.Normal;
         
         /// <summary>
-        /// Gets or sets the list of cores to include
+        /// Gets or sets a value indicating whether to apply the priority setting
         /// </summary>
-        public List<int> IncludedCores { get; set; } = new List<int>();
+        public bool ApplyPriority { get; set; }
         
         /// <summary>
-        /// Gets or sets the process priority to apply
+        /// Gets or sets a value indicating whether to apply the affinity setting
         /// </summary>
-        public ProcessPriority? Priority { get; set; }
+        public bool ApplyAffinity { get; set; } = true;
         
         /// <summary>
-        /// Gets or sets whether the rule is enabled
+        /// Gets or sets a value indicating whether to apply the rule automatically when the process starts
+        /// </summary>
+        public bool ApplyOnProcessStart { get; set; } = true;
+        
+        /// <summary>
+        /// Gets or sets a value indicating whether the rule is enabled
         /// </summary>
         public bool IsEnabled { get; set; } = true;
         
         /// <summary>
-        /// Gets or sets whether to include child processes
+        /// Gets or sets a value indicating whether to use performance cores for this process
         /// </summary>
-        public bool IncludeChildren { get; set; }
+        public bool UsePerformanceCores { get; set; }
         
         /// <summary>
-        /// Gets or sets the rule category for organization
+        /// Gets or sets a value indicating whether to use efficiency cores for this process
         /// </summary>
-        public string Category { get; set; }
+        public bool UseEfficiencyCores { get; set; }
         
         /// <summary>
-        /// Gets or sets the rule description
+        /// Gets or sets the creation date
         /// </summary>
-        public string Description { get; set; }
+        public DateTime CreationDate { get; set; } = DateTime.Now;
         
         /// <summary>
-        /// Gets or sets whether the rule is applied only once
+        /// Gets or sets the last modified date
         /// </summary>
-        public bool ApplyOnce { get; set; }
+        public DateTime LastModifiedDate { get; set; } = DateTime.Now;
         
         /// <summary>
-        /// Gets or sets whether the rule has been applied
+        /// Gets or sets the number of cores to use (0 = all)
         /// </summary>
-        public bool HasBeenApplied { get; set; }
+        public int CoreCount { get; set; }
+        
+        /// <summary>
+        /// Creates a clone of the process affinity rule
+        /// </summary>
+        /// <returns>A new instance of the process affinity rule with the same values</returns>
+        public ProcessAffinityRule Clone()
+        {
+            return new ProcessAffinityRule
+            {
+                Name = Name,
+                ProcessNamePattern = ProcessNamePattern,
+                Affinity = Affinity,
+                Priority = Priority,
+                ApplyPriority = ApplyPriority,
+                ApplyAffinity = ApplyAffinity,
+                ApplyOnProcessStart = ApplyOnProcessStart,
+                IsEnabled = IsEnabled,
+                UsePerformanceCores = UsePerformanceCores,
+                UseEfficiencyCores = UseEfficiencyCores,
+                CreationDate = CreationDate,
+                LastModifiedDate = LastModifiedDate,
+                CoreCount = CoreCount
+            };
+        }
     }
 }

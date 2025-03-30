@@ -1,38 +1,38 @@
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Represents the priority levels for processes
+    /// Enumeration of process priorities
     /// </summary>
     public enum ProcessPriority
     {
         /// <summary>
-        /// Idle priority level
+        /// Idle process priority (lowest)
         /// </summary>
-        Idle = 0,
+        Idle,
         
         /// <summary>
-        /// Below normal priority level
+        /// Below normal process priority
         /// </summary>
-        BelowNormal = 1,
+        BelowNormal,
         
         /// <summary>
-        /// Normal priority level
+        /// Normal process priority (default)
         /// </summary>
-        Normal = 2,
+        Normal,
         
         /// <summary>
-        /// Above normal priority level
+        /// Above normal process priority
         /// </summary>
-        AboveNormal = 3,
+        AboveNormal,
         
         /// <summary>
-        /// High priority level
+        /// High process priority
         /// </summary>
-        High = 4,
+        High,
         
         /// <summary>
-        /// Realtime priority level
+        /// Real-time process priority (highest)
         /// </summary>
-        Realtime = 5
+        RealTime
     }
 }

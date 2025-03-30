@@ -10,85 +10,119 @@ namespace ThreadPilot
     /// </summary>
     public partial class App : Application
     {
-        private readonly string _logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
-        private readonly string _powerProfilesDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PowerProfiles");
-        
-        /// <summary>
-        /// Application startup handler
-        /// </summary>
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
-            
-            // Create necessary directories if they don't exist
-            Directory.CreateDirectory(_logDirectory);
-            Directory.CreateDirectory(_powerProfilesDirectory);
-            
+
+            // Create necessary directories
+            CreateApplicationDirectories();
+
             // Register services
-            ServiceLocator.Register<IProcessService, ProcessService>();
-            ServiceLocator.Register<IPowerProfileService, PowerProfileService>();
-            ServiceLocator.Register<IFileDialogService, FileDialogService>();
-            ServiceLocator.Register<INotificationService, NotificationService>();
-            ServiceLocator.Register<ISystemInfoService, SystemInfoService>();
-            
-            // Set up global exception handling
-            Current.DispatcherUnhandledException += CurrentOnDispatcherUnhandledException;
-            AppDomain.CurrentDomain.UnhandledException += CurrentDomainOnUnhandledException;
+            RegisterServices();
+
+            // Set up unhandled exception handling
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+            Current.DispatcherUnhandledException += Current_DispatcherUnhandledException;
+
+            // Initialize logging
+            InitializeLogging();
         }
-        
-        /// <summary>
-        /// Handle unhandled exceptions in the dispatcher
-        /// </summary>
-        private void CurrentOnDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+
+        private void CreateApplicationDirectories()
         {
-            LogException(e.Exception);
-            MessageBox.Show($"An unexpected error occurred: {e.Exception.Message}\n\nThe error has been logged.", 
-                "ThreadPilot Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            e.Handled = true;
-        }
-        
-        /// <summary>
-        /// Handle unhandled exceptions in the current domain
-        /// </summary>
-        private void CurrentDomainOnUnhandledException(object sender, UnhandledExceptionEventArgs e)
-        {
-            if (e.ExceptionObject is Exception exception)
+            var appDataPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "ThreadPilot");
+
+            if (!Directory.Exists(appDataPath))
             {
-                LogException(exception);
-                MessageBox.Show($"A critical error occurred: {exception.Message}\n\nThe application will now terminate.", 
-                    "Critical Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Directory.CreateDirectory(appDataPath);
+            }
+
+            var directories = new[]
+            {
+                Path.Combine(appDataPath, "Logs"),
+                Path.Combine(appDataPath, "PowerProfiles"),
+                Path.Combine(appDataPath, "Settings")
+            };
+
+            foreach (var directory in directories)
+            {
+                if (!Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
             }
         }
-        
-        /// <summary>
-        /// Log exceptions to a file
-        /// </summary>
-        private void LogException(Exception exception)
+
+        private void RegisterServices()
         {
+            // Registration of services will be implemented here
+            // For example:
+            // ServiceLocator.Instance.Register<ISystemInfoService>(new SystemInfoService());
+            // ServiceLocator.Instance.Register<IProcessService>(new ProcessService());
+            // ServiceLocator.Instance.Register<IPowerProfileService>(new PowerProfileService());
+            // ServiceLocator.Instance.Register<INotificationService>(new NotificationService());
+            // ServiceLocator.Instance.Register<IFileDialogService>(new FileDialogService());
+        }
+
+        private void InitializeLogging()
+        {
+            // Logging initialization will be implemented here
+        }
+
+        private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            LogUnhandledException(e.ExceptionObject as Exception);
+        }
+
+        private void Current_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+        {
+            LogUnhandledException(e.Exception);
+            e.Handled = true;
+        }
+
+        private void LogUnhandledException(Exception? exception)
+        {
+            if (exception == null)
+            {
+                return;
+            }
+
             try
             {
-                string filePath = Path.Combine(_logDirectory, $"Error_{DateTime.Now:yyyyMMdd_HHmmss}.log");
-                using (StreamWriter writer = new StreamWriter(filePath))
+                var logDirectoryPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "ThreadPilot",
+                    "Logs");
+
+                if (!Directory.Exists(logDirectoryPath))
                 {
-                    writer.WriteLine($"Exception Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-                    writer.WriteLine($"Exception Type: {exception.GetType().FullName}");
-                    writer.WriteLine($"Exception Message: {exception.Message}");
-                    writer.WriteLine($"Stack Trace: {exception.StackTrace}");
-                    
-                    if (exception.InnerException != null)
-                    {
-                        writer.WriteLine("\nInner Exception:");
-                        writer.WriteLine($"Type: {exception.InnerException.GetType().FullName}");
-                        writer.WriteLine($"Message: {exception.InnerException.Message}");
-                        writer.WriteLine($"Stack Trace: {exception.InnerException.StackTrace}");
-                    }
+                    Directory.CreateDirectory(logDirectoryPath);
+                }
+
+                var logFilePath = Path.Combine(logDirectoryPath, $"Error_{DateTime.Now:yyyyMMdd_HHmmss}.log");
+
+                using var writer = new StreamWriter(logFilePath, false);
+                writer.WriteLine($"Time: {DateTime.Now}");
+                writer.WriteLine($"Message: {exception.Message}");
+                writer.WriteLine($"Stack Trace: {exception.StackTrace}");
+
+                if (exception.InnerException != null)
+                {
+                    writer.WriteLine($"Inner Exception: {exception.InnerException.Message}");
+                    writer.WriteLine($"Inner Stack Trace: {exception.InnerException.StackTrace}");
                 }
             }
             catch
             {
-                // If logging fails, we can't do much but try to show a message box
-                MessageBox.Show("Failed to log exception details to file.", "Logging Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                // If logging fails, we can't do much more
             }
+
+            MessageBox.Show($"An unexpected error occurred: {exception.Message}\n\nPlease check the logs for more details.",
+                "Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
     }
 }

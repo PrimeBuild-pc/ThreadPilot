@@ -4,60 +4,74 @@ using System.Collections.Generic;
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// A simple service locator for dependency injection
+    /// Service locator for dependency injection.
     /// </summary>
-    public static class ServiceLocator
+    public class ServiceLocator
     {
-        private static readonly Dictionary<Type, object> _services = new Dictionary<Type, object>();
-        
+        private static readonly Lazy<ServiceLocator> _instance = new(() => new ServiceLocator());
+        private readonly Dictionary<Type, object> _services = new();
+
         /// <summary>
-        /// Registers a service interface with its implementation
+        /// Gets the instance of the service locator.
         /// </summary>
-        /// <typeparam name="TInterface">The interface type</typeparam>
-        /// <typeparam name="TImplementation">The implementation type</typeparam>
-        /// <exception cref="ArgumentException">Thrown if the implementation does not implement the interface</exception>
-        public static void Register<TInterface, TImplementation>() 
-            where TInterface : class
-            where TImplementation : class, TInterface, new()
+        public static ServiceLocator Instance => _instance.Value;
+
+        /// <summary>
+        /// Registers a service.
+        /// </summary>
+        /// <typeparam name="TService">The service type.</typeparam>
+        /// <param name="service">The service instance.</param>
+        public void Register<TService>(TService service) where TService : class
         {
-            if (!typeof(TInterface).IsAssignableFrom(typeof(TImplementation)))
+            if (service == null)
             {
-                throw new ArgumentException($"{typeof(TImplementation).Name} does not implement {typeof(TInterface).Name}");
+                throw new ArgumentNullException(nameof(service));
             }
-            
-            _services[typeof(TInterface)] = new TImplementation();
+
+            _services[typeof(TService)] = service;
         }
-        
+
         /// <summary>
-        /// Registers a specific instance as the implementation for an interface
+        /// Gets a service.
         /// </summary>
-        /// <typeparam name="TInterface">The interface type</typeparam>
-        /// <param name="implementation">The implementation instance</param>
-        public static void RegisterInstance<TInterface>(TInterface implementation) where TInterface : class
+        /// <typeparam name="TService">The service type.</typeparam>
+        /// <returns>The service instance.</returns>
+        public TService Get<TService>() where TService : class
         {
-            _services[typeof(TInterface)] = implementation;
-        }
-        
-        /// <summary>
-        /// Gets the service implementation for the specified interface
-        /// </summary>
-        /// <typeparam name="T">The interface type</typeparam>
-        /// <returns>The service implementation</returns>
-        /// <exception cref="InvalidOperationException">Thrown if the service is not registered</exception>
-        public static T Get<T>() where T : class
-        {
-            if (!_services.TryGetValue(typeof(T), out var service))
+            if (_services.TryGetValue(typeof(TService), out var service))
             {
-                throw new InvalidOperationException($"Service of type {typeof(T).Name} is not registered");
+                return (TService)service;
             }
-            
-            return (T)service;
+
+            throw new KeyNotFoundException($"Service of type {typeof(TService).Name} is not registered.");
         }
-        
+
         /// <summary>
-        /// Clears all registered services
+        /// Checks if a service is registered.
         /// </summary>
-        public static void Clear()
+        /// <typeparam name="TService">The service type.</typeparam>
+        /// <returns>True if the service is registered, false otherwise.</returns>
+        public bool IsRegistered<TService>() where TService : class
+        {
+            return _services.ContainsKey(typeof(TService));
+        }
+
+        /// <summary>
+        /// Unregisters a service.
+        /// </summary>
+        /// <typeparam name="TService">The service type.</typeparam>
+        public void Unregister<TService>() where TService : class
+        {
+            if (_services.ContainsKey(typeof(TService)))
+            {
+                _services.Remove(typeof(TService));
+            }
+        }
+
+        /// <summary>
+        /// Clears all registered services.
+        /// </summary>
+        public void Clear()
         {
             _services.Clear();
         }

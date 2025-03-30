@@ -1,66 +1,42 @@
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
 namespace ThreadPilot.ViewModels
 {
     /// <summary>
-    /// Base class for all view models that implements INotifyPropertyChanged
+    /// Base class for all ViewModels in the application, providing INotifyPropertyChanged implementation.
     /// </summary>
     public abstract class ViewModelBase : INotifyPropertyChanged
     {
+        public event PropertyChangedEventHandler? PropertyChanged;
+
         /// <summary>
-        /// Occurs when a property value changes
+        /// Sets a property value and raises the PropertyChanged event if the value has changed.
         /// </summary>
-        public event PropertyChangedEventHandler PropertyChanged;
-        
+        /// <typeparam name="T">The type of the property.</typeparam>
+        /// <param name="field">The field storing the property value.</param>
+        /// <param name="value">The new value for the property.</param>
+        /// <param name="propertyName">The name of the property, automatically obtained from the caller member name.</param>
+        /// <returns>True if the property value changed, false otherwise.</returns>
+        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+        {
+            if (Equals(field, value))
+            {
+                return false;
+            }
+
+            field = value;
+            OnPropertyChanged(propertyName);
+            return true;
+        }
+
         /// <summary>
-        /// Raises the PropertyChanged event for the specified property
+        /// Raises the PropertyChanged event for a property.
         /// </summary>
-        /// <param name="propertyName">The name of the property that changed</param>
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        /// <param name="propertyName">The name of the property that changed.</param>
+        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-        
-        /// <summary>
-        /// Sets the property value and raises the PropertyChanged event if the value has changed
-        /// </summary>
-        /// <typeparam name="T">The type of the property</typeparam>
-        /// <param name="storage">A reference to the backing field for the property</param>
-        /// <param name="value">The new value for the property</param>
-        /// <param name="propertyName">The name of the property</param>
-        /// <returns>True if the value was changed, false otherwise</returns>
-        protected virtual bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null)
-        {
-            if (EqualityComparer<T>.Default.Equals(storage, value))
-                return false;
-            
-            storage = value;
-            OnPropertyChanged(propertyName);
-            return true;
-        }
-        
-        /// <summary>
-        /// Sets the property value and raises the PropertyChanged event if the value has changed,
-        /// and also executes the specified action
-        /// </summary>
-        /// <typeparam name="T">The type of the property</typeparam>
-        /// <param name="storage">A reference to the backing field for the property</param>
-        /// <param name="value">The new value for the property</param>
-        /// <param name="onChanged">The action to execute if the value changes</param>
-        /// <param name="propertyName">The name of the property</param>
-        /// <returns>True if the value was changed, false otherwise</returns>
-        protected virtual bool SetProperty<T>(ref T storage, T value, Action onChanged, [CallerMemberName] string propertyName = null)
-        {
-            if (EqualityComparer<T>.Default.Equals(storage, value))
-                return false;
-            
-            storage = value;
-            onChanged?.Invoke();
-            OnPropertyChanged(propertyName);
-            return true;
         }
     }
 }

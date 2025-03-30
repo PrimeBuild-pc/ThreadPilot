@@ -1,741 +1,959 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.Json;
+using System.Xml.Linq;
 using ThreadPilot.Models;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Service for managing power profiles
+    /// Implementation of power profile operations
     /// </summary>
     public class PowerProfileService : IPowerProfileService
     {
-        private readonly string _profilesDirectory;
-        private readonly string _bundledProfilesDirectory;
+        private readonly List<PowerProfile> _profiles = new List<PowerProfile>();
+        private readonly string _bundledProfilesPath;
+        private readonly string _userProfilesPath;
+        
+        /// <summary>
+        /// Occurs when the active power profile is changed
+        /// </summary>
+        public event EventHandler<PowerProfile> ActiveProfileChanged;
         
         /// <summary>
         /// Initializes a new instance of the <see cref="PowerProfileService"/> class
         /// </summary>
         public PowerProfileService()
         {
-            string basePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            // Define paths
+            _bundledProfilesPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BundledProfiles");
+            _userProfilesPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PowerProfiles");
             
-            if (basePath != null)
-            {
-                _profilesDirectory = Path.Combine(basePath, "Profiles");
-                _bundledProfilesDirectory = Path.Combine(basePath, "BundledProfiles");
-                
-                // Create directories if they don't exist
-                Directory.CreateDirectory(_profilesDirectory);
-                Directory.CreateDirectory(_bundledProfilesDirectory);
-                
-                // Copy bundled profiles from resources to the bundled profiles directory
-                CopyBundledProfiles();
-            }
-            else
-            {
-                _profilesDirectory = "Profiles";
-                _bundledProfilesDirectory = "BundledProfiles";
-            }
-        }
-        
-        /// <summary>
-        /// Get all available power profiles
-        /// </summary>
-        /// <returns>Collection of power profiles</returns>
-        public IEnumerable<PowerProfile> GetAllProfiles()
-        {
-            var profiles = new List<PowerProfile>();
+            // Create directories if they don't exist
+            Directory.CreateDirectory(_bundledProfilesPath);
+            Directory.CreateDirectory(_userProfilesPath);
             
-            try
-            {
-                // Add system profiles
-                profiles.AddRange(GetSystemProfiles());
-                
-                // Add JSON profiles from the profiles directory
-                foreach (string filePath in Directory.GetFiles(_profilesDirectory, "*.json"))
-                {
-                    try
-                    {
-                        var profile = LoadProfileFromJson(filePath);
-                        
-                        if (profile != null)
-                        {
-                            profiles.Add(profile);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error loading profile {filePath}: {ex.Message}");
-                    }
-                }
-                
-                // Add binary profiles from the profiles directory
-                foreach (string filePath in Directory.GetFiles(_profilesDirectory, "*.pow"))
-                {
-                    try
-                    {
-                        var profile = LoadProfileFromBinary(filePath);
-                        
-                        if (profile != null)
-                        {
-                            profiles.Add(profile);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error loading profile {filePath}: {ex.Message}");
-                    }
-                }
-                
-                // Add binary profiles from the bundled profiles directory
-                foreach (string filePath in Directory.GetFiles(_bundledProfilesDirectory, "*.pow"))
-                {
-                    try
-                    {
-                        var profile = LoadProfileFromBinary(filePath);
-                        
-                        if (profile != null && !profiles.Any(p => p.Name == profile.Name))
-                        {
-                            profile.IsSystemDefault = true;
-                            profiles.Add(profile);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error loading bundled profile {filePath}: {ex.Message}");
-                    }
-                }
-                
-                // Mark the active power plan
-                Guid activeProfileGuid = GetActivePowerPlanGuid();
-                
-                foreach (var profile in profiles.Where(p => p.IsSystemDefault))
-                {
-                    if (activeProfileGuid != Guid.Empty && profile.FilePath.Contains(activeProfileGuid.ToString()))
-                    {
-                        profile.IsActive = true;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error getting all profiles: {ex.Message}");
-            }
-            
-            return profiles;
+            // Load profiles
+            LoadProfiles();
         }
         
         /// <summary>
-        /// Get a power profile by name
+        /// Gets a power profile by its ID
         /// </summary>
-        /// <param name="name">Profile name</param>
-        /// <returns>Power profile</returns>
-        public PowerProfile GetProfile(string name)
+        /// <param name="profileId">The profile ID</param>
+        /// <returns>The power profile or null if not found</returns>
+        public PowerProfile GetProfile(Guid profileId)
         {
-            try
+            lock (_profiles)
             {
-                return GetAllProfiles().FirstOrDefault(p => p.Name == name);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error getting profile {name}: {ex.Message}");
-                return null;
+                return _profiles.FirstOrDefault(p => p.Id == profileId);
             }
         }
         
         /// <summary>
-        /// Create a default power profile
+        /// Gets a power profile by its name
         /// </summary>
-        /// <param name="name">Profile name</param>
-        /// <param name="description">Profile description</param>
-        /// <returns>Created power profile</returns>
-        public PowerProfile CreateDefaultProfile(string name, string description)
+        /// <param name="profileName">The profile name</param>
+        /// <returns>The power profile or null if not found</returns>
+        public PowerProfile GetProfileByName(string profileName)
         {
-            return new PowerProfile
+            lock (_profiles)
             {
-                Name = name,
-                Description = description,
-                CreationDate = DateTime.Now,
-                ModificationDate = DateTime.Now,
-                IsSystemDefault = false,
-                Category = "Custom",
-                ApplyAffinityRules = true,
-                ApplyPriorityRules = true,
-                ApplyPowerSettings = true,
-                ApplyCoreParking = true,
-                MinimumProcessorState = 5,
-                MaximumProcessorState = 100,
-                CoreParkingMinCores = 50,
-                ProcessorPerformanceBoostPolicy = 3, // Aggressive
-                SystemCoolingPolicy = 1, // Active
-                AffinityRules = new List<ProcessAffinityRule>(),
-                IsActive = false
-            };
+                return _profiles.FirstOrDefault(p => p.Name == profileName);
+            }
         }
         
         /// <summary>
-        /// Save a power profile
+        /// Gets all power profiles
         /// </summary>
-        /// <param name="profile">Power profile to save</param>
-        /// <returns>True if the profile was saved successfully, false otherwise</returns>
-        public bool SaveProfile(PowerProfile profile)
+        /// <returns>The list of all power profiles</returns>
+        public List<PowerProfile> GetAllProfiles()
+        {
+            lock (_profiles)
+            {
+                return _profiles.ToList();
+            }
+        }
+        
+        /// <summary>
+        /// Gets the active power profile
+        /// </summary>
+        /// <returns>The active power profile or null if none is active</returns>
+        public PowerProfile GetActiveProfile()
+        {
+            lock (_profiles)
+            {
+                return _profiles.FirstOrDefault(p => p.IsActive);
+            }
+        }
+        
+        /// <summary>
+        /// Creates a new power profile
+        /// </summary>
+        /// <param name="profile">The power profile</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool CreateProfile(PowerProfile profile)
         {
             if (profile == null)
-            {
                 return false;
-            }
-            
-            try
+                
+            lock (_profiles)
             {
-                profile.ModificationDate = DateTime.Now;
+                // Check if a profile with the same name already exists
+                if (_profiles.Any(p => p.Name == profile.Name))
+                    return false;
+                    
+                // Set creation and modified dates
+                profile.CreationDate = DateTime.Now;
+                profile.LastModifiedDate = DateTime.Now;
                 
-                string filePath = Path.Combine(_profilesDirectory, SanitizeFileName(profile.Name) + ".json");
-                profile.FilePath = filePath;
+                // Add to profiles
+                _profiles.Add(profile);
                 
-                var options = new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                };
-                
-                string json = JsonSerializer.Serialize(profile, options);
-                File.WriteAllText(filePath, json, Encoding.UTF8);
+                // Save the profile
+                SaveProfile(profile);
                 
                 return true;
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error saving profile {profile.Name}: {ex.Message}");
-                return false;
-            }
         }
         
         /// <summary>
-        /// Delete a power profile
+        /// Updates a power profile
         /// </summary>
-        /// <param name="name">Profile name</param>
-        /// <returns>True if the profile was deleted successfully, false otherwise</returns>
-        public bool DeleteProfile(string name)
-        {
-            try
-            {
-                var profile = GetProfile(name);
-                
-                if (profile == null || profile.IsSystemDefault)
-                {
-                    return false;
-                }
-                
-                if (File.Exists(profile.FilePath))
-                {
-                    File.Delete(profile.FilePath);
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error deleting profile {name}: {ex.Message}");
-            }
-            
-            return false;
-        }
-        
-        /// <summary>
-        /// Apply a power profile
-        /// </summary>
-        /// <param name="profile">Power profile to apply</param>
-        /// <returns>True if the profile was applied successfully, false otherwise</returns>
-        public bool ApplyProfile(PowerProfile profile)
+        /// <param name="profileId">The profile ID</param>
+        /// <param name="profile">The updated power profile</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool UpdateProfile(Guid profileId, PowerProfile profile)
         {
             if (profile == null)
-            {
                 return false;
-            }
-            
-            bool success = true;
-            
-            try
+                
+            lock (_profiles)
             {
-                // Apply affinity rules if specified
-                if (profile.ApplyAffinityRules && profile.AffinityRules.Any())
-                {
-                    var processService = ServiceLocator.GetService<IProcessService>();
-                    int appliedCount = processService.ApplyProcessAffinityRules(profile.AffinityRules);
+                // Find the profile
+                var existingProfile = _profiles.FirstOrDefault(p => p.Id == profileId);
+                if (existingProfile == null)
+                    return false;
                     
-                    if (appliedCount == 0 && profile.AffinityRules.Count > 0)
-                    {
-                        Debug.WriteLine("Warning: No affinity rules were applied");
-                        success = false;
-                    }
+                // Check if the profile is a system profile or bundled
+                if (existingProfile.IsSystemProfile || existingProfile.IsBundled)
+                    return false;
+                    
+                // Update properties
+                existingProfile.Name = profile.Name;
+                existingProfile.Description = profile.Description;
+                existingProfile.Settings = new Dictionary<string, string>(profile.Settings);
+                existingProfile.IsGamingOptimized = profile.IsGamingOptimized;
+                existingProfile.IsBatteryOptimized = profile.IsBatteryOptimized;
+                existingProfile.IsThermalOptimized = profile.IsThermalOptimized;
+                existingProfile.UsesDynamicThreadAllocation = profile.UsesDynamicThreadAllocation;
+                existingProfile.UsesPerformanceCoresForApps = profile.UsesPerformanceCoresForApps;
+                existingProfile.PerformanceCoreApps = new List<string>(profile.PerformanceCoreApps);
+                existingProfile.AffinityRules = new List<ProcessAffinityRule>();
+                
+                // Clone the affinity rules
+                foreach (var rule in profile.AffinityRules)
+                {
+                    existingProfile.AffinityRules.Add(rule.Clone());
                 }
                 
-                // Apply power settings if specified and this is a system profile
-                if (profile.ApplyPowerSettings && profile.IsSystemDefault)
-                {
-                    string filePath = profile.FilePath;
-                    
-                    if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
-                    {
-                        // Check if the file is a .pow file
-                        if (filePath.EndsWith(".pow", StringComparison.OrdinalIgnoreCase))
-                        {
-                            // Apply the power plan
-                            success = ApplyPowerPlan(filePath) && success;
-                        }
-                    }
-                    else
-                    {
-                        Debug.WriteLine($"Warning: Power plan file not found: {filePath}");
-                        success = false;
-                    }
-                }
+                existingProfile.MaxCpuPower = profile.MaxCpuPower;
+                existingProfile.MaxCpuTemperature = profile.MaxCpuTemperature;
+                existingProfile.MinCpuFrequency = profile.MinCpuFrequency;
+                existingProfile.MaxCpuFrequency = profile.MaxCpuFrequency;
+                existingProfile.ParkEfficiencyCores = profile.ParkEfficiencyCores;
+                existingProfile.UseHyperthreading = profile.UseHyperthreading;
+                existingProfile.PerformanceCoresOffset = profile.PerformanceCoresOffset;
+                existingProfile.EfficiencyCoresOffset = profile.EfficiencyCoresOffset;
+                existingProfile.PowerSchemeGuid = profile.PowerSchemeGuid;
+                existingProfile.LastModifiedDate = DateTime.Now;
                 
-                // Save the profile if it's a custom profile
-                if (!profile.IsSystemDefault)
-                {
-                    success = SaveProfile(profile) && success;
-                }
+                // Save the profile
+                SaveProfile(existingProfile);
+                
+                return true;
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error applying profile {profile.Name}: {ex.Message}");
-                success = false;
-            }
-            
-            return success;
         }
         
         /// <summary>
-        /// Import a power profile from a file
+        /// Deletes a power profile
         /// </summary>
-        /// <param name="filePath">Path to the profile file</param>
-        /// <returns>Imported power profile</returns>
+        /// <param name="profileId">The profile ID</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool DeleteProfile(Guid profileId)
+        {
+            lock (_profiles)
+            {
+                // Find the profile
+                var profile = _profiles.FirstOrDefault(p => p.Id == profileId);
+                if (profile == null)
+                    return false;
+                    
+                // Check if the profile is a system profile, bundled, or active
+                if (profile.IsSystemProfile || profile.IsBundled || profile.IsActive)
+                    return false;
+                    
+                // Remove from profiles
+                _profiles.Remove(profile);
+                
+                // Delete the file
+                if (!string.IsNullOrWhiteSpace(profile.FilePath) && File.Exists(profile.FilePath))
+                {
+                    try
+                    {
+                        File.Delete(profile.FilePath);
+                    }
+                    catch
+                    {
+                        // Ignore exceptions
+                    }
+                }
+                
+                return true;
+            }
+        }
+        
+        /// <summary>
+        /// Sets the active power profile
+        /// </summary>
+        /// <param name="profileId">The profile ID</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool SetActiveProfile(Guid profileId)
+        {
+            lock (_profiles)
+            {
+                // Find the profile
+                var profile = _profiles.FirstOrDefault(p => p.Id == profileId);
+                if (profile == null)
+                    return false;
+                    
+                // Check if already active
+                if (profile.IsActive)
+                    return true;
+                    
+                // Deactivate current active profile
+                var activeProfile = _profiles.FirstOrDefault(p => p.IsActive);
+                if (activeProfile != null)
+                {
+                    activeProfile.IsActive = false;
+                    SaveProfile(activeProfile);
+                }
+                
+                // Activate new profile
+                profile.IsActive = true;
+                SaveProfile(profile);
+                
+                // Raise event
+                ActiveProfileChanged?.Invoke(this, profile);
+                
+                // Apply the profile settings (this would be implemented with actual hardware API calls)
+                ApplyProfileSettings(profile);
+                
+                return true;
+            }
+        }
+        
+        /// <summary>
+        /// Imports a power profile from a file
+        /// </summary>
+        /// <param name="filePath">The file path</param>
+        /// <returns>The imported power profile or null if import failed</returns>
         public PowerProfile ImportProfile(string filePath)
         {
             try
             {
-                if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+                if (!File.Exists(filePath))
+                    return null;
+                    
+                // Parse file based on extension
+                var extension = Path.GetExtension(filePath).ToLower();
+                
+                PowerProfile profile = null;
+                
+                if (extension == ".pow")
+                {
+                    profile = ParsePowFile(filePath);
+                }
+                else if (extension == ".json")
+                {
+                    profile = ParseJsonFile(filePath);
+                }
+                else
                 {
                     return null;
                 }
                 
-                string extension = Path.GetExtension(filePath).ToLower();
+                if (profile == null)
+                    return null;
+                    
+                // Generate a new ID
+                profile.Id = Guid.NewGuid();
                 
-                // Import JSON profile
-                if (extension == ".json")
-                {
-                    var profile = LoadProfileFromJson(filePath);
-                    
-                    if (profile != null)
-                    {
-                        // Copy the file to the profiles directory
-                        string destFilePath = Path.Combine(_profilesDirectory, Path.GetFileName(filePath));
-                        
-                        if (File.Exists(destFilePath))
-                        {
-                            destFilePath = Path.Combine(_profilesDirectory, $"{Path.GetFileNameWithoutExtension(filePath)}_{DateTime.Now:yyyyMMddHHmmss}.json");
-                        }
-                        
-                        File.Copy(filePath, destFilePath, true);
-                        profile.FilePath = destFilePath;
-                        
-                        return profile;
-                    }
-                }
-                // Import binary profile
-                else if (extension == ".pow")
-                {
-                    var profile = LoadProfileFromBinary(filePath);
-                    
-                    if (profile != null)
-                    {
-                        // Copy the file to the profiles directory
-                        string destFilePath = Path.Combine(_profilesDirectory, Path.GetFileName(filePath));
-                        
-                        if (File.Exists(destFilePath))
-                        {
-                            destFilePath = Path.Combine(_profilesDirectory, $"{Path.GetFileNameWithoutExtension(filePath)}_{DateTime.Now:yyyyMMddHHmmss}.pow");
-                        }
-                        
-                        File.Copy(filePath, destFilePath, true);
-                        profile.FilePath = destFilePath;
-                        
-                        return profile;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error importing profile from {filePath}: {ex.Message}");
-            }
-            
-            return null;
-        }
-        
-        /// <summary>
-        /// Export a power profile to a file
-        /// </summary>
-        /// <param name="profile">Power profile to export</param>
-        /// <param name="filePath">Path to save the profile file</param>
-        /// <returns>True if the profile was exported successfully, false otherwise</returns>
-        public bool ExportProfile(PowerProfile profile, string filePath)
-        {
-            if (profile == null || string.IsNullOrEmpty(filePath))
-            {
-                return false;
-            }
-            
-            try
-            {
-                string extension = Path.GetExtension(filePath).ToLower();
+                // Check if a profile with the same name already exists
+                var existingName = profile.Name;
+                var counter = 1;
                 
-                // Export as JSON
-                if (extension == ".json")
+                lock (_profiles)
                 {
-                    var options = new JsonSerializerOptions
+                    while (_profiles.Any(p => p.Name == profile.Name))
                     {
-                        WriteIndented = true
-                    };
-                    
-                    string json = JsonSerializer.Serialize(profile, options);
-                    File.WriteAllText(filePath, json, Encoding.UTF8);
-                    
-                    return true;
-                }
-                // Export as binary (if it's a system profile)
-                else if (extension == ".pow" && profile.IsSystemDefault && !string.IsNullOrEmpty(profile.FilePath))
-                {
-                    if (File.Exists(profile.FilePath))
-                    {
-                        File.Copy(profile.FilePath, filePath, true);
-                        return true;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error exporting profile {profile.Name} to {filePath}: {ex.Message}");
-            }
-            
-            return false;
-        }
-        
-        private List<PowerProfile> GetSystemProfiles()
-        {
-            var systemProfiles = new List<PowerProfile>();
-            
-            try
-            {
-                // Get system power plans
-                IntPtr plansBuffer = IntPtr.Zero;
-                uint planCount = 0;
-                uint planBufferSize = 16; // Size of a GUID
-                
-                uint result = PowerEnumerate(IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, (uint)AccessFlags.ACCESS_SCHEME,
-                    (uint)PowerDataType.POWER_DATA_GUID, ref plansBuffer, ref planBufferSize, ref planCount);
-                
-                if (result == 0 && planCount > 0)
-                {
-                    var activePlanGuid = GetActivePowerPlanGuid();
-                    
-                    for (int i = 0; i < planCount; i++)
-                    {
-                        IntPtr planPtr = IntPtr.Add(plansBuffer, i * 16); // 16 is the size of a GUID
-                        Guid planGuid = Marshal.PtrToStructure<Guid>(planPtr);
-                        
-                        string planName = GetPowerPlanName(planGuid);
-                        
-                        var profile = new PowerProfile
-                        {
-                            Name = planName,
-                            Description = "System power plan",
-                            CreationDate = DateTime.Now,
-                            ModificationDate = DateTime.Now,
-                            IsSystemDefault = true,
-                            Category = "System",
-                            ApplyAffinityRules = false,
-                            ApplyPriorityRules = false,
-                            ApplyPowerSettings = true,
-                            ApplyCoreParking = true,
-                            MinimumProcessorState = 0,
-                            MaximumProcessorState = 100,
-                            CoreParkingMinCores = 50,
-                            ProcessorPerformanceBoostPolicy = 3,
-                            SystemCoolingPolicy = 1,
-                            AffinityRules = new List<ProcessAffinityRule>(),
-                            FilePath = $"System\\{planGuid}",
-                            IsActive = planGuid == activePlanGuid
-                        };
-                        
-                        systemProfiles.Add(profile);
+                        profile.Name = $"{existingName} ({counter})";
+                        counter++;
                     }
                     
-                    LocalFree(plansBuffer);
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error getting system profiles: {ex.Message}");
-            }
-            
-            return systemProfiles;
-        }
-        
-        private string GetPowerPlanName(Guid guid)
-        {
-            try
-            {
-                IntPtr friendlyNamePtr = IntPtr.Zero;
-                uint friendlyNameSize = 0;
-                
-                uint result = PowerReadFriendlyName(IntPtr.Zero, ref guid, IntPtr.Zero, IntPtr.Zero, friendlyNamePtr, ref friendlyNameSize);
-                
-                if (result == 0 && friendlyNameSize > 0)
-                {
-                    friendlyNamePtr = Marshal.AllocHGlobal((int)friendlyNameSize);
+                    // Set import properties
+                    profile.IsBundled = false;
+                    profile.IsSystemProfile = false;
+                    profile.IsActive = false;
+                    profile.CreationDate = DateTime.Now;
+                    profile.LastModifiedDate = DateTime.Now;
                     
-                    if (friendlyNamePtr != IntPtr.Zero)
-                    {
-                        result = PowerReadFriendlyName(IntPtr.Zero, ref guid, IntPtr.Zero, IntPtr.Zero, friendlyNamePtr, ref friendlyNameSize);
-                        
-                        if (result == 0)
-                        {
-                            string friendlyName = Marshal.PtrToStringUni(friendlyNamePtr);
-                            Marshal.FreeHGlobal(friendlyNamePtr);
-                            
-                            return friendlyName;
-                        }
-                        
-                        Marshal.FreeHGlobal(friendlyNamePtr);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error getting power plan name: {ex.Message}");
-            }
-            
-            return "Unknown";
-        }
-        
-        private Guid GetActivePowerPlanGuid()
-        {
-            try
-            {
-                IntPtr activeGuidPtr = IntPtr.Zero;
-                uint activeGuidSize = 16; // Size of a GUID
-                
-                uint result = PowerGetActiveScheme(IntPtr.Zero, ref activeGuidPtr);
-                
-                if (result == 0 && activeGuidPtr != IntPtr.Zero)
-                {
-                    Guid activeGuid = Marshal.PtrToStructure<Guid>(activeGuidPtr);
-                    LocalFree(activeGuidPtr);
+                    // Save to user profiles
+                    var newFilePath = Path.Combine(_userProfilesPath, $"{Guid.NewGuid()}.pow");
+                    profile.FilePath = newFilePath;
                     
-                    return activeGuid;
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error getting active power plan GUID: {ex.Message}");
-            }
-            
-            return Guid.Empty;
-        }
-        
-        private PowerProfile LoadProfileFromJson(string filePath)
-        {
-            try
-            {
-                string json = File.ReadAllText(filePath, Encoding.UTF8);
-                var profile = JsonSerializer.Deserialize<PowerProfile>(json);
-                
-                if (profile != null)
-                {
-                    profile.FilePath = filePath;
+                    // Save the profile
+                    SaveProfile(profile);
+                    
+                    // Add to profiles
+                    _profiles.Add(profile);
+                    
                     return profile;
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error loading profile from JSON {filePath}: {ex.Message}");
+                Console.WriteLine($"Failed to import profile: {ex.Message}");
+                return null;
             }
-            
-            return null;
         }
         
-        private PowerProfile LoadProfileFromBinary(string filePath)
+        /// <summary>
+        /// Exports a power profile to a file
+        /// </summary>
+        /// <param name="profileId">The profile ID</param>
+        /// <param name="filePath">The file path</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool ExportProfile(Guid profileId, string filePath)
         {
             try
             {
-                string fileName = Path.GetFileNameWithoutExtension(filePath);
-                
-                // Create a simple profile from the file name
-                var profile = new PowerProfile
+                // Find the profile
+                var profile = GetProfile(profileId);
+                if (profile == null)
+                    return false;
+                    
+                // Copy the profile file
+                if (!string.IsNullOrWhiteSpace(profile.FilePath) && File.Exists(profile.FilePath))
                 {
-                    Name = fileName,
-                    Description = "Imported power profile",
-                    CreationDate = File.GetCreationTime(filePath),
-                    ModificationDate = File.GetLastWriteTime(filePath),
-                    IsSystemDefault = false,
-                    Category = "Custom",
-                    ApplyAffinityRules = false,
-                    ApplyPriorityRules = false,
-                    ApplyPowerSettings = true,
-                    ApplyCoreParking = true,
-                    MinimumProcessorState = 0,
-                    MaximumProcessorState = 100,
-                    CoreParkingMinCores = 50,
-                    ProcessorPerformanceBoostPolicy = 3,
-                    SystemCoolingPolicy = 1,
-                    AffinityRules = new List<ProcessAffinityRule>(),
-                    FilePath = filePath,
-                    IsActive = false
-                };
+                    File.Copy(profile.FilePath, filePath, true);
+                    return true;
+                }
                 
-                return profile;
+                // If no file exists, create a new one
+                var extension = Path.GetExtension(filePath).ToLower();
+                
+                if (extension == ".pow")
+                {
+                    return ExportToPowFile(profile, filePath);
+                }
+                else if (extension == ".json")
+                {
+                    return ExportToJsonFile(profile, filePath);
+                }
+                
+                return false;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error loading profile from binary {filePath}: {ex.Message}");
+                Console.WriteLine($"Failed to export profile: {ex.Message}");
+                return false;
             }
-            
-            return null;
         }
         
-        private void CopyBundledProfiles()
+        /// <summary>
+        /// Loads the bundled power profiles
+        /// </summary>
+        /// <returns>The list of bundled power profiles</returns>
+        public List<PowerProfile> LoadBundledProfiles()
+        {
+            var bundledProfiles = new List<PowerProfile>();
+            
+            try
+            {
+                if (!Directory.Exists(_bundledProfilesPath))
+                    return bundledProfiles;
+                    
+                var files = Directory.GetFiles(_bundledProfilesPath, "*.pow");
+                
+                foreach (var file in files)
+                {
+                    try
+                    {
+                        var profile = ParsePowFile(file);
+                        
+                        if (profile != null)
+                        {
+                            profile.IsBundled = true;
+                            bundledProfiles.Add(profile);
+                        }
+                    }
+                    catch
+                    {
+                        // Skip files that cannot be parsed
+                    }
+                }
+                
+                return bundledProfiles;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to load bundled profiles: {ex.Message}");
+                return bundledProfiles;
+            }
+        }
+        
+        /// <summary>
+        /// Resets the power profile settings to the system defaults
+        /// </summary>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool ResetToSystemDefaults()
         {
             try
             {
-                // Check if we have the bundled profiles in the application directory
-                string[] powFiles = Directory.GetFiles(_bundledProfilesDirectory, "*.pow");
-                
-                if (powFiles.Length == 0)
+                // This would be implemented with actual hardware API calls
+                // For now, just simulate success
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        
+        private void LoadProfiles()
+        {
+            try
+            {
+                lock (_profiles)
                 {
-                    // Copy all .pow files from the attached_assets directory
-                    string assetsDirectory = Path.Combine(Directory.GetCurrentDirectory(), "attached_assets");
+                    _profiles.Clear();
                     
-                    if (Directory.Exists(assetsDirectory))
+                    // Load bundled profiles
+                    var bundledProfiles = LoadBundledProfiles();
+                    _profiles.AddRange(bundledProfiles);
+                    
+                    // Load user profiles
+                    if (Directory.Exists(_userProfilesPath))
                     {
-                        foreach (string filePath in Directory.GetFiles(assetsDirectory, "*.pow"))
+                        var files = Directory.GetFiles(_userProfilesPath, "*.pow");
+                        
+                        foreach (var file in files)
                         {
-                            string fileName = Path.GetFileName(filePath);
-                            string destPath = Path.Combine(_bundledProfilesDirectory, fileName);
-                            
-                            if (!File.Exists(destPath))
+                            try
                             {
-                                File.Copy(filePath, destPath);
+                                var profile = ParsePowFile(file);
+                                
+                                if (profile != null)
+                                {
+                                    _profiles.Add(profile);
+                                }
                             }
+                            catch
+                            {
+                                // Skip files that cannot be parsed
+                            }
+                        }
+                    }
+                    
+                    // Create default profiles if none exist
+                    if (_profiles.Count == 0)
+                    {
+                        CreateDefaultProfiles();
+                    }
+                    
+                    // Make sure there is an active profile
+                    if (!_profiles.Any(p => p.IsActive))
+                    {
+                        var defaultProfile = _profiles.FirstOrDefault();
+                        if (defaultProfile != null)
+                        {
+                            defaultProfile.IsActive = true;
+                            SaveProfile(defaultProfile);
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error copying bundled profiles: {ex.Message}");
+                Console.WriteLine($"Failed to load profiles: {ex.Message}");
             }
         }
         
-        private bool ApplyPowerPlan(string filePath)
+        private void CreateDefaultProfiles()
         {
-            try
+            // Create a balanced profile
+            var balancedProfile = new PowerProfile
             {
-                if (!File.Exists(filePath))
-                {
-                    return false;
-                }
-                
-                // Use powercfg.exe to import and set the power plan
-                string tempGuid = Guid.NewGuid().ToString();
-                string importArg = $"/import \"{filePath}\" {tempGuid}";
-                
-                // Import the power plan
-                if (RunPowerCfg(importArg))
-                {
-                    // Set the imported power plan as active
-                    string setActiveArg = $"/s {tempGuid}";
-                    return RunPowerCfg(setActiveArg);
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error applying power plan {filePath}: {ex.Message}");
-            }
+                Name = "Balanced",
+                Description = "Balanced performance and power saving",
+                IsSystemProfile = true,
+                IsActive = true,
+                UseHyperthreading = true,
+                MaxCpuPower = 0, // Unlimited
+                MaxCpuTemperature = 0, // Unlimited
+                MinCpuFrequency = 0, // Auto
+                MaxCpuFrequency = 0 // Auto
+            };
             
-            return false;
+            // Create a performance profile
+            var performanceProfile = new PowerProfile
+            {
+                Name = "Performance",
+                Description = "Maximum performance",
+                IsSystemProfile = true,
+                IsActive = false,
+                UseHyperthreading = true,
+                IsGamingOptimized = true,
+                MaxCpuPower = 0, // Unlimited
+                MaxCpuTemperature = 0, // Unlimited
+                MinCpuFrequency = 0, // Auto
+                MaxCpuFrequency = 0 // Auto
+            };
+            
+            // Create a power saver profile
+            var powerSaverProfile = new PowerProfile
+            {
+                Name = "Power Saver",
+                Description = "Maximum power saving",
+                IsSystemProfile = true,
+                IsActive = false,
+                UseHyperthreading = true,
+                IsBatteryOptimized = true,
+                MaxCpuPower = 45, // Limit power
+                MaxCpuTemperature = 70, // Limit temperature
+                MinCpuFrequency = 0, // Auto
+                MaxCpuFrequency = 3000 // Limit frequency
+            };
+            
+            // Add the profiles
+            _profiles.Add(balancedProfile);
+            _profiles.Add(performanceProfile);
+            _profiles.Add(powerSaverProfile);
+            
+            // Save the profiles
+            SaveProfile(balancedProfile);
+            SaveProfile(performanceProfile);
+            SaveProfile(powerSaverProfile);
         }
         
-        private bool RunPowerCfg(string arguments)
+        private void SaveProfile(PowerProfile profile)
         {
             try
             {
-                using var process = new Process();
-                process.StartInfo.FileName = "powercfg.exe";
-                process.StartInfo.Arguments = arguments;
-                process.StartInfo.UseShellExecute = false;
-                process.StartInfo.CreateNoWindow = true;
-                process.StartInfo.RedirectStandardOutput = true;
-                process.StartInfo.RedirectStandardError = true;
+                if (profile == null)
+                    return;
+                    
+                // Determine file path
+                var filePath = profile.FilePath;
+                if (string.IsNullOrWhiteSpace(filePath))
+                {
+                    var directory = profile.IsBundled ? _bundledProfilesPath : _userProfilesPath;
+                    filePath = Path.Combine(directory, $"{profile.Id}.pow");
+                    profile.FilePath = filePath;
+                }
                 
-                process.Start();
-                process.WaitForExit();
-                
-                return process.ExitCode == 0;
+                // Save the profile
+                if (Path.GetExtension(filePath).ToLower() == ".pow")
+                {
+                    ExportToPowFile(profile, filePath);
+                }
+                else
+                {
+                    ExportToJsonFile(profile, filePath);
+                }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error running powercfg with arguments {arguments}: {ex.Message}");
+                Console.WriteLine($"Failed to save profile: {ex.Message}");
+            }
+        }
+        
+        private PowerProfile ParsePowFile(string filePath)
+        {
+            try
+            {
+                var profile = new PowerProfile
+                {
+                    FilePath = filePath,
+                    Name = Path.GetFileNameWithoutExtension(filePath)
+                };
+                
+                var document = XDocument.Load(filePath);
+                var root = document.Root;
+                
+                if (root != null)
+                {
+                    // Parse basic properties
+                    profile.Id = GetGuidAttribute(root, "id");
+                    profile.Name = GetStringElement(root, "Name") ?? profile.Name;
+                    profile.Description = GetStringElement(root, "Description");
+                    profile.IsActive = GetBoolElement(root, "IsActive");
+                    profile.IsSystemProfile = GetBoolElement(root, "IsSystemProfile");
+                    profile.IsBundled = GetBoolElement(root, "IsBundled");
+                    profile.CreationDate = GetDateTimeElement(root, "CreationDate");
+                    profile.LastModifiedDate = GetDateTimeElement(root, "LastModifiedDate");
+                    
+                    // Parse optimization flags
+                    profile.IsGamingOptimized = GetBoolElement(root, "IsGamingOptimized");
+                    profile.IsBatteryOptimized = GetBoolElement(root, "IsBatteryOptimized");
+                    profile.IsThermalOptimized = GetBoolElement(root, "IsThermalOptimized");
+                    profile.UsesDynamicThreadAllocation = GetBoolElement(root, "UsesDynamicThreadAllocation");
+                    profile.UsesPerformanceCoresForApps = GetBoolElement(root, "UsesPerformanceCoresForApps");
+                    
+                    // Parse CPU settings
+                    profile.MaxCpuPower = GetIntElement(root, "MaxCpuPower");
+                    profile.MaxCpuTemperature = GetIntElement(root, "MaxCpuTemperature");
+                    profile.MinCpuFrequency = GetIntElement(root, "MinCpuFrequency");
+                    profile.MaxCpuFrequency = GetIntElement(root, "MaxCpuFrequency");
+                    profile.ParkEfficiencyCores = GetBoolElement(root, "ParkEfficiencyCores");
+                    profile.UseHyperthreading = GetBoolElement(root, "UseHyperthreading", true);
+                    profile.PerformanceCoresOffset = GetIntElement(root, "PerformanceCoresOffset");
+                    profile.EfficiencyCoresOffset = GetIntElement(root, "EfficiencyCoresOffset");
+                    profile.PowerSchemeGuid = GetStringElement(root, "PowerSchemeGuid");
+                    
+                    // Parse performance core apps
+                    var appsElement = root.Element("PerformanceCoreApps");
+                    if (appsElement != null)
+                    {
+                        foreach (var appElement in appsElement.Elements("App"))
+                        {
+                            var appName = appElement.Value;
+                            if (!string.IsNullOrWhiteSpace(appName))
+                            {
+                                profile.PerformanceCoreApps.Add(appName);
+                            }
+                        }
+                    }
+                    
+                    // Parse settings
+                    var settingsElement = root.Element("Settings");
+                    if (settingsElement != null)
+                    {
+                        foreach (var settingElement in settingsElement.Elements("Setting"))
+                        {
+                            var key = settingElement.Attribute("key")?.Value;
+                            var value = settingElement.Attribute("value")?.Value;
+                            
+                            if (!string.IsNullOrWhiteSpace(key))
+                            {
+                                profile.Settings[key] = value ?? string.Empty;
+                            }
+                        }
+                    }
+                    
+                    // Parse affinity rules
+                    var rulesElement = root.Element("AffinityRules");
+                    if (rulesElement != null)
+                    {
+                        foreach (var ruleElement in rulesElement.Elements("Rule"))
+                        {
+                            var rule = new ProcessAffinityRule
+                            {
+                                Id = GetGuidAttribute(ruleElement, "id"),
+                                Name = GetStringAttribute(ruleElement, "name"),
+                                ProcessNamePattern = GetStringAttribute(ruleElement, "pattern"),
+                                Affinity = GetLongAttribute(ruleElement, "affinity"),
+                                Priority = (ProcessPriority)GetIntAttribute(ruleElement, "priority", (int)ProcessPriority.Normal),
+                                ApplyPriority = GetBoolAttribute(ruleElement, "applyPriority"),
+                                ApplyAffinity = GetBoolAttribute(ruleElement, "applyAffinity", true),
+                                ApplyOnProcessStart = GetBoolAttribute(ruleElement, "applyOnStart", true),
+                                IsEnabled = GetBoolAttribute(ruleElement, "enabled", true),
+                                UsePerformanceCores = GetBoolAttribute(ruleElement, "usePerformanceCores"),
+                                UseEfficiencyCores = GetBoolAttribute(ruleElement, "useEfficiencyCores"),
+                                CreationDate = GetDateTimeAttribute(ruleElement, "created"),
+                                LastModifiedDate = GetDateTimeAttribute(ruleElement, "modified"),
+                                CoreCount = GetIntAttribute(ruleElement, "coreCount")
+                            };
+                            
+                            profile.AffinityRules.Add(rule);
+                        }
+                    }
+                }
+                
+                return profile;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to parse .pow file: {ex.Message}");
+                return null;
+            }
+        }
+        
+        private PowerProfile ParseJsonFile(string filePath)
+        {
+            try
+            {
+                var json = File.ReadAllText(filePath);
+                var profile = JsonSerializer.Deserialize<PowerProfile>(json);
+                
+                if (profile != null)
+                {
+                    profile.FilePath = filePath;
+                }
+                
+                return profile;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to parse .json file: {ex.Message}");
+                return null;
+            }
+        }
+        
+        private bool ExportToPowFile(PowerProfile profile, string filePath)
+        {
+            try
+            {
+                var document = new XDocument();
+                var root = new XElement("PowerProfile");
+                document.Add(root);
+                
+                // Add basic properties
+                root.SetAttributeValue("id", profile.Id);
+                root.Add(new XElement("Name", profile.Name));
+                root.Add(new XElement("Description", profile.Description));
+                root.Add(new XElement("IsActive", profile.IsActive));
+                root.Add(new XElement("IsSystemProfile", profile.IsSystemProfile));
+                root.Add(new XElement("IsBundled", profile.IsBundled));
+                root.Add(new XElement("CreationDate", profile.CreationDate));
+                root.Add(new XElement("LastModifiedDate", profile.LastModifiedDate));
+                
+                // Add optimization flags
+                root.Add(new XElement("IsGamingOptimized", profile.IsGamingOptimized));
+                root.Add(new XElement("IsBatteryOptimized", profile.IsBatteryOptimized));
+                root.Add(new XElement("IsThermalOptimized", profile.IsThermalOptimized));
+                root.Add(new XElement("UsesDynamicThreadAllocation", profile.UsesDynamicThreadAllocation));
+                root.Add(new XElement("UsesPerformanceCoresForApps", profile.UsesPerformanceCoresForApps));
+                
+                // Add CPU settings
+                root.Add(new XElement("MaxCpuPower", profile.MaxCpuPower));
+                root.Add(new XElement("MaxCpuTemperature", profile.MaxCpuTemperature));
+                root.Add(new XElement("MinCpuFrequency", profile.MinCpuFrequency));
+                root.Add(new XElement("MaxCpuFrequency", profile.MaxCpuFrequency));
+                root.Add(new XElement("ParkEfficiencyCores", profile.ParkEfficiencyCores));
+                root.Add(new XElement("UseHyperthreading", profile.UseHyperthreading));
+                root.Add(new XElement("PerformanceCoresOffset", profile.PerformanceCoresOffset));
+                root.Add(new XElement("EfficiencyCoresOffset", profile.EfficiencyCoresOffset));
+                root.Add(new XElement("PowerSchemeGuid", profile.PowerSchemeGuid));
+                
+                // Add performance core apps
+                var appsElement = new XElement("PerformanceCoreApps");
+                root.Add(appsElement);
+                
+                foreach (var app in profile.PerformanceCoreApps)
+                {
+                    appsElement.Add(new XElement("App", app));
+                }
+                
+                // Add settings
+                var settingsElement = new XElement("Settings");
+                root.Add(settingsElement);
+                
+                foreach (var setting in profile.Settings)
+                {
+                    var settingElement = new XElement("Setting");
+                    settingElement.SetAttributeValue("key", setting.Key);
+                    settingElement.SetAttributeValue("value", setting.Value);
+                    settingsElement.Add(settingElement);
+                }
+                
+                // Add affinity rules
+                var rulesElement = new XElement("AffinityRules");
+                root.Add(rulesElement);
+                
+                foreach (var rule in profile.AffinityRules)
+                {
+                    var ruleElement = new XElement("Rule");
+                    ruleElement.SetAttributeValue("id", rule.Id);
+                    ruleElement.SetAttributeValue("name", rule.Name);
+                    ruleElement.SetAttributeValue("pattern", rule.ProcessNamePattern);
+                    ruleElement.SetAttributeValue("affinity", rule.Affinity);
+                    ruleElement.SetAttributeValue("priority", (int)rule.Priority);
+                    ruleElement.SetAttributeValue("applyPriority", rule.ApplyPriority);
+                    ruleElement.SetAttributeValue("applyAffinity", rule.ApplyAffinity);
+                    ruleElement.SetAttributeValue("applyOnStart", rule.ApplyOnProcessStart);
+                    ruleElement.SetAttributeValue("enabled", rule.IsEnabled);
+                    ruleElement.SetAttributeValue("usePerformanceCores", rule.UsePerformanceCores);
+                    ruleElement.SetAttributeValue("useEfficiencyCores", rule.UseEfficiencyCores);
+                    ruleElement.SetAttributeValue("created", rule.CreationDate);
+                    ruleElement.SetAttributeValue("modified", rule.LastModifiedDate);
+                    ruleElement.SetAttributeValue("coreCount", rule.CoreCount);
+                    rulesElement.Add(ruleElement);
+                }
+                
+                document.Save(filePath);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to export to .pow file: {ex.Message}");
                 return false;
             }
         }
         
-        private string SanitizeFileName(string fileName)
+        private bool ExportToJsonFile(PowerProfile profile, string filePath)
         {
-            if (string.IsNullOrEmpty(fileName))
+            try
             {
-                return "Unnamed";
+                var json = JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(filePath, json);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to export to .json file: {ex.Message}");
+                return false;
+            }
+        }
+        
+        private void ApplyProfileSettings(PowerProfile profile)
+        {
+            try
+            {
+                // This would be implemented with actual hardware API calls
+                // For now, just log the application
+                Console.WriteLine($"Applying profile {profile.Name}...");
+                
+                // Example of what would be implemented:
+                // - Set CPU power limit
+                // - Set CPU thermal limit
+                // - Set CPU frequency limits
+                // - Set core parking settings
+                // - Set hyperthreading setting
+                // - Set voltage offset
+                // - Apply affinity rules
+                // - Set Windows power scheme
+                
+                // Apply affinity rules
+                if (profile.AffinityRules.Count > 0)
+                {
+                    var processService = ServiceLocator.Get<IProcessService>();
+                    processService.ApplyAffinityRules(profile.AffinityRules);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to apply profile settings: {ex.Message}");
+            }
+        }
+        
+        private Guid GetGuidAttribute(XElement element, string name)
+        {
+            var attr = element.Attribute(name)?.Value;
+            
+            if (!string.IsNullOrWhiteSpace(attr) && Guid.TryParse(attr, out var guid))
+            {
+                return guid;
             }
             
-            // Replace invalid characters
-            char[] invalidChars = Path.GetInvalidFileNameChars();
-            string validFileName = string.Join("_", fileName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
+            return Guid.NewGuid();
+        }
+        
+        private string GetStringAttribute(XElement element, string name)
+        {
+            return element.Attribute(name)?.Value;
+        }
+        
+        private int GetIntAttribute(XElement element, string name, int defaultValue = 0)
+        {
+            var attr = element.Attribute(name)?.Value;
             
-            // Ensure the file name is not empty after sanitization
-            return string.IsNullOrEmpty(validFileName) ? "Unnamed" : validFileName;
+            if (!string.IsNullOrWhiteSpace(attr) && int.TryParse(attr, out var value))
+            {
+                return value;
+            }
+            
+            return defaultValue;
         }
         
-        #region Native methods
-        
-        [DllImport("powrprof.dll")]
-        private static extern uint PowerGetActiveScheme(IntPtr UserRootPowerKey, ref IntPtr ActivePolicyGuid);
-        
-        [DllImport("powrprof.dll")]
-        private static extern uint PowerEnumerate(IntPtr RootPowerKey, IntPtr SchemeGuid, IntPtr SubGroupOfPowerSettingGuid,
-            uint AccessFlags, uint Level, ref IntPtr Buffer, ref uint BufferSize, ref uint Count);
-        
-        [DllImport("powrprof.dll", CharSet = CharSet.Unicode)]
-        private static extern uint PowerReadFriendlyName(IntPtr RootPowerKey, ref Guid SchemeGuid, IntPtr SubGroupOfPowerSettingGuid,
-            IntPtr PowerSettingGuid, IntPtr Buffer, ref uint BufferSize);
-        
-        [DllImport("kernel32.dll")]
-        private static extern IntPtr LocalFree(IntPtr hMem);
-        
-        private enum AccessFlags
+        private long GetLongAttribute(XElement element, string name, long defaultValue = 0)
         {
-            ACCESS_SCHEME = 16
+            var attr = element.Attribute(name)?.Value;
+            
+            if (!string.IsNullOrWhiteSpace(attr) && long.TryParse(attr, out var value))
+            {
+                return value;
+            }
+            
+            return defaultValue;
         }
         
-        private enum PowerDataType
+        private bool GetBoolAttribute(XElement element, string name, bool defaultValue = false)
         {
-            POWER_DATA_GUID = 0
+            var attr = element.Attribute(name)?.Value;
+            
+            if (!string.IsNullOrWhiteSpace(attr) && bool.TryParse(attr, out var value))
+            {
+                return value;
+            }
+            
+            return defaultValue;
         }
         
-        #endregion
+        private DateTime GetDateTimeAttribute(XElement element, string name)
+        {
+            var attr = element.Attribute(name)?.Value;
+            
+            if (!string.IsNullOrWhiteSpace(attr) && DateTime.TryParse(attr, out var value))
+            {
+                return value;
+            }
+            
+            return DateTime.Now;
+        }
+        
+        private string GetStringElement(XElement element, string name)
+        {
+            return element.Element(name)?.Value;
+        }
+        
+        private int GetIntElement(XElement element, string name, int defaultValue = 0)
+        {
+            var elem = element.Element(name)?.Value;
+            
+            if (!string.IsNullOrWhiteSpace(elem) && int.TryParse(elem, out var value))
+            {
+                return value;
+            }
+            
+            return defaultValue;
+        }
+        
+        private bool GetBoolElement(XElement element, string name, bool defaultValue = false)
+        {
+            var elem = element.Element(name)?.Value;
+            
+            if (!string.IsNullOrWhiteSpace(elem) && bool.TryParse(elem, out var value))
+            {
+                return value;
+            }
+            
+            return defaultValue;
+        }
+        
+        private DateTime GetDateTimeElement(XElement element, string name)
+        {
+            var elem = element.Element(name)?.Value;
+            
+            if (!string.IsNullOrWhiteSpace(elem) && DateTime.TryParse(elem, out var value))
+            {
+                return value;
+            }
+            
+            return DateTime.Now;
+        }
     }
 }

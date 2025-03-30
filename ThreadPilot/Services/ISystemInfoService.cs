@@ -5,96 +5,97 @@ using ThreadPilot.Models;
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Interface for system information operations
+    /// Interface for the system information service.
     /// </summary>
     public interface ISystemInfoService
     {
         /// <summary>
-        /// Gets the system information
+        /// Gets information about the system.
         /// </summary>
-        /// <returns>The system information</returns>
+        /// <returns>A SystemInfo object containing the system information.</returns>
         SystemInfo GetSystemInfo();
-        
+
         /// <summary>
-        /// Gets the list of CPU cores
+        /// Gets the list of CPU cores.
         /// </summary>
-        /// <returns>A list of CPU cores</returns>
+        /// <returns>A list of CpuCore objects.</returns>
         List<CpuCore> GetCpuCores();
-        
+
         /// <summary>
-        /// Gets the CPU utilization per core
+        /// Gets the CPU utilization percentage.
         /// </summary>
-        /// <returns>A dictionary mapping core indices to utilization percentages</returns>
-        Dictionary<int, double> GetCpuCoreUtilization();
-        
+        /// <returns>The CPU utilization percentage.</returns>
+        float GetCpuUtilization();
+
         /// <summary>
-        /// Gets the overall CPU utilization
+        /// Gets the CPU temperature.
         /// </summary>
-        /// <returns>The overall CPU utilization percentage</returns>
-        double GetOverallCpuUtilization();
-        
+        /// <returns>The CPU temperature in degrees Celsius.</returns>
+        float GetCpuTemperature();
+
         /// <summary>
-        /// Gets the memory utilization
+        /// Gets the RAM utilization percentage.
         /// </summary>
-        /// <returns>The memory utilization percentage</returns>
-        double GetMemoryUtilization();
-        
+        /// <returns>The RAM utilization percentage.</returns>
+        float GetRamUtilization();
+
         /// <summary>
-        /// Gets the CPU frequency per core
+        /// Gets the total RAM in GB.
         /// </summary>
-        /// <returns>A dictionary mapping core indices to frequencies in MHz</returns>
-        Dictionary<int, int> GetCpuCoreFrequency();
-        
+        /// <returns>The total RAM in GB.</returns>
+        float GetTotalRam();
+
         /// <summary>
-        /// Gets the CPU temperature per core
+        /// Gets the battery percentage (if applicable).
         /// </summary>
-        /// <returns>A dictionary mapping core indices to temperatures in Celsius</returns>
-        Dictionary<int, double> GetCpuCoreTemperature();
-        
+        /// <returns>The battery percentage, or null if not applicable.</returns>
+        float? GetBatteryPercentage();
+
         /// <summary>
-        /// Gets the overall CPU temperature
+        /// Checks if the system has a battery.
         /// </summary>
-        /// <returns>The overall CPU temperature in Celsius</returns>
-        double GetOverallCpuTemperature();
-        
+        /// <returns>True if the system has a battery, false otherwise.</returns>
+        bool HasBattery();
+
         /// <summary>
-        /// Gets the system uptime
+        /// Checks if the system is on AC power.
         /// </summary>
-        /// <returns>The system uptime</returns>
-        TimeSpan GetSystemUptime();
-        
+        /// <returns>True if the system is on AC power, false otherwise.</returns>
+        bool IsOnAcPower();
+
         /// <summary>
-        /// Gets the operating system version
+        /// Gets the current power scheme.
         /// </summary>
-        /// <returns>The operating system version</returns>
-        string GetOsVersion();
-        
+        /// <returns>The current power scheme GUID.</returns>
+        Guid GetCurrentPowerScheme();
+
         /// <summary>
-        /// Gets whether the system is running on a laptop
+        /// Sets the current power scheme.
         /// </summary>
-        /// <returns>True if running on a laptop, false otherwise</returns>
-        bool IsLaptop();
-        
+        /// <param name="powerSchemeGuid">The power scheme GUID to set.</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        bool SetCurrentPowerScheme(Guid powerSchemeGuid);
+
         /// <summary>
-        /// Gets the current power profile name
+        /// Event that is raised when system information is updated.
         /// </summary>
-        /// <returns>The current power profile name</returns>
-        string GetCurrentPowerProfileName();
-        
+        event EventHandler? SystemInfoUpdated;
+
         /// <summary>
-        /// Starts monitoring system information
+        /// Starts the monitoring of system information.
         /// </summary>
-        /// <param name="updateInterval">The update interval in milliseconds</param>
-        void StartMonitoring(int updateInterval = 1000);
-        
+        /// <param name="intervalInSeconds">The interval in seconds between updates.</param>
+        void StartMonitoring(int intervalInSeconds = 1);
+
         /// <summary>
-        /// Stops monitoring system information
+        /// Stops the monitoring of system information.
         /// </summary>
         void StopMonitoring();
-        
+
         /// <summary>
-        /// Occurs when system information is updated
+        /// Checks if monitoring is active.
         /// </summary>
-        event EventHandler<SystemInfo> SystemInfoUpdated;
+        /// <returns>True if monitoring is active, false otherwise.</returns>
+        bool IsMonitoringActive();
     }
 }
