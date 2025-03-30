@@ -1,66 +1,59 @@
-using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using ThreadPilot.Models;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Interface for power profile services
+    /// Service for managing power profiles
     /// </summary>
     public interface IPowerProfileService
     {
         /// <summary>
-        /// Gets a power profile by ID
+        /// Get all available power profiles
         /// </summary>
-        /// <param name="id">The ID of the power profile</param>
-        /// <returns>The power profile or null if not found</returns>
-        Task<BundledPowerProfile> GetProfileById(Guid id);
-
+        /// <returns>List of power profiles</returns>
+        List<BundledPowerProfile> GetAvailableProfiles();
+        
         /// <summary>
-        /// Gets all available power profiles
+        /// Apply a power profile to the system
         /// </summary>
-        /// <returns>Dictionary of power profiles with their IDs</returns>
-        Task<Dictionary<Guid, string>> GetAllProfiles();
-
+        /// <param name="profile">Profile to apply</param>
+        /// <returns>True if successful, false otherwise</returns>
+        bool ApplyProfile(BundledPowerProfile profile);
+        
         /// <summary>
-        /// Applies a power profile to the system
+        /// Save a power profile
         /// </summary>
-        /// <param name="id">The ID of the power profile to apply</param>
-        /// <returns>True if successful, otherwise false</returns>
-        Task<bool> ApplyProfile(Guid id);
-
+        /// <param name="profile">Profile to save</param>
+        /// <returns>True if successful, false otherwise</returns>
+        bool SaveProfile(BundledPowerProfile profile);
+        
         /// <summary>
-        /// Imports a power profile from a file
+        /// Delete a power profile
         /// </summary>
-        /// <param name="filePath">Path to the power profile file</param>
-        /// <returns>The ID of the imported profile, or null if import failed</returns>
-        Task<Guid?> ImportProfile(string filePath);
-
+        /// <param name="profileId">ID of the profile to delete</param>
+        /// <returns>True if successful, false otherwise</returns>
+        bool DeleteProfile(string profileId);
+        
         /// <summary>
-        /// Exports a power profile to a file
+        /// Export a power profile to a file
         /// </summary>
-        /// <param name="id">The ID of the power profile to export</param>
-        /// <param name="filePath">Path to save the power profile file</param>
-        /// <returns>True if successful, otherwise false</returns>
-        Task<bool> ExportProfile(Guid id, string filePath);
-
+        /// <param name="profile">Profile to export</param>
+        /// <param name="filePath">Destination file path</param>
+        /// <returns>True if successful, false otherwise</returns>
+        bool ExportProfile(BundledPowerProfile profile, string filePath);
+        
         /// <summary>
-        /// Deletes a power profile
+        /// Import a power profile from a file
         /// </summary>
-        /// <param name="id">The ID of the power profile to delete</param>
-        /// <returns>True if successful, otherwise false</returns>
-        Task<bool> DeleteProfile(Guid id);
-
+        /// <param name="filePath">Source file path</param>
+        /// <returns>Imported profile or null if import failed</returns>
+        BundledPowerProfile? ImportProfile(string filePath);
+        
         /// <summary>
-        /// Creates a new power profile from system settings
+        /// Get the currently active power profile
         /// </summary>
-        /// <param name="name">Name of the profile</param>
-        /// <param name="description">Description of the profile</param>
-        /// <param name="category">Category of the profile</param>
-        /// <param name="author">Author of the profile</param>
-        /// <param name="isDefault">Whether this profile should be the default</param>
-        /// <returns>The ID of the created profile, or null if creation failed</returns>
-        Task<Guid?> CreateProfileFromCurrentSettings(string name, string description, string category, string author, bool isDefault = false);
+        /// <returns>Active profile or null if no custom profile is active</returns>
+        BundledPowerProfile? GetActiveProfile();
     }
 }

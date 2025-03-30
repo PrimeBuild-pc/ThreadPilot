@@ -6,11 +6,11 @@ using ThreadPilot.ViewModels;
 namespace ThreadPilot.Views
 {
     /// <summary>
-    /// Interaction logic for PowerProfilesView.xaml
+    /// Interaction logic for AutomationRulesView.xaml
     /// </summary>
-    public partial class PowerProfilesView : UserControl
+    public partial class AutomationRulesView : UserControl
     {
-        public PowerProfilesView()
+        public AutomationRulesView()
         {
             InitializeComponent();
         }

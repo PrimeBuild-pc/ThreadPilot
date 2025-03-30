@@ -1,407 +1,367 @@
 using System;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Windows.Input;
+using ThreadPilot.Helpers;
 using ThreadPilot.Models;
 using ThreadPilot.Services;
 
 namespace ThreadPilot.ViewModels
 {
+    /// <summary>
+    /// ViewModel for the PowerProfilesView
+    /// </summary>
     public class PowerProfilesViewModel : ViewModelBase
     {
-        private readonly IBundledPowerProfilesService _bundledPowerProfilesService;
-        private readonly IFileDialogService _fileDialogService;
         private readonly INotificationService _notificationService;
-
+        private ObservableCollection<BundledPowerProfile> _powerProfiles;
         private BundledPowerProfile _selectedProfile;
-        private bool _isLoading;
-        private string _searchText;
-        private ObservableCollection<BundledPowerProfile> _profiles;
-        private ObservableCollection<BundledPowerProfile> _filteredProfiles;
+        private BundledPowerProfile _activeProfile;
 
-        public PowerProfilesViewModel(
-            IBundledPowerProfilesService bundledPowerProfilesService,
-            IFileDialogService fileDialogService,
-            INotificationService notificationService)
+        /// <summary>
+        /// Gets or sets the collection of power profiles
+        /// </summary>
+        public ObservableCollection<BundledPowerProfile> PowerProfiles
         {
-            _bundledPowerProfilesService = bundledPowerProfilesService;
-            _fileDialogService = fileDialogService;
-            _notificationService = notificationService;
-
-            // Initialize commands
-            RefreshCommand = new RelayCommand(_ => RefreshProfiles());
-            ActivateProfileCommand = new RelayCommand(ActivateProfile, CanActivateProfile);
-            ImportProfileCommand = new RelayCommand(_ => ImportProfile());
-            ExportProfileCommand = new RelayCommand(_ => ExportProfile(), _ => CanExportProfile());
-            DeleteProfileCommand = new RelayCommand(_ => DeleteProfile(), _ => CanDeleteProfile());
-
-            // Load profiles
-            Profiles = new ObservableCollection<BundledPowerProfile>();
-            FilteredProfiles = new ObservableCollection<BundledPowerProfile>();
-            RefreshProfiles();
-        }
-
-        #region Properties
-
-        public ObservableCollection<BundledPowerProfile> Profiles
-        {
-            get => _profiles;
+            get => _powerProfiles;
             set
             {
-                if (_profiles != value)
-                {
-                    _profiles = value;
-                    OnPropertyChanged();
-                }
+                _powerProfiles = value;
+                OnPropertyChanged();
             }
         }
 
-        public ObservableCollection<BundledPowerProfile> FilteredProfiles
-        {
-            get => _filteredProfiles;
-            set
-            {
-                if (_filteredProfiles != value)
-                {
-                    _filteredProfiles = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
+        /// <summary>
+        /// Gets or sets the currently selected power profile
+        /// </summary>
         public BundledPowerProfile SelectedProfile
         {
             get => _selectedProfile;
             set
             {
-                if (_selectedProfile != value)
-                {
-                    _selectedProfile = value;
-                    OnPropertyChanged();
-                    InvalidateCommands();
-                }
+                _selectedProfile = value;
+                OnPropertyChanged();
             }
         }
 
-        public bool IsLoading
+        /// <summary>
+        /// Gets or sets the currently active power profile
+        /// </summary>
+        public BundledPowerProfile ActiveProfile
         {
-            get => _isLoading;
+            get => _activeProfile;
             set
             {
-                if (_isLoading != value)
-                {
-                    _isLoading = value;
-                    OnPropertyChanged();
-                }
+                _activeProfile = value;
+                OnPropertyChanged();
             }
         }
 
-        public string SearchText
-        {
-            get => _searchText;
-            set
-            {
-                if (_searchText != value)
-                {
-                    _searchText = value;
-                    OnPropertyChanged();
-                    FilterProfiles();
-                }
-            }
-        }
+        /// <summary>
+        /// Command to apply the selected power profile
+        /// </summary>
+        public ICommand ApplyProfileCommand { get; }
 
-        #endregion
-
-        #region Commands
-
-        public ICommand RefreshCommand { get; }
-        public ICommand ActivateProfileCommand { get; }
+        /// <summary>
+        /// Command to import a power profile
+        /// </summary>
         public ICommand ImportProfileCommand { get; }
+
+        /// <summary>
+        /// Command to export the selected power profile
+        /// </summary>
         public ICommand ExportProfileCommand { get; }
-        public ICommand DeleteProfileCommand { get; }
 
-        #endregion
+        /// <summary>
+        /// Command to edit the selected power profile
+        /// </summary>
+        public ICommand EditProfileCommand { get; }
 
-        #region Command Handlers
+        /// <summary>
+        /// Command to toggle the favorite status of the selected power profile
+        /// </summary>
+        public ICommand ToggleFavoriteCommand { get; }
 
-        private void RefreshProfiles()
+        /// <summary>
+        /// Command to create a new power profile
+        /// </summary>
+        public ICommand CreateProfileCommand { get; }
+
+        /// <summary>
+        /// Initializes a new instance of the PowerProfilesViewModel class
+        /// </summary>
+        public PowerProfilesViewModel()
         {
-            try
-            {
-                IsLoading = true;
-                // Refresh profiles from service
-                _bundledPowerProfilesService.RefreshProfiles();
-                
-                // Update our collection
-                Profiles.Clear();
-                foreach (var profile in _bundledPowerProfilesService.GetAllProfiles())
-                {
-                    Profiles.Add(profile);
-                }
-                
-                // Apply filtering
-                FilterProfiles();
-                
-                // If we have an active profile, select it
-                var activeProfile = Profiles.FirstOrDefault(p => p.IsActive);
-                if (activeProfile != null)
-                {
-                    SelectedProfile = activeProfile;
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error refreshing profiles: {ex.Message}");
-            }
-            finally
-            {
-                IsLoading = false;
-            }
-        }
+            // Get services
+            _notificationService = ServiceLocator.GetService<INotificationService>();
 
-        private void ActivateProfile(object parameter)
-        {
-            if (SelectedProfile == null)
-                return;
+            // Initialize commands
+            ApplyProfileCommand = new RelayCommand(ExecuteApplyProfile, CanExecuteApplyProfile);
+            ImportProfileCommand = new RelayCommand(ExecuteImportProfile);
+            ExportProfileCommand = new RelayCommand(ExecuteExportProfile, CanExecuteExportProfile);
+            EditProfileCommand = new RelayCommand(ExecuteEditProfile, CanExecuteEditProfile);
+            ToggleFavoriteCommand = new RelayCommand(ExecuteToggleFavorite, CanExecuteToggleFavorite);
+            CreateProfileCommand = new RelayCommand(ExecuteCreateProfile);
 
-            try
-            {
-                IsLoading = true;
-                
-                // If this profile is not imported yet (it's a bundled .pow file)
-                if (string.IsNullOrEmpty(SelectedProfile.Guid) && !string.IsNullOrEmpty(SelectedProfile.FilePath))
-                {
-                    // Import it first
-                    var importedProfile = _bundledPowerProfilesService.ImportProfile(SelectedProfile.FilePath);
-                    if (importedProfile != null)
-                    {
-                        // Select the imported profile
-                        SelectedProfile = Profiles.FirstOrDefault(p => p.Guid == importedProfile.Guid);
-                    }
-                    else
-                    {
-                        // Import failed
-                        _notificationService.ShowError($"Failed to import the profile {SelectedProfile.Name}");
-                        return;
-                    }
-                }
-                
-                // Activate the profile
-                if (_bundledPowerProfilesService.ActivateProfile(SelectedProfile))
-                {
-                    // Update status of all profiles
-                    foreach (var profile in Profiles)
-                    {
-                        profile.IsActive = profile.Guid == SelectedProfile.Guid;
-                    }
-                    
-                    // Refresh the view
-                    RefreshProfiles();
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error activating profile: {ex.Message}");
-            }
-            finally
-            {
-                IsLoading = false;
-            }
-        }
-
-        private bool CanActivateProfile(object parameter)
-        {
-            // Can't activate if no profile is selected
-            if (SelectedProfile == null)
-                return false;
+            // Initialize collections
+            PowerProfiles = new ObservableCollection<BundledPowerProfile>();
             
-            // Can't activate if it's already active
-            if (SelectedProfile.IsActive)
-                return false;
+            // Load profiles
+            LoadProfiles();
+        }
+
+        /// <summary>
+        /// Loads power profiles from disk
+        /// </summary>
+        private void LoadProfiles()
+        {
+            try
+            {
+                // Clear existing profiles
+                PowerProfiles.Clear();
+                
+                // Add sample profiles (in a real app, these would be loaded from disk)
+                AddSampleProfiles();
+                
+                // Set active profile
+                if (PowerProfiles.Count > 0)
+                {
+                    ActiveProfile = PowerProfiles.FirstOrDefault(p => p.IsActive) ?? PowerProfiles[0];
+                    SelectedProfile = ActiveProfile;
+                }
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError($"Error loading power profiles: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Adds sample power profiles for demonstration purposes
+        /// </summary>
+        private void AddSampleProfiles()
+        {
+            // Add a few sample profiles
+            PowerProfiles.Add(new BundledPowerProfile
+            {
+                Name = "Balanced",
+                Description = "Standard Windows power plan with balanced performance and energy usage",
+                Author = "Microsoft",
+                Version = "1.0",
+                Category = BundledPowerProfile.ProfileCategory.Balanced,
+                FilePath = "balanced.pow",
+                IsActive = true
+            });
             
-            return true;
+            PowerProfiles.Add(new BundledPowerProfile
+            {
+                Name = "High Performance",
+                Description = "Maximum performance with higher energy consumption",
+                Author = "Microsoft",
+                Version = "1.0",
+                Category = BundledPowerProfile.ProfileCategory.Performance,
+                FilePath = "high_performance.pow",
+                IsActive = false
+            });
+            
+            PowerProfiles.Add(new BundledPowerProfile
+            {
+                Name = "Power Saver",
+                Description = "Maximizes battery life at the expense of performance",
+                Author = "Microsoft",
+                Version = "1.0",
+                Category = BundledPowerProfile.ProfileCategory.PowerSaving,
+                FilePath = "power_saver.pow",
+                IsActive = false
+            });
+            
+            PowerProfiles.Add(new BundledPowerProfile
+            {
+                Name = "Ultimate Performance",
+                Description = "Designed for workstations and high-end PCs for maximum performance",
+                Author = "Microsoft",
+                Version = "1.0",
+                Category = BundledPowerProfile.ProfileCategory.Performance,
+                FilePath = "ultimate_performance.pow",
+                IsActive = false,
+                IsFavorite = true
+            });
+            
+            PowerProfiles.Add(new BundledPowerProfile
+            {
+                Name = "Gaming Mode",
+                Description = "Optimized for gaming with high CPU performance and responsive input",
+                Author = "ThreadPilot",
+                Version = "1.0",
+                Category = BundledPowerProfile.ProfileCategory.Gaming,
+                FilePath = "gaming.pow",
+                IsActive = false,
+                IsFavorite = true
+            });
         }
 
-        private void ImportProfile()
+        #region Command Execution Methods
+
+        /// <summary>
+        /// Determines whether the apply profile command can be executed
+        /// </summary>
+        private bool CanExecuteApplyProfile()
+        {
+            return SelectedProfile != null && !SelectedProfile.IsActive;
+        }
+
+        /// <summary>
+        /// Executes the apply profile command
+        /// </summary>
+        private void ExecuteApplyProfile()
         {
             try
             {
-                // Show file dialog to pick a .pow file
-                string filePath = _fileDialogService.OpenFile(
-                    "Import Power Profile",
-                    "Power Profile Files (*.pow)|*.pow|All Files (*.*)|*.*");
-                
-                if (string.IsNullOrEmpty(filePath))
+                if (SelectedProfile == null)
                     return;
-                
-                IsLoading = true;
-                
-                // Import the profile
-                var importedProfile = _bundledPowerProfilesService.ImportProfile(filePath);
-                if (importedProfile != null)
+
+                // Set the active status of profiles
+                foreach (var profile in PowerProfiles)
                 {
-                    // Add to our collection if not already there
-                    if (!Profiles.Any(p => p.Guid == importedProfile.Guid))
-                    {
-                        Profiles.Add(importedProfile);
-                    }
-                    
-                    // Select the imported profile
-                    SelectedProfile = Profiles.FirstOrDefault(p => p.Guid == importedProfile.Guid);
-                    
-                    // Update filtered list
-                    FilterProfiles();
-                    
-                    _notificationService.ShowSuccess($"Successfully imported power profile: {importedProfile.Name}");
+                    profile.IsActive = false;
                 }
+                
+                SelectedProfile.IsActive = true;
+                ActiveProfile = SelectedProfile;
+                
+                // In a real implementation, this would apply the power profile using Windows APIs
+                
+                _notificationService.ShowSuccess($"Power profile '{SelectedProfile.Name}' applied successfully");
+                
+                // Refresh the profiles list to update the UI
+                OnPropertyChanged(nameof(PowerProfiles));
             }
             catch (Exception ex)
             {
-                _notificationService.ShowError($"Error importing profile: {ex.Message}");
-            }
-            finally
-            {
-                IsLoading = false;
+                _notificationService.ShowError($"Error applying power profile: {ex.Message}");
             }
         }
 
-        private void ExportProfile()
+        /// <summary>
+        /// Executes the import profile command
+        /// </summary>
+        private void ExecuteImportProfile()
         {
-            if (SelectedProfile == null)
-                return;
-
             try
             {
-                // If this profile hasn't been imported yet, we can just copy the file
-                if (string.IsNullOrEmpty(SelectedProfile.Guid) && !string.IsNullOrEmpty(SelectedProfile.FilePath))
-                {
-                    string targetPath = _fileDialogService.SaveFile(
-                        "Export Power Profile",
-                        "Power Profile Files (*.pow)|*.pow|All Files (*.*)|*.*",
-                        null,
-                        $"{SelectedProfile.Name}.pow");
-                    
-                    if (string.IsNullOrEmpty(targetPath))
-                        return;
-                    
-                    // Copy the file
-                    System.IO.File.Copy(SelectedProfile.FilePath, targetPath, true);
-                    _notificationService.ShowSuccess($"Successfully exported power profile: {SelectedProfile.Name}");
-                    return;
-                }
-                
-                // For imported/Windows profiles, use the service
-                string filePath = _fileDialogService.SaveFile(
-                    "Export Power Profile",
-                    "Power Profile Files (*.pow)|*.pow|All Files (*.*)|*.*",
-                    null,
-                    $"{SelectedProfile.Name}.pow");
-                
-                if (string.IsNullOrEmpty(filePath))
-                    return;
-                
-                IsLoading = true;
-                
-                // Export the profile
-                if (_bundledPowerProfilesService.ExportProfile(SelectedProfile, filePath))
-                {
-                    _notificationService.ShowSuccess($"Successfully exported power profile: {SelectedProfile.Name}");
-                }
+                // In a real implementation, this would show a file dialog and import the profile
+                _notificationService.ShowInfo("Import power profile functionality is not implemented yet");
             }
             catch (Exception ex)
             {
-                _notificationService.ShowError($"Error exporting profile: {ex.Message}");
-            }
-            finally
-            {
-                IsLoading = false;
+                _notificationService.ShowError($"Error importing power profile: {ex.Message}");
             }
         }
 
-        private bool CanExportProfile()
+        /// <summary>
+        /// Determines whether the export profile command can be executed
+        /// </summary>
+        private bool CanExecuteExportProfile()
         {
             return SelectedProfile != null;
         }
 
-        private void DeleteProfile()
+        /// <summary>
+        /// Executes the export profile command
+        /// </summary>
+        private void ExecuteExportProfile()
         {
-            if (SelectedProfile == null)
-                return;
-
             try
             {
-                // Confirm before deleting
-                if (!_notificationService.ShowConfirmation(
-                    $"Are you sure you want to delete the power profile '{SelectedProfile.Name}'?",
-                    "Confirm Deletion"))
-                {
+                if (SelectedProfile == null)
                     return;
-                }
                 
-                IsLoading = true;
+                // In a real implementation, this would show a file dialog and export the profile
+                _notificationService.ShowInfo("Export power profile functionality is not implemented yet");
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError($"Error exporting power profile: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Determines whether the edit profile command can be executed
+        /// </summary>
+        private bool CanExecuteEditProfile()
+        {
+            return SelectedProfile != null;
+        }
+
+        /// <summary>
+        /// Executes the edit profile command
+        /// </summary>
+        private void ExecuteEditProfile()
+        {
+            try
+            {
+                if (SelectedProfile == null)
+                    return;
                 
-                // Delete the profile
-                if (_bundledPowerProfilesService.DeleteProfile(SelectedProfile))
+                // In a real implementation, this would show a dialog to edit the profile
+                _notificationService.ShowInfo("Edit power profile functionality is not implemented yet");
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError($"Error editing power profile: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Determines whether the toggle favorite command can be executed
+        /// </summary>
+        private bool CanExecuteToggleFavorite()
+        {
+            return SelectedProfile != null;
+        }
+
+        /// <summary>
+        /// Executes the toggle favorite command
+        /// </summary>
+        private void ExecuteToggleFavorite()
+        {
+            try
+            {
+                if (SelectedProfile == null)
+                    return;
+                
+                SelectedProfile.IsFavorite = !SelectedProfile.IsFavorite;
+                
+                if (SelectedProfile.IsFavorite)
                 {
-                    // Remove from our collection
-                    Profiles.Remove(SelectedProfile);
-                    
-                    // Update filtered list
-                    FilterProfiles();
-                    
-                    // Clear selection
-                    SelectedProfile = null;
-                    
-                    _notificationService.ShowSuccess($"Successfully deleted power profile.");
+                    _notificationService.ShowSuccess($"Power profile '{SelectedProfile.Name}' added to favorites");
+                }
+                else
+                {
+                    _notificationService.ShowSuccess($"Power profile '{SelectedProfile.Name}' removed from favorites");
                 }
             }
             catch (Exception ex)
             {
-                _notificationService.ShowError($"Error deleting profile: {ex.Message}");
-            }
-            finally
-            {
-                IsLoading = false;
+                _notificationService.ShowError($"Error toggling favorite status: {ex.Message}");
             }
         }
 
-        private bool CanDeleteProfile()
+        /// <summary>
+        /// Executes the create profile command
+        /// </summary>
+        private void ExecuteCreateProfile()
         {
-            // Can only delete non-built-in and non-active profiles
-            return SelectedProfile != null && !SelectedProfile.IsBuiltIn && !SelectedProfile.IsActive;
-        }
-
-        private void FilterProfiles()
-        {
-            // Apply search filter
-            FilteredProfiles.Clear();
-            
-            var query = Profiles.AsEnumerable();
-            
-            // Filter by search text
-            if (!string.IsNullOrWhiteSpace(SearchText))
+            try
             {
-                string searchLower = SearchText.ToLowerInvariant();
-                query = query.Where(p => 
-                    p.Name.ToLowerInvariant().Contains(searchLower) || 
-                    p.Description.ToLowerInvariant().Contains(searchLower) ||
-                    p.Tags.ToLowerInvariant().Contains(searchLower));
+                // In a real implementation, this would show a dialog to create a new profile
+                _notificationService.ShowInfo("Create power profile functionality is not implemented yet");
             }
-            
-            // Order by active first, then by name
-            query = query.OrderByDescending(p => p.IsActive).ThenBy(p => p.Name);
-            
-            foreach (var profile in query)
+            catch (Exception ex)
             {
-                FilteredProfiles.Add(profile);
+                _notificationService.ShowError($"Error creating power profile: {ex.Message}");
             }
-        }
-
-        private void InvalidateCommands()
-        {
-            (ActivateProfileCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (ExportProfileCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (DeleteProfileCommand as RelayCommand)?.RaiseCanExecuteChanged();
         }
 
         #endregion

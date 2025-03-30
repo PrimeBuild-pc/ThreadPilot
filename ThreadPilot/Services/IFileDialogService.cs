@@ -1,47 +1,32 @@
-using System;
-using System.Collections.Generic;
-
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Interface for file dialog service
+    /// Service for file dialogs
     /// </summary>
     public interface IFileDialogService
     {
         /// <summary>
-        /// Opens a file dialog to select a file
+        /// Show an open file dialog
         /// </summary>
-        /// <param name="filter">The file filter (e.g., "Power Profile|*.pow")</param>
-        /// <param name="title">The title of the dialog</param>
-        /// <returns>The selected file path, or null if cancelled</returns>
-        string OpenFileDialog(string filter, string title = "Select a file");
-
+        /// <param name="filter">File filter pattern</param>
+        /// <param name="title">Dialog title</param>
+        /// <returns>Selected file path or null if canceled</returns>
+        string? OpenFile(string filter, string title);
+        
         /// <summary>
-        /// Opens a file dialog to save a file
+        /// Show a save file dialog
         /// </summary>
-        /// <param name="filter">The file filter (e.g., "Power Profile|*.pow")</param>
-        /// <param name="defaultFileName">The default file name</param>
-        /// <param name="title">The title of the dialog</param>
-        /// <returns>The selected file path, or null if cancelled</returns>
-        string SaveFileDialog(string filter, string defaultFileName = "", string title = "Save file");
-
+        /// <param name="filter">File filter pattern</param>
+        /// <param name="title">Dialog title</param>
+        /// <param name="defaultFileName">Default file name</param>
+        /// <returns>Selected file path or null if canceled</returns>
+        string? SaveFile(string filter, string title, string defaultFileName = "");
+        
         /// <summary>
-        /// Opens a folder browser dialog
+        /// Show a folder browser dialog
         /// </summary>
-        /// <param name="title">The title of the dialog</param>
-        /// <returns>The selected folder path, or null if cancelled</returns>
-        string OpenFolderBrowserDialog(string title = "Select a folder");
-
-        /// <summary>
-        /// Gets the extension filters for power profile files
-        /// </summary>
-        /// <returns>Power profile file filter string</returns>
-        string GetPowerProfileFilter();
-
-        /// <summary>
-        /// Gets common file dialog filters
-        /// </summary>
-        /// <returns>Dictionary of file type names and their filter strings</returns>
-        Dictionary<string, string> GetCommonFileFilters();
+        /// <param name="title">Dialog title</param>
+        /// <returns>Selected folder path or null if canceled</returns>
+        string? SelectFolder(string title);
     }
 }

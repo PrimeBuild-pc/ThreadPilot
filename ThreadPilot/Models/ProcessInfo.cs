@@ -1,323 +1,81 @@
 using System;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
+using ThreadPilot.Services;
 
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Represents detailed information about a system process
+    /// Represents information about a running process
     /// </summary>
-    public class ProcessInfo : INotifyPropertyChanged
+    public class ProcessInfo
     {
-        private Process _process;
-        private int _id;
-        private string _name;
-        private string _windowTitle;
-        private double _cpuUsage;
-        private long _memoryUsage;
-        private ProcessPriorityClass _priority;
-        private IntPtr _affinityMask;
-        private bool _isSelected;
-
         /// <summary>
-        /// Event that fires when a property is changed
+        /// Process ID
         /// </summary>
-        public event PropertyChangedEventHandler PropertyChanged;
-
+        public int Id { get; set; }
+        
         /// <summary>
-        /// Gets the Process object
+        /// Process name
         /// </summary>
-        public Process Process
-        {
-            get => _process;
-            private set
-            {
-                if (_process != value)
-                {
-                    _process = value;
-                    OnPropertyChanged(nameof(Process));
-                }
-            }
-        }
-
+        public string Name { get; set; } = string.Empty;
+        
         /// <summary>
-        /// Gets the process ID
+        /// Process executable path
         /// </summary>
-        public int Id
-        {
-            get => _id;
-            set
-            {
-                if (_id != value)
-                {
-                    _id = value;
-                    OnPropertyChanged(nameof(Id));
-                }
-            }
-        }
-
+        public string Path { get; set; } = string.Empty;
+        
         /// <summary>
-        /// Gets the process name
+        /// Process description or title
         /// </summary>
-        public string Name
-        {
-            get => _name;
-            set
-            {
-                if (_name != value)
-                {
-                    _name = value;
-                    OnPropertyChanged(nameof(Name));
-                }
-            }
-        }
-
+        public string Description { get; set; } = string.Empty;
+        
         /// <summary>
-        /// Gets the window title of the process
+        /// CPU usage percentage (0-100)
         /// </summary>
-        public string WindowTitle
-        {
-            get => _windowTitle;
-            set
-            {
-                if (_windowTitle != value)
-                {
-                    _windowTitle = value;
-                    OnPropertyChanged(nameof(WindowTitle));
-                }
-            }
-        }
-
+        public double CpuUsage { get; set; }
+        
         /// <summary>
-        /// Gets or sets the CPU usage percentage
+        /// Memory usage in MB
         /// </summary>
-        public double CpuUsage
-        {
-            get => _cpuUsage;
-            set
-            {
-                if (Math.Abs(_cpuUsage - value) > 0.01)
-                {
-                    _cpuUsage = value;
-                    OnPropertyChanged(nameof(CpuUsage));
-                }
-            }
-        }
-
+        public double MemoryUsage { get; set; }
+        
         /// <summary>
-        /// Gets or sets the memory usage in bytes
+        /// Current CPU affinity mask
         /// </summary>
-        public long MemoryUsage
-        {
-            get => _memoryUsage;
-            set
-            {
-                if (_memoryUsage != value)
-                {
-                    _memoryUsage = value;
-                    OnPropertyChanged(nameof(MemoryUsage));
-                    OnPropertyChanged(nameof(MemoryUsageMB));
-                }
-            }
-        }
-
+        public long AffinityMask { get; set; }
+        
         /// <summary>
-        /// Gets the memory usage in MB
+        /// Process priority class
         /// </summary>
-        public double MemoryUsageMB => Math.Round((double)MemoryUsage / 1024 / 1024, 1);
-
+        public ProcessPriorityClass Priority { get; set; }
+        
         /// <summary>
-        /// Gets or sets the process priority class
+        /// Start time of the process
         /// </summary>
-        public ProcessPriorityClass Priority
-        {
-            get => _priority;
-            set
-            {
-                if (_priority != value)
-                {
-                    _priority = value;
-                    OnPropertyChanged(nameof(Priority));
-                }
-            }
-        }
-
+        public DateTime StartTime { get; set; }
+        
         /// <summary>
-        /// Gets or sets the processor affinity mask
+        /// Whether the process is a system process
         /// </summary>
-        public IntPtr AffinityMask
-        {
-            get => _affinityMask;
-            set
-            {
-                if (_affinityMask != value)
-                {
-                    _affinityMask = value;
-                    OnPropertyChanged(nameof(AffinityMask));
-                }
-            }
-        }
-
+        public bool IsSystemProcess { get; set; }
+        
         /// <summary>
-        /// Gets or sets whether this process is selected in the UI
+        /// Whether the process has a window
         /// </summary>
-        public bool IsSelected
-        {
-            get => _isSelected;
-            set
-            {
-                if (_isSelected != value)
-                {
-                    _isSelected = value;
-                    OnPropertyChanged(nameof(IsSelected));
-                }
-            }
-        }
-
+        public bool HasWindow { get; set; }
+        
         /// <summary>
-        /// Creates a new instance of ProcessInfo
+        /// Whether the process can have its affinity modified
         /// </summary>
-        public ProcessInfo(Process process)
-        {
-            _process = process;
-            _id = process.Id;
-            _name = process.ProcessName;
-            
-            try
-            {
-                _windowTitle = process.MainWindowTitle;
-            }
-            catch
-            {
-                _windowTitle = string.Empty;
-            }
-
-            try
-            {
-                _priority = process.PriorityClass;
-            }
-            catch
-            {
-                _priority = ProcessPriorityClass.Normal;
-            }
-
-            try
-            {
-                _affinityMask = process.ProcessorAffinity;
-            }
-            catch
-            {
-                _affinityMask = (IntPtr)0;
-            }
-
-            try
-            {
-                _memoryUsage = process.PrivateMemorySize64;
-            }
-            catch
-            {
-                _memoryUsage = 0;
-            }
-
-            _cpuUsage = 0;
-            _isSelected = false;
-        }
-
+        public bool IsOptimizable { get; set; }
+        
         /// <summary>
-        /// Updates the CPU affinity mask
+        /// Thread count
         /// </summary>
-        public bool UpdateAffinity(IntPtr newAffinityMask)
-        {
-            try
-            {
-                if (Process != null && Process.ProcessorAffinity != newAffinityMask)
-                {
-                    Process.ProcessorAffinity = newAffinityMask;
-                    AffinityMask = newAffinityMask;
-                    return true;
-                }
-                return false;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-        }
-
+        public int ThreadCount { get; set; }
+        
         /// <summary>
-        /// Updates the process priority
+        /// Process uptime
         /// </summary>
-        public bool UpdatePriority(ProcessPriorityClass newPriority)
-        {
-            try
-            {
-                if (Process != null && Process.PriorityClass != newPriority)
-                {
-                    Process.PriorityClass = newPriority;
-                    Priority = newPriority;
-                    return true;
-                }
-                return false;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Refreshes the process information
-        /// </summary>
-        public void Refresh()
-        {
-            try
-            {
-                if (Process != null && !Process.HasExited)
-                {
-                    Process.Refresh();
-                    MemoryUsage = Process.PrivateMemorySize64;
-                    
-                    try
-                    {
-                        WindowTitle = Process.MainWindowTitle;
-                    }
-                    catch
-                    {
-                        // Ignore errors for window title
-                    }
-
-                    try
-                    {
-                        Priority = Process.PriorityClass;
-                    }
-                    catch
-                    {
-                        // Ignore errors for priority
-                    }
-
-                    try
-                    {
-                        AffinityMask = Process.ProcessorAffinity;
-                    }
-                    catch
-                    {
-                        // Ignore errors for affinity
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                // Process may have exited or access denied
-            }
-        }
-
-        /// <summary>
-        /// Handles property changed events
-        /// </summary>
-        protected virtual void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        public TimeSpan Uptime => DateTime.Now - StartTime;
     }
 }

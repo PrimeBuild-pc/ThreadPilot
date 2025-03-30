@@ -4,80 +4,99 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ThreadPilot"
+        xmlns:vm="clr-namespace:ThreadPilot.ViewModels"
         mc:Ignorable="d"
-        Title="ThreadPilot" 
-        Height="800" 
-        Width="1200"
+        Title="ThreadPilot - CPU Thread Optimization and Management"
+        Height="750" Width="1200"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource BackgroundBrush}">
-        
+        Loaded="Window_Loaded">
+    
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="60"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="250"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-        
-        <!-- App Header -->
-        <Border Grid.Row="0" Grid.ColumnSpan="2" Background="{StaticResource NavBackgroundBrush}" BorderThickness="0,0,0,1" BorderBrush="{StaticResource BorderBrush}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="250"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                
-                <!-- Logo & App Name -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0,0,0">
-                    <Image Source="/Resources/Images/logo.png" Width="32" Height="32" VerticalAlignment="Center"/>
-                    <TextBlock Text="ThreadPilot" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource PrimaryTextBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
-                </StackPanel>
-                
-                <!-- Page Title -->
-                <TextBlock x:Name="PageTitle" Grid.Column="1" Text="Dashboard" FontSize="18" VerticalAlignment="Center" Margin="20,0,0,0" Foreground="{StaticResource PrimaryTextBrush}"/>
-                
-                <!-- Header Actions -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
-                    <Button x:Name="HelpButton" Style="{StaticResource SecondaryButtonStyle}" Width="36" Height="36" Margin="12,0,0,0" Click="HelpButton_Click" ToolTip="Help">
-                        <TextBlock Text="?" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Button>
-                </StackPanel>
-            </Grid>
-        </Border>
-        
-        <!-- Sidebar Navigation -->
-        <Border Grid.Row="1" Grid.Column="0" Background="{StaticResource NavBackgroundBrush}" BorderThickness="0,0,1,0" BorderBrush="{StaticResource BorderBrush}">
-            <StackPanel Margin="0,20,0,0">
-                <RadioButton x:Name="DashboardNav" Content="Dashboard" Style="{StaticResource NavButtonStyle}" IsChecked="True" Checked="NavigationButton_Click"/>
-                <RadioButton x:Name="ProcessesNav" Content="Processes" Style="{StaticResource NavButtonStyle}" Checked="NavigationButton_Click"/>
-                <RadioButton x:Name="AffinityOptimizationNav" Content="Affinity Optimization" Style="{StaticResource NavButtonStyle}" Checked="NavigationButton_Click"/>
-                <RadioButton x:Name="PowerProfilesNav" Content="Power Profiles" Style="{StaticResource NavButtonStyle}" Checked="NavigationButton_Click"/>
-                <RadioButton x:Name="AutomationRulesNav" Content="Automation Rules" Style="{StaticResource NavButtonStyle}" Checked="NavigationButton_Click"/>
-                <RadioButton x:Name="SettingsNav" Content="Settings" Style="{StaticResource NavButtonStyle}" Checked="NavigationButton_Click"/>
-            </StackPanel>
-        </Border>
+        <!-- Top Menu -->
+        <Menu Grid.Row="0">
+            <MenuItem Header="_File">
+                <MenuItem Header="_Import Profile..." Command="{Binding ImportProfileCommand}"/>
+                <Separator/>
+                <MenuItem Header="_Exit" Click="ExitMenuItem_Click"/>
+            </MenuItem>
+            <MenuItem Header="_Settings">
+                <MenuItem Header="_Preferences..." Command="{Binding OpenSettingsCommand}"/>
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="_About..." Command="{Binding OpenAboutCommand}"/>
+            </MenuItem>
+        </Menu>
         
         <!-- Main Content -->
-        <Border Grid.Row="1" Grid.Column="1" Background="{StaticResource BackgroundBrush}" Padding="20">
-            <Grid>
-                <ContentControl x:Name="PageContent"/>
-            </Grid>
-        </Border>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- Left Navigation Panel -->
+            <Border Grid.Column="0" Background="{StaticResource BrushSidebarBackground}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Application Logo and Title -->
+                    <StackPanel Grid.Row="0" Margin="15">
+                        <TextBlock Text="ThreadPilot" FontSize="24" FontWeight="Bold" Foreground="{StaticResource BrushPrimary}"/>
+                        <TextBlock Text="Advanced Thread Management" FontSize="14" Foreground="{StaticResource BrushSecondary}" Margin="0,5,0,0"/>
+                    </StackPanel>
+                    
+                    <!-- Navigation Items -->
+                    <ListBox Grid.Row="1" 
+                             ItemsSource="{Binding NavigationItems}" 
+                             SelectedItem="{Binding SelectedNavigationItem}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Margin="10,20,10,10">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}" Padding="10" FontSize="16"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    
+                    <!-- Power Profiles Selector -->
+                    <Border Grid.Row="2" Padding="15" Background="{StaticResource BrushSidebarAccent}">
+                        <StackPanel>
+                            <TextBlock Text="Power Profiles" FontWeight="Bold" Margin="0,0,0,10"/>
+                            <ComboBox ItemsSource="{Binding PowerProfiles}"
+                                      SelectedItem="{Binding SelectedPowerProfile}"
+                                      DisplayMemberPath="Name"
+                                      Margin="0,0,0,5"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+            
+            <!-- Main Content Area -->
+            <Border Grid.Column="1" Background="{StaticResource BrushContentBackground}" Padding="20">
+                <ContentControl Content="{Binding CurrentView}"/>
+            </Border>
+        </Grid>
         
-        <!-- Notification Panel -->
-        <Border x:Name="NotificationPanel" Grid.Row="1" Grid.Column="1" Background="#2ECC71" Visibility="Collapsed" Padding="20,12" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,20,20,0" CornerRadius="4" MaxWidth="400">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock x:Name="NotificationText" Grid.Column="0" Text="Operation completed successfully!" Foreground="White" TextWrapping="Wrap"/>
-                <Button x:Name="CloseNotification" Grid.Column="1" Content="×" FontSize="16" Foreground="White" Background="Transparent" BorderThickness="0" Margin="10,0,0,0" Padding="5,0" VerticalAlignment="Top" Click="CloseNotification_Click"/>
-            </Grid>
-        </Border>
+        <!-- Status Bar -->
+        <Grid Grid.Row="2" Background="{StaticResource BrushStatusBarBackground}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" Margin="10,5" Foreground="{StaticResource BrushStatusBarForeground}"/>
+            <TextBlock Grid.Column="1" Text="{Binding SystemInfoText}" Margin="10,5" Foreground="{StaticResource BrushStatusBarForeground}"/>
+        </Grid>
     </Grid>
 </Window>

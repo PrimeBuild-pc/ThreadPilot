@@ -4,84 +4,54 @@ using System.Windows.Input;
 namespace ThreadPilot.Helpers
 {
     /// <summary>
-    /// A generic implementation of ICommand for XAML.
+    /// A command that relays its functionality to other objects by invoking delegates
     /// </summary>
     public class RelayCommand : ICommand
     {
-        private readonly Action<object> _execute;
-        private readonly Func<object, bool> _canExecute;
-
-        public RelayCommand(Action<object> execute, Func<object, bool> canExecute = null)
-        {
-            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
-            _canExecute = canExecute;
-        }
-
-        public event EventHandler CanExecuteChanged
+        private readonly Action<object?> _execute;
+        private readonly Predicate<object?>? _canExecute;
+        
+        /// <summary>
+        /// Event that is fired when the ability to execute the command changes
+        /// </summary>
+        public event EventHandler? CanExecuteChanged
         {
             add { CommandManager.RequerySuggested += value; }
             remove { CommandManager.RequerySuggested -= value; }
         }
-
-        public bool CanExecute(object parameter)
+        
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="execute">The execution logic</param>
+        /// <param name="canExecute">The execution status logic (optional)</param>
+        public RelayCommand(Action<object?> execute, Predicate<object?>? canExecute = null)
+        {
+            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+            _canExecute = canExecute;
+        }
+        
+        /// <summary>
+        /// Determines whether this command can execute in its current state
+        /// </summary>
+        /// <param name="parameter">Data used by the command</param>
+        /// <returns>True if this command can be executed; otherwise, false</returns>
+        public bool CanExecute(object? parameter)
         {
             return _canExecute == null || _canExecute(parameter);
         }
-
-        public void Execute(object parameter)
+        
+        /// <summary>
+        /// Executes the command
+        /// </summary>
+        /// <param name="parameter">Data used by the command</param>
+        public void Execute(object? parameter)
         {
             _execute(parameter);
         }
-
+        
         /// <summary>
-        /// Forces a re-query of the CanExecute method.
-        /// </summary>
-        public void RaiseCanExecuteChanged()
-        {
-            CommandManager.InvalidateRequerySuggested();
-        }
-    }
-
-    /// <summary>
-    /// A generic implementation of ICommand for XAML with a strong typed parameter.
-    /// </summary>
-    public class RelayCommand<T> : ICommand
-    {
-        private readonly Action<T> _execute;
-        private readonly Func<T, bool> _canExecute;
-
-        public RelayCommand(Action<T> execute, Func<T, bool> canExecute = null)
-        {
-            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
-            _canExecute = canExecute;
-        }
-
-        public event EventHandler CanExecuteChanged
-        {
-            add { CommandManager.RequerySuggested += value; }
-            remove { CommandManager.RequerySuggested -= value; }
-        }
-
-        public bool CanExecute(object parameter)
-        {
-            if (parameter is T typedParameter || parameter == null && default(T) == null)
-            {
-                return _canExecute == null || _canExecute((T)parameter);
-            }
-            
-            return false;
-        }
-
-        public void Execute(object parameter)
-        {
-            if (parameter is T typedParameter || parameter == null && default(T) == null)
-            {
-                _execute((T)parameter);
-            }
-        }
-
-        /// <summary>
-        /// Forces a re-query of the CanExecute method.
+        /// Forces a re-query on command state
         /// </summary>
         public void RaiseCanExecuteChanged()
         {

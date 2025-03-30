@@ -1,56 +1,87 @@
 using System;
 using System.Collections.Generic;
 
-namespace ThreadPilot
+namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Service locator for dependency injection
+    /// Service locator pattern implementation for dependency injection
     /// </summary>
     public static class ServiceLocator
     {
         private static readonly Dictionary<Type, object> _services = new Dictionary<Type, object>();
         
         /// <summary>
-        /// Initialize all services
+        /// Register a service
         /// </summary>
-        public static void Initialize()
+        /// <typeparam name="TInterface">Interface type</typeparam>
+        /// <typeparam name="TImplementation">Implementation type</typeparam>
+        /// <param name="instance">Optional existing instance</param>
+        public static void Register<TInterface, TImplementation>(TImplementation? instance = null)
+            where TInterface : class
+            where TImplementation : class, TInterface
         {
-            // Register services
-            RegisterService<IProcessMonitoringService>(new ProcessMonitoringService());
-            RegisterService<ISystemInfoService>(new SystemInfoService());
-            RegisterService<IFileDialogService>(new FileDialogService());
-            RegisterService<IPowerProfileService>(new PowerProfileService());
-            RegisterService<IBundledPowerProfilesService>(new BundledPowerProfilesService());
-            RegisterService<INotificationService>(new NotificationService());
-            RegisterService<ISettingsService>(new SettingsService());
+            // If no instance is provided, create a new one
+            if (instance == null)
+            {
+                instance = Activator.CreateInstance<TImplementation>();
+            }
             
-            // Register view models
-            RegisterService<ProcessesViewModel>(new ProcessesViewModel());
-            RegisterService<PowerProfilesViewModel>(new PowerProfilesViewModel());
-            RegisterService<DashboardViewModel>(new DashboardViewModel());
-            RegisterService<SettingsViewModel>(new SettingsViewModel());
-            RegisterService<MainViewModel>(new MainViewModel());
+            _services[typeof(TInterface)] = instance;
         }
         
         /// <summary>
-        /// Register a service
+        /// Register a singleton service instance
         /// </summary>
-        public static void RegisterService<T>(T service)
+        /// <typeparam name="TInterface">Interface type</typeparam>
+        /// <param name="instance">Instance to register</param>
+        public static void RegisterInstance<TInterface>(TInterface instance)
+            where TInterface : class
         {
-            _services[typeof(T)] = service;
+            _services[typeof(TInterface)] = instance;
         }
         
         /// <summary>
         /// Get a service
         /// </summary>
-        public static T GetService<T>()
+        /// <typeparam name="T">Service type</typeparam>
+        /// <returns>Service instance</returns>
+        public static T Get<T>() where T : class
         {
-            if (_services.TryGetValue(typeof(T), out var service))
+            var type = typeof(T);
+            
+            if (!_services.TryGetValue(type, out var service))
             {
-                return (T)service;
+                throw new InvalidOperationException($"Service of type {type.Name} is not registered");
             }
             
-            throw new InvalidOperationException($"Service of type {typeof(T).Name} is not registered");
+            return (T)service;
+        }
+        
+        /// <summary>
+        /// Check if a service is registered
+        /// </summary>
+        /// <typeparam name="T">Service type</typeparam>
+        /// <returns>True if registered, false otherwise</returns>
+        public static bool IsRegistered<T>() where T : class
+        {
+            return _services.ContainsKey(typeof(T));
+        }
+        
+        /// <summary>
+        /// Remove a service
+        /// </summary>
+        /// <typeparam name="T">Service type</typeparam>
+        public static void Unregister<T>() where T : class
+        {
+            _services.Remove(typeof(T));
+        }
+        
+        /// <summary>
+        /// Clear all registered services
+        /// </summary>
+        public static void Clear()
+        {
+            _services.Clear();
         }
     }
 }

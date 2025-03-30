@@ -1,0 +1,224 @@
+<UserControl x:Class="ThreadPilot.Views.AutomationRulesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ThreadPilot.Views"
+             xmlns:viewmodels="clr-namespace:ThreadPilot.ViewModels"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+    
+    <UserControl.DataContext>
+        <viewmodels:AutomationRulesViewModel/>
+    </UserControl.DataContext>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header Section -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="Create automation rules to apply power profiles when specific conditions are met" 
+                       TextWrapping="Wrap" Foreground="{StaticResource SecondaryTextBrush}" 
+                       Margin="0,0,0,15"/>
+            
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Automation" FontWeight="SemiBold" VerticalAlignment="Center"
+                               Foreground="{StaticResource PrimaryTextBrush}"/>
+                    <ToggleButton IsChecked="{Binding IsAutomationEnabled}" Margin="10,0,0,0" 
+                                  Width="40" Height="20"/>
+                </StackPanel>
+                
+                <Button Grid.Column="1" Content="Add New Rule" Style="{StaticResource PrimaryButtonStyle}" 
+                        Command="{Binding AddRuleCommand}"/>
+            </Grid>
+        </StackPanel>
+        
+        <!-- Main Content -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- Rules List -->
+            <Border Grid.Column="0" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Automation Rules" FontWeight="SemiBold" 
+                               Foreground="{StaticResource PrimaryTextBrush}" 
+                               Margin="0,0,0,15"/>
+                    
+                    <ListView Grid.Row="1" ItemsSource="{Binding AutomationRules}" 
+                              SelectedItem="{Binding SelectedRule}" 
+                              BorderThickness="0" Background="Transparent">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Padding" Value="10"/>
+                                <Setter Property="Margin" Value="0,0,0,5"/>
+                                <Setter Property="Background" Value="{StaticResource CardBackgroundBrush}"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+                                <Setter Property="BorderThickness" Value="1"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListViewItem">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                                    CornerRadius="4">
+                                                <ContentPresenter Margin="{TemplateBinding Padding}"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="{StaticResource SelectedItemBackgroundBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                                    </Trigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="{StaticResource HoverItemBackgroundBrush}"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <Grid Grid.Row="0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold" 
+                                                   Foreground="{StaticResource PrimaryTextBrush}"/>
+                                        
+                                        <ToggleButton Grid.Column="1" IsChecked="{Binding IsEnabled}" 
+                                                      Command="{Binding DataContext.ToggleRuleCommand, 
+                                                                RelativeSource={RelativeSource AncestorType=ListView}}" 
+                                                      Width="40" Height="20"/>
+                                    </Grid>
+                                    
+                                    <Grid Grid.Row="1" Margin="0,10,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Trigger" FontWeight="SemiBold" FontSize="12" 
+                                                       Foreground="{StaticResource SecondaryTextBrush}"/>
+                                            <TextBlock Text="{Binding TriggerDescription}" 
+                                                       Foreground="{StaticResource PrimaryTextBrush}" 
+                                                       TextWrapping="Wrap" Margin="0,5,0,0"/>
+                                        </StackPanel>
+                                        
+                                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                            <TextBlock Text="Action" FontWeight="SemiBold" FontSize="12" 
+                                                       Foreground="{StaticResource SecondaryTextBrush}"/>
+                                            <TextBlock Text="{Binding ActionDescription}" 
+                                                       Foreground="{StaticResource PrimaryTextBrush}" 
+                                                       TextWrapping="Wrap" Margin="0,5,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Grid>
+            </Border>
+            
+            <!-- Rule Details -->
+            <Border Grid.Column="1" Style="{StaticResource CardStyle}" Margin="10,0,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Rule Details" FontWeight="SemiBold" 
+                               Foreground="{StaticResource PrimaryTextBrush}" 
+                               Margin="0,0,0,15"/>
+                    
+                    <StackPanel Grid.Row="1">
+                        <TextBlock Text="Select a rule to view or edit details" 
+                                   Foreground="{StaticResource SecondaryTextBrush}" 
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                   TextAlignment="Center" TextWrapping="Wrap" 
+                                   Visibility="{Binding SelectedRule, Converter={StaticResource NullToVisibilityConverter}}"/>
+                        
+                        <Grid Visibility="{Binding SelectedRule, Converter={StaticResource NotNullToVisibilityConverter}}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Rule Name -->
+                            <StackPanel Grid.Row="0" Margin="0,0,0,15">
+                                <TextBlock Text="Rule Name" FontWeight="SemiBold" 
+                                           Foreground="{StaticResource SecondaryTextBrush}"/>
+                                <TextBox Text="{Binding SelectedRule.Name}" Margin="0,5,0,0" 
+                                         IsReadOnly="True"/>
+                            </StackPanel>
+                            
+                            <!-- Trigger Type -->
+                            <StackPanel Grid.Row="1" Margin="0,0,0,15">
+                                <TextBlock Text="Trigger Type" FontWeight="SemiBold" 
+                                           Foreground="{StaticResource SecondaryTextBrush}"/>
+                                <ComboBox SelectedItem="{Binding SelectedRule.TriggerType}" 
+                                          Margin="0,5,0,0" IsEnabled="False"/>
+                            </StackPanel>
+                            
+                            <!-- Process Name -->
+                            <StackPanel Grid.Row="2" Margin="0,0,0,15" 
+                                        Visibility="{Binding SelectedRule.TriggerType, Converter={StaticResource ProcessTriggerToVisibilityConverter}}">
+                                <TextBlock Text="Process Name" FontWeight="SemiBold" 
+                                           Foreground="{StaticResource SecondaryTextBrush}"/>
+                                <TextBox Text="{Binding SelectedRule.ProcessName}" Margin="0,5,0,0" 
+                                         IsReadOnly="True"/>
+                            </StackPanel>
+                            
+                            <!-- Power Profile -->
+                            <StackPanel Grid.Row="3" Margin="0,0,0,15">
+                                <TextBlock Text="Power Profile" FontWeight="SemiBold" 
+                                           Foreground="{StaticResource SecondaryTextBrush}"/>
+                                <ComboBox SelectedItem="{Binding SelectedRule.ProfileName}" 
+                                          Margin="0,5,0,0" IsEnabled="False"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                    
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" 
+                                Visibility="{Binding SelectedRule, Converter={StaticResource NotNullToVisibilityConverter}}">
+                        <Button Content="Remove" Style="{StaticResource DangerButtonStyle}" 
+                                Command="{Binding RemoveRuleCommand}" Margin="0,0,10,0"/>
+                        <Button Content="Edit" Style="{StaticResource SecondaryButtonStyle}" 
+                                Command="{Binding EditRuleCommand}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

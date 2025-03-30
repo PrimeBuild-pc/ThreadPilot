@@ -1,60 +1,41 @@
-using System;
-using System.Collections.Generic;
-using System.Windows;
 using Microsoft.Win32;
-using System.Windows.Forms;
 using System.IO;
+using System.Windows.Forms;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Implementation of IFileDialogService
+    /// Implementation of the file dialog service interface
     /// </summary>
     public class FileDialogService : IFileDialogService
     {
-        private readonly Window _mainWindow;
-
         /// <summary>
-        /// Constructs a new instance of the FileDialogService
+        /// Show an open file dialog
         /// </summary>
-        /// <param name="mainWindow">The main window to anchor dialogs to</param>
-        public FileDialogService(Window mainWindow)
-        {
-            _mainWindow = mainWindow ?? throw new ArgumentNullException(nameof(mainWindow));
-        }
-
-        /// <summary>
-        /// Opens a file dialog to select a file
-        /// </summary>
-        /// <param name="filter">The file filter (e.g., "Power Profile|*.pow")</param>
-        /// <param name="title">The title of the dialog</param>
-        /// <returns>The selected file path, or null if cancelled</returns>
-        public string OpenFileDialog(string filter, string title = "Select a file")
+        /// <param name="filter">File filter pattern</param>
+        /// <param name="title">Dialog title</param>
+        /// <returns>Selected file path or null if canceled</returns>
+        public string? OpenFile(string filter, string title)
         {
             var dialog = new OpenFileDialog
             {
                 Filter = filter,
                 Title = title,
-                CheckFileExists = true,
-                CheckPathExists = true
+                Multiselect = false,
+                CheckFileExists = true
             };
 
-            if (dialog.ShowDialog(_mainWindow) == true)
-            {
-                return dialog.FileName;
-            }
-
-            return null;
+            return dialog.ShowDialog() == true ? dialog.FileName : null;
         }
 
         /// <summary>
-        /// Opens a file dialog to save a file
+        /// Show a save file dialog
         /// </summary>
-        /// <param name="filter">The file filter (e.g., "Power Profile|*.pow")</param>
-        /// <param name="defaultFileName">The default file name</param>
-        /// <param name="title">The title of the dialog</param>
-        /// <returns>The selected file path, or null if cancelled</returns>
-        public string SaveFileDialog(string filter, string defaultFileName = "", string title = "Save file")
+        /// <param name="filter">File filter pattern</param>
+        /// <param name="title">Dialog title</param>
+        /// <param name="defaultFileName">Default file name</param>
+        /// <returns>Selected file path or null if canceled</returns>
+        public string? SaveFile(string filter, string title, string defaultFileName = "")
         {
             var dialog = new SaveFileDialog
             {
@@ -64,61 +45,23 @@ namespace ThreadPilot.Services
                 OverwritePrompt = true
             };
 
-            if (dialog.ShowDialog(_mainWindow) == true)
-            {
-                return dialog.FileName;
-            }
-
-            return null;
+            return dialog.ShowDialog() == true ? dialog.FileName : null;
         }
 
         /// <summary>
-        /// Opens a folder browser dialog
+        /// Show a folder browser dialog
         /// </summary>
-        /// <param name="title">The title of the dialog</param>
-        /// <returns>The selected folder path, or null if cancelled</returns>
-        public string OpenFolderBrowserDialog(string title = "Select a folder")
+        /// <param name="title">Dialog title</param>
+        /// <returns>Selected folder path or null if canceled</returns>
+        public string? SelectFolder(string title)
         {
-            using (var dialog = new FolderBrowserDialog
+            using var dialog = new FolderBrowserDialog
             {
                 Description = title,
                 ShowNewFolderButton = true
-            })
-            {
-                if (dialog.ShowDialog() == DialogResult.OK)
-                {
-                    return dialog.SelectedPath;
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Gets the extension filters for power profile files
-        /// </summary>
-        /// <returns>Power profile file filter string</returns>
-        public string GetPowerProfileFilter()
-        {
-            return "Power Profile (*.pow)|*.pow|All Files (*.*)|*.*";
-        }
-
-        /// <summary>
-        /// Gets common file dialog filters
-        /// </summary>
-        /// <returns>Dictionary of file type names and their filter strings</returns>
-        public Dictionary<string, string> GetCommonFileFilters()
-        {
-            return new Dictionary<string, string>
-            {
-                { "Power Profile", "Power Profile (*.pow)|*.pow" },
-                { "Text Files", "Text Files (*.txt)|*.txt" },
-                { "All Files", "All Files (*.*)|*.*" },
-                { "Executables", "Executable (*.exe)|*.exe" },
-                { "XML Files", "XML Files (*.xml)|*.xml" },
-                { "JSON Files", "JSON Files (*.json)|*.json" },
-                { "Config Files", "Config Files (*.config)|*.config" }
             };
+
+            return dialog.ShowDialog() == DialogResult.OK ? dialog.SelectedPath : null;
         }
     }
 }

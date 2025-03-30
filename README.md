@@ -1,107 +1,59 @@
-# 🚀 ThreadPilot
+# ThreadPilot
+
+ThreadPilot is a Windows desktop application designed to provide advanced system performance optimization through intuitive core affinity and process management tools.
 
 <p align="center">
-  <img src="generated-icon.png" alt="ThreadPilot Logo" width="200" height="200">
+  <img src="ThreadPilot/Resources/Images/logo.svg" width="150" />
 </p>
 
-## 📋 Overview
+## Features
 
-ThreadPilot is a powerful Windows 11 desktop application designed to help you manage and optimize your system's CPU thread allocation, process affinity, and power profiles. With its intuitive interface, you can monitor system performance, apply optimization profiles automatically, and fine-tune your system settings for improved performance.
+- **Core Affinity Management**: Easily assign specific CPU cores to applications for optimal performance
+- **Process Priority Control**: Adjust process priorities to ensure critical applications get the resources they need
+- **Power Profile Management**: Apply optimized power profiles for different usage scenarios (gaming, productivity, power saving)
+- **Automation Rules**: Create automated rules to apply specific settings when certain applications are launched
+- **System Tray Integration**: Runs in the background with minimal resource usage
+- **Modern UI**: Clean, modern interface with light and dark theme support
 
-## ✨ Features
+## System Requirements
 
-### 🧠 CPU Core Management
-- **Dynamic Thread Allocation**: Intelligently distribute application workloads across CPU cores
-- **Process Affinity Control**: Fine-tune which cores specific applications can use
-- **Multi-threading Optimization**: Maximize performance for both single and multi-threaded applications
-
-### ⚡ Power Profile Management
-- **Pre-configured Power Profiles**: Choose from bundled optimization profiles for different use cases
-- **Profile Import/Export**: Share your custom power profiles with others
-- **Real-time Switching**: Seamlessly switch between profiles based on your current tasks
-
-### 📊 System Monitoring
-- **Resource Usage Tracking**: Monitor CPU, memory, and disk usage in real-time
-- **Process Prioritization**: Easily adjust process priorities to allocate resources where needed
-- **Performance Analytics**: Track system performance over time with detailed graphs
-
-### 🔧 Customization
-- **Application Rules**: Create custom rules for specific applications
-- **Automated Optimization**: Schedule profile changes based on running applications
-- **Light and Dark Themes**: Choose the visual theme that matches your preference
-
-## 🖼️ Screenshots
-
-*Coming soon*
-
-## 🔍 System Requirements
-
-- Windows 11 (64-bit)
+- Windows 10 (1903 or later) or Windows 11
 - .NET 6.0 or later
-- Administrator privileges (for modifying system settings)
-- 4GB RAM minimum
-- 50MB of free disk space
+- Admin rights for certain operations (changing process priorities, applying power profiles)
 
-## 📥 Installation
+## Installation
 
-1. Download the latest release from the [Releases](https://github.com/PrimeBuild-pc/ThreadPilot/releases) page
-2. Run the installer and follow the on-screen instructions
-3. Launch ThreadPilot from your Start menu
-4. Grant administrator privileges when prompted
+1. Download the latest release from the [releases page](https://github.com/PrimeBuild-pc/ThreadPilot/releases)
+2. Run the installer and follow the installation wizard
+3. Launch ThreadPilot from the Start menu or desktop shortcut
 
-## 🔄 How It Works
+## Development
 
-ThreadPilot integrates with Windows' built-in power management and process scheduling capabilities, providing a user-friendly interface to access and control these features. It uses the Windows Management Instrumentation (WMI) and PowerCfg utilities to modify system settings safely and effectively.
+ThreadPilot is built using:
+- C# (.NET 6+)
+- WPF (Windows Presentation Foundation)
+- MVVM architectural pattern
 
-### Power Profiles
+To build from source:
+1. Clone the repository: `git clone https://github.com/PrimeBuild-pc/ThreadPilot.git`
+2. Open `ThreadPilot.sln` in Visual Studio 2022
+3. Build the solution (F6 or Build > Build Solution)
 
-Power profiles (.pow files) contain configurations for Windows power management settings. ThreadPilot allows you to:
+## Contributing
 
-- Import existing .pow files
-- Create custom profiles tailored to your needs
-- Export and share your optimized configurations
-- Switch between profiles with a single click
-
-### Process Management
-
-The application monitors running processes and allows you to:
-
-- Set processor affinity (which cores a process can use)
-- Adjust process priorities
-- Create persistent rules for applications
-
-## 🛡️ Security and Privacy
-
-ThreadPilot operates entirely on your local system and does not:
-- Collect or transmit any personal data
-- Require internet connectivity to function
-- Install any third-party software or services
-
-## 🤝 Contributing
-
-Contributions are welcome! If you'd like to help improve ThreadPilot:
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create your feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add some amazing feature'`
+4. Push to the branch: `git push origin feature/amazing-feature`
 5. Open a Pull Request
 
-## 📜 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
-- Thanks to all contributors who have helped shape this project
-- Special appreciation to the open-source community for their invaluable resources and tools
-
-## 📞 Support
-
-For support, feature requests, or bug reports, please [open an issue](https://github.com/PrimeBuild-pc/ThreadPilot/issues) on GitHub.
-
----
-
-<p align="center">
-  <i>Made with ❤️ by the ThreadPilot Team</i>
-</p>
+- All bundled power profiles are provided for optimization purposes
+- Special thanks to the open-source community for various libraries and tools used in this project
