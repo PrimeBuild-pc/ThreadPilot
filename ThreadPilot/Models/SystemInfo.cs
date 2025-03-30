@@ -4,94 +4,78 @@ using System.Collections.Generic;
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Represents CPU core information
-    /// </summary>
-    public class CpuCore
-    {
-        /// <summary>
-        /// Core index
-        /// </summary>
-        public int Index { get; set; }
-        
-        /// <summary>
-        /// Whether this is a logical (SMT/HT) or physical core
-        /// </summary>
-        public bool IsLogical { get; set; }
-        
-        /// <summary>
-        /// Current usage percentage (0-100)
-        /// </summary>
-        public double Usage { get; set; }
-        
-        /// <summary>
-        /// Current temperature in Celsius (if available)
-        /// </summary>
-        public double? Temperature { get; set; }
-        
-        /// <summary>
-        /// Current frequency in MHz
-        /// </summary>
-        public int Frequency { get; set; }
-        
-        /// <summary>
-        /// Physical core this logical core belongs to (for logical cores)
-        /// </summary>
-        public int? PhysicalCoreIndex { get; set; }
-    }
-    
-    /// <summary>
-    /// Represents system information
+    /// Model class for system information
     /// </summary>
     public class SystemInfo
     {
         /// <summary>
-        /// CPU model name
+        /// CPU name
         /// </summary>
         public string CpuName { get; set; } = string.Empty;
         
         /// <summary>
         /// Number of physical CPU cores
         /// </summary>
-        public int CoreCount { get; set; }
+        public int PhysicalCores { get; set; }
         
         /// <summary>
-        /// Number of logical CPU processors/threads
+        /// Number of logical CPU cores
         /// </summary>
-        public int ProcessorCount { get; set; }
+        public int LogicalCores { get; set; }
         
         /// <summary>
-        /// Base CPU frequency in MHz
+        /// CPU base clock speed in MHz
         /// </summary>
-        public int BaseCpuFrequency { get; set; }
+        public double CpuBaseClockMhz { get; set; }
         
         /// <summary>
-        /// Total system RAM in GB
+        /// Current CPU clock speed in MHz
         /// </summary>
-        public double TotalRam { get; set; }
+        public double CpuCurrentClockMhz { get; set; }
         
         /// <summary>
-        /// Available system RAM in GB
+        /// Current CPU load as a percentage
         /// </summary>
-        public double AvailableRam { get; set; }
+        public double CpuLoad { get; set; }
         
         /// <summary>
-        /// Operating system name and version
+        /// CPU temperature in Celsius
         /// </summary>
-        public string OsInfo { get; set; } = string.Empty;
+        public double CpuTemperature { get; set; }
         
         /// <summary>
-        /// Whether CPU performance mode is enabled
+        /// Total RAM in GB
         /// </summary>
-        public bool IsPerformanceModeEnabled { get; set; }
+        public double TotalRamGb { get; set; }
         
         /// <summary>
-        /// List of CPU cores
+        /// Available RAM in GB
         /// </summary>
-        public List<CpuCore> Cores { get; } = new List<CpuCore>();
+        public double AvailableRamGb { get; set; }
+        
+        /// <summary>
+        /// RAM usage as a percentage
+        /// </summary>
+        public double RamUsagePercent { get; set; }
+        
+        /// <summary>
+        /// List of core loads for each logical core
+        /// </summary>
+        public List<double> CoreLoads { get; set; } = new();
+        
+        /// <summary>
+        /// Operating system information
+        /// </summary>
+        public string OperatingSystem { get; set; } = string.Empty;
         
         /// <summary>
         /// System uptime
         /// </summary>
         public TimeSpan Uptime { get; set; }
+        
+        /// <summary>
+        /// Time the info was captured
+        /// </summary>
+        public DateTime CaptureTime { get; set; } = DateTime.Now;
     }
 }

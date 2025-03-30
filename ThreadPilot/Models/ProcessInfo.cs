@@ -1,10 +1,9 @@
 using System;
-using ThreadPilot.Services;
 
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Represents information about a running process
+    /// Model class for process information
     /// </summary>
     public class ProcessInfo
     {
@@ -19,63 +18,68 @@ namespace ThreadPilot.Models
         public string Name { get; set; } = string.Empty;
         
         /// <summary>
-        /// Process executable path
-        /// </summary>
-        public string Path { get; set; } = string.Empty;
-        
-        /// <summary>
-        /// Process description or title
+        /// Process description
         /// </summary>
         public string Description { get; set; } = string.Empty;
         
         /// <summary>
-        /// CPU usage percentage (0-100)
+        /// Process executable path
+        /// </summary>
+        public string ExecutablePath { get; set; } = string.Empty;
+        
+        /// <summary>
+        /// CPU usage as a percentage
         /// </summary>
         public double CpuUsage { get; set; }
         
         /// <summary>
         /// Memory usage in MB
         /// </summary>
-        public double MemoryUsage { get; set; }
+        public double MemoryUsageMb { get; set; }
         
         /// <summary>
-        /// Current CPU affinity mask
-        /// </summary>
-        public long AffinityMask { get; set; }
-        
-        /// <summary>
-        /// Process priority class
-        /// </summary>
-        public ProcessPriorityClass Priority { get; set; }
-        
-        /// <summary>
-        /// Start time of the process
-        /// </summary>
-        public DateTime StartTime { get; set; }
-        
-        /// <summary>
-        /// Whether the process is a system process
-        /// </summary>
-        public bool IsSystemProcess { get; set; }
-        
-        /// <summary>
-        /// Whether the process has a window
-        /// </summary>
-        public bool HasWindow { get; set; }
-        
-        /// <summary>
-        /// Whether the process can have its affinity modified
-        /// </summary>
-        public bool IsOptimizable { get; set; }
-        
-        /// <summary>
-        /// Thread count
+        /// Number of threads
         /// </summary>
         public int ThreadCount { get; set; }
         
         /// <summary>
-        /// Process uptime
+        /// Process start time
         /// </summary>
-        public TimeSpan Uptime => DateTime.Now - StartTime;
+        public DateTime StartTime { get; set; }
+        
+        /// <summary>
+        /// Current process affinity mask
+        /// </summary>
+        public long AffinityMask { get; set; }
+        
+        /// <summary>
+        /// Current process priority
+        /// </summary>
+        public int Priority { get; set; }
+        
+        /// <summary>
+        /// Indicates if the process is responding
+        /// </summary>
+        public bool IsResponding { get; set; }
+        
+        /// <summary>
+        /// Indicates if the process is a system process
+        /// </summary>
+        public bool IsSystemProcess { get; set; }
+        
+        /// <summary>
+        /// Indicates if the process is 64-bit
+        /// </summary>
+        public bool Is64Bit { get; set; }
+        
+        /// <summary>
+        /// Indicates if the process is elevated
+        /// </summary>
+        public bool IsElevated { get; set; }
+        
+        /// <summary>
+        /// Company name of the process
+        /// </summary>
+        public string CompanyName { get; set; } = string.Empty;
     }
 }

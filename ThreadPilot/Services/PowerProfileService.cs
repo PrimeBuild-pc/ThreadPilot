@@ -1,304 +1,270 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using System.Diagnostics;
+using ThreadPilot.Models;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Interface for interacting with Windows power profiles (schemes)
-    /// </summary>
-    public interface IPowerProfileService
-    {
-        /// <summary>
-        /// Gets the current power scheme GUID
-        /// </summary>
-        Task<Guid> GetCurrentPowerSchemeAsync();
-        
-        /// <summary>
-        /// Lists all available power schemes
-        /// </summary>
-        Task<Dictionary<Guid, string>> ListPowerSchemesAsync();
-        
-        /// <summary>
-        /// Sets the active power scheme
-        /// </summary>
-        Task<bool> SetActivePowerSchemeAsync(Guid schemeGuid);
-        
-        /// <summary>
-        /// Imports a power scheme from a .pow file
-        /// </summary>
-        Task<Guid?> ImportPowerSchemeAsync(string filePath);
-        
-        /// <summary>
-        /// Exports a power scheme to a .pow file
-        /// </summary>
-        Task<bool> ExportPowerSchemeAsync(Guid schemeGuid, string filePath);
-        
-        /// <summary>
-        /// Deletes a power scheme
-        /// </summary>
-        Task<bool> DeletePowerSchemeAsync(Guid schemeGuid);
-    }
-
-    /// <summary>
-    /// Service for interacting with Windows power profiles using PowerCfg.exe
+    /// Implementation of the power profile service
     /// </summary>
     public class PowerProfileService : IPowerProfileService
     {
+        // Default profiles folder
+        private readonly string _profilesFolder;
+        
         /// <summary>
-        /// Gets the current power scheme GUID
+        /// Constructor
         /// </summary>
-        public async Task<Guid> GetCurrentPowerSchemeAsync()
+        public PowerProfileService()
         {
-            try
-            {
-                // In a real application, this would run:
-                // powercfg.exe /getactivescheme
-                // We're simulating the result here
+            // Initialize profiles folder
+            _profilesFolder = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "ThreadPilot",
+                "Profiles");
                 
-                // Simulate delay for async operation
-                await Task.Delay(100);
-                
-                // Return a default GUID
-                return Guid.Parse("8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c"); // Balanced (default)
-            }
-            catch (Exception ex)
+            // Create the folder if it doesn't exist
+            if (!Directory.Exists(_profilesFolder))
             {
-                Console.WriteLine($"Error getting current power scheme: {ex.Message}");
-                // Return the balanced power scheme GUID (default)
-                return Guid.Parse("8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c");
+                Directory.CreateDirectory(_profilesFolder);
             }
         }
-
+        
         /// <summary>
-        /// Lists all available power schemes
+        /// Get all available power profiles
         /// </summary>
-        public async Task<Dictionary<Guid, string>> ListPowerSchemesAsync()
+        public IList<BundledPowerProfile> GetAvailableProfiles()
         {
-            // In a real application, this would run:
-            // powercfg.exe /list
+            var profiles = new List<BundledPowerProfile>();
             
-            // Simulate delay for async operation
-            await Task.Delay(100);
+            try
+            {
+                // Add demo power profiles - in a real app, this would load actual Windows power profiles
+                // and user-created custom profiles from files
+                profiles.Add(CreateDemoProfile("Balanced", "Windows default balanced power plan", "balanced", true));
+                profiles.Add(CreateDemoProfile("High Performance", "Maximizes system performance and responsiveness", "performance", false));
+                profiles.Add(CreateDemoProfile("Power Saver", "Saves energy by reducing performance", "powersaver", false));
+                profiles.Add(CreateDemoProfile("Ultimate Performance", "Provides ultimate performance on Windows", "ultimate", false));
+                
+                // Add any additional saved profiles in the profiles folder
+                var powFiles = Directory.GetFiles(_profilesFolder, "*.pow");
+                foreach (var file in powFiles)
+                {
+                    var fileProfile = LoadProfileFromFile(file);
+                    if (fileProfile != null && !profiles.Any(p => p.FilePath == file))
+                    {
+                        profiles.Add(fileProfile);
+                    }
+                }
+                
+                // Also look for attached sample profiles
+                var attachedFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "attached_assets");
+                if (Directory.Exists(attachedFolder))
+                {
+                    var attachedFiles = Directory.GetFiles(attachedFolder, "*.pow");
+                    foreach (var file in attachedFiles)
+                    {
+                        var fileProfile = LoadProfileFromFile(file);
+                        if (fileProfile != null && !profiles.Any(p => p.FilePath == file))
+                        {
+                            profiles.Add(fileProfile);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error loading profiles: {ex.Message}");
+            }
             
-            // Return some default power schemes
-            var schemes = new Dictionary<Guid, string>
-            {
-                { Guid.Parse("8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c"), "Balanced" },
-                { Guid.Parse("381b4222-f694-41f0-9685-ff5bb260df2e"), "Power Saver" },
-                { Guid.Parse("a1841308-3541-4fab-bc81-f71556f20b4a"), "High Performance" },
-                { Guid.Parse("e9a42b02-d5df-448d-aa00-03f14749eb61"), "Ultimate Performance" }
-            };
+            return profiles;
+        }
+        
+        /// <summary>
+        /// Get the currently active power profile
+        /// </summary>
+        public BundledPowerProfile? GetActiveProfile()
+        {
+            // In a real app, this would get the actual active Windows power profile
+            var profiles = GetAvailableProfiles();
+            return profiles.FirstOrDefault(p => p.Category == "balanced");
+        }
+        
+        /// <summary>
+        /// Apply a power profile
+        /// </summary>
+        public async Task<bool> ApplyProfileAsync(BundledPowerProfile profile)
+        {
+            // This would actually apply the Windows power profile using powercfg or other API
+            await Task.Delay(1000); // Simulate work
             
-            return schemes;
+            return true;
         }
-
+        
         /// <summary>
-        /// Sets the active power scheme
+        /// Save profile to a file
         /// </summary>
-        public async Task<bool> SetActivePowerSchemeAsync(Guid schemeGuid)
+        public bool SaveProfileToFile(BundledPowerProfile profile, string filePath)
         {
             try
             {
-                // In a real application, this would run:
-                // powercfg.exe /setactive {GUID}
+                // In a real app, this would serialize the actual power profile data
+                // For demo purposes, we'll just write some demo data
+                File.WriteAllText(filePath, $"DEMOPOWER:{profile.Name}:{profile.Description}:{DateTime.Now}");
                 
-                // Simulate delay for async operation
-                await Task.Delay(100);
+                // Update the file path in the profile
+                profile.FilePath = filePath;
                 
-                // Check if the GUID is valid (would be one of the known schemes)
-                var schemes = await ListPowerSchemesAsync();
-                var success = schemes.ContainsKey(schemeGuid);
-                
-                // Log success or failure
-                if (success)
-                {
-                    Console.WriteLine($"Set active power scheme to {schemeGuid}");
-                }
-                else
-                {
-                    Console.WriteLine($"Failed to set active power scheme: Unknown scheme {schemeGuid}");
-                }
-                
-                return success;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error setting active power scheme: {ex.Message}");
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Imports a power scheme from a .pow file
-        /// </summary>
-        public async Task<Guid?> ImportPowerSchemeAsync(string filePath)
-        {
-            try
-            {
-                if (!File.Exists(filePath))
-                {
-                    Console.WriteLine($"Error importing power scheme: File not found at {filePath}");
-                    return null;
-                }
-                
-                // In a real application, this would run:
-                // powercfg.exe /import {filePath}
-                
-                // Simulate delay for async operation
-                await Task.Delay(100);
-                
-                // Generate a random GUID for the imported scheme
-                // In real app, we would parse the powercfg output to get the actual GUID
-                var newSchemeGuid = Guid.NewGuid();
-                Console.WriteLine($"Imported power scheme: {newSchemeGuid}");
-                
-                return newSchemeGuid;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error importing power scheme: {ex.Message}");
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// Exports a power scheme to a .pow file
-        /// </summary>
-        public async Task<bool> ExportPowerSchemeAsync(Guid schemeGuid, string filePath)
-        {
-            try
-            {
-                // In a real application, this would run:
-                // powercfg.exe /export {filePath} {GUID}
-                
-                // Simulate delay for async operation
-                await Task.Delay(100);
-                
-                // Check if the GUID is valid
-                var schemes = await ListPowerSchemesAsync();
-                if (!schemes.ContainsKey(schemeGuid))
-                {
-                    Console.WriteLine($"Failed to export power scheme: Unknown scheme {schemeGuid}");
-                    return false;
-                }
-                
-                // Ensure the directory exists
-                string directory = Path.GetDirectoryName(filePath);
-                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-                {
-                    Directory.CreateDirectory(directory);
-                }
-                
-                // Simulate creating an empty file
-                try
-                {
-                    // Create an empty file to simulate the export
-                    using (File.Create(filePath)) { }
-                    Console.WriteLine($"Exported power scheme {schemeGuid} to {filePath}");
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error creating export file: {ex.Message}");
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error exporting power scheme: {ex.Message}");
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Deletes a power scheme
-        /// </summary>
-        public async Task<bool> DeletePowerSchemeAsync(Guid schemeGuid)
-        {
-            try
-            {
-                // In a real application, this would run:
-                // powercfg.exe /delete {GUID}
-                
-                // Simulate delay for async operation
-                await Task.Delay(100);
-                
-                // We can't delete built-in schemes, so check against known system schemes
-                var systemSchemes = new List<Guid>
-                {
-                    Guid.Parse("8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c"), // Balanced
-                    Guid.Parse("381b4222-f694-41f0-9685-ff5bb260df2e"), // Power Saver
-                    Guid.Parse("a1841308-3541-4fab-bc81-f71556f20b4a"), // High Performance
-                    Guid.Parse("e9a42b02-d5df-448d-aa00-03f14749eb61")  // Ultimate Performance
-                };
-                
-                if (systemSchemes.Contains(schemeGuid))
-                {
-                    Console.WriteLine($"Cannot delete built-in power scheme: {schemeGuid}");
-                    return false;
-                }
-                
-                // Check if the GUID exists in our schemes (would check if it exists in the system)
-                var schemes = await ListPowerSchemesAsync();
-                var exists = schemes.ContainsKey(schemeGuid);
-                
-                if (!exists)
-                {
-                    Console.WriteLine($"Failed to delete power scheme: Unknown scheme {schemeGuid}");
-                    return false;
-                }
-                
-                Console.WriteLine($"Deleted power scheme: {schemeGuid}");
                 return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error deleting power scheme: {ex.Message}");
+                Debug.WriteLine($"Error saving profile: {ex.Message}");
                 return false;
             }
         }
-
+        
         /// <summary>
-        /// Runs a PowerCfg command and returns the output
+        /// Load profile from a file
         /// </summary>
-        private async Task<string> RunPowerCfgCommandAsync(string arguments)
+        public BundledPowerProfile? LoadProfileFromFile(string filePath)
         {
             try
             {
-                var startInfo = new ProcessStartInfo
+                // Check if the file exists
+                if (!File.Exists(filePath))
                 {
-                    FileName = "powercfg.exe",
-                    Arguments = arguments,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                using (var process = Process.Start(startInfo))
-                {
-                    // Read the output
-                    string output = await process.StandardOutput.ReadToEndAsync();
-                    await process.WaitForExitAsync();
-                    
-                    if (process.ExitCode != 0)
-                    {
-                        string error = await process.StandardError.ReadToEndAsync();
-                        throw new Exception($"PowerCfg exited with code {process.ExitCode}: {error}");
-                    }
-                    
-                    return output;
+                    return null;
                 }
+                
+                // Check the file size - if it's tiny or empty, it might be corrupted
+                var fileInfo = new FileInfo(filePath);
+                if (fileInfo.Length < 10)
+                {
+                    // Just create a default profile based on filename
+                    var fileName = Path.GetFileNameWithoutExtension(filePath);
+                    return new BundledPowerProfile
+                    {
+                        Name = fileName,
+                        Description = $"Imported profile: {fileName}",
+                        FilePath = filePath,
+                        CreatedOn = fileInfo.CreationTime,
+                        ModifiedOn = fileInfo.LastWriteTime,
+                        IsReadOnly = false,
+                        IsSystemProfile = false,
+                        Category = "custom"
+                    };
+                }
+                
+                // In a real app, this would deserialize the actual power profile data
+                // For demo purposes, we'll create a profile with basic info
+                var fileName2 = Path.GetFileNameWithoutExtension(filePath);
+                return new BundledPowerProfile
+                {
+                    Name = fileName2,
+                    Description = $"Custom power profile imported from {fileName2}",
+                    FilePath = filePath,
+                    CreatedOn = fileInfo.CreationTime,
+                    ModifiedOn = fileInfo.LastWriteTime,
+                    IsReadOnly = false,
+                    IsSystemProfile = false,
+                    Category = "custom"
+                };
             }
             catch (Exception ex)
             {
-                // Log the exception
-                Console.WriteLine($"Error running PowerCfg command: {ex.Message}");
-                throw;
+                Debug.WriteLine($"Error loading profile: {ex.Message}");
+                return null;
             }
+        }
+        
+        /// <summary>
+        /// Create a profile from the current system settings
+        /// </summary>
+        public BundledPowerProfile CreateProfileFromCurrentSettings(string name, string description)
+        {
+            // In a real app, this would create a profile from the actual current Windows power settings
+            var profile = new BundledPowerProfile
+            {
+                Name = name,
+                Description = description,
+                CreatedOn = DateTime.Now,
+                ModifiedOn = DateTime.Now,
+                IsReadOnly = false,
+                IsSystemProfile = false,
+                Category = "custom"
+            };
+            
+            return profile;
+        }
+        
+        /// <summary>
+        /// Delete a power profile
+        /// </summary>
+        public bool DeleteProfile(BundledPowerProfile profile)
+        {
+            try
+            {
+                // Don't allow deletion of system profiles
+                if (profile.IsSystemProfile)
+                {
+                    return false;
+                }
+                
+                // If the profile has a file, delete it
+                if (!string.IsNullOrEmpty(profile.FilePath) && File.Exists(profile.FilePath))
+                {
+                    File.Delete(profile.FilePath);
+                }
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error deleting profile: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Create a demo power profile
+        /// </summary>
+        private BundledPowerProfile CreateDemoProfile(string name, string description, string category, bool isActive)
+        {
+            // This method is for demo purposes only
+            var profile = new BundledPowerProfile
+            {
+                Name = name,
+                Description = description,
+                CreatedOn = DateTime.Now.AddDays(-30),
+                ModifiedOn = DateTime.Now.AddDays(-5),
+                IsReadOnly = true,
+                IsSystemProfile = true,
+                Category = category,
+                IsActive = isActive,
+                Icon = category switch
+                {
+                    "balanced" => "Balance",
+                    "performance" => "Performance",
+                    "powersaver" => "Battery",
+                    "ultimate" => "Ultimate",
+                    _ => "Custom"
+                },
+                WindowsGuid = Guid.NewGuid() // In real app, this would be the actual Windows GUID
+            };
+            
+            // For built-in profiles, the file path would point to Windows power profiles
+            // We'll set a demo path
+            profile.FilePath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.System),
+                "PowerProfiles", 
+                $"{category}.pow");
+                
+            return profile;
         }
     }
 }

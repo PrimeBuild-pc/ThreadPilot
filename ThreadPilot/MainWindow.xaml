@@ -1,102 +1,118 @@
-<Window x:Class="ThreadPilot.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:ThreadPilot"
-        xmlns:vm="clr-namespace:ThreadPilot.ViewModels"
-        mc:Ignorable="d"
-        Title="ThreadPilot - CPU Thread Optimization and Management"
-        Height="750" Width="1200"
-        WindowStartupLocation="CenterScreen"
-        Loaded="Window_Loaded">
+<Window
+    x:Class="ThreadPilot.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:local="clr-namespace:ThreadPilot"
+    xmlns:viewmodels="clr-namespace:ThreadPilot.ViewModels"
+    mc:Ignorable="d"
+    Title="ThreadPilot - Advanced System Performance Optimization" 
+    Height="720" Width="1280" 
+    WindowStartupLocation="CenterScreen"
+    Background="{StaticResource BrushContentBackground}">
+    
+    <Window.DataContext>
+        <viewmodels:MainViewModel />
+    </Window.DataContext>
     
     <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="240" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="30" />
         </Grid.RowDefinitions>
         
-        <!-- Top Menu -->
-        <Menu Grid.Row="0">
-            <MenuItem Header="_File">
-                <MenuItem Header="_Import Profile..." Command="{Binding ImportProfileCommand}"/>
-                <Separator/>
-                <MenuItem Header="_Exit" Click="ExitMenuItem_Click"/>
-            </MenuItem>
-            <MenuItem Header="_Settings">
-                <MenuItem Header="_Preferences..." Command="{Binding OpenSettingsCommand}"/>
-            </MenuItem>
-            <MenuItem Header="_Help">
-                <MenuItem Header="_About..." Command="{Binding OpenAboutCommand}"/>
-            </MenuItem>
-        </Menu>
-        
-        <!-- Main Content -->
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="250"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+        <!-- Sidebar -->
+        <Grid Grid.Column="0" Grid.Row="0" Background="{StaticResource BrushSidebarBackground}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="80" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
             
-            <!-- Left Navigation Panel -->
-            <Border Grid.Column="0" Background="{StaticResource BrushSidebarBackground}">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    
-                    <!-- Application Logo and Title -->
-                    <StackPanel Grid.Row="0" Margin="15">
-                        <TextBlock Text="ThreadPilot" FontSize="24" FontWeight="Bold" Foreground="{StaticResource BrushPrimary}"/>
-                        <TextBlock Text="Advanced Thread Management" FontSize="14" Foreground="{StaticResource BrushSecondary}" Margin="0,5,0,0"/>
+            <!-- App Logo and Name -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" 
+                        VerticalAlignment="Center" HorizontalAlignment="Left" 
+                        Margin="15">
+                <Path Data="M20,12 L24,8 L24,16 Z M4,4 L28,4 L28,28 L4,28 Z" 
+                      Fill="White" Stretch="Uniform" Width="32" Height="32"
+                      Margin="0,0,10,0"/>
+                <TextBlock Text="ThreadPilot" Foreground="White" 
+                           FontSize="22" FontWeight="SemiBold" 
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+            
+            <!-- Navigation Menu -->
+            <ListBox Grid.Row="1" Background="Transparent" BorderThickness="0"
+                     ItemContainerStyle="{StaticResource CustomListBoxItemStyle}"
+                     SelectedIndex="{Binding SelectedPageIndex, Mode=TwoWay}"
+                     Margin="5,10">
+                <ListBoxItem>
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="M4,4 L12,4 L12,12 L4,12 Z M16,4 L24,4 L24,12 L16,12 Z M4,16 L12,16 L12,24 L4,24 Z M16,16 L24,16 L24,24 L16,24 Z" 
+                              Fill="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=Foreground}" 
+                              Stretch="Uniform" Width="18" Height="18"
+                              Margin="0,0,10,0"/>
+                        <TextBlock Text="Dashboard" />
                     </StackPanel>
-                    
-                    <!-- Navigation Items -->
-                    <ListBox Grid.Row="1" 
-                             ItemsSource="{Binding NavigationItems}" 
-                             SelectedItem="{Binding SelectedNavigationItem}"
-                             Background="Transparent"
-                             BorderThickness="0"
-                             Margin="10,20,10,10">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Name}" Padding="10" FontSize="16"/>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                    
-                    <!-- Power Profiles Selector -->
-                    <Border Grid.Row="2" Padding="15" Background="{StaticResource BrushSidebarAccent}">
-                        <StackPanel>
-                            <TextBlock Text="Power Profiles" FontWeight="Bold" Margin="0,0,0,10"/>
-                            <ComboBox ItemsSource="{Binding PowerProfiles}"
-                                      SelectedItem="{Binding SelectedPowerProfile}"
-                                      DisplayMemberPath="Name"
-                                      Margin="0,0,0,5"/>
-                        </StackPanel>
-                    </Border>
-                </Grid>
-            </Border>
-            
-            <!-- Main Content Area -->
-            <Border Grid.Column="1" Background="{StaticResource BrushContentBackground}" Padding="20">
-                <ContentControl Content="{Binding CurrentView}"/>
-            </Border>
+                </ListBoxItem>
+                <ListBoxItem>
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="M6,4 L26,4 L26,8 L6,8 Z M6,12 L26,12 L26,16 L6,16 Z M6,20 L26,20 L26,24 L6,24 Z" 
+                              Fill="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=Foreground}" 
+                              Stretch="Uniform" Width="18" Height="18"
+                              Margin="0,0,10,0"/>
+                        <TextBlock Text="Processes" />
+                    </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem>
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="M16,4 C22,4 26,8 26,14 C26,20 22,24 16,24 C10,24 6,20 6,14 C6,8 10,4 16,4 Z M16,6 C11,6 8,10 8,14 C8,18 11,22 16,22 C21,22 24,18 24,14 C24,10 21,6 16,6 Z M16,8 C20,8 22,11 22,14 C22,17 20,20 16,20 C12,20 10,17 10,14 C10,11 12,8 16,8 Z M16,10 C13,10 12,12 12,14 C12,16 13,18 16,18 C19,18 20,16 20,14 C20,12 19,10 16,10 Z" 
+                              Fill="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=Foreground}" 
+                              Stretch="Uniform" Width="18" Height="18"
+                              Margin="0,0,10,0"/>
+                        <TextBlock Text="CPU Cores" />
+                    </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem>
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="M4,4 L28,4 L28,8 L4,8 Z M4,12 L28,12 L16,24 Z" 
+                              Fill="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=Foreground}" 
+                              Stretch="Uniform" Width="18" Height="18"
+                              Margin="0,0,10,0"/>
+                        <TextBlock Text="Power Profiles" />
+                    </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem>
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="M16,4 C18,4 20,5 21,7 L27,7 L27,11 L21,11 C20,13 18,14 16,14 C14,14 12,13 11,11 L5,11 L5,7 L11,7 C12,5 14,4 16,4 Z M16,17 C18,17 20,18 21,20 L27,20 L27,24 L21,24 C20,26 18,27 16,27 C14,27 12,26 11,24 L5,24 L5,20 L11,20 C12,18 14,17 16,17 Z" 
+                              Fill="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=Foreground}" 
+                              Stretch="Uniform" Width="18" Height="18"
+                              Margin="0,0,10,0"/>
+                        <TextBlock Text="Settings" />
+                    </StackPanel>
+                </ListBoxItem>
+            </ListBox>
         </Grid>
         
+        <!-- Main Content -->
+        <Frame Grid.Column="1" Grid.Row="0" 
+               Background="{StaticResource BrushContentBackground}"
+               NavigationUIVisibility="Hidden"
+               Content="{Binding CurrentPageViewModel}" />
+        
         <!-- Status Bar -->
-        <Grid Grid.Row="2" Background="{StaticResource BrushStatusBarBackground}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            
-            <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" Margin="10,5" Foreground="{StaticResource BrushStatusBarForeground}"/>
-            <TextBlock Grid.Column="1" Text="{Binding SystemInfoText}" Margin="10,5" Foreground="{StaticResource BrushStatusBarForeground}"/>
+        <Grid Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2" 
+              Background="{StaticResource BrushStatusBarBackground}">
+            <StackPanel Orientation="Horizontal" Margin="10,0"
+                       VerticalAlignment="Center">
+                <TextBlock Text="{Binding StatusMessage}" 
+                           Foreground="{StaticResource BrushStatusBarForeground}"
+                           FontSize="12" />
+            </StackPanel>
         </Grid>
     </Grid>
 </Window>

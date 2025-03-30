@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Timers;
 using System.Windows.Input;
 using ThreadPilot.Helpers;
 using ThreadPilot.Models;
@@ -9,164 +10,195 @@ using ThreadPilot.Services;
 namespace ThreadPilot.ViewModels
 {
     /// <summary>
-    /// View model for the dashboard view
+    /// View model for the dashboard page
     /// </summary>
     public class DashboardViewModel : ViewModelBase
     {
+        // Dependencies
         private readonly ISystemInfoService _systemInfoService;
+        private readonly IPowerProfileService _powerProfileService;
         private readonly IProcessService _processService;
         
-        private SystemInfo _systemInfo = new SystemInfo();
-        private double _cpuUsage;
-        private double _memoryUsage;
-        private string _cpuName = string.Empty;
-        private int _coreCount;
-        private int _threadCount;
-        private double _ramTotal;
+        // Timer for refreshing system info
+        private readonly Timer _refreshTimer;
+        
+        // Backing fields
+        private SystemInfo? _systemInfo;
+        private BundledPowerProfile? _activePowerProfile;
+        private ObservableCollection<ProcessInfo> _topProcesses = new ObservableCollection<ProcessInfo>();
+        private bool _isBusy;
         
         /// <summary>
         /// System information
         /// </summary>
-        public SystemInfo SystemInfo
+        public SystemInfo? SystemInfo
         {
             get => _systemInfo;
             set => SetProperty(ref _systemInfo, value);
         }
         
         /// <summary>
-        /// Current CPU usage percentage
+        /// Active power profile
         /// </summary>
-        public double CpuUsage
+        public BundledPowerProfile? ActivePowerProfile
         {
-            get => _cpuUsage;
-            set => SetProperty(ref _cpuUsage, value);
-        }
-        
-        /// <summary>
-        /// Current memory usage percentage
-        /// </summary>
-        public double MemoryUsage
-        {
-            get => _memoryUsage;
-            set => SetProperty(ref _memoryUsage, value);
-        }
-        
-        /// <summary>
-        /// CPU model name
-        /// </summary>
-        public string CpuName
-        {
-            get => _cpuName;
-            set => SetProperty(ref _cpuName, value);
-        }
-        
-        /// <summary>
-        /// Number of physical CPU cores
-        /// </summary>
-        public int CoreCount
-        {
-            get => _coreCount;
-            set => SetProperty(ref _coreCount, value);
-        }
-        
-        /// <summary>
-        /// Number of logical CPU threads
-        /// </summary>
-        public int ThreadCount
-        {
-            get => _threadCount;
-            set => SetProperty(ref _threadCount, value);
-        }
-        
-        /// <summary>
-        /// Total RAM in GB
-        /// </summary>
-        public double RamTotal
-        {
-            get => _ramTotal;
-            set => SetProperty(ref _ramTotal, value);
+            get => _activePowerProfile;
+            set => SetProperty(ref _activePowerProfile, value);
         }
         
         /// <summary>
         /// Top processes by CPU usage
         /// </summary>
-        public ObservableCollection<ProcessInfo> TopProcesses { get; } = new ObservableCollection<ProcessInfo>();
+        public ObservableCollection<ProcessInfo> TopProcesses
+        {
+            get => _topProcesses;
+            set => SetProperty(ref _topProcesses, value);
+        }
         
         /// <summary>
-        /// Command to refresh dashboard data
+        /// Indicates if an operation is in progress
+        /// </summary>
+        public bool IsBusy
+        {
+            get => _isBusy;
+            set => SetProperty(ref _isBusy, value);
+        }
+        
+        /// <summary>
+        /// Command to refresh system information
         /// </summary>
         public ICommand RefreshCommand { get; }
+        
+        /// <summary>
+        /// Command to optimize system performance
+        /// </summary>
+        public ICommand OptimizeCommand { get; }
         
         /// <summary>
         /// Constructor
         /// </summary>
         public DashboardViewModel()
         {
-            // Get services
+            // Get dependencies
             _systemInfoService = ServiceLocator.Get<ISystemInfoService>();
+            _powerProfileService = ServiceLocator.Get<IPowerProfileService>();
             _processService = ServiceLocator.Get<IProcessService>();
             
-            // Initialize commands
-            RefreshCommand = new RelayCommand(_ => RefreshData());
-        }
-        
-        /// <summary>
-        /// Initialize the view model
-        /// </summary>
-        public override void Initialize()
-        {
-            RefreshData();
+            // Create commands
+            RefreshCommand = new RelayCommand(param => RefreshSystemInfo(), param => !IsBusy);
+            OptimizeCommand = new RelayCommand(param => OptimizeSystem(), param => !IsBusy);
             
-            // TODO: Start a timer to periodically refresh data
+            // Setup refresh timer
+            _refreshTimer = new Timer(3000); // 3 seconds
+            _refreshTimer.Elapsed += OnRefreshTimerElapsed;
+            _refreshTimer.AutoReset = true;
+            _refreshTimer.Start();
+            
+            // Initial refresh
+            RefreshSystemInfo();
         }
         
         /// <summary>
-        /// Refresh dashboard data
+        /// Refresh system information
         /// </summary>
-        private void RefreshData()
+        private void RefreshSystemInfo()
         {
             try
             {
-                // Update system information
+                IsBusy = true;
+                
+                // Get system info
                 SystemInfo = _systemInfoService.GetSystemInfo();
                 
-                // Update CPU and memory usage
-                CpuUsage = _systemInfoService.GetCpuUsage();
-                MemoryUsage = _systemInfoService.GetMemoryUsage();
+                // Get active power profile
+                ActivePowerProfile = _powerProfileService.GetActiveProfile();
                 
-                // Update CPU info
-                CpuName = SystemInfo.CpuName;
-                CoreCount = SystemInfo.CoreCount;
-                ThreadCount = SystemInfo.ProcessorCount;
-                RamTotal = SystemInfo.TotalRam;
+                // Get top processes
+                var processes = _processService.GetProcesses();
                 
-                // Update top processes
-                UpdateTopProcesses();
+                // Sort by CPU usage and take top 5
+                var topProcesses = processes
+                    .OrderByDescending(p => p.CpuUsage)
+                    .Take(5)
+                    .ToList();
+                    
+                // Update collection
+                TopProcesses.Clear();
+                foreach (var process in topProcesses)
+                {
+                    TopProcesses.Add(process);
+                }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Handle errors
+                // Log or handle error
+                Console.WriteLine($"Error refreshing system info: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
         
         /// <summary>
-        /// Update the list of top processes by CPU usage
+        /// Optimize system performance
         /// </summary>
-        private void UpdateTopProcesses()
+        private async void OptimizeSystem()
         {
-            TopProcesses.Clear();
-            
-            var processes = _processService.GetRunningProcesses();
-            
-            // Sort by CPU usage and take top 5
-            var topProcesses = processes
-                .OrderByDescending(p => p.CpuUsage)
-                .Take(5);
-                
-            foreach (var process in topProcesses)
+            try
             {
-                TopProcesses.Add(process);
+                IsBusy = true;
+                
+                // Get all available profiles
+                var profiles = _powerProfileService.GetAvailableProfiles();
+                
+                // Find the "Performance" profile (or similar)
+                var performanceProfile = profiles.FirstOrDefault(p => 
+                    p.Name.Contains("Performance", StringComparison.OrdinalIgnoreCase) ||
+                    p.Name.Contains("High Performance", StringComparison.OrdinalIgnoreCase));
+                    
+                if (performanceProfile != null)
+                {
+                    // Apply the performance profile
+                    bool success = await _powerProfileService.ApplyProfileAsync(performanceProfile);
+                    
+                    if (success)
+                    {
+                        // Update active profile
+                        ActivePowerProfile = performanceProfile;
+                    }
+                }
+                
+                // Apply process optimizations
+                _processService.OptimizeProcesses();
+                
+                // Refresh system info
+                RefreshSystemInfo();
             }
+            catch (Exception ex)
+            {
+                // Log or handle error
+                Console.WriteLine($"Error optimizing system: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+        
+        /// <summary>
+        /// Event handler for the refresh timer
+        /// </summary>
+        private void OnRefreshTimerElapsed(object? sender, ElapsedEventArgs e)
+        {
+            // Invoke on the UI thread
+            App.Current.Dispatcher.Invoke(() =>
+            {
+                if (!IsBusy)
+                {
+                    RefreshSystemInfo();
+                }
+            });
         }
     }
 }

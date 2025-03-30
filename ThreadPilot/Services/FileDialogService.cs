@@ -1,67 +1,80 @@
-using Microsoft.Win32;
+using System;
 using System.IO;
 using System.Windows.Forms;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Implementation of the file dialog service interface
+    /// Implementation of the file dialog service
     /// </summary>
     public class FileDialogService : IFileDialogService
     {
         /// <summary>
         /// Show an open file dialog
         /// </summary>
-        /// <param name="filter">File filter pattern</param>
-        /// <param name="title">Dialog title</param>
-        /// <returns>Selected file path or null if canceled</returns>
-        public string? OpenFile(string filter, string title)
+        public string ShowOpenFileDialog(string title, string filter)
         {
-            var dialog = new OpenFileDialog
+            using var dialog = new OpenFileDialog
             {
-                Filter = filter,
                 Title = title,
-                Multiselect = false,
-                CheckFileExists = true
+                Filter = filter,
+                CheckFileExists = true,
+                CheckPathExists = true,
+                Multiselect = false
             };
-
-            return dialog.ShowDialog() == true ? dialog.FileName : null;
+            
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                return dialog.FileName;
+            }
+            
+            return string.Empty;
         }
-
+        
         /// <summary>
         /// Show a save file dialog
         /// </summary>
-        /// <param name="filter">File filter pattern</param>
-        /// <param name="title">Dialog title</param>
-        /// <param name="defaultFileName">Default file name</param>
-        /// <returns>Selected file path or null if canceled</returns>
-        public string? SaveFile(string filter, string title, string defaultFileName = "")
+        public string ShowSaveFileDialog(string title, string filter, string? defaultFileName = null)
         {
-            var dialog = new SaveFileDialog
+            using var dialog = new SaveFileDialog
             {
-                Filter = filter,
                 Title = title,
-                FileName = defaultFileName,
+                Filter = filter,
+                CheckPathExists = true,
                 OverwritePrompt = true
             };
-
-            return dialog.ShowDialog() == true ? dialog.FileName : null;
+            
+            if (!string.IsNullOrEmpty(defaultFileName))
+            {
+                dialog.FileName = defaultFileName;
+            }
+            
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                return dialog.FileName;
+            }
+            
+            return string.Empty;
         }
-
+        
         /// <summary>
         /// Show a folder browser dialog
         /// </summary>
-        /// <param name="title">Dialog title</param>
-        /// <returns>Selected folder path or null if canceled</returns>
-        public string? SelectFolder(string title)
+        public string ShowFolderBrowserDialog(string description)
         {
             using var dialog = new FolderBrowserDialog
             {
-                Description = title,
-                ShowNewFolderButton = true
+                Description = description,
+                ShowNewFolderButton = true,
+                UseDescriptionForTitle = true
             };
-
-            return dialog.ShowDialog() == DialogResult.OK ? dialog.SelectedPath : null;
+            
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                return dialog.SelectedPath;
+            }
+            
+            return string.Empty;
         }
     }
 }

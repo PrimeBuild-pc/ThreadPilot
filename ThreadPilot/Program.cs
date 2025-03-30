@@ -5,25 +5,15 @@ namespace ThreadPilot
     /// <summary>
     /// Application entry point
     /// </summary>
-    internal class Program
+    public class Program
     {
-        /// <summary>
-        /// Main entry point
-        /// </summary>
         [STAThread]
-        static void Main(string[] args)
+        public static void Main()
         {
-            try
-            {
-                App app = new App();
-                app.InitializeComponent();
-                app.Run();
-            }
-            catch (Exception ex)
-            {
-                // Log the error to a file 
-                Console.Error.WriteLine($"Fatal error: {ex}");
-            }
+            // Create and run the application
+            var app = new App();
+            app.InitializeComponent();
+            app.Run();
         }
     }
 }

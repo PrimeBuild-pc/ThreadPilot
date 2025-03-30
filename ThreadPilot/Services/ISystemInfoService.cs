@@ -1,35 +1,35 @@
-using System.Collections.Generic;
 using ThreadPilot.Models;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Service for retrieving system information
+    /// Interface for the system information service
     /// </summary>
     public interface ISystemInfoService
     {
         /// <summary>
-        /// Get system information including CPU, RAM, and core details
+        /// Get system information
         /// </summary>
-        /// <returns>System information</returns>
         SystemInfo GetSystemInfo();
         
         /// <summary>
-        /// Get CPU usage as a percentage
+        /// Get CPU usage
         /// </summary>
-        /// <returns>CPU usage percentage (0-100)</returns>
         double GetCpuUsage();
         
         /// <summary>
-        /// Get memory usage as a percentage
+        /// Get available memory in GB
         /// </summary>
-        /// <returns>Memory usage percentage (0-100)</returns>
-        double GetMemoryUsage();
+        double GetAvailableMemoryGb();
         
         /// <summary>
-        /// Get CPU core usage
+        /// Get CPU temperature in Celsius
         /// </summary>
-        /// <returns>List of CPU cores with usage information</returns>
-        List<CpuCore> GetCoreUsage();
+        double GetCpuTemperature();
+        
+        /// <summary>
+        /// Get core usage for each CPU core
+        /// </summary>
+        double[] GetCoreUsages();
     }
 }
