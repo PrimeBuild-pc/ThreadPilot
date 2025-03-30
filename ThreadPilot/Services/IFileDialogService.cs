@@ -1,3 +1,5 @@
+using System;
+
 namespace ThreadPilot.Services
 {
     /// <summary>
@@ -6,18 +8,27 @@ namespace ThreadPilot.Services
     public interface IFileDialogService
     {
         /// <summary>
-        /// Show open dialog
+        /// Open file dialog
         /// </summary>
-        string ShowOpenDialog(string filter);
+        /// <param name="title">Dialog title</param>
+        /// <param name="filter">File filter (e.g. "Text files (*.txt)|*.txt")</param>
+        /// <returns>Selected file path or null if canceled</returns>
+        string OpenFileDialog(string title, string filter);
         
         /// <summary>
-        /// Show save dialog
+        /// Save file dialog
         /// </summary>
-        string ShowSaveDialog(string filter, string defaultFileName = "");
+        /// <param name="title">Dialog title</param>
+        /// <param name="filter">File filter (e.g. "Text files (*.txt)|*.txt")</param>
+        /// <param name="defaultFileName">Default file name</param>
+        /// <returns>Selected file path or null if canceled</returns>
+        string SaveFileDialog(string title, string filter, string defaultFileName = "");
         
         /// <summary>
-        /// Show folder browser dialog
+        /// Open folder dialog
         /// </summary>
-        string ShowFolderBrowserDialog();
+        /// <param name="title">Dialog title</param>
+        /// <returns>Selected folder path or null if canceled</returns>
+        string OpenFolderDialog(string title);
     }
 }

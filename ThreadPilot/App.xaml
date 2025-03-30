@@ -6,13 +6,23 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <!-- Theme resources -->
+                <!-- Application theme -->
                 <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
-                <ResourceDictionary Source="Resources/Styles/Fonts.xaml" />
-                <ResourceDictionary Source="Resources/Styles/ButtonStyles.xaml" />
-                <ResourceDictionary Source="Resources/Styles/TextBlockStyles.xaml" />
-                <ResourceDictionary Source="Resources/Styles/WindowStyles.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Buttons.xaml" />
+                <ResourceDictionary Source="Resources/Styles/TextElements.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Panels.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Controls.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            
+            <!-- Global application resources -->
+            <FontFamily x:Key="DefaultFontFamily">Segoe UI</FontFamily>
+            <FontFamily x:Key="MonoFontFamily">Consolas</FontFamily>
+            
+            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="DefaultFontSize">12</system:Double>
+            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="SmallFontSize">11</system:Double>
+            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="LargeFontSize">14</system:Double>
+            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="HeaderFontSize">16</system:Double>
+            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="TitleFontSize">20</system:Double>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -1,7 +1,9 @@
+using System;
+
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// CPU core information
+    /// CPU core class
     /// </summary>
     public class CpuCore
     {
@@ -11,28 +13,48 @@ namespace ThreadPilot.Models
         public int Id { get; set; }
         
         /// <summary>
-        /// Core name
+        /// Core number (0-based)
         /// </summary>
-        public string? Name { get; set; }
+        public int Number { get; set; }
         
         /// <summary>
-        /// Core usage (percentage)
+        /// Processor ID (for multi-CPU systems)
         /// </summary>
-        public double Usage { get; set; }
+        public int ProcessorId { get; set; }
         
         /// <summary>
-        /// Core temperature (Celsius)
+        /// NUMA node
         /// </summary>
-        public double Temperature { get; set; }
+        public int NumaNode { get; set; }
         
         /// <summary>
-        /// Core frequency (MHz)
+        /// Core usage percentage
         /// </summary>
-        public double Frequency { get; set; }
+        public float UsagePercentage { get; set; }
         
         /// <summary>
-        /// Is core parked
+        /// Core frequency in MHz
         /// </summary>
-        public bool IsParked { get; set; }
+        public int FrequencyMHz { get; set; }
+        
+        /// <summary>
+        /// Gets a value indicating whether the core is a performance core (as opposed to efficiency core)
+        /// </summary>
+        public bool IsPerformanceCore { get; set; }
+        
+        /// <summary>
+        /// Gets the core name
+        /// </summary>
+        public string CoreName => $"Core {Number}";
+        
+        /// <summary>
+        /// Gets the core type name
+        /// </summary>
+        public string CoreTypeName => IsPerformanceCore ? "Performance" : "Efficiency";
+        
+        /// <summary>
+        /// Gets the core frequency in GHz
+        /// </summary>
+        public float FrequencyGHz => FrequencyMHz / 1000f;
     }
 }

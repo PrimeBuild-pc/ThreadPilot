@@ -4,63 +4,54 @@ using System.Collections.Generic;
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Service locator
+    /// Service locator for dependency injection
     /// </summary>
     public static class ServiceLocator
     {
-        // Services dictionary
-        private static readonly Dictionary<Type, object> Services = new Dictionary<Type, object>();
+        private static readonly Dictionary<Type, object> _services = new Dictionary<Type, object>();
         
         /// <summary>
-        /// Initialize services
+        /// Register service by interface
         /// </summary>
-        public static void Initialize()
+        /// <typeparam name="TInterface">Interface type</typeparam>
+        /// <param name="service">Service implementation</param>
+        public static void Register<TInterface>(object service)
         {
-            // Register services
-            Register<INotificationService>(new NotificationService());
-            Register<IFileDialogService>(new FileDialogService());
-            Register<ISystemInfoService>(new SystemInfoService());
-            Register<IProcessService>(new ProcessService());
-            Register<IPowerProfileService>(new PowerProfileService());
+            var type = typeof(TInterface);
+            
+            if (_services.ContainsKey(type))
+            {
+                _services[type] = service;
+            }
+            else
+            {
+                _services.Add(type, service);
+            }
         }
         
         /// <summary>
-        /// Cleanup services
+        /// Resolve service by interface
         /// </summary>
-        public static void Cleanup()
+        /// <typeparam name="TInterface">Interface type</typeparam>
+        /// <returns>Service implementation or null if not registered</returns>
+        public static TInterface Resolve<TInterface>() where TInterface : class
         {
-            // Dispose services
-            foreach (var service in Services.Values)
+            var type = typeof(TInterface);
+            
+            if (_services.TryGetValue(type, out var service))
             {
-                if (service is IDisposable disposable)
-                {
-                    disposable.Dispose();
-                }
+                return service as TInterface;
             }
             
-            // Clear services
-            Services.Clear();
+            return null;
         }
         
         /// <summary>
-        /// Register service
+        /// Clear all registered services
         /// </summary>
-        public static void Register<T>(T service) where T : class
+        public static void Clear()
         {
-            Services[typeof(T)] = service;
-        }
-        
-        /// <summary>
-        /// Get service
-        /// </summary>
-        public static T Get<T>() where T : class
-        {
-            if (Services.TryGetValue(typeof(T), out var service))
-            {
-                return (T)service;
-            }
-            
-            throw new InvalidOperationException($"Service {typeof(T).Name} not registered");
+            _services.Clear();
         }
     }
 }

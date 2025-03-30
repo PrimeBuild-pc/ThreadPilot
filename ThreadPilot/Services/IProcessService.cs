@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using ThreadPilot.Models;
 
@@ -9,44 +10,46 @@ namespace ThreadPilot.Services
     public interface IProcessService
     {
         /// <summary>
-        /// Get all processes
+        /// Gets all running processes
         /// </summary>
-        IEnumerable<ProcessInfo> GetAllProcesses();
+        /// <returns>List of process information</returns>
+        IEnumerable<ProcessInfo> GetProcesses();
         
         /// <summary>
-        /// Get process by ID
+        /// Gets process by ID
         /// </summary>
         /// <param name="processId">Process ID</param>
-        ProcessInfo? GetProcessById(int processId);
+        /// <returns>Process information or null if not found</returns>
+        ProcessInfo GetProcessById(int processId);
         
         /// <summary>
-        /// Set process affinity
+        /// Gets processes by name
+        /// </summary>
+        /// <param name="processName">Process name</param>
+        /// <returns>List of process information</returns>
+        IEnumerable<ProcessInfo> GetProcessesByName(string processName);
+        
+        /// <summary>
+        /// Sets process affinity (which cores the process can use)
         /// </summary>
         /// <param name="processId">Process ID</param>
-        /// <param name="affinityMask">Affinity mask</param>
-        /// <returns>True if successful</returns>
+        /// <param name="affinityMask">Affinity mask (bit mask where each bit represents a core)</param>
+        /// <returns>True if successful, false otherwise</returns>
         bool SetProcessAffinity(int processId, long affinityMask);
         
         /// <summary>
-        /// Set process priority
+        /// Sets process priority
         /// </summary>
         /// <param name="processId">Process ID</param>
-        /// <param name="priority">Priority</param>
-        /// <returns>True if successful</returns>
+        /// <param name="priority">Process priority</param>
+        /// <returns>True if successful, false otherwise</returns>
         bool SetProcessPriority(int processId, ProcessPriority priority);
         
         /// <summary>
-        /// Suspend process
+        /// Applies process affinity rules to matching processes
         /// </summary>
-        /// <param name="processId">Process ID</param>
-        /// <returns>True if successful</returns>
-        bool SuspendProcess(int processId);
-        
-        /// <summary>
-        /// Resume process
-        /// </summary>
-        /// <param name="processId">Process ID</param>
-        /// <returns>True if successful</returns>
-        bool ResumeProcess(int processId);
+        /// <param name="rules">List of process affinity rules</param>
+        /// <returns>Number of processes affected</returns>
+        int ApplyAffinityRules(IEnumerable<ProcessAffinityRule> rules);
     }
 }

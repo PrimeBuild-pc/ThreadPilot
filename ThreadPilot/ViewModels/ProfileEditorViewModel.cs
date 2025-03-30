@@ -1,5 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
 using System.Windows.Input;
 using ThreadPilot.Commands;
 using ThreadPilot.Models;
@@ -12,20 +14,11 @@ namespace ThreadPilot.ViewModels
     /// </summary>
     public class ProfileEditorViewModel : ViewModelBase
     {
-        // Selected profile
-        private BundledPowerProfile? _selectedProfile;
-        
-        // Selected rule
-        private ProcessAffinityRule? _selectedRule;
-        
-        // Power profile service
         private readonly IPowerProfileService _powerProfileService;
-        
-        // File dialog service
         private readonly IFileDialogService _fileDialogService;
-        
-        // Notification service
-        private readonly INotificationService _notificationService;
+        private PowerProfile _selectedProfile;
+        private ProcessAffinityRule _selectedRule;
+        private string _searchText;
         
         /// <summary>
         /// Constructor
@@ -33,25 +26,94 @@ namespace ThreadPilot.ViewModels
         public ProfileEditorViewModel()
         {
             // Get services
-            _powerProfileService = ServiceLocator.Get<IPowerProfileService>();
-            _fileDialogService = ServiceLocator.Get<IFileDialogService>();
-            _notificationService = ServiceLocator.Get<INotificationService>();
+            _powerProfileService = ServiceLocator.Resolve<IPowerProfileService>();
+            _fileDialogService = ServiceLocator.Resolve<IFileDialogService>();
             
-            // Initialize collections
-            Profiles = new ObservableCollection<BundledPowerProfile>();
+            // Initialize properties
+            Profiles = new ObservableCollection<PowerProfile>();
+            Rules = new ObservableCollection<ProcessAffinityRule>();
+            AvailablePriorities = new ObservableCollection<ProcessPriority>(Enum.GetValues(typeof(ProcessPriority)).Cast<ProcessPriority>());
             
-            // Create commands
-            NewProfileCommand = new RelayCommand(NewProfile);
-            SaveProfileCommand = new RelayCommand(SaveProfile, CanSaveProfile);
-            DeleteProfileCommand = new RelayCommand(DeleteProfile, CanDeleteProfile);
-            ImportProfileCommand = new RelayCommand(ImportProfile);
-            ExportProfileCommand = new RelayCommand(ExportProfile, CanExportProfile);
-            NewRuleCommand = new RelayCommand(NewRule, CanModifyProfile);
-            DeleteRuleCommand = new RelayCommand(DeleteRule, CanDeleteRule);
+            // Initialize commands
+            RefreshCommand = new RelayCommand(_ => RefreshProfiles());
+            NewProfileCommand = new RelayCommand(_ => CreateNewProfile());
+            CloneProfileCommand = new RelayCommand(_ => CloneProfile(), _ => SelectedProfile != null);
+            DeleteProfileCommand = new RelayCommand(_ => DeleteProfile(), _ => SelectedProfile != null && !SelectedProfile.IsBundled);
+            ImportProfileCommand = new RelayCommand(_ => ImportProfile());
+            ExportProfileCommand = new RelayCommand(_ => ExportProfile(), _ => SelectedProfile != null);
+            
+            AddRuleCommand = new RelayCommand(_ => AddRule(), _ => SelectedProfile != null);
+            RemoveRuleCommand = new RelayCommand(_ => RemoveRule(), _ => SelectedRule != null);
+            SaveProfileCommand = new RelayCommand(_ => SaveProfile(), _ => SelectedProfile != null && !SelectedProfile.IsBundled);
+            ApplyRulesCommand = new RelayCommand(_ => ApplyRules(), _ => SelectedProfile != null);
             
             // Initial load
-            LoadProfiles();
+            RefreshProfiles();
         }
+        
+        /// <summary>
+        /// Power profiles collection
+        /// </summary>
+        public ObservableCollection<PowerProfile> Profiles { get; }
+        
+        /// <summary>
+        /// Process affinity rules collection for the selected profile
+        /// </summary>
+        public ObservableCollection<ProcessAffinityRule> Rules { get; }
+        
+        /// <summary>
+        /// Available process priorities collection
+        /// </summary>
+        public ObservableCollection<ProcessPriority> AvailablePriorities { get; }
+        
+        /// <summary>
+        /// Selected profile
+        /// </summary>
+        public PowerProfile SelectedProfile
+        {
+            get => _selectedProfile;
+            set
+            {
+                if (SetProperty(ref _selectedProfile, value))
+                {
+                    // Load rules for the selected profile
+                    LoadRulesForProfile();
+                    
+                    // Reset selected rule
+                    SelectedRule = null;
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Selected rule
+        /// </summary>
+        public ProcessAffinityRule SelectedRule
+        {
+            get => _selectedRule;
+            set => SetProperty(ref _selectedRule, value);
+        }
+        
+        /// <summary>
+        /// Search text
+        /// </summary>
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                if (SetProperty(ref _searchText, value))
+                {
+                    // Refresh with filter
+                    RefreshProfiles();
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Refresh command
+        /// </summary>
+        public ICommand RefreshCommand { get; }
         
         /// <summary>
         /// New profile command
@@ -59,9 +121,9 @@ namespace ThreadPilot.ViewModels
         public ICommand NewProfileCommand { get; }
         
         /// <summary>
-        /// Save profile command
+        /// Clone profile command
         /// </summary>
-        public ICommand SaveProfileCommand { get; }
+        public ICommand CloneProfileCommand { get; }
         
         /// <summary>
         /// Delete profile command
@@ -79,410 +141,335 @@ namespace ThreadPilot.ViewModels
         public ICommand ExportProfileCommand { get; }
         
         /// <summary>
-        /// New rule command
+        /// Add rule command
         /// </summary>
-        public ICommand NewRuleCommand { get; }
+        public ICommand AddRuleCommand { get; }
         
         /// <summary>
-        /// Delete rule command
+        /// Remove rule command
         /// </summary>
-        public ICommand DeleteRuleCommand { get; }
+        public ICommand RemoveRuleCommand { get; }
         
         /// <summary>
-        /// Profiles
+        /// Save profile command
         /// </summary>
-        public ObservableCollection<BundledPowerProfile> Profiles { get; }
+        public ICommand SaveProfileCommand { get; }
         
         /// <summary>
-        /// Selected profile
+        /// Apply rules command
         /// </summary>
-        public BundledPowerProfile? SelectedProfile
+        public ICommand ApplyRulesCommand { get; }
+        
+        /// <summary>
+        /// Refresh power profiles
+        /// </summary>
+        private void RefreshProfiles()
         {
-            get => _selectedProfile;
-            set
+            if (_powerProfileService == null)
             {
-                if (SetProperty(ref _selectedProfile, value))
-                {
-                    SelectedRule = value?.ProcessAffinityRules.FirstOrDefault();
-                    
-                    ((RelayCommand)SaveProfileCommand).RaiseCanExecuteChanged();
-                    ((RelayCommand)DeleteProfileCommand).RaiseCanExecuteChanged();
-                    ((RelayCommand)ExportProfileCommand).RaiseCanExecuteChanged();
-                    ((RelayCommand)NewRuleCommand).RaiseCanExecuteChanged();
-                }
+                return;
             }
-        }
-        
-        /// <summary>
-        /// Selected rule
-        /// </summary>
-        public ProcessAffinityRule? SelectedRule
-        {
-            get => _selectedRule;
-            set
+            
+            Profiles.Clear();
+            
+            var profiles = _powerProfileService.GetAllProfiles();
+            
+            // Apply filter
+            if (!string.IsNullOrWhiteSpace(SearchText))
             {
-                if (SetProperty(ref _selectedRule, value))
-                {
-                    ((RelayCommand)DeleteRuleCommand).RaiseCanExecuteChanged();
-                }
+                profiles = profiles.Where(p => 
+                    p.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) || 
+                    p.Description.Contains(SearchText, StringComparison.OrdinalIgnoreCase)).ToArray();
             }
-        }
-        
-        /// <summary>
-        /// Load profiles
-        /// </summary>
-        private void LoadProfiles()
-        {
-            try
+            
+            foreach (var profile in profiles)
             {
-                // Clear profiles
-                Profiles.Clear();
-                
-                // Load profiles
-                foreach (var profile in _powerProfileService.GetAllProfiles())
-                {
-                    Profiles.Add(profile);
-                }
-                
-                // Select the first profile if none is selected
-                SelectedProfile ??= Profiles.Count > 0 ? Profiles[0] : null;
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error loading profiles: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// New profile
-        /// </summary>
-        private void NewProfile(object? parameter)
-        {
-            try
-            {
-                // Create a new profile
-                var profile = new BundledPowerProfile
-                {
-                    Name = "New Profile",
-                    Description = "New profile description",
-                    IsEnabled = true,
-                    ShouldUnparkAllCores = false
-                };
-                
-                // Add the profile
                 Profiles.Add(profile);
+            }
+            
+            // Reset selection
+            SelectedProfile = null;
+        }
+        
+        /// <summary>
+        /// Create a new power profile
+        /// </summary>
+        private void CreateNewProfile()
+        {
+            var newProfile = new PowerProfile
+            {
+                Name = "New Profile",
+                Description = "A new power profile",
+                IsBundled = false,
+                LastModified = DateTime.Now,
+                Guid = System.Guid.NewGuid().ToString()
+            };
+            
+            if (_powerProfileService != null)
+            {
+                bool success = _powerProfileService.SaveProfile(newProfile);
                 
-                // Select the new profile
+                var notification = ServiceLocator.Resolve<INotificationService>();
+                if (success)
+                {
+                    Profiles.Add(newProfile);
+                    SelectedProfile = newProfile;
+                    
+                    notification?.ShowSuccess("New profile created successfully.", "Profile Created");
+                }
+                else
+                {
+                    notification?.ShowError("Failed to create new profile.", "Error");
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Clone the selected power profile
+        /// </summary>
+        private void CloneProfile()
+        {
+            if (SelectedProfile == null || _powerProfileService == null)
+            {
+                return;
+            }
+            
+            var clonedProfile = SelectedProfile.Clone();
+            bool success = _powerProfileService.SaveProfile(clonedProfile);
+            
+            var notification = ServiceLocator.Resolve<INotificationService>();
+            if (success)
+            {
+                Profiles.Add(clonedProfile);
+                SelectedProfile = clonedProfile;
+                
+                notification?.ShowSuccess($"Profile '{SelectedProfile.Name}' cloned successfully.", "Profile Cloned");
+            }
+            else
+            {
+                notification?.ShowError($"Failed to clone profile '{SelectedProfile.Name}'.", "Error");
+            }
+        }
+        
+        /// <summary>
+        /// Delete the selected power profile
+        /// </summary>
+        private void DeleteProfile()
+        {
+            if (SelectedProfile == null || _powerProfileService == null)
+            {
+                return;
+            }
+            
+            if (SelectedProfile.IsBundled)
+            {
+                var notification = ServiceLocator.Resolve<INotificationService>();
+                notification?.ShowError("Cannot delete bundled profiles.", "Error");
+                return;
+            }
+            
+            var notification = ServiceLocator.Resolve<INotificationService>();
+            bool confirm = notification?.ShowConfirmation($"Are you sure you want to delete profile '{SelectedProfile.Name}'?", "Confirm Deletion") ?? false;
+            
+            if (!confirm)
+            {
+                return;
+            }
+            
+            bool success = _powerProfileService.DeleteProfile(SelectedProfile);
+            
+            if (success)
+            {
+                Profiles.Remove(SelectedProfile);
+                SelectedProfile = null;
+                
+                notification?.ShowSuccess("Profile deleted successfully.", "Profile Deleted");
+            }
+            else
+            {
+                notification?.ShowError("Failed to delete profile.", "Error");
+            }
+        }
+        
+        /// <summary>
+        /// Import a power profile
+        /// </summary>
+        private void ImportProfile()
+        {
+            if (_fileDialogService == null || _powerProfileService == null)
+            {
+                return;
+            }
+            
+            string filePath = _fileDialogService.OpenFileDialog("Select Profile", "Power Profile (*.pow)|*.pow");
+            
+            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+            {
+                return;
+            }
+            
+            var profile = _powerProfileService.LoadProfile(filePath);
+            
+            var notification = ServiceLocator.Resolve<INotificationService>();
+            if (profile != null)
+            {
+                Profiles.Add(profile);
                 SelectedProfile = profile;
                 
-                // Save the profile
-                if (_powerProfileService.SaveProfile(profile))
-                {
-                    _notificationService.ShowSuccess("New profile created successfully");
-                }
-                else
-                {
-                    _notificationService.ShowError("Failed to create new profile");
-                }
+                notification?.ShowSuccess($"Profile '{profile.Name}' imported successfully.", "Profile Imported");
             }
-            catch (Exception ex)
+            else
             {
-                _notificationService.ShowError($"Error creating new profile: {ex.Message}");
+                notification?.ShowError("Failed to import profile.", "Error");
             }
         }
         
         /// <summary>
-        /// Save profile
+        /// Export the selected power profile
         /// </summary>
-        private void SaveProfile(object? parameter)
+        private void ExportProfile()
+        {
+            if (SelectedProfile == null || _fileDialogService == null || _powerProfileService == null)
+            {
+                return;
+            }
+            
+            string filePath = _fileDialogService.SaveFileDialog("Export Profile", "Power Profile (*.pow)|*.pow", SelectedProfile.Name);
+            
+            if (string.IsNullOrEmpty(filePath))
+            {
+                return;
+            }
+            
+            bool success = _powerProfileService.SaveProfileToFile(SelectedProfile, filePath);
+            
+            var notification = ServiceLocator.Resolve<INotificationService>();
+            if (success)
+            {
+                notification?.ShowSuccess($"Profile '{SelectedProfile.Name}' exported successfully.", "Profile Exported");
+            }
+            else
+            {
+                notification?.ShowError($"Failed to export profile '{SelectedProfile.Name}'.", "Error");
+            }
+        }
+        
+        /// <summary>
+        /// Add a new rule to the selected profile
+        /// </summary>
+        private void AddRule()
         {
             if (SelectedProfile == null)
             {
                 return;
             }
             
-            try
+            var newRule = new ProcessAffinityRule
             {
-                if (_powerProfileService.SaveProfile(SelectedProfile))
-                {
-                    _notificationService.ShowSuccess("Profile saved successfully");
-                }
-                else
-                {
-                    _notificationService.ShowError("Failed to save profile");
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error saving profile: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Delete profile
-        /// </summary>
-        private void DeleteProfile(object? parameter)
-        {
-            if (SelectedProfile == null)
-            {
-                return;
-            }
+                Name = "New Rule",
+                ProcessNamePattern = ".*",
+                ProcessPriority = ProcessPriority.Normal,
+                IsEnabled = true
+            };
             
-            try
-            {
-                // Remember the profile
-                var profile = SelectedProfile;
-                
-                // Select another profile
-                var index = Profiles.IndexOf(profile);
-                if (index > 0)
-                {
-                    SelectedProfile = Profiles[index - 1];
-                }
-                else if (Profiles.Count > 1)
-                {
-                    SelectedProfile = Profiles[1];
-                }
-                else
-                {
-                    SelectedProfile = null;
-                }
-                
-                // Remove the profile
-                Profiles.Remove(profile);
-                
-                // Delete the profile
-                if (_powerProfileService.DeleteProfile(profile.Id))
-                {
-                    _notificationService.ShowSuccess("Profile deleted successfully");
-                }
-                else
-                {
-                    _notificationService.ShowError("Failed to delete profile");
-                    
-                    // Restore the profile
-                    Profiles.Add(profile);
-                    SelectedProfile = profile;
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error deleting profile: {ex.Message}");
-            }
+            SelectedProfile.AffinityRules.Add(newRule);
+            Rules.Add(newRule);
+            SelectedRule = newRule;
         }
         
         /// <summary>
-        /// Import profile
+        /// Remove the selected rule from the profile
         /// </summary>
-        private void ImportProfile(object? parameter)
-        {
-            try
-            {
-                // Show open file dialog
-                var filePath = _fileDialogService.ShowOpenDialog("Power Profile Files (*.pow)|*.pow|All Files (*.*)|*.*");
-                
-                if (string.IsNullOrEmpty(filePath))
-                {
-                    return;
-                }
-                
-                // Import profile
-                var profile = _powerProfileService.ImportProfile(filePath);
-                
-                if (profile != null)
-                {
-                    _notificationService.ShowSuccess("Profile imported successfully");
-                    
-                    // Add the profile
-                    Profiles.Add(profile);
-                    
-                    // Select the new profile
-                    SelectedProfile = profile;
-                }
-                else
-                {
-                    _notificationService.ShowError("Failed to import profile");
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error importing profile: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Export profile
-        /// </summary>
-        private void ExportProfile(object? parameter)
-        {
-            if (SelectedProfile == null)
-            {
-                return;
-            }
-            
-            try
-            {
-                // Show save file dialog
-                var filePath = _fileDialogService.ShowSaveDialog("Power Profile Files (*.pow)|*.pow|All Files (*.*)|*.*", $"{SelectedProfile.Name}.pow");
-                
-                if (string.IsNullOrEmpty(filePath))
-                {
-                    return;
-                }
-                
-                // Export profile
-                if (_powerProfileService.ExportProfile(SelectedProfile.Id, filePath))
-                {
-                    _notificationService.ShowSuccess("Profile exported successfully");
-                }
-                else
-                {
-                    _notificationService.ShowError("Failed to export profile");
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error exporting profile: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// New rule
-        /// </summary>
-        private void NewRule(object? parameter)
-        {
-            if (SelectedProfile == null)
-            {
-                return;
-            }
-            
-            try
-            {
-                // Create a new rule
-                var rule = new ProcessAffinityRule
-                {
-                    Id = SelectedProfile.ProcessAffinityRules.Count > 0 ? SelectedProfile.ProcessAffinityRules.Max(r => r.Id) + 1 : 1,
-                    Name = "New Rule",
-                    ProcessNamePattern = ".*",
-                    AffinityMask = 0xFFFF,
-                    Priority = ProcessPriority.Normal,
-                    IsEnabled = true,
-                    RulePriority = 100
-                };
-                
-                // Add the rule
-                SelectedProfile.ProcessAffinityRules.Add(rule);
-                
-                // Select the new rule
-                SelectedRule = rule;
-                
-                // Save the profile
-                if (_powerProfileService.SaveProfile(SelectedProfile))
-                {
-                    _notificationService.ShowSuccess("New rule created successfully");
-                }
-                else
-                {
-                    _notificationService.ShowError("Failed to create new rule");
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error creating new rule: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Delete rule
-        /// </summary>
-        private void DeleteRule(object? parameter)
+        private void RemoveRule()
         {
             if (SelectedProfile == null || SelectedRule == null)
             {
                 return;
             }
             
-            try
+            var notification = ServiceLocator.Resolve<INotificationService>();
+            bool confirm = notification?.ShowConfirmation($"Are you sure you want to remove rule '{SelectedRule.Name}'?", "Confirm Removal") ?? false;
+            
+            if (!confirm)
             {
-                // Remember the rule
-                var rule = SelectedRule;
-                
-                // Select another rule
-                var index = SelectedProfile.ProcessAffinityRules.IndexOf(rule);
-                if (index > 0)
+                return;
+            }
+            
+            SelectedProfile.AffinityRules.Remove(SelectedRule);
+            Rules.Remove(SelectedRule);
+            SelectedRule = null;
+        }
+        
+        /// <summary>
+        /// Save the selected profile
+        /// </summary>
+        private void SaveProfile()
+        {
+            if (SelectedProfile == null || _powerProfileService == null)
+            {
+                return;
+            }
+            
+            if (SelectedProfile.IsBundled)
+            {
+                var notification = ServiceLocator.Resolve<INotificationService>();
+                notification?.ShowError("Cannot modify bundled profiles. Please clone first.", "Error");
+                return;
+            }
+            
+            // Update last modified
+            SelectedProfile.LastModified = DateTime.Now;
+            
+            bool success = _powerProfileService.SaveProfile(SelectedProfile);
+            
+            var notification = ServiceLocator.Resolve<INotificationService>();
+            if (success)
+            {
+                notification?.ShowSuccess($"Profile '{SelectedProfile.Name}' saved successfully.", "Profile Saved");
+            }
+            else
+            {
+                notification?.ShowError($"Failed to save profile '{SelectedProfile.Name}'.", "Error");
+            }
+        }
+        
+        /// <summary>
+        /// Apply the rules of the selected profile
+        /// </summary>
+        private void ApplyRules()
+        {
+            if (SelectedProfile == null || _powerProfileService == null)
+            {
+                return;
+            }
+            
+            bool success = _powerProfileService.ApplyProfile(SelectedProfile);
+            
+            var notification = ServiceLocator.Resolve<INotificationService>();
+            if (success)
+            {
+                notification?.ShowSuccess($"Profile '{SelectedProfile.Name}' applied successfully.", "Profile Applied");
+            }
+            else
+            {
+                notification?.ShowError($"Failed to apply profile '{SelectedProfile.Name}'.", "Error");
+            }
+        }
+        
+        /// <summary>
+        /// Load rules for the selected profile
+        /// </summary>
+        private void LoadRulesForProfile()
+        {
+            Rules.Clear();
+            
+            if (SelectedProfile != null)
+            {
+                foreach (var rule in SelectedProfile.AffinityRules)
                 {
-                    SelectedRule = SelectedProfile.ProcessAffinityRules[index - 1];
-                }
-                else if (SelectedProfile.ProcessAffinityRules.Count > 1)
-                {
-                    SelectedRule = SelectedProfile.ProcessAffinityRules[1];
-                }
-                else
-                {
-                    SelectedRule = null;
-                }
-                
-                // Remove the rule
-                SelectedProfile.ProcessAffinityRules.Remove(rule);
-                
-                // Save the profile
-                if (_powerProfileService.SaveProfile(SelectedProfile))
-                {
-                    _notificationService.ShowSuccess("Rule deleted successfully");
-                }
-                else
-                {
-                    _notificationService.ShowError("Failed to delete rule");
-                    
-                    // Restore the rule
-                    SelectedProfile.ProcessAffinityRules.Add(rule);
-                    SelectedRule = rule;
+                    Rules.Add(rule);
                 }
             }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error deleting rule: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Can save profile
-        /// </summary>
-        private bool CanSaveProfile(object? parameter)
-        {
-            return SelectedProfile != null;
-        }
-        
-        /// <summary>
-        /// Can delete profile
-        /// </summary>
-        private bool CanDeleteProfile(object? parameter)
-        {
-            return SelectedProfile != null;
-        }
-        
-        /// <summary>
-        /// Can export profile
-        /// </summary>
-        private bool CanExportProfile(object? parameter)
-        {
-            return SelectedProfile != null;
-        }
-        
-        /// <summary>
-        /// Can modify profile
-        /// </summary>
-        private bool CanModifyProfile(object? parameter)
-        {
-            return SelectedProfile != null;
-        }
-        
-        /// <summary>
-        /// Can delete rule
-        /// </summary>
-        private bool CanDeleteRule(object? parameter)
-        {
-            return SelectedProfile != null && SelectedRule != null;
         }
     }
 }

@@ -1,89 +1,70 @@
 using System;
-using System.Collections.Generic;
 
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// System information
+    /// System information class
     /// </summary>
     public class SystemInfo
     {
         /// <summary>
-        /// Constructor
+        /// Processor name
         /// </summary>
-        public SystemInfo()
-        {
-            CpuCores = new List<CpuCore>();
-        }
+        public string ProcessorName { get; set; } = string.Empty;
         
         /// <summary>
-        /// CPU name
+        /// CPU usage percentage
         /// </summary>
-        public string? CpuName { get; set; }
+        public float CpuUsagePercentage { get; set; }
         
         /// <summary>
-        /// CPU usage
+        /// Memory usage in MB
         /// </summary>
-        public double CpuUsage { get; set; }
+        public ulong MemoryUsageMB { get; set; }
         
         /// <summary>
-        /// CPU temperature
+        /// Total memory in MB
         /// </summary>
-        public double CpuTemperature { get; set; }
+        public ulong TotalMemoryMB { get; set; }
         
         /// <summary>
-        /// CPU frequency
+        /// Logical processor count
         /// </summary>
-        public double CpuFrequency { get; set; }
+        public int LogicalProcessorCount { get; set; }
         
         /// <summary>
-        /// Operating system name
+        /// Physical processor count
         /// </summary>
-        public string? OsName { get; set; }
+        public int PhysicalProcessorCount { get; set; }
         
         /// <summary>
-        /// Operating system version
+        /// Performance core count (hybrid CPUs)
         /// </summary>
-        public string? OsVersion { get; set; }
+        public int PerformanceCoreCount { get; set; }
         
         /// <summary>
-        /// System uptime
+        /// Efficiency core count (hybrid CPUs)
         /// </summary>
-        public TimeSpan Uptime { get; set; }
+        public int EfficiencyCoreCount { get; set; }
         
         /// <summary>
-        /// Process count
+        /// Operating system information
         /// </summary>
-        public int ProcessCount { get; set; }
+        public string OperatingSystem { get; set; } = string.Empty;
         
         /// <summary>
-        /// Thread count
+        /// Machine name
         /// </summary>
-        public int ThreadCount { get; set; }
+        public string MachineName { get; set; } = string.Empty;
         
         /// <summary>
-        /// Total memory (KB)
+        /// Gets the memory usage percentage
         /// </summary>
-        public double TotalMemory { get; set; }
+        public float MemoryUsagePercentage => TotalMemoryMB > 0 ? (float)MemoryUsageMB / TotalMemoryMB * 100 : 0;
         
         /// <summary>
-        /// Available memory (KB)
+        /// Gets a value indicating whether the system has a hybrid CPU
         /// </summary>
-        public double AvailableMemory { get; set; }
-        
-        /// <summary>
-        /// Used memory (KB)
-        /// </summary>
-        public double UsedMemory { get; set; }
-        
-        /// <summary>
-        /// Memory usage (percentage)
-        /// </summary>
-        public double MemoryUsage { get; set; }
-        
-        /// <summary>
-        /// CPU cores
-        /// </summary>
-        public List<CpuCore> CpuCores { get; }
+        public bool HasHybridCpu => PerformanceCoreCount > 0 && EfficiencyCoreCount > 0;
     }
 }

@@ -4,60 +4,56 @@ using System.Windows;
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Notification service
+    /// Implementation of notification service using MessageBox
     /// </summary>
     public class NotificationService : INotificationService
     {
         /// <summary>
-        /// Notification received event
+        /// Shows success notification
         /// </summary>
-        public event EventHandler<NotificationEventArgs>? NotificationReceived;
-        
-        /// <summary>
-        /// Show notification
-        /// </summary>
-        public void Show(string message, NotificationType type = NotificationType.Info)
-        {
-            // Raise event
-            NotificationReceived?.Invoke(this, new NotificationEventArgs(type, message));
-            
-            // Show messagebox for errors
-            if (type == NotificationType.Error)
-            {
-                MessageBox.Show(message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-        
-        /// <summary>
-        /// Show information notification
-        /// </summary>
-        public void ShowInfo(string message)
-        {
-            Show(message, NotificationType.Info);
-        }
-        
-        /// <summary>
-        /// Show success notification
-        /// </summary>
+        /// <param name="message">Message</param>
         public void ShowSuccess(string message)
         {
-            Show(message, NotificationType.Success);
+            MessageBox.Show(message, "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         
         /// <summary>
-        /// Show warning notification
+        /// Shows information notification
         /// </summary>
+        /// <param name="message">Message</param>
+        public void ShowInformation(string message)
+        {
+            MessageBox.Show(message, "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        
+        /// <summary>
+        /// Shows warning notification
+        /// </summary>
+        /// <param name="message">Message</param>
         public void ShowWarning(string message)
         {
-            Show(message, NotificationType.Warning);
+            MessageBox.Show(message, "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         
         /// <summary>
-        /// Show error notification
+        /// Shows error notification
         /// </summary>
+        /// <param name="message">Message</param>
         public void ShowError(string message)
         {
-            Show(message, NotificationType.Error);
+            MessageBox.Show(message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        
+        /// <summary>
+        /// Shows confirmation dialog
+        /// </summary>
+        /// <param name="message">Message</param>
+        /// <param name="title">Title</param>
+        /// <returns>True if confirmed, false otherwise</returns>
+        public bool ShowConfirmation(string message, string title = "Confirmation")
+        {
+            var result = MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Question);
+            return result == MessageBoxResult.Yes;
         }
     }
 }

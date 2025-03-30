@@ -1,7 +1,10 @@
+using System;
+using System.Collections.Generic;
+
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Process information
+    /// Process information class
     /// </summary>
     public class ProcessInfo
     {
@@ -13,37 +16,27 @@ namespace ThreadPilot.Models
         /// <summary>
         /// Process name
         /// </summary>
-        public string? Name { get; set; }
+        public string Name { get; set; } = string.Empty;
         
         /// <summary>
         /// Process description
         /// </summary>
-        public string? Description { get; set; }
+        public string Description { get; set; } = string.Empty;
         
         /// <summary>
-        /// Process path
+        /// Process CPU usage percentage
         /// </summary>
-        public string? Path { get; set; }
+        public float CpuUsagePercentage { get; set; }
         
         /// <summary>
-        /// Process CPU usage (percentage)
+        /// Process memory usage in MB
         /// </summary>
-        public double CpuUsage { get; set; }
+        public long MemoryUsageMB { get; set; }
         
         /// <summary>
-        /// Process memory usage (KB)
-        /// </summary>
-        public double MemoryUsage { get; set; }
-        
-        /// <summary>
-        /// Thread count
+        /// Process thread count
         /// </summary>
         public int ThreadCount { get; set; }
-        
-        /// <summary>
-        /// CPU affinity mask (used to determine which cores the process can use)
-        /// </summary>
-        public long AffinityMask { get; set; }
         
         /// <summary>
         /// Process priority
@@ -51,49 +44,43 @@ namespace ThreadPilot.Models
         public ProcessPriority Priority { get; set; }
         
         /// <summary>
-        /// Is the process suspended
+        /// Process affinity mask (each bit represents a core)
         /// </summary>
-        public bool IsSuspended { get; set; }
+        public long Affinity { get; set; }
         
         /// <summary>
-        /// Is the process critical (system process)
+        /// Gets the list of CPU cores associated with the process affinity
         /// </summary>
-        public bool IsCritical { get; set; }
-    }
-    
-    /// <summary>
-    /// Process priority
-    /// </summary>
-    public enum ProcessPriority
-    {
-        /// <summary>
-        /// Idle
-        /// </summary>
-        Idle = 0,
+        /// <returns>List of core indices</returns>
+        public IEnumerable<int> GetAffinityCores()
+        {
+            var coreIndices = new List<int>();
+            
+            for (int i = 0; i < 64; i++)
+            {
+                if ((Affinity & (1L << i)) != 0)
+                {
+                    coreIndices.Add(i);
+                }
+            }
+            
+            return coreIndices;
+        }
         
         /// <summary>
-        /// Below normal
+        /// Sets the process affinity for the specified cores
         /// </summary>
-        BelowNormal = 1,
-        
-        /// <summary>
-        /// Normal
-        /// </summary>
-        Normal = 2,
-        
-        /// <summary>
-        /// Above normal
-        /// </summary>
-        AboveNormal = 3,
-        
-        /// <summary>
-        /// High
-        /// </summary>
-        High = 4,
-        
-        /// <summary>
-        /// Realtime
-        /// </summary>
-        Realtime = 5
+        /// <param name="coreIndices">Core indices</param>
+        public void SetAffinity(IEnumerable<int> coreIndices)
+        {
+            long affinityMask = 0;
+            
+            foreach (var coreIndex in coreIndices)
+            {
+                affinityMask |= (1L << coreIndex);
+            }
+            
+            Affinity = affinityMask;
+        }
     }
 }

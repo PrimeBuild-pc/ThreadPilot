@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Windows.Input;
 using ThreadPilot.Commands;
 using ThreadPilot.Services;
@@ -11,85 +10,35 @@ namespace ThreadPilot.ViewModels
     /// </summary>
     public class MainViewModel : ViewModelBase
     {
-        // Current view model
         private ViewModelBase _currentViewModel;
-        
-        // Status message
-        private string _statusMessage = "Ready";
-        
-        // Is dark mode
-        private bool _isDarkMode;
-        
-        // Dashboard view model
         private readonly DashboardViewModel _dashboardViewModel;
-        
-        // Processes view model
         private readonly ProcessesViewModel _processesViewModel;
-        
-        // CPU cores view model
         private readonly CpuCoresViewModel _cpuCoresViewModel;
-        
-        // Profile editor view model
         private readonly ProfileEditorViewModel _profileEditorViewModel;
-        
-        // System info service
-        private readonly ISystemInfoService _systemInfoService;
-        
-        // Power profile service
-        private readonly IPowerProfileService _powerProfileService;
-        
-        // File dialog service
-        private readonly IFileDialogService _fileDialogService;
-        
-        // Notification service
-        private readonly INotificationService _notificationService;
         
         /// <summary>
         /// Constructor
         /// </summary>
         public MainViewModel()
         {
-            // Get services
-            _systemInfoService = ServiceLocator.Get<ISystemInfoService>();
-            _powerProfileService = ServiceLocator.Get<IPowerProfileService>();
-            _fileDialogService = ServiceLocator.Get<IFileDialogService>();
-            _notificationService = ServiceLocator.Get<INotificationService>();
-            
-            // Set notification callback
-            _notificationService.NotificationReceived += OnNotificationReceived;
-            
-            // Create view models
+            // Initialize view models
             _dashboardViewModel = new DashboardViewModel();
             _processesViewModel = new ProcessesViewModel();
             _cpuCoresViewModel = new CpuCoresViewModel();
             _profileEditorViewModel = new ProfileEditorViewModel();
             
-            // Create commands
-            NavigateCommand = new RelayCommand<string>(Navigate);
-            ApplyProfileCommand = new RelayCommand(ApplyProfile);
-            ExportLogsCommand = new RelayCommand(ExportLogs);
-            
-            // Set default view
+            // Set default view model
             CurrentViewModel = _dashboardViewModel;
             
-            // Set dark mode based on system settings
-            IsDarkMode = IsSystemUsingDarkMode();
+            // Initialize commands
+            NavigateDashboardCommand = new RelayCommand(_ => NavigateTo(_dashboardViewModel));
+            NavigateProcessesCommand = new RelayCommand(_ => NavigateTo(_processesViewModel));
+            NavigateCpuCoresCommand = new RelayCommand(_ => NavigateTo(_cpuCoresViewModel));
+            NavigateProfileEditorCommand = new RelayCommand(_ => NavigateTo(_profileEditorViewModel));
+            RefreshCommand = new RelayCommand(_ => Refresh());
+            ExitCommand = new RelayCommand(_ => Exit());
+            AboutCommand = new RelayCommand(_ => ShowAbout());
         }
-        
-        /// <summary>
-        /// Navigate command
-        /// </summary>
-        public ICommand NavigateCommand { get; }
-        
-        /// <summary>
-        /// Apply profile command
-        /// </summary>
-        public ICommand ApplyProfileCommand { get; }
-        
-        /// <summary>
-        /// Export logs command
-        /// </summary>
-        public ICommand ExportLogsCommand { get; }
         
         /// <summary>
         /// Current view model
@@ -101,173 +50,96 @@ namespace ThreadPilot.ViewModels
         }
         
         /// <summary>
-        /// Status message
+        /// Navigate to Dashboard command
         /// </summary>
-        public string StatusMessage
+        public ICommand NavigateDashboardCommand { get; }
+        
+        /// <summary>
+        /// Navigate to Processes command
+        /// </summary>
+        public ICommand NavigateProcessesCommand { get; }
+        
+        /// <summary>
+        /// Navigate to CPU Cores command
+        /// </summary>
+        public ICommand NavigateCpuCoresCommand { get; }
+        
+        /// <summary>
+        /// Navigate to Profile Editor command
+        /// </summary>
+        public ICommand NavigateProfileEditorCommand { get; }
+        
+        /// <summary>
+        /// Refresh command
+        /// </summary>
+        public ICommand RefreshCommand { get; }
+        
+        /// <summary>
+        /// Exit command
+        /// </summary>
+        public ICommand ExitCommand { get; }
+        
+        /// <summary>
+        /// About command
+        /// </summary>
+        public ICommand AboutCommand { get; }
+        
+        /// <summary>
+        /// Navigate to the specified view model
+        /// </summary>
+        /// <param name="viewModel">View model to navigate to</param>
+        private void NavigateTo(ViewModelBase viewModel)
         {
-            get => _statusMessage;
-            set => SetProperty(ref _statusMessage, value);
+            CurrentViewModel = viewModel;
         }
         
         /// <summary>
-        /// Is dark mode
+        /// Refresh current view model
         /// </summary>
-        public bool IsDarkMode
+        private void Refresh()
         {
-            get => _isDarkMode;
-            set
-            {
-                if (SetProperty(ref _isDarkMode, value))
-                {
-                    ApplyTheme();
-                }
-            }
-        }
-        
-        /// <summary>
-        /// System info summary
-        /// </summary>
-        public string SystemInfoSummary => 
-            $"{_systemInfoService.GetSystemInfo().CpuName} | {_systemInfoService.GetSystemInfo().CpuCores.Count} Cores | {_systemInfoService.GetSystemInfo().TotalMemoryGB:F1} GB RAM";
-        
-        /// <summary>
-        /// Version info
-        /// </summary>
-        public string VersionInfo => $"ThreadPilot v1.0.0";
-        
-        /// <summary>
-        /// Navigate
-        /// </summary>
-        private void Navigate(string? viewName)
-        {
-            if (string.IsNullOrEmpty(viewName))
-            {
-                return;
-            }
+            // Each view model has its own refresh mechanism
+            // We might want to implement a common interface for refreshable view models
             
-            CurrentViewModel = viewName switch
+            if (CurrentViewModel == _dashboardViewModel)
             {
-                "Dashboard" => _dashboardViewModel,
-                "Processes" => _processesViewModel,
-                "CpuCores" => _cpuCoresViewModel,
-                "ProfileEditor" => _profileEditorViewModel,
-                _ => _dashboardViewModel
-            };
+                // Refresh dashboard
+            }
+            else if (CurrentViewModel == _processesViewModel)
+            {
+                // Refresh processes
+            }
+            else if (CurrentViewModel == _cpuCoresViewModel)
+            {
+                // Refresh CPU cores
+            }
+            else if (CurrentViewModel == _profileEditorViewModel)
+            {
+                // Refresh profile editor
+            }
+        }
+        
+        /// <summary>
+        /// Exit application
+        /// </summary>
+        private void Exit()
+        {
+            var notification = ServiceLocator.Resolve<INotificationService>();
+            var confirmed = notification?.ShowConfirmation("Are you sure you want to exit?", "Exit") ?? false;
             
-            StatusMessage = $"Viewing {viewName}";
-        }
-        
-        /// <summary>
-        /// Apply profile
-        /// </summary>
-        private void ApplyProfile(object? parameter)
-        {
-            try
+            if (confirmed)
             {
-                // Get the first enabled profile
-                var profile = _powerProfileService.GetAllProfiles().FirstOrDefault(p => p.IsEnabled);
-                
-                if (profile == null)
-                {
-                    _notificationService.ShowError("No enabled profile found");
-                    return;
-                }
-                
-                // Apply profile
-                if (_powerProfileService.ApplyProfile(profile.Id))
-                {
-                    _notificationService.ShowSuccess($"Profile '{profile.Name}' applied successfully");
-                }
-                else
-                {
-                    _notificationService.ShowError($"Failed to apply profile '{profile.Name}'");
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error applying profile: {ex.Message}");
+                System.Windows.Application.Current.Shutdown();
             }
         }
         
         /// <summary>
-        /// Export logs
+        /// Show about dialog
         /// </summary>
-        private void ExportLogs(object? parameter)
+        private void ShowAbout()
         {
-            try
-            {
-                // Get file path
-                var filePath = _fileDialogService.ShowSaveDialog("Log Files (*.log)|*.log|All Files (*.*)|*.*", "ThreadPilot.log");
-                
-                if (string.IsNullOrEmpty(filePath))
-                {
-                    return;
-                }
-                
-                // Export logs
-                var logs = new[]
-                {
-                    $"ThreadPilot Log Export - {DateTime.Now}",
-                    $"System Info: {_systemInfoService.GetSystemInfo().CpuName}",
-                    $"CPU Cores: {_systemInfoService.GetSystemInfo().CpuCores.Count}",
-                    $"Total Memory: {_systemInfoService.GetSystemInfo().TotalMemoryGB:F1} GB",
-                    $"Used Memory: {_systemInfoService.GetSystemInfo().UsedMemoryGB:F1} GB",
-                    $"CPU Temperature: {_systemInfoService.GetSystemInfo().CpuTemperatureCelsius:F1}°C",
-                    $"Active Processes: {_systemInfoService.GetSystemInfo().ActiveProcessesCount}",
-                    $"Total Processes: {_systemInfoService.GetSystemInfo().TotalProcessesCount}"
-                };
-                
-                // Write logs to file
-                File.WriteAllLines(filePath, logs);
-                
-                _notificationService.ShowSuccess("Logs exported successfully");
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error exporting logs: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Apply theme
-        /// </summary>
-        private void ApplyTheme()
-        {
-            try
-            {
-                // In a real application, we would change the theme resources here
-                // For now, we'll just change the status message
-                StatusMessage = IsDarkMode ? "Dark theme applied" : "Light theme applied";
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error applying theme: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Is system using dark mode
-        /// </summary>
-        private bool IsSystemUsingDarkMode()
-        {
-            try
-            {
-                // In a real application, we would check system settings here
-                // For now, we'll just return a default value
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-        
-        /// <summary>
-        /// On notification received
-        /// </summary>
-        private void OnNotificationReceived(object? sender, NotificationEventArgs e)
-        {
-            StatusMessage = e.Message;
+            var notification = ServiceLocator.Resolve<INotificationService>();
+            notification?.ShowInformation($"ThreadPilot\nVersion {App.Version}\n\nA Windows desktop application for advanced system performance optimization.", "About ThreadPilot");
         }
     }
 }

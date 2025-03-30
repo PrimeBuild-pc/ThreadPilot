@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+
 namespace ThreadPilot.Models
 {
     /// <summary>
@@ -6,43 +9,59 @@ namespace ThreadPilot.Models
     public class ProcessAffinityRule
     {
         /// <summary>
-        /// Rule ID
+        /// Constructor
         /// </summary>
-        public int Id { get; set; }
+        public ProcessAffinityRule()
+        {
+            CoreIndices = new List<int>();
+        }
         
         /// <summary>
         /// Rule name
         /// </summary>
-        public string? Name { get; set; }
+        public string Name { get; set; } = string.Empty;
         
         /// <summary>
-        /// Process name pattern
+        /// Process name pattern (regular expression)
         /// </summary>
-        public string? ProcessNamePattern { get; set; }
+        public string ProcessNamePattern { get; set; } = string.Empty;
         
         /// <summary>
-        /// Process path pattern
+        /// Core indices
         /// </summary>
-        public string? ProcessPathPattern { get; set; }
-        
-        /// <summary>
-        /// CPU affinity mask (used to determine which cores the process can use)
-        /// </summary>
-        public long AffinityMask { get; set; }
+        public List<int> CoreIndices { get; set; }
         
         /// <summary>
         /// Process priority
         /// </summary>
-        public ProcessPriority Priority { get; set; }
+        public ProcessPriority ProcessPriority { get; set; } = ProcessPriority.Normal;
         
         /// <summary>
-        /// Is the rule enabled
+        /// Gets or sets a value indicating whether the rule is enabled
         /// </summary>
-        public bool IsEnabled { get; set; }
+        public bool IsEnabled { get; set; } = true;
         
         /// <summary>
-        /// Rule priority (higher priority rules will be applied first)
+        /// Creates a clone of the rule
         /// </summary>
-        public int RulePriority { get; set; }
+        /// <returns>Clone of the rule</returns>
+        public ProcessAffinityRule Clone()
+        {
+            var clone = new ProcessAffinityRule
+            {
+                Name = Name,
+                ProcessNamePattern = ProcessNamePattern,
+                ProcessPriority = ProcessPriority,
+                IsEnabled = IsEnabled
+            };
+            
+            // Clone core indices
+            foreach (var coreIndex in CoreIndices)
+            {
+                clone.CoreIndices.Add(coreIndex);
+            }
+            
+            return clone;
+        }
     }
 }

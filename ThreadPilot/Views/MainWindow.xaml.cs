@@ -7,9 +7,6 @@ namespace ThreadPilot.Views
     /// </summary>
     public partial class MainWindow : Window
     {
-        /// <summary>
-        /// Constructor
-        /// </summary>
         public MainWindow()
         {
             InitializeComponent();

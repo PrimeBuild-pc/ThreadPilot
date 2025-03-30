@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using ThreadPilot.Models;
 
@@ -9,50 +10,79 @@ namespace ThreadPilot.Services
     public interface IPowerProfileService
     {
         /// <summary>
-        /// Get all power profiles
+        /// Gets all available power profiles
         /// </summary>
-        IEnumerable<BundledPowerProfile> GetAllProfiles();
+        /// <returns>List of power profiles</returns>
+        IEnumerable<PowerProfile> GetProfiles();
         
         /// <summary>
-        /// Get profile by ID
+        /// Gets power profile by name
         /// </summary>
-        /// <param name="profileId">Profile ID</param>
-        BundledPowerProfile? GetProfileById(int profileId);
+        /// <param name="name">Profile name</param>
+        /// <returns>Power profile or null if not found</returns>
+        PowerProfile GetProfileByName(string name);
         
         /// <summary>
-        /// Save power profile
+        /// Gets active power profile
+        /// </summary>
+        /// <returns>Active power profile or null if not found</returns>
+        PowerProfile GetActiveProfile();
+        
+        /// <summary>
+        /// Creates new power profile
+        /// </summary>
+        /// <param name="name">Profile name</param>
+        /// <param name="description">Profile description</param>
+        /// <returns>New power profile</returns>
+        PowerProfile CreateProfile(string name, string description);
+        
+        /// <summary>
+        /// Saves power profile
         /// </summary>
         /// <param name="profile">Power profile</param>
-        /// <returns>True if successful</returns>
-        bool SaveProfile(BundledPowerProfile profile);
+        /// <returns>True if successful, false otherwise</returns>
+        bool SaveProfile(PowerProfile profile);
         
         /// <summary>
-        /// Delete power profile
+        /// Deletes power profile
         /// </summary>
-        /// <param name="profileId">Profile ID</param>
-        /// <returns>True if successful</returns>
-        bool DeleteProfile(int profileId);
+        /// <param name="profile">Power profile</param>
+        /// <returns>True if successful, false otherwise</returns>
+        bool DeleteProfile(PowerProfile profile);
         
         /// <summary>
-        /// Apply power profile
-        /// </summary>
-        /// <param name="profileId">Profile ID</param>
-        /// <returns>True if successful</returns>
-        bool ApplyProfile(int profileId);
-        
-        /// <summary>
-        /// Import power profile
+        /// Imports power profile from file
         /// </summary>
         /// <param name="filePath">File path</param>
-        /// <returns>Imported profile</returns>
-        BundledPowerProfile? ImportProfile(string filePath);
+        /// <returns>Imported power profile or null if import failed</returns>
+        PowerProfile ImportProfile(string filePath);
         
         /// <summary>
-        /// Export power profile
+        /// Exports power profile to file
         /// </summary>
-        /// <param name="profileId">Profile ID</param>
+        /// <param name="profile">Power profile</param>
         /// <param name="filePath">File path</param>
-        /// <returns>True if successful</returns>
-        bool ExportProfile(int profileId, string filePath);
+        /// <returns>True if successful, false otherwise</returns>
+        bool ExportProfile(PowerProfile profile, string filePath);
+        
+        /// <summary>
+        /// Applies power profile
+        /// </summary>
+        /// <param name="profile">Power profile</param>
+        /// <returns>True if successful, false otherwise</returns>
+        bool ApplyProfile(PowerProfile profile);
+        
+        /// <summary>
+        /// Gets all bundled power profiles
+        /// </summary>
+        /// <returns>List of bundled power profiles</returns>
+        IEnumerable<BundledPowerProfile> GetBundledProfiles();
+        
+        /// <summary>
+        /// Applies affinity rules from a power profile to all processes
+        /// </summary>
+        /// <param name="profile">Power profile</param>
+        /// <returns>Number of processes affected</returns>
+        int ApplyAffinityRules(PowerProfile profile);
     }
 }

@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Management;
+using System.Text.RegularExpressions;
 using ThreadPilot.Models;
 
 namespace ThreadPilot.Services
@@ -11,268 +14,367 @@ namespace ThreadPilot.Services
     /// </summary>
     public class ProcessService : IProcessService
     {
-        // Random for generating demo data
-        private readonly Random _random = new Random();
-        
-        // List of demo processes
-        private readonly List<ProcessInfo> _demoProcesses;
-        
         /// <summary>
-        /// Constructor
+        /// Gets all running processes
         /// </summary>
-        public ProcessService()
-        {
-            // Create demo processes
-            _demoProcesses = GenerateDemoProcesses();
-        }
-        
-        /// <summary>
-        /// Get all processes
-        /// </summary>
-        public IEnumerable<ProcessInfo> GetAllProcesses()
-        {
-            try
-            {
-                // In a real application, we would get the actual processes
-                // For now, we'll return demo data
-                
-                // Refresh demo processes
-                RefreshDemoProcesses();
-                
-                return _demoProcesses;
-            }
-            catch (Exception)
-            {
-                // In case of error, we'll return empty list
-                return new List<ProcessInfo>();
-            }
-        }
-        
-        /// <summary>
-        /// Get process by ID
-        /// </summary>
-        public ProcessInfo? GetProcessById(int processId)
-        {
-            try
-            {
-                // In a real application, we would get the actual process
-                // For now, we'll return demo data
-                
-                return _demoProcesses.FirstOrDefault(p => p.Id == processId);
-            }
-            catch (Exception)
-            {
-                // In case of error, we'll return null
-                return null;
-            }
-        }
-        
-        /// <summary>
-        /// Set process affinity
-        /// </summary>
-        public bool SetProcessAffinity(int processId, long affinityMask)
-        {
-            try
-            {
-                // In a real application, we would set the process affinity
-                // For now, we'll just update our demo data
-                
-                var process = _demoProcesses.FirstOrDefault(p => p.Id == processId);
-                
-                if (process == null)
-                {
-                    return false;
-                }
-                
-                process.AffinityMask = affinityMask;
-                
-                return true;
-            }
-            catch (Exception)
-            {
-                // In case of error, we'll return false
-                return false;
-            }
-        }
-        
-        /// <summary>
-        /// Set process priority
-        /// </summary>
-        public bool SetProcessPriority(int processId, ProcessPriority priority)
-        {
-            try
-            {
-                // In a real application, we would set the process priority
-                // For now, we'll just update our demo data
-                
-                var process = _demoProcesses.FirstOrDefault(p => p.Id == processId);
-                
-                if (process == null)
-                {
-                    return false;
-                }
-                
-                process.Priority = priority;
-                
-                return true;
-            }
-            catch (Exception)
-            {
-                // In case of error, we'll return false
-                return false;
-            }
-        }
-        
-        /// <summary>
-        /// Suspend process
-        /// </summary>
-        public bool SuspendProcess(int processId)
-        {
-            try
-            {
-                // In a real application, we would suspend the process
-                // For now, we'll just update our demo data
-                
-                var process = _demoProcesses.FirstOrDefault(p => p.Id == processId);
-                
-                if (process == null)
-                {
-                    return false;
-                }
-                
-                process.IsSuspended = true;
-                
-                return true;
-            }
-            catch (Exception)
-            {
-                // In case of error, we'll return false
-                return false;
-            }
-        }
-        
-        /// <summary>
-        /// Resume process
-        /// </summary>
-        public bool ResumeProcess(int processId)
-        {
-            try
-            {
-                // In a real application, we would resume the process
-                // For now, we'll just update our demo data
-                
-                var process = _demoProcesses.FirstOrDefault(p => p.Id == processId);
-                
-                if (process == null)
-                {
-                    return false;
-                }
-                
-                process.IsSuspended = false;
-                
-                return true;
-            }
-            catch (Exception)
-            {
-                // In case of error, we'll return false
-                return false;
-            }
-        }
-        
-        /// <summary>
-        /// Generate demo processes
-        /// </summary>
-        private List<ProcessInfo> GenerateDemoProcesses()
+        /// <returns>List of process information</returns>
+        public IEnumerable<ProcessInfo> GetProcesses()
         {
             var processes = new List<ProcessInfo>();
-            var coreCount = Environment.ProcessorCount;
             
-            // System processes
-            processes.Add(CreateProcess(1, "System", "Windows System Process", "C:\\Windows\\System32\\ntoskrnl.exe", 0.5, 50000, 8, (1 << coreCount) - 1, ProcessPriority.Realtime, false, true));
-            processes.Add(CreateProcess(4, "System Idle Process", "Windows System Process", "C:\\Windows\\System32\\ntoskrnl.exe", 0.1, 0, 1, (1 << coreCount) - 1, ProcessPriority.Idle, false, true));
-            processes.Add(CreateProcess(84, "Registry", "Windows Registry Service", "C:\\Windows\\System32\\smss.exe", 0.1, 2000, 2, (1 << coreCount) - 1, ProcessPriority.Normal, false, true));
-            processes.Add(CreateProcess(372, "smss.exe", "Session Manager Subsystem", "C:\\Windows\\System32\\smss.exe", 0.1, 900, 2, (1 << coreCount) - 1, ProcessPriority.Normal, false, true));
-            processes.Add(CreateProcess(476, "csrss.exe", "Client Server Runtime Process", "C:\\Windows\\System32\\csrss.exe", 0.2, 3600, 10, (1 << coreCount) - 1, ProcessPriority.Normal, false, true));
-            processes.Add(CreateProcess(552, "wininit.exe", "Windows Initialization Process", "C:\\Windows\\System32\\wininit.exe", 0.1, 4500, 3, (1 << coreCount) - 1, ProcessPriority.Normal, false, true));
-            processes.Add(CreateProcess(560, "winlogon.exe", "Windows Logon Process", "C:\\Windows\\System32\\winlogon.exe", 0.2, 5000, 5, (1 << coreCount) - 1, ProcessPriority.Normal, false, true));
-            processes.Add(CreateProcess(652, "services.exe", "Services Control Manager", "C:\\Windows\\System32\\services.exe", 0.3, 5200, 6, (1 << coreCount) - 1, ProcessPriority.Normal, false, true));
-            processes.Add(CreateProcess(676, "lsass.exe", "Local Security Authority Process", "C:\\Windows\\System32\\lsass.exe", 0.3, 11000, 12, (1 << coreCount) - 1, ProcessPriority.Normal, false, true));
-            processes.Add(CreateProcess(748, "svchost.exe", "Host Process for Windows Services", "C:\\Windows\\System32\\svchost.exe", 0.4, 8000, 16, (1 << coreCount) - 1, ProcessPriority.Normal, false, true));
-            
-            // User processes
-            processes.Add(CreateProcess(1056, "dwm.exe", "Desktop Window Manager", "C:\\Windows\\System32\\dwm.exe", 2.0, 75000, 12, (1 << coreCount) - 1, ProcessPriority.AboveNormal, false, false));
-            processes.Add(CreateProcess(1180, "explorer.exe", "Windows Explorer", "C:\\Windows\\explorer.exe", 1.5, 65000, 32, (1 << coreCount) - 1, ProcessPriority.Normal, false, false));
-            processes.Add(CreateProcess(3224, "chrome.exe", "Google Chrome", "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", 5.0, 250000, 35, (1 << coreCount) - 1, ProcessPriority.Normal, false, false));
-            processes.Add(CreateProcess(3352, "chrome.exe", "Google Chrome - Tab 1", "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", 2.5, 125000, 18, (1 << coreCount) - 1, ProcessPriority.Normal, false, false));
-            processes.Add(CreateProcess(3648, "chrome.exe", "Google Chrome - Tab 2", "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", 3.0, 145000, 22, (1 << coreCount) - 1, ProcessPriority.Normal, false, false));
-            processes.Add(CreateProcess(4152, "msedge.exe", "Microsoft Edge", "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", 4.0, 200000, 28, (1 << coreCount) - 1, ProcessPriority.Normal, false, false));
-            processes.Add(CreateProcess(5908, "Discord.exe", "Discord", "C:\\Users\\user\\AppData\\Local\\Discord\\app-1.0.9020\\Discord.exe", 1.8, 180000, 20, (1 << coreCount) - 1, ProcessPriority.Normal, false, false));
-            processes.Add(CreateProcess(6604, "Spotify.exe", "Spotify", "C:\\Users\\user\\AppData\\Roaming\\Spotify\\Spotify.exe", 1.2, 160000, 16, (1 << coreCount) - 1, ProcessPriority.Normal, false, false));
-            processes.Add(CreateProcess(7124, "Slack.exe", "Slack", "C:\\Users\\user\\AppData\\Local\\slack\\app-4.31.0\\slack.exe", 1.5, 170000, 18, (1 << coreCount) - 1, ProcessPriority.Normal, false, false));
-            processes.Add(CreateProcess(8752, "Teams.exe", "Microsoft Teams", "C:\\Users\\user\\AppData\\Local\\Microsoft\\Teams\\current\\Teams.exe", 2.2, 190000, 24, (1 << coreCount) - 1, ProcessPriority.Normal, false, false));
-            
-            // Office
-            processes.Add(CreateProcess(9480, "WINWORD.EXE", "Microsoft Word", "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE", 1.0, 110000, 12, (1 << coreCount) - 1, ProcessPriority.Normal, false, false));
-            processes.Add(CreateProcess(9876, "EXCEL.EXE", "Microsoft Excel", "C:\\Program Files\\Microsoft Office\\root\\Office16\\EXCEL.EXE", 1.5, 120000, 14, (1 << coreCount) - 1, ProcessPriority.Normal, false, false));
-            processes.Add(CreateProcess(10244, "OUTLOOK.EXE", "Microsoft Outlook", "C:\\Program Files\\Microsoft Office\\root\\Office16\\OUTLOOK.EXE", 1.2, 130000, 16, (1 << coreCount) - 1, ProcessPriority.Normal, false, false));
-            
-            // Games and other processes
-            processes.Add(CreateProcess(11568, "steam.exe", "Steam", "C:\\Program Files (x86)\\Steam\\steam.exe", 0.8, 85000, 22, (1 << coreCount) - 1, ProcessPriority.Normal, false, false));
-            processes.Add(CreateProcess(12328, "EpicGamesLauncher.exe", "Epic Games Launcher", "C:\\Program Files (x86)\\Epic Games\\Launcher\\Portal\\Binaries\\Win32\\EpicGamesLauncher.exe", 0.7, 75000, 18, (1 << coreCount) - 1, ProcessPriority.Normal, false, false));
-            processes.Add(CreateProcess(13072, "Battle.net.exe", "Battle.net", "C:\\Program Files (x86)\\Battle.net\\Battle.net.exe", 0.6, 68000, 16, (1 << coreCount) - 1, ProcessPriority.Normal, false, false));
-            processes.Add(CreateProcess(14356, "Photoshop.exe", "Adobe Photoshop", "C:\\Program Files\\Adobe\\Adobe Photoshop 2023\\Photoshop.exe", 2.8, 250000, 24, (1 << coreCount) - 1, ProcessPriority.Normal, false, false));
-            processes.Add(CreateProcess(15052, "AfterFX.exe", "Adobe After Effects", "C:\\Program Files\\Adobe\\Adobe After Effects 2023\\Support Files\\AfterFX.exe", 3.5, 300000, 28, (1 << coreCount) - 1, ProcessPriority.Normal, false, false));
-            processes.Add(CreateProcess(16784, "Premiere Pro.exe", "Adobe Premiere Pro", "C:\\Program Files\\Adobe\\Adobe Premiere Pro 2023\\Adobe Premiere Pro.exe", 4.0, 350000, 32, (1 << coreCount) - 1, ProcessPriority.Normal, false, false));
+            try
+            {
+                foreach (var process in Process.GetProcesses())
+                {
+                    try
+                    {
+                        var processInfo = GetProcessInfo(process);
+                        if (processInfo != null)
+                        {
+                            processes.Add(processInfo);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error getting process info for {process.ProcessName}: {ex.Message}");
+                    }
+                    finally
+                    {
+                        process.Dispose();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting processes: {ex.Message}");
+            }
             
             return processes;
         }
         
         /// <summary>
-        /// Create a process
+        /// Gets process by ID
         /// </summary>
-        private ProcessInfo CreateProcess(int id, string name, string description, string path, double cpuUsage, double memoryUsage, int threadCount, long affinityMask, ProcessPriority priority, bool isSuspended, bool isCritical)
+        /// <param name="processId">Process ID</param>
+        /// <returns>Process information or null if not found</returns>
+        public ProcessInfo GetProcessById(int processId)
         {
-            return new ProcessInfo
+            try
             {
-                Id = id,
-                Name = name,
-                Description = description,
-                Path = path,
-                CpuUsage = cpuUsage,
-                MemoryUsage = memoryUsage,
-                ThreadCount = threadCount,
-                AffinityMask = affinityMask,
-                Priority = priority,
-                IsSuspended = isSuspended,
-                IsCritical = isCritical
+                using (var process = Process.GetProcessById(processId))
+                {
+                    return GetProcessInfo(process);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting process by ID {processId}: {ex.Message}");
+                return null;
+            }
+        }
+        
+        /// <summary>
+        /// Gets processes by name
+        /// </summary>
+        /// <param name="processName">Process name</param>
+        /// <returns>List of process information</returns>
+        public IEnumerable<ProcessInfo> GetProcessesByName(string processName)
+        {
+            var processes = new List<ProcessInfo>();
+            
+            try
+            {
+                foreach (var process in Process.GetProcessesByName(processName))
+                {
+                    try
+                    {
+                        var processInfo = GetProcessInfo(process);
+                        if (processInfo != null)
+                        {
+                            processes.Add(processInfo);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error getting process info for {process.ProcessName}: {ex.Message}");
+                    }
+                    finally
+                    {
+                        process.Dispose();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting processes by name {processName}: {ex.Message}");
+            }
+            
+            return processes;
+        }
+        
+        /// <summary>
+        /// Sets process affinity (which cores the process can use)
+        /// </summary>
+        /// <param name="processId">Process ID</param>
+        /// <param name="affinityMask">Affinity mask (bit mask where each bit represents a core)</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool SetProcessAffinity(int processId, long affinityMask)
+        {
+            try
+            {
+                using (var process = Process.GetProcessById(processId))
+                {
+                    process.ProcessorAffinity = new IntPtr(affinityMask);
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error setting process affinity for ID {processId}: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Sets process priority
+        /// </summary>
+        /// <param name="processId">Process ID</param>
+        /// <param name="priority">Process priority</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool SetProcessPriority(int processId, ProcessPriority priority)
+        {
+            try
+            {
+                using (var process = Process.GetProcessById(processId))
+                {
+                    process.PriorityClass = GetSystemPriorityClass(priority);
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error setting process priority for ID {processId}: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Applies process affinity rules to matching processes
+        /// </summary>
+        /// <param name="rules">List of process affinity rules</param>
+        /// <returns>Number of processes affected</returns>
+        public int ApplyAffinityRules(IEnumerable<ProcessAffinityRule> rules)
+        {
+            int affectedCount = 0;
+            
+            try
+            {
+                var processes = Process.GetProcesses();
+                
+                foreach (var rule in rules.Where(r => r.IsEnabled))
+                {
+                    var regex = new Regex(rule.ProcessNamePattern, RegexOptions.IgnoreCase);
+                    var affinityMask = GetAffinityMask(rule.CoreIndices);
+                    
+                    foreach (var process in processes)
+                    {
+                        try
+                        {
+                            if (regex.IsMatch(process.ProcessName))
+                            {
+                                // Set process affinity
+                                process.ProcessorAffinity = new IntPtr(affinityMask);
+                                
+                                // Set process priority
+                                process.PriorityClass = GetSystemPriorityClass(rule.ProcessPriority);
+                                
+                                affectedCount++;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"Error applying rule to process {process.ProcessName}: {ex.Message}");
+                        }
+                    }
+                }
+                
+                // Dispose all processes
+                foreach (var process in processes)
+                {
+                    process.Dispose();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error applying process affinity rules: {ex.Message}");
+            }
+            
+            return affectedCount;
+        }
+        
+        /// <summary>
+        /// Gets process information
+        /// </summary>
+        /// <param name="process">Process</param>
+        /// <returns>Process information</returns>
+        private ProcessInfo GetProcessInfo(Process process)
+        {
+            if (process == null || process.Id == 0)
+            {
+                return null;
+            }
+            
+            try
+            {
+                var processInfo = new ProcessInfo
+                {
+                    Id = process.Id,
+                    Name = process.ProcessName,
+                    Description = GetProcessDescription(process),
+                    Priority = GetProcessPriority(process.PriorityClass),
+                    Affinity = (long)process.ProcessorAffinity,
+                    ThreadCount = process.Threads.Count
+                };
+                
+                // Get CPU and memory usage if process has not exited
+                if (!process.HasExited)
+                {
+                    try
+                    {
+                        process.Refresh();
+                        processInfo.CpuUsagePercentage = GetProcessCpuUsage(process);
+                        processInfo.MemoryUsageMB = process.WorkingSet64 / (1024 * 1024);
+                    }
+                    catch (Exception)
+                    {
+                        // Ignore errors getting CPU/memory usage
+                    }
+                }
+                
+                return processInfo;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+        
+        /// <summary>
+        /// Gets process description from file version info
+        /// </summary>
+        /// <param name="process">Process</param>
+        /// <returns>Process description or empty string if not available</returns>
+        private string GetProcessDescription(Process process)
+        {
+            try
+            {
+                if (process.MainModule != null && !string.IsNullOrEmpty(process.MainModule.FileName))
+                {
+                    var fileVersionInfo = FileVersionInfo.GetVersionInfo(process.MainModule.FileName);
+                    return fileVersionInfo.FileDescription ?? process.ProcessName;
+                }
+            }
+            catch (Exception)
+            {
+                // Ignore errors getting file description
+            }
+            
+            return process.ProcessName;
+        }
+        
+        /// <summary>
+        /// Gets process CPU usage
+        /// </summary>
+        /// <param name="process">Process</param>
+        /// <returns>CPU usage percentage</returns>
+        private float GetProcessCpuUsage(Process process)
+        {
+            // This is a simplified implementation 
+            // Real implementation would require performance counters for accurate CPU usage per process
+            
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher(
+                    $"SELECT PercentProcessorTime FROM Win32_PerfFormattedData_PerfProc_Process WHERE IDProcess = {process.Id}"))
+                {
+                    foreach (var obj in searcher.Get())
+                    {
+                        var cpuUsage = Convert.ToSingle(obj["PercentProcessorTime"]);
+                        return cpuUsage;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Ignore errors getting CPU usage
+            }
+            
+            // Return estimate based on process priority
+            return process.PriorityClass switch
+            {
+                ProcessPriorityClass.RealTime => 90,
+                ProcessPriorityClass.High => 70,
+                ProcessPriorityClass.AboveNormal => 50,
+                ProcessPriorityClass.Normal => 30,
+                ProcessPriorityClass.BelowNormal => 15,
+                ProcessPriorityClass.Idle => 5,
+                _ => 0
             };
         }
         
         /// <summary>
-        /// Refresh demo processes
+        /// Converts system priority class to process priority enum
         /// </summary>
-        private void RefreshDemoProcesses()
+        /// <param name="priorityClass">System priority class</param>
+        /// <returns>Process priority enum</returns>
+        private ProcessPriority GetProcessPriority(ProcessPriorityClass priorityClass)
         {
-            // Update CPU and memory usage for each process
-            foreach (var process in _demoProcesses)
+            return priorityClass switch
             {
-                if (!process.IsSuspended)
-                {
-                    // Fluctuate CPU usage
-                    process.CpuUsage += _random.NextDouble() * 2 - 1;
-                    if (process.CpuUsage < 0.1) process.CpuUsage = 0.1;
-                    if (process.CpuUsage > 100) process.CpuUsage = 100;
-                    
-                    // Fluctuate memory usage
-                    process.MemoryUsage += (_random.NextDouble() * 2 - 1) * 1000;
-                    if (process.MemoryUsage < 100) process.MemoryUsage = 100;
-                }
-                else
-                {
-                    // Suspended processes have 0 CPU usage
-                    process.CpuUsage = 0;
-                }
+                ProcessPriorityClass.RealTime => ProcessPriority.Realtime,
+                ProcessPriorityClass.High => ProcessPriority.High,
+                ProcessPriorityClass.AboveNormal => ProcessPriority.AboveNormal,
+                ProcessPriorityClass.Normal => ProcessPriority.Normal,
+                ProcessPriorityClass.BelowNormal => ProcessPriority.BelowNormal,
+                ProcessPriorityClass.Idle => ProcessPriority.Idle,
+                _ => ProcessPriority.Normal
+            };
+        }
+        
+        /// <summary>
+        /// Converts process priority enum to system priority class
+        /// </summary>
+        /// <param name="priority">Process priority enum</param>
+        /// <returns>System priority class</returns>
+        private ProcessPriorityClass GetSystemPriorityClass(ProcessPriority priority)
+        {
+            return priority switch
+            {
+                ProcessPriority.Realtime => ProcessPriorityClass.RealTime,
+                ProcessPriority.High => ProcessPriorityClass.High,
+                ProcessPriority.AboveNormal => ProcessPriorityClass.AboveNormal,
+                ProcessPriority.Normal => ProcessPriorityClass.Normal,
+                ProcessPriority.BelowNormal => ProcessPriorityClass.BelowNormal,
+                ProcessPriority.Idle => ProcessPriorityClass.Idle,
+                _ => ProcessPriorityClass.Normal
+            };
+        }
+        
+        /// <summary>
+        /// Gets affinity mask from core indices
+        /// </summary>
+        /// <param name="coreIndices">Core indices</param>
+        /// <returns>Affinity mask</returns>
+        private long GetAffinityMask(IEnumerable<int> coreIndices)
+        {
+            long affinityMask = 0;
+            
+            foreach (var coreIndex in coreIndices)
+            {
+                affinityMask |= (1L << coreIndex);
             }
+            
+            return affinityMask == 0 ? (1L << Environment.ProcessorCount) - 1 : affinityMask;
         }
     }
 }

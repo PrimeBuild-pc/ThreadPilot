@@ -1,6 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Timers;
+using System.Linq;
 using System.Windows.Input;
 using ThreadPilot.Commands;
 using ThreadPilot.Models;
@@ -13,44 +13,82 @@ namespace ThreadPilot.ViewModels
     /// </summary>
     public class ProcessesViewModel : ViewModelBase
     {
-        // Selected process
-        private ProcessInfo? _selectedProcess;
-        
-        // Process service
         private readonly IProcessService _processService;
-        
-        // Notification service
-        private readonly INotificationService _notificationService;
-        
-        // Timer for updating processes
-        private readonly Timer _updateTimer;
-        
+        private ProcessInfo _selectedProcess;
+        private string _searchText;
+        private bool _showAllProcesses;
+
         /// <summary>
         /// Constructor
         /// </summary>
         public ProcessesViewModel()
         {
             // Get services
-            _processService = ServiceLocator.Get<IProcessService>();
-            _notificationService = ServiceLocator.Get<INotificationService>();
+            _processService = ServiceLocator.Resolve<IProcessService>();
             
-            // Initialize collections
+            // Initialize properties
             Processes = new ObservableCollection<ProcessInfo>();
+            AvailablePriorities = new ObservableCollection<ProcessPriority>(Enum.GetValues(typeof(ProcessPriority)).Cast<ProcessPriority>());
             
-            // Create commands
-            RefreshCommand = new RelayCommand(Refresh);
-            SetAffinityCommand = new RelayCommand(SetAffinity, CanModifyProcess);
-            SetPriorityCommand = new RelayCommand<ProcessPriority>(SetPriority, CanModifyProcess);
-            SuspendProcessCommand = new RelayCommand(SuspendProcess, CanSuspendProcess);
-            ResumeProcessCommand = new RelayCommand(ResumeProcess, CanResumeProcess);
+            // Initialize commands
+            RefreshCommand = new RelayCommand(_ => RefreshProcesses());
+            SetPriorityCommand = new RelayCommand<ProcessPriority>(priority => SetProcessPriority(priority), _ => SelectedProcess != null);
+            SetAffinityCommand = new RelayCommand<int[]>(coreIndices => SetProcessAffinity(coreIndices), _ => SelectedProcess != null);
+            TerminateProcessCommand = new RelayCommand(_ => TerminateProcess(), _ => SelectedProcess != null);
             
-            // Create timer
-            _updateTimer = new Timer(5000);
-            _updateTimer.Elapsed += UpdateTimer_Elapsed;
-            _updateTimer.Start();
-            
-            // Initial refresh
-            Refresh(null);
+            // Initial load
+            RefreshProcesses();
+        }
+        
+        /// <summary>
+        /// Processes collection
+        /// </summary>
+        public ObservableCollection<ProcessInfo> Processes { get; }
+        
+        /// <summary>
+        /// Available process priorities
+        /// </summary>
+        public ObservableCollection<ProcessPriority> AvailablePriorities { get; }
+        
+        /// <summary>
+        /// Selected process
+        /// </summary>
+        public ProcessInfo SelectedProcess
+        {
+            get => _selectedProcess;
+            set => SetProperty(ref _selectedProcess, value);
+        }
+        
+        /// <summary>
+        /// Search text
+        /// </summary>
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                if (SetProperty(ref _searchText, value))
+                {
+                    // Refresh with filter
+                    RefreshProcesses();
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Gets or sets a value indicating whether to show all processes
+        /// </summary>
+        public bool ShowAllProcesses
+        {
+            get => _showAllProcesses;
+            set
+            {
+                if (SetProperty(ref _showAllProcesses, value))
+                {
+                    // Refresh with updated setting
+                    RefreshProcesses();
+                }
+            }
         }
         
         /// <summary>
@@ -59,229 +97,142 @@ namespace ThreadPilot.ViewModels
         public ICommand RefreshCommand { get; }
         
         /// <summary>
-        /// Set affinity command
-        /// </summary>
-        public ICommand SetAffinityCommand { get; }
-        
-        /// <summary>
         /// Set priority command
         /// </summary>
         public ICommand SetPriorityCommand { get; }
         
         /// <summary>
-        /// Suspend process command
+        /// Set affinity command
         /// </summary>
-        public ICommand SuspendProcessCommand { get; }
+        public ICommand SetAffinityCommand { get; }
         
         /// <summary>
-        /// Resume process command
+        /// Terminate process command
         /// </summary>
-        public ICommand ResumeProcessCommand { get; }
+        public ICommand TerminateProcessCommand { get; }
         
         /// <summary>
-        /// Processes
+        /// Refresh processes
         /// </summary>
-        public ObservableCollection<ProcessInfo> Processes { get; }
-        
-        /// <summary>
-        /// Selected process
-        /// </summary>
-        public ProcessInfo? SelectedProcess
+        private void RefreshProcesses()
         {
-            get => _selectedProcess;
-            set
+            if (_processService == null)
             {
-                if (SetProperty(ref _selectedProcess, value))
-                {
-                    ((RelayCommand)SetAffinityCommand).RaiseCanExecuteChanged();
-                    ((RelayCommand<ProcessPriority>)SetPriorityCommand).RaiseCanExecuteChanged();
-                    ((RelayCommand)SuspendProcessCommand).RaiseCanExecuteChanged();
-                    ((RelayCommand)ResumeProcessCommand).RaiseCanExecuteChanged();
-                }
+                return;
             }
-        }
-        
-        /// <summary>
-        /// Timer elapsed event handler
-        /// </summary>
-        private void UpdateTimer_Elapsed(object? sender, ElapsedEventArgs e)
-        {
-            Refresh(null);
-        }
-        
-        /// <summary>
-        /// Refresh
-        /// </summary>
-        private void Refresh(object? parameter)
-        {
-            try
+            
+            Processes.Clear();
+            
+            var processes = _processService.GetProcesses();
+            
+            // Apply filters
+            if (!string.IsNullOrWhiteSpace(SearchText))
             {
-                var selectedProcessId = SelectedProcess?.Id;
+                processes = processes.Where(p => 
+                    p.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) || 
+                    p.Description.Contains(SearchText, StringComparison.OrdinalIgnoreCase)).ToArray();
+            }
+            
+            if (!ShowAllProcesses)
+            {
+                // Show only processes that use CPU
+                processes = processes.Where(p => p.CpuUsagePercentage > 0.1f).ToArray();
+            }
+            
+            foreach (var process in processes)
+            {
+                Processes.Add(process);
+            }
+            
+            // Reset selection
+            SelectedProcess = null;
+        }
+        
+        /// <summary>
+        /// Set process priority
+        /// </summary>
+        /// <param name="priority">Priority to set</param>
+        private void SetProcessPriority(ProcessPriority priority)
+        {
+            if (SelectedProcess == null || _processService == null)
+            {
+                return;
+            }
+            
+            bool success = _processService.SetProcessPriority(SelectedProcess.Id, priority);
+            
+            var notification = ServiceLocator.Resolve<INotificationService>();
+            if (success)
+            {
+                SelectedProcess.Priority = priority;
+                OnPropertyChanged(nameof(SelectedProcess));
                 
-                // Get processes
-                Processes.Clear();
-                foreach (var process in _processService.GetAllProcesses())
-                {
-                    Processes.Add(process);
-                }
+                notification?.ShowSuccess($"Priority set to {priority} for process '{SelectedProcess.Name}'.", "Priority Set");
+            }
+            else
+            {
+                notification?.ShowError($"Failed to set priority for process '{SelectedProcess.Name}'.", "Error");
+            }
+        }
+        
+        /// <summary>
+        /// Set process affinity
+        /// </summary>
+        /// <param name="coreIndices">Core indices</param>
+        private void SetProcessAffinity(int[] coreIndices)
+        {
+            if (SelectedProcess == null || _processService == null || coreIndices == null || coreIndices.Length == 0)
+            {
+                return;
+            }
+            
+            bool success = _processService.SetProcessAffinity(SelectedProcess.Id, coreIndices);
+            
+            var notification = ServiceLocator.Resolve<INotificationService>();
+            if (success)
+            {
+                SelectedProcess.SetAffinity(coreIndices);
+                OnPropertyChanged(nameof(SelectedProcess));
                 
-                // Restore selected process
-                if (selectedProcessId.HasValue)
-                {
-                    SelectedProcess = Processes.FirstOrDefault(p => p.Id == selectedProcessId);
-                }
+                notification?.ShowSuccess($"Affinity set for process '{SelectedProcess.Name}'.", "Affinity Set");
             }
-            catch (Exception ex)
+            else
             {
-                _notificationService.ShowError($"Error refreshing processes: {ex.Message}");
+                notification?.ShowError($"Failed to set affinity for process '{SelectedProcess.Name}'.", "Error");
             }
         }
         
         /// <summary>
-        /// Set affinity
+        /// Terminate process
         /// </summary>
-        private void SetAffinity(object? parameter)
+        private void TerminateProcess()
         {
-            if (SelectedProcess == null)
+            if (SelectedProcess == null || _processService == null)
             {
                 return;
             }
             
-            try
+            var notification = ServiceLocator.Resolve<INotificationService>();
+            bool confirm = notification?.ShowConfirmation($"Are you sure you want to terminate process '{SelectedProcess.Name}'?", "Confirm Termination") ?? false;
+            
+            if (!confirm)
             {
-                // In a real application, we would show a dialog here
-                var affinityMask = 0xFFFF; // Just for demo
+                return;
+            }
+            
+            bool success = _processService.TerminateProcess(SelectedProcess.Id);
+            
+            if (success)
+            {
+                Processes.Remove(SelectedProcess);
+                SelectedProcess = null;
                 
-                if (_processService.SetProcessAffinity(SelectedProcess.Id, affinityMask))
-                {
-                    _notificationService.ShowSuccess($"Process '{SelectedProcess.Name}' affinity set successfully");
-                    
-                    // Refresh to show the changes
-                    Refresh(null);
-                }
-                else
-                {
-                    _notificationService.ShowError($"Failed to set process '{SelectedProcess.Name}' affinity");
-                }
+                notification?.ShowSuccess("Process terminated successfully.", "Process Terminated");
             }
-            catch (Exception ex)
+            else
             {
-                _notificationService.ShowError($"Error setting process affinity: {ex.Message}");
+                notification?.ShowError("Failed to terminate process.", "Error");
             }
-        }
-        
-        /// <summary>
-        /// Set priority
-        /// </summary>
-        private void SetPriority(ProcessPriority? priority)
-        {
-            if (SelectedProcess == null || priority == null)
-            {
-                return;
-            }
-            
-            try
-            {
-                if (_processService.SetProcessPriority(SelectedProcess.Id, priority.Value))
-                {
-                    _notificationService.ShowSuccess($"Process '{SelectedProcess.Name}' priority set to {priority}");
-                    
-                    // Refresh to show the changes
-                    Refresh(null);
-                }
-                else
-                {
-                    _notificationService.ShowError($"Failed to set process '{SelectedProcess.Name}' priority");
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error setting process priority: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Suspend process
-        /// </summary>
-        private void SuspendProcess(object? parameter)
-        {
-            if (SelectedProcess == null)
-            {
-                return;
-            }
-            
-            try
-            {
-                if (_processService.SuspendProcess(SelectedProcess.Id))
-                {
-                    _notificationService.ShowSuccess($"Process '{SelectedProcess.Name}' suspended successfully");
-                    
-                    // Refresh to show the changes
-                    Refresh(null);
-                }
-                else
-                {
-                    _notificationService.ShowError($"Failed to suspend process '{SelectedProcess.Name}'");
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error suspending process: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Resume process
-        /// </summary>
-        private void ResumeProcess(object? parameter)
-        {
-            if (SelectedProcess == null)
-            {
-                return;
-            }
-            
-            try
-            {
-                if (_processService.ResumeProcess(SelectedProcess.Id))
-                {
-                    _notificationService.ShowSuccess($"Process '{SelectedProcess.Name}' resumed successfully");
-                    
-                    // Refresh to show the changes
-                    Refresh(null);
-                }
-                else
-                {
-                    _notificationService.ShowError($"Failed to resume process '{SelectedProcess.Name}'");
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error resuming process: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Can modify process
-        /// </summary>
-        private bool CanModifyProcess(object? parameter)
-        {
-            return SelectedProcess != null && !SelectedProcess.IsCritical;
-        }
-        
-        /// <summary>
-        /// Can suspend process
-        /// </summary>
-        private bool CanSuspendProcess(object? parameter)
-        {
-            return SelectedProcess != null && !SelectedProcess.IsSuspended && !SelectedProcess.IsCritical;
-        }
-        
-        /// <summary>
-        /// Can resume process
-        /// </summary>
-        private bool CanResumeProcess(object? parameter)
-        {
-            return SelectedProcess != null && SelectedProcess.IsSuspended && !SelectedProcess.IsCritical;
         }
     }
 }

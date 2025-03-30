@@ -1,6 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Timers;
+using System.Linq;
 using System.Windows.Input;
 using ThreadPilot.Commands;
 using ThreadPilot.Models;
@@ -13,20 +13,11 @@ namespace ThreadPilot.ViewModels
     /// </summary>
     public class CpuCoresViewModel : ViewModelBase
     {
-        // Selected core
-        private CpuCore? _selectedCore;
-        
-        // System info
-        private SystemInfo? _systemInfo;
-        
-        // System info service
         private readonly ISystemInfoService _systemInfoService;
-        
-        // Notification service
-        private readonly INotificationService _notificationService;
-        
-        // Timer for updating system info
-        private readonly Timer _updateTimer;
+        private CpuCore _selectedCore;
+        private bool _showOnlyPerformanceCores;
+        private bool _showOnlyEfficiencyCores;
+        private string _searchText;
         
         /// <summary>
         /// Constructor
@@ -34,23 +25,87 @@ namespace ThreadPilot.ViewModels
         public CpuCoresViewModel()
         {
             // Get services
-            _systemInfoService = ServiceLocator.Get<ISystemInfoService>();
-            _notificationService = ServiceLocator.Get<INotificationService>();
+            _systemInfoService = ServiceLocator.Resolve<ISystemInfoService>();
             
-            // Initialize collections
+            // Initialize properties
             CpuCores = new ObservableCollection<CpuCore>();
             
-            // Create commands
-            RefreshCommand = new RelayCommand(Refresh);
-            UnparkAllCoresCommand = new RelayCommand(UnparkAllCores);
+            // Initialize commands
+            RefreshCommand = new RelayCommand(_ => RefreshCores());
             
-            // Create timer
-            _updateTimer = new Timer(3000);
-            _updateTimer.Elapsed += UpdateTimer_Elapsed;
-            _updateTimer.Start();
-            
-            // Initial refresh
-            Refresh(null);
+            // Initial load
+            RefreshCores();
+        }
+        
+        /// <summary>
+        /// CPU cores collection
+        /// </summary>
+        public ObservableCollection<CpuCore> CpuCores { get; }
+        
+        /// <summary>
+        /// Selected core
+        /// </summary>
+        public CpuCore SelectedCore
+        {
+            get => _selectedCore;
+            set => SetProperty(ref _selectedCore, value);
+        }
+        
+        /// <summary>
+        /// Gets or sets a value indicating whether to show only performance cores
+        /// </summary>
+        public bool ShowOnlyPerformanceCores
+        {
+            get => _showOnlyPerformanceCores;
+            set
+            {
+                if (SetProperty(ref _showOnlyPerformanceCores, value))
+                {
+                    // Can't have both filters enabled
+                    if (value && ShowOnlyEfficiencyCores)
+                    {
+                        ShowOnlyEfficiencyCores = false;
+                    }
+                    
+                    RefreshCores();
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Gets or sets a value indicating whether to show only efficiency cores
+        /// </summary>
+        public bool ShowOnlyEfficiencyCores
+        {
+            get => _showOnlyEfficiencyCores;
+            set
+            {
+                if (SetProperty(ref _showOnlyEfficiencyCores, value))
+                {
+                    // Can't have both filters enabled
+                    if (value && ShowOnlyPerformanceCores)
+                    {
+                        ShowOnlyPerformanceCores = false;
+                    }
+                    
+                    RefreshCores();
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Search text
+        /// </summary>
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                if (SetProperty(ref _searchText, value))
+                {
+                    RefreshCores();
+                }
+            }
         }
         
         /// <summary>
@@ -59,89 +114,42 @@ namespace ThreadPilot.ViewModels
         public ICommand RefreshCommand { get; }
         
         /// <summary>
-        /// Unpark all cores command
+        /// Refresh cores
         /// </summary>
-        public ICommand UnparkAllCoresCommand { get; }
-        
-        /// <summary>
-        /// CPU cores
-        /// </summary>
-        public ObservableCollection<CpuCore> CpuCores { get; }
-        
-        /// <summary>
-        /// System info
-        /// </summary>
-        public SystemInfo? SystemInfo
+        private void RefreshCores()
         {
-            get => _systemInfo;
-            set => SetProperty(ref _systemInfo, value);
-        }
-        
-        /// <summary>
-        /// Selected core
-        /// </summary>
-        public CpuCore? SelectedCore
-        {
-            get => _selectedCore;
-            set => SetProperty(ref _selectedCore, value);
-        }
-        
-        /// <summary>
-        /// Timer elapsed event handler
-        /// </summary>
-        private void UpdateTimer_Elapsed(object? sender, ElapsedEventArgs e)
-        {
-            Refresh(null);
-        }
-        
-        /// <summary>
-        /// Refresh
-        /// </summary>
-        private void Refresh(object? parameter)
-        {
-            try
+            if (_systemInfoService == null)
             {
-                var selectedCoreId = SelectedCore?.Id;
-                
-                // Get system info
-                SystemInfo = _systemInfoService.GetSystemInfo();
-                
-                // Update cores
-                CpuCores.Clear();
-                foreach (var core in SystemInfo.CpuCores)
-                {
-                    CpuCores.Add(core);
-                }
-                
-                // Restore selected core
-                if (selectedCoreId.HasValue)
-                {
-                    SelectedCore = CpuCores.FirstOrDefault(c => c.Id == selectedCoreId);
-                }
+                return;
             }
-            catch (Exception ex)
+            
+            CpuCores.Clear();
+            
+            var systemInfo = _systemInfoService.GetSystemInfo();
+            var cores = systemInfo?.CpuCores?.ToArray() ?? Array.Empty<CpuCore>();
+            
+            // Apply filters
+            if (ShowOnlyPerformanceCores)
             {
-                _notificationService.ShowError($"Error refreshing CPU cores: {ex.Message}");
+                cores = cores.Where(c => c.IsPerformanceCore).ToArray();
             }
-        }
-        
-        /// <summary>
-        /// Unpark all cores
-        /// </summary>
-        private void UnparkAllCores(object? parameter)
-        {
-            try
+            else if (ShowOnlyEfficiencyCores)
             {
-                _systemInfoService.UnparkAllCores();
-                _notificationService.ShowSuccess("All CPU cores unparked successfully");
-                
-                // Refresh to show the changes
-                Refresh(null);
+                cores = cores.Where(c => !c.IsPerformanceCore).ToArray();
             }
-            catch (Exception ex)
+            
+            if (!string.IsNullOrWhiteSpace(SearchText))
             {
-                _notificationService.ShowError($"Error unparking cores: {ex.Message}");
+                cores = cores.Where(c => c.CoreName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)).ToArray();
             }
+            
+            foreach (var core in cores)
+            {
+                CpuCores.Add(core);
+            }
+            
+            // Reset selection
+            SelectedCore = null;
         }
     }
 }
