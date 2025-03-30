@@ -4,38 +4,56 @@ using System.Collections.Generic;
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Service locator for dependency injection
+    /// Service locator
     /// </summary>
     public static class ServiceLocator
     {
-        // Dictionary of services
+        // Services dictionary
         private static readonly Dictionary<Type, object> Services = new Dictionary<Type, object>();
         
         /// <summary>
-        /// Initialize the service locator
+        /// Initialize services
         /// </summary>
         public static void Initialize()
         {
             // Register services
-            RegisterService<INotificationService>(new NotificationService());
-            RegisterService<IFileDialogService>(new FileDialogService());
-            RegisterService<ISystemInfoService>(new SystemInfoService());
-            RegisterService<IProcessService>(new ProcessService());
-            RegisterService<IPowerProfileService>(new PowerProfileService());
+            Register<INotificationService>(new NotificationService());
+            Register<IFileDialogService>(new FileDialogService());
+            Register<ISystemInfoService>(new SystemInfoService());
+            Register<IProcessService>(new ProcessService());
+            Register<IPowerProfileService>(new PowerProfileService());
         }
         
         /// <summary>
-        /// Register a service
+        /// Cleanup services
         /// </summary>
-        public static void RegisterService<T>(object service)
+        public static void Cleanup()
+        {
+            // Dispose services
+            foreach (var service in Services.Values)
+            {
+                if (service is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
+            }
+            
+            // Clear services
+            Services.Clear();
+        }
+        
+        /// <summary>
+        /// Register service
+        /// </summary>
+        public static void Register<T>(T service) where T : class
         {
             Services[typeof(T)] = service;
         }
         
         /// <summary>
-        /// Get a service
+        /// Get service
         /// </summary>
-        public static T Get<T>()
+        public static T Get<T>() where T : class
         {
             if (Services.TryGetValue(typeof(T), out var service))
             {

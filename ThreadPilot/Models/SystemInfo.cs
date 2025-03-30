@@ -4,69 +4,47 @@ using System.Collections.Generic;
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Model class for system information
+    /// System information
     /// </summary>
     public class SystemInfo
     {
         /// <summary>
+        /// Constructor
+        /// </summary>
+        public SystemInfo()
+        {
+            CpuCores = new List<CpuCore>();
+        }
+        
+        /// <summary>
         /// CPU name
         /// </summary>
-        public string CpuName { get; set; } = string.Empty;
+        public string? CpuName { get; set; }
         
         /// <summary>
-        /// Number of physical CPU cores
+        /// CPU usage
         /// </summary>
-        public int PhysicalCores { get; set; }
+        public double CpuUsage { get; set; }
         
         /// <summary>
-        /// Number of logical CPU cores
-        /// </summary>
-        public int LogicalCores { get; set; }
-        
-        /// <summary>
-        /// CPU base clock speed in MHz
-        /// </summary>
-        public double CpuBaseClockMhz { get; set; }
-        
-        /// <summary>
-        /// Current CPU clock speed in MHz
-        /// </summary>
-        public double CpuCurrentClockMhz { get; set; }
-        
-        /// <summary>
-        /// Current CPU load as a percentage
-        /// </summary>
-        public double CpuLoad { get; set; }
-        
-        /// <summary>
-        /// CPU temperature in Celsius
+        /// CPU temperature
         /// </summary>
         public double CpuTemperature { get; set; }
         
         /// <summary>
-        /// Total RAM in GB
+        /// CPU frequency
         /// </summary>
-        public double TotalRamGb { get; set; }
+        public double CpuFrequency { get; set; }
         
         /// <summary>
-        /// Available RAM in GB
+        /// Operating system name
         /// </summary>
-        public double AvailableRamGb { get; set; }
+        public string? OsName { get; set; }
         
         /// <summary>
-        /// RAM usage as a percentage
+        /// Operating system version
         /// </summary>
-        public double RamUsagePercent { get; set; }
-        
-        /// <summary>
-        /// List of core loads for each logical core
-        /// </summary>
-        public List<double> CoreLoads { get; set; } = new();
-        
-        /// <summary>
-        /// Operating system information
-        /// </summary>
-        public string OperatingSystem { get; set; } = string.Empty;
+        public string? OsVersion { get; set; }
         
         /// <summary>
         /// System uptime
@@ -74,8 +52,38 @@ namespace ThreadPilot.Models
         public TimeSpan Uptime { get; set; }
         
         /// <summary>
-        /// Time the info was captured
+        /// Process count
         /// </summary>
-        public DateTime CaptureTime { get; set; } = DateTime.Now;
+        public int ProcessCount { get; set; }
+        
+        /// <summary>
+        /// Thread count
+        /// </summary>
+        public int ThreadCount { get; set; }
+        
+        /// <summary>
+        /// Total memory (KB)
+        /// </summary>
+        public double TotalMemory { get; set; }
+        
+        /// <summary>
+        /// Available memory (KB)
+        /// </summary>
+        public double AvailableMemory { get; set; }
+        
+        /// <summary>
+        /// Used memory (KB)
+        /// </summary>
+        public double UsedMemory { get; set; }
+        
+        /// <summary>
+        /// Memory usage (percentage)
+        /// </summary>
+        public double MemoryUsage { get; set; }
+        
+        /// <summary>
+        /// CPU cores
+        /// </summary>
+        public List<CpuCore> CpuCores { get; }
     }
 }

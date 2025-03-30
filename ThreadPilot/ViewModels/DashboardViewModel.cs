@@ -1,35 +1,79 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Timers;
 using System.Windows.Input;
-using ThreadPilot.Helpers;
+using ThreadPilot.Commands;
 using ThreadPilot.Models;
 using ThreadPilot.Services;
 
 namespace ThreadPilot.ViewModels
 {
     /// <summary>
-    /// View model for the dashboard page
+    /// Dashboard view model
     /// </summary>
     public class DashboardViewModel : ViewModelBase
     {
-        // Dependencies
-        private readonly ISystemInfoService _systemInfoService;
-        private readonly IPowerProfileService _powerProfileService;
-        private readonly IProcessService _processService;
+        // Selected profile
+        private BundledPowerProfile? _selectedProfile;
         
-        // Timer for refreshing system info
-        private readonly Timer _refreshTimer;
-        
-        // Backing fields
+        // System info
         private SystemInfo? _systemInfo;
-        private BundledPowerProfile? _activePowerProfile;
-        private ObservableCollection<ProcessInfo> _topProcesses = new ObservableCollection<ProcessInfo>();
-        private bool _isBusy;
+        
+        // System info service
+        private readonly ISystemInfoService _systemInfoService;
+        
+        // Power profile service
+        private readonly IPowerProfileService _powerProfileService;
+        
+        // Notification service
+        private readonly INotificationService _notificationService;
+        
+        // Timer for updating system info
+        private readonly Timer _updateTimer;
         
         /// <summary>
-        /// System information
+        /// Constructor
+        /// </summary>
+        public DashboardViewModel()
+        {
+            // Get services
+            _systemInfoService = ServiceLocator.Get<ISystemInfoService>();
+            _powerProfileService = ServiceLocator.Get<IPowerProfileService>();
+            _notificationService = ServiceLocator.Get<INotificationService>();
+            
+            // Initialize collections
+            PowerProfiles = new ObservableCollection<BundledPowerProfile>();
+            
+            // Create commands
+            RefreshCommand = new RelayCommand(Refresh);
+            ApplyProfileCommand = new RelayCommand(ApplyProfile, CanApplyProfile);
+            
+            // Create timer
+            _updateTimer = new Timer(1000);
+            _updateTimer.Elapsed += UpdateTimer_Elapsed;
+            _updateTimer.Start();
+            
+            // Initial refresh
+            Refresh(null);
+        }
+        
+        /// <summary>
+        /// Refresh command
+        /// </summary>
+        public ICommand RefreshCommand { get; }
+        
+        /// <summary>
+        /// Apply profile command
+        /// </summary>
+        public ICommand ApplyProfileCommand { get; }
+        
+        /// <summary>
+        /// Power profiles
+        /// </summary>
+        public ObservableCollection<BundledPowerProfile> PowerProfiles { get; }
+        
+        /// <summary>
+        /// System info
         /// </summary>
         public SystemInfo? SystemInfo
         {
@@ -38,167 +82,131 @@ namespace ThreadPilot.ViewModels
         }
         
         /// <summary>
-        /// Active power profile
+        /// Selected profile
         /// </summary>
-        public BundledPowerProfile? ActivePowerProfile
+        public BundledPowerProfile? SelectedProfile
         {
-            get => _activePowerProfile;
-            set => SetProperty(ref _activePowerProfile, value);
+            get => _selectedProfile;
+            set
+            {
+                if (SetProperty(ref _selectedProfile, value))
+                {
+                    ((RelayCommand)ApplyProfileCommand).RaiseCanExecuteChanged();
+                }
+            }
         }
         
         /// <summary>
-        /// Top processes by CPU usage
+        /// CPU usage percentage
         /// </summary>
-        public ObservableCollection<ProcessInfo> TopProcesses
+        public double CpuUsagePercentage => SystemInfo?.CpuUsagePercentage ?? 0;
+        
+        /// <summary>
+        /// Memory usage percentage
+        /// </summary>
+        public double MemoryUsagePercentage => SystemInfo?.MemoryUsagePercentage ?? 0;
+        
+        /// <summary>
+        /// Used memory in GB
+        /// </summary>
+        public double UsedMemoryGB => SystemInfo?.UsedMemoryGB ?? 0;
+        
+        /// <summary>
+        /// Total memory in GB
+        /// </summary>
+        public double TotalMemoryGB => SystemInfo?.TotalMemoryGB ?? 0;
+        
+        /// <summary>
+        /// Total processes count
+        /// </summary>
+        public int TotalProcessesCount => SystemInfo?.TotalProcessesCount ?? 0;
+        
+        /// <summary>
+        /// Active processes count
+        /// </summary>
+        public int ActiveProcessesCount => SystemInfo?.ActiveProcessesCount ?? 0;
+        
+        /// <summary>
+        /// CPU temperature in Celsius
+        /// </summary>
+        public double CpuTemperatureCelsius => SystemInfo?.CpuTemperatureCelsius ?? 0;
+        
+        /// <summary>
+        /// Timer elapsed event handler
+        /// </summary>
+        private void UpdateTimer_Elapsed(object? sender, ElapsedEventArgs e)
         {
-            get => _topProcesses;
-            set => SetProperty(ref _topProcesses, value);
+            Refresh(null);
         }
         
         /// <summary>
-        /// Indicates if an operation is in progress
+        /// Refresh
         /// </summary>
-        public bool IsBusy
-        {
-            get => _isBusy;
-            set => SetProperty(ref _isBusy, value);
-        }
-        
-        /// <summary>
-        /// Command to refresh system information
-        /// </summary>
-        public ICommand RefreshCommand { get; }
-        
-        /// <summary>
-        /// Command to optimize system performance
-        /// </summary>
-        public ICommand OptimizeCommand { get; }
-        
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        public DashboardViewModel()
-        {
-            // Get dependencies
-            _systemInfoService = ServiceLocator.Get<ISystemInfoService>();
-            _powerProfileService = ServiceLocator.Get<IPowerProfileService>();
-            _processService = ServiceLocator.Get<IProcessService>();
-            
-            // Create commands
-            RefreshCommand = new RelayCommand(param => RefreshSystemInfo(), param => !IsBusy);
-            OptimizeCommand = new RelayCommand(param => OptimizeSystem(), param => !IsBusy);
-            
-            // Setup refresh timer
-            _refreshTimer = new Timer(3000); // 3 seconds
-            _refreshTimer.Elapsed += OnRefreshTimerElapsed;
-            _refreshTimer.AutoReset = true;
-            _refreshTimer.Start();
-            
-            // Initial refresh
-            RefreshSystemInfo();
-        }
-        
-        /// <summary>
-        /// Refresh system information
-        /// </summary>
-        private void RefreshSystemInfo()
+        private void Refresh(object? parameter)
         {
             try
             {
-                IsBusy = true;
-                
                 // Get system info
                 SystemInfo = _systemInfoService.GetSystemInfo();
                 
-                // Get active power profile
-                ActivePowerProfile = _powerProfileService.GetActiveProfile();
-                
-                // Get top processes
-                var processes = _processService.GetProcesses();
-                
-                // Sort by CPU usage and take top 5
-                var topProcesses = processes
-                    .OrderByDescending(p => p.CpuUsage)
-                    .Take(5)
-                    .ToList();
-                    
-                // Update collection
-                TopProcesses.Clear();
-                foreach (var process in topProcesses)
+                // Update profiles
+                PowerProfiles.Clear();
+                foreach (var profile in _powerProfileService.GetAllProfiles())
                 {
-                    TopProcesses.Add(process);
+                    PowerProfiles.Add(profile);
                 }
+                
+                // Select default profile if none is selected
+                SelectedProfile ??= PowerProfiles.Count > 0 ? PowerProfiles[0] : null;
+                
+                // Notify properties changed
+                OnPropertyChanged(nameof(CpuUsagePercentage));
+                OnPropertyChanged(nameof(MemoryUsagePercentage));
+                OnPropertyChanged(nameof(UsedMemoryGB));
+                OnPropertyChanged(nameof(TotalMemoryGB));
+                OnPropertyChanged(nameof(TotalProcessesCount));
+                OnPropertyChanged(nameof(ActiveProcessesCount));
+                OnPropertyChanged(nameof(CpuTemperatureCelsius));
             }
             catch (Exception ex)
             {
-                // Log or handle error
-                Console.WriteLine($"Error refreshing system info: {ex.Message}");
-            }
-            finally
-            {
-                IsBusy = false;
+                _notificationService.ShowError($"Error refreshing dashboard: {ex.Message}");
             }
         }
         
         /// <summary>
-        /// Optimize system performance
+        /// Apply profile
         /// </summary>
-        private async void OptimizeSystem()
+        private void ApplyProfile(object? parameter)
         {
+            if (SelectedProfile == null)
+            {
+                return;
+            }
+            
             try
             {
-                IsBusy = true;
-                
-                // Get all available profiles
-                var profiles = _powerProfileService.GetAvailableProfiles();
-                
-                // Find the "Performance" profile (or similar)
-                var performanceProfile = profiles.FirstOrDefault(p => 
-                    p.Name.Contains("Performance", StringComparison.OrdinalIgnoreCase) ||
-                    p.Name.Contains("High Performance", StringComparison.OrdinalIgnoreCase));
-                    
-                if (performanceProfile != null)
+                if (_powerProfileService.ApplyProfile(SelectedProfile.Id))
                 {
-                    // Apply the performance profile
-                    bool success = await _powerProfileService.ApplyProfileAsync(performanceProfile);
-                    
-                    if (success)
-                    {
-                        // Update active profile
-                        ActivePowerProfile = performanceProfile;
-                    }
+                    _notificationService.ShowSuccess($"Profile '{SelectedProfile.Name}' applied successfully");
                 }
-                
-                // Apply process optimizations
-                _processService.OptimizeProcesses();
-                
-                // Refresh system info
-                RefreshSystemInfo();
+                else
+                {
+                    _notificationService.ShowError($"Failed to apply profile '{SelectedProfile.Name}'");
+                }
             }
             catch (Exception ex)
             {
-                // Log or handle error
-                Console.WriteLine($"Error optimizing system: {ex.Message}");
-            }
-            finally
-            {
-                IsBusy = false;
+                _notificationService.ShowError($"Error applying profile: {ex.Message}");
             }
         }
         
         /// <summary>
-        /// Event handler for the refresh timer
+        /// Can apply profile
         /// </summary>
-        private void OnRefreshTimerElapsed(object? sender, ElapsedEventArgs e)
+        private bool CanApplyProfile(object? parameter)
         {
-            // Invoke on the UI thread
-            App.Current.Dispatcher.Invoke(() =>
-            {
-                if (!IsBusy)
-                {
-                    RefreshSystemInfo();
-                }
-            });
+            return SelectedProfile != null;
         }
     }
 }

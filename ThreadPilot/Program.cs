@@ -1,19 +1,34 @@
 using System;
+using System.Windows;
+using ThreadPilot.Services;
 
 namespace ThreadPilot
 {
     /// <summary>
-    /// Application entry point
+    /// Program entry point
     /// </summary>
-    public class Program
+    public static class Program
     {
+        /// <summary>
+        /// Application entry point
+        /// </summary>
         [STAThread]
         public static void Main()
         {
-            // Create and run the application
-            var app = new App();
-            app.InitializeComponent();
-            app.Run();
+            try
+            {
+                // Initialize services
+                ServiceLocator.Initialize();
+                
+                // Create and run application
+                var app = new App();
+                app.InitializeComponent();
+                app.Run();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"An unhandled exception occurred: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 }

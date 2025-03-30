@@ -1,89 +1,29 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Linq;
+using System.Timers;
 using System.Windows.Input;
-using ThreadPilot.Helpers;
+using ThreadPilot.Commands;
 using ThreadPilot.Models;
 using ThreadPilot.Services;
 
 namespace ThreadPilot.ViewModels
 {
     /// <summary>
-    /// View model for the processes view
+    /// Processes view model
     /// </summary>
     public class ProcessesViewModel : ViewModelBase
     {
+        // Selected process
+        private ProcessInfo? _selectedProcess;
+        
+        // Process service
         private readonly IProcessService _processService;
+        
+        // Notification service
         private readonly INotificationService _notificationService;
         
-        private ProcessInfo? _selectedProcess;
-        private string _filterText = string.Empty;
-        private bool _showSystemProcesses = false;
-
-        /// <summary>
-        /// List of running processes
-        /// </summary>
-        public ObservableCollection<ProcessInfo> Processes { get; } = new ObservableCollection<ProcessInfo>();
-
-        /// <summary>
-        /// Filtered processes based on search text and filter options
-        /// </summary>
-        public ObservableCollection<ProcessInfo> FilteredProcesses { get; } = new ObservableCollection<ProcessInfo>();
-        
-        /// <summary>
-        /// Currently selected process
-        /// </summary>
-        public ProcessInfo? SelectedProcess
-        {
-            get => _selectedProcess;
-            set => SetProperty(ref _selectedProcess, value);
-        }
-        
-        /// <summary>
-        /// Text to filter processes
-        /// </summary>
-        public string FilterText
-        {
-            get => _filterText;
-            set
-            {
-                if (SetProperty(ref _filterText, value))
-                {
-                    ApplyFilter();
-                }
-            }
-        }
-        
-        /// <summary>
-        /// Whether to show system processes
-        /// </summary>
-        public bool ShowSystemProcesses
-        {
-            get => _showSystemProcesses;
-            set
-            {
-                if (SetProperty(ref _showSystemProcesses, value))
-                {
-                    ApplyFilter();
-                }
-            }
-        }
-
-        // Commands
-        /// <summary>
-        /// Command to refresh the process list
-        /// </summary>
-        public ICommand RefreshCommand { get; }
-        
-        /// <summary>
-        /// Command to set process affinity
-        /// </summary>
-        public ICommand SetAffinityCommand { get; }
-        
-        /// <summary>
-        /// Command to set process priority
-        /// </summary>
-        public ICommand SetPriorityCommand { get; }
+        // Timer for updating processes
+        private readonly Timer _updateTimer;
         
         /// <summary>
         /// Constructor
@@ -94,38 +34,102 @@ namespace ThreadPilot.ViewModels
             _processService = ServiceLocator.Get<IProcessService>();
             _notificationService = ServiceLocator.Get<INotificationService>();
             
-            // Initialize commands
-            RefreshCommand = new RelayCommand(_ => RefreshProcesses());
-            SetAffinityCommand = new RelayCommand(SetAffinity, CanModifyProcess);
-            SetPriorityCommand = new RelayCommand(SetPriority, CanModifyProcess);
-        }
-        
-        /// <summary>
-        /// Initialize the view model
-        /// </summary>
-        public override void Initialize()
-        {
-            RefreshProcesses();
+            // Initialize collections
+            Processes = new ObservableCollection<ProcessInfo>();
             
-            // TODO: Start a timer to periodically refresh process information
+            // Create commands
+            RefreshCommand = new RelayCommand(Refresh);
+            SetAffinityCommand = new RelayCommand(SetAffinity, CanModifyProcess);
+            SetPriorityCommand = new RelayCommand<ProcessPriority>(SetPriority, CanModifyProcess);
+            SuspendProcessCommand = new RelayCommand(SuspendProcess, CanSuspendProcess);
+            ResumeProcessCommand = new RelayCommand(ResumeProcess, CanResumeProcess);
+            
+            // Create timer
+            _updateTimer = new Timer(5000);
+            _updateTimer.Elapsed += UpdateTimer_Elapsed;
+            _updateTimer.Start();
+            
+            // Initial refresh
+            Refresh(null);
         }
         
         /// <summary>
-        /// Refresh the process list
+        /// Refresh command
         /// </summary>
-        private void RefreshProcesses()
+        public ICommand RefreshCommand { get; }
+        
+        /// <summary>
+        /// Set affinity command
+        /// </summary>
+        public ICommand SetAffinityCommand { get; }
+        
+        /// <summary>
+        /// Set priority command
+        /// </summary>
+        public ICommand SetPriorityCommand { get; }
+        
+        /// <summary>
+        /// Suspend process command
+        /// </summary>
+        public ICommand SuspendProcessCommand { get; }
+        
+        /// <summary>
+        /// Resume process command
+        /// </summary>
+        public ICommand ResumeProcessCommand { get; }
+        
+        /// <summary>
+        /// Processes
+        /// </summary>
+        public ObservableCollection<ProcessInfo> Processes { get; }
+        
+        /// <summary>
+        /// Selected process
+        /// </summary>
+        public ProcessInfo? SelectedProcess
+        {
+            get => _selectedProcess;
+            set
+            {
+                if (SetProperty(ref _selectedProcess, value))
+                {
+                    ((RelayCommand)SetAffinityCommand).RaiseCanExecuteChanged();
+                    ((RelayCommand<ProcessPriority>)SetPriorityCommand).RaiseCanExecuteChanged();
+                    ((RelayCommand)SuspendProcessCommand).RaiseCanExecuteChanged();
+                    ((RelayCommand)ResumeProcessCommand).RaiseCanExecuteChanged();
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Timer elapsed event handler
+        /// </summary>
+        private void UpdateTimer_Elapsed(object? sender, ElapsedEventArgs e)
+        {
+            Refresh(null);
+        }
+        
+        /// <summary>
+        /// Refresh
+        /// </summary>
+        private void Refresh(object? parameter)
         {
             try
             {
-                Processes.Clear();
+                var selectedProcessId = SelectedProcess?.Id;
                 
-                var processes = _processService.GetRunningProcesses();
-                foreach (var process in processes)
+                // Get processes
+                Processes.Clear();
+                foreach (var process in _processService.GetAllProcesses())
                 {
                     Processes.Add(process);
                 }
                 
-                ApplyFilter();
+                // Restore selected process
+                if (selectedProcessId.HasValue)
+                {
+                    SelectedProcess = Processes.FirstOrDefault(p => p.Id == selectedProcessId);
+                }
             }
             catch (Exception ex)
             {
@@ -134,85 +138,150 @@ namespace ThreadPilot.ViewModels
         }
         
         /// <summary>
-        /// Apply the current filter to the process list
-        /// </summary>
-        private void ApplyFilter()
-        {
-            FilteredProcesses.Clear();
-            
-            var filtered = Processes.AsEnumerable();
-            
-            // Apply text filter if provided
-            if (!string.IsNullOrWhiteSpace(FilterText))
-            {
-                var filterLower = FilterText.ToLowerInvariant();
-                filtered = filtered.Where(p => p.Name.ToLowerInvariant().Contains(filterLower));
-            }
-            
-            // Apply system process filter
-            if (!ShowSystemProcesses)
-            {
-                filtered = filtered.Where(p => !p.IsSystemProcess);
-            }
-            
-            // Add filtered processes
-            foreach (var process in filtered)
-            {
-                FilteredProcesses.Add(process);
-            }
-        }
-        
-        /// <summary>
-        /// Check if the selected process can be modified
-        /// </summary>
-        private bool CanModifyProcess(object? parameter)
-        {
-            return SelectedProcess != null && SelectedProcess.IsOptimizable;
-        }
-        
-        /// <summary>
-        /// Set the CPU affinity for the selected process
+        /// Set affinity
         /// </summary>
         private void SetAffinity(object? parameter)
         {
-            if (SelectedProcess == null) return;
+            if (SelectedProcess == null)
+            {
+                return;
+            }
             
             try
             {
-                // TODO: Show affinity dialog and apply settings
+                // In a real application, we would show a dialog here
+                var affinityMask = 0xFFFF; // Just for demo
+                
+                if (_processService.SetProcessAffinity(SelectedProcess.Id, affinityMask))
+                {
+                    _notificationService.ShowSuccess($"Process '{SelectedProcess.Name}' affinity set successfully");
+                    
+                    // Refresh to show the changes
+                    Refresh(null);
+                }
+                else
+                {
+                    _notificationService.ShowError($"Failed to set process '{SelectedProcess.Name}' affinity");
+                }
             }
             catch (Exception ex)
             {
-                _notificationService.ShowError($"Error setting affinity: {ex.Message}");
+                _notificationService.ShowError($"Error setting process affinity: {ex.Message}");
             }
         }
         
         /// <summary>
-        /// Set the priority for the selected process
+        /// Set priority
         /// </summary>
-        private void SetPriority(object? parameter)
+        private void SetPriority(ProcessPriority? priority)
         {
-            if (SelectedProcess == null) return;
+            if (SelectedProcess == null || priority == null)
+            {
+                return;
+            }
             
             try
             {
-                if (parameter is not ProcessPriorityClass priority) return;
-                
-                var result = _processService.SetProcessPriority(SelectedProcess.Id, priority);
-                if (result)
+                if (_processService.SetProcessPriority(SelectedProcess.Id, priority.Value))
                 {
-                    SelectedProcess.Priority = priority;
-                    _notificationService.ShowSuccess($"Priority for {SelectedProcess.Name} set to {priority}");
+                    _notificationService.ShowSuccess($"Process '{SelectedProcess.Name}' priority set to {priority}");
+                    
+                    // Refresh to show the changes
+                    Refresh(null);
                 }
                 else
                 {
-                    _notificationService.ShowError("Failed to set process priority");
+                    _notificationService.ShowError($"Failed to set process '{SelectedProcess.Name}' priority");
                 }
             }
             catch (Exception ex)
             {
-                _notificationService.ShowError($"Error setting priority: {ex.Message}");
+                _notificationService.ShowError($"Error setting process priority: {ex.Message}");
             }
+        }
+        
+        /// <summary>
+        /// Suspend process
+        /// </summary>
+        private void SuspendProcess(object? parameter)
+        {
+            if (SelectedProcess == null)
+            {
+                return;
+            }
+            
+            try
+            {
+                if (_processService.SuspendProcess(SelectedProcess.Id))
+                {
+                    _notificationService.ShowSuccess($"Process '{SelectedProcess.Name}' suspended successfully");
+                    
+                    // Refresh to show the changes
+                    Refresh(null);
+                }
+                else
+                {
+                    _notificationService.ShowError($"Failed to suspend process '{SelectedProcess.Name}'");
+                }
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError($"Error suspending process: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Resume process
+        /// </summary>
+        private void ResumeProcess(object? parameter)
+        {
+            if (SelectedProcess == null)
+            {
+                return;
+            }
+            
+            try
+            {
+                if (_processService.ResumeProcess(SelectedProcess.Id))
+                {
+                    _notificationService.ShowSuccess($"Process '{SelectedProcess.Name}' resumed successfully");
+                    
+                    // Refresh to show the changes
+                    Refresh(null);
+                }
+                else
+                {
+                    _notificationService.ShowError($"Failed to resume process '{SelectedProcess.Name}'");
+                }
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError($"Error resuming process: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Can modify process
+        /// </summary>
+        private bool CanModifyProcess(object? parameter)
+        {
+            return SelectedProcess != null && !SelectedProcess.IsCritical;
+        }
+        
+        /// <summary>
+        /// Can suspend process
+        /// </summary>
+        private bool CanSuspendProcess(object? parameter)
+        {
+            return SelectedProcess != null && !SelectedProcess.IsSuspended && !SelectedProcess.IsCritical;
+        }
+        
+        /// <summary>
+        /// Can resume process
+        /// </summary>
+        private bool CanResumeProcess(object? parameter)
+        {
+            return SelectedProcess != null && SelectedProcess.IsSuspended && !SelectedProcess.IsCritical;
         }
     }
 }

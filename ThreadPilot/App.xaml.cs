@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 using ThreadPilot.Services;
 
@@ -8,12 +9,29 @@ namespace ThreadPilot
     /// </summary>
     public partial class App : Application
     {
-        protected override void OnStartup(StartupEventArgs e)
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        public App()
         {
-            base.OnStartup(e);
-            
-            // Initialize services
-            ServiceLocator.Initialize();
+            // Register process exit event
+            AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+        }
+        
+        /// <summary>
+        /// On process exit
+        /// </summary>
+        private void OnProcessExit(object? sender, EventArgs e)
+        {
+            try
+            {
+                // Cleanup services
+                ServiceLocator.Cleanup();
+            }
+            catch
+            {
+                // Ignore
+            }
         }
     }
 }

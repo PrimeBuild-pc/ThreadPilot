@@ -1,9 +1,7 @@
-using System;
-
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Model class for process information
+    /// Process information
     /// </summary>
     public class ProcessInfo
     {
@@ -15,71 +13,87 @@ namespace ThreadPilot.Models
         /// <summary>
         /// Process name
         /// </summary>
-        public string Name { get; set; } = string.Empty;
+        public string? Name { get; set; }
         
         /// <summary>
         /// Process description
         /// </summary>
-        public string Description { get; set; } = string.Empty;
+        public string? Description { get; set; }
         
         /// <summary>
-        /// Process executable path
+        /// Process path
         /// </summary>
-        public string ExecutablePath { get; set; } = string.Empty;
+        public string? Path { get; set; }
         
         /// <summary>
-        /// CPU usage as a percentage
+        /// Process CPU usage (percentage)
         /// </summary>
         public double CpuUsage { get; set; }
         
         /// <summary>
-        /// Memory usage in MB
+        /// Process memory usage (KB)
         /// </summary>
-        public double MemoryUsageMb { get; set; }
+        public double MemoryUsage { get; set; }
         
         /// <summary>
-        /// Number of threads
+        /// Thread count
         /// </summary>
         public int ThreadCount { get; set; }
         
         /// <summary>
-        /// Process start time
-        /// </summary>
-        public DateTime StartTime { get; set; }
-        
-        /// <summary>
-        /// Current process affinity mask
+        /// CPU affinity mask (used to determine which cores the process can use)
         /// </summary>
         public long AffinityMask { get; set; }
         
         /// <summary>
-        /// Current process priority
+        /// Process priority
         /// </summary>
-        public int Priority { get; set; }
+        public ProcessPriority Priority { get; set; }
         
         /// <summary>
-        /// Indicates if the process is responding
+        /// Is the process suspended
         /// </summary>
-        public bool IsResponding { get; set; }
+        public bool IsSuspended { get; set; }
         
         /// <summary>
-        /// Indicates if the process is a system process
+        /// Is the process critical (system process)
         /// </summary>
-        public bool IsSystemProcess { get; set; }
+        public bool IsCritical { get; set; }
+    }
+    
+    /// <summary>
+    /// Process priority
+    /// </summary>
+    public enum ProcessPriority
+    {
+        /// <summary>
+        /// Idle
+        /// </summary>
+        Idle = 0,
         
         /// <summary>
-        /// Indicates if the process is 64-bit
+        /// Below normal
         /// </summary>
-        public bool Is64Bit { get; set; }
+        BelowNormal = 1,
         
         /// <summary>
-        /// Indicates if the process is elevated
+        /// Normal
         /// </summary>
-        public bool IsElevated { get; set; }
+        Normal = 2,
         
         /// <summary>
-        /// Company name of the process
+        /// Above normal
         /// </summary>
-        public string CompanyName { get; set; } = string.Empty;
+        AboveNormal = 3,
+        
+        /// <summary>
+        /// High
+        /// </summary>
+        High = 4,
+        
+        /// <summary>
+        /// Realtime
+        /// </summary>
+        Realtime = 5
     }
 }

@@ -1,70 +1,63 @@
-using System;
+using System.Collections.Generic;
 
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Model class for bundled power profiles
+    /// Bundled power profile
     /// </summary>
     public class BundledPowerProfile
     {
         /// <summary>
+        /// Constructor
+        /// </summary>
+        public BundledPowerProfile()
+        {
+            ProcessAffinityRules = new List<ProcessAffinityRule>();
+        }
+        
+        /// <summary>
         /// Profile ID
         /// </summary>
-        public Guid Id { get; set; } = Guid.NewGuid();
+        public int Id { get; set; }
         
         /// <summary>
         /// Profile name
         /// </summary>
-        public string Name { get; set; } = string.Empty;
+        public string? Name { get; set; }
         
         /// <summary>
         /// Profile description
         /// </summary>
-        public string Description { get; set; } = string.Empty;
+        public string? Description { get; set; }
         
         /// <summary>
-        /// File path for the profile
+        /// Is the profile enabled
         /// </summary>
-        public string FilePath { get; set; } = string.Empty;
+        public bool IsEnabled { get; set; }
         
         /// <summary>
-        /// Indicates if the profile is read-only
+        /// Windows power profile GUID
         /// </summary>
-        public bool IsReadOnly { get; set; }
+        public string? WindowsPowerProfileGuid { get; set; }
         
         /// <summary>
-        /// Indicates if the profile is a system profile
+        /// Windows power profile name
         /// </summary>
-        public bool IsSystemProfile { get; set; }
+        public string? WindowsPowerProfileName { get; set; }
         
         /// <summary>
-        /// Profile creation date
+        /// Power profile file path
         /// </summary>
-        public DateTime CreatedOn { get; set; } = DateTime.Now;
+        public string? PowerProfileFilePath { get; set; }
         
         /// <summary>
-        /// Profile last modified date
+        /// Process affinity rules
         /// </summary>
-        public DateTime ModifiedOn { get; set; } = DateTime.Now;
+        public List<ProcessAffinityRule> ProcessAffinityRules { get; }
         
         /// <summary>
-        /// Profile category
+        /// Should unpark all CPU cores
         /// </summary>
-        public string Category { get; set; } = string.Empty;
-        
-        /// <summary>
-        /// Profile GUID in Windows
-        /// </summary>
-        public Guid WindowsGuid { get; set; } = Guid.Empty;
-        
-        /// <summary>
-        /// Indicates if the profile is active
-        /// </summary>
-        public bool IsActive { get; set; }
-        
-        /// <summary>
-        /// Profile icon
-        /// </summary>
-        public string Icon { get; set; } = string.Empty;
+        public bool ShouldUnparkAllCores { get; set; }
     }
 }

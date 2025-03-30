@@ -1,23 +1,23 @@
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Interface for the file dialog service
+    /// File dialog service interface
     /// </summary>
     public interface IFileDialogService
     {
         /// <summary>
-        /// Show an open file dialog
+        /// Show open dialog
         /// </summary>
-        string ShowOpenFileDialog(string title, string filter);
+        string ShowOpenDialog(string filter);
         
         /// <summary>
-        /// Show a save file dialog
+        /// Show save dialog
         /// </summary>
-        string ShowSaveFileDialog(string title, string filter, string? defaultFileName = null);
+        string ShowSaveDialog(string filter, string defaultFileName = "");
         
         /// <summary>
-        /// Show a folder browser dialog
+        /// Show folder browser dialog
         /// </summary>
-        string ShowFolderBrowserDialog(string description);
+        string ShowFolderBrowserDialog();
     }
 }

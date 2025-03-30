@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -10,12 +9,12 @@ namespace ThreadPilot.ViewModels
     public abstract class ViewModelBase : INotifyPropertyChanged
     {
         /// <summary>
-        /// Event that is fired when a property changes
+        /// Occurs when a property value changes
         /// </summary>
         public event PropertyChangedEventHandler? PropertyChanged;
         
         /// <summary>
-        /// Method to notify when a property changes
+        /// Raises the <see cref="PropertyChanged"/> event
         /// </summary>
         protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
@@ -23,13 +22,15 @@ namespace ThreadPilot.ViewModels
         }
         
         /// <summary>
-        /// Helper method to set property values and notify when they change
+        /// Sets the property value and raises the <see cref="PropertyChanged"/> event if the value has changed
         /// </summary>
         protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
         {
-            if (EqualityComparer<T>.Default.Equals(field, value))
+            if (Equals(field, value))
+            {
                 return false;
-                
+            }
+            
             field = value;
             OnPropertyChanged(propertyName);
             return true;

@@ -1,50 +1,48 @@
-using System;
-
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Model class for process affinity rules
+    /// Process affinity rule
     /// </summary>
     public class ProcessAffinityRule
     {
         /// <summary>
         /// Rule ID
         /// </summary>
-        public Guid Id { get; set; } = Guid.NewGuid();
+        public int Id { get; set; }
         
         /// <summary>
-        /// Process name pattern (supports wildcards)
+        /// Rule name
         /// </summary>
-        public string ProcessNamePattern { get; set; } = string.Empty;
+        public string? Name { get; set; }
         
         /// <summary>
-        /// Process affinity mask
+        /// Process name pattern
+        /// </summary>
+        public string? ProcessNamePattern { get; set; }
+        
+        /// <summary>
+        /// Process path pattern
+        /// </summary>
+        public string? ProcessPathPattern { get; set; }
+        
+        /// <summary>
+        /// CPU affinity mask (used to determine which cores the process can use)
         /// </summary>
         public long AffinityMask { get; set; }
         
         /// <summary>
         /// Process priority
         /// </summary>
-        public int Priority { get; set; }
+        public ProcessPriority Priority { get; set; }
         
         /// <summary>
-        /// Rule description
+        /// Is the rule enabled
         /// </summary>
-        public string Description { get; set; } = string.Empty;
+        public bool IsEnabled { get; set; }
         
         /// <summary>
-        /// Indicates if the rule is enabled
+        /// Rule priority (higher priority rules will be applied first)
         /// </summary>
-        public bool IsEnabled { get; set; } = true;
-        
-        /// <summary>
-        /// Rule creation date
-        /// </summary>
-        public DateTime CreatedOn { get; set; } = DateTime.Now;
-        
-        /// <summary>
-        /// Rule last modified date
-        /// </summary>
-        public DateTime ModifiedOn { get; set; } = DateTime.Now;
+        public int RulePriority { get; set; }
     }
 }

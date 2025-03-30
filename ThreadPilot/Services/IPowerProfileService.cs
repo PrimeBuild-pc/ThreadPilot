@@ -1,48 +1,58 @@
-using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using ThreadPilot.Models;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Interface for the power profile service
+    /// Interface for power profile service
     /// </summary>
     public interface IPowerProfileService
     {
         /// <summary>
-        /// Get all available power profiles
+        /// Get all power profiles
         /// </summary>
-        IList<BundledPowerProfile> GetAvailableProfiles();
+        IEnumerable<BundledPowerProfile> GetAllProfiles();
         
         /// <summary>
-        /// Get the currently active power profile
+        /// Get profile by ID
         /// </summary>
-        BundledPowerProfile? GetActiveProfile();
+        /// <param name="profileId">Profile ID</param>
+        BundledPowerProfile? GetProfileById(int profileId);
         
         /// <summary>
-        /// Apply a power profile
+        /// Save power profile
         /// </summary>
-        Task<bool> ApplyProfileAsync(BundledPowerProfile profile);
+        /// <param name="profile">Power profile</param>
+        /// <returns>True if successful</returns>
+        bool SaveProfile(BundledPowerProfile profile);
         
         /// <summary>
-        /// Save profile to a file
+        /// Delete power profile
         /// </summary>
-        bool SaveProfileToFile(BundledPowerProfile profile, string filePath);
+        /// <param name="profileId">Profile ID</param>
+        /// <returns>True if successful</returns>
+        bool DeleteProfile(int profileId);
         
         /// <summary>
-        /// Load profile from a file
+        /// Apply power profile
         /// </summary>
-        BundledPowerProfile? LoadProfileFromFile(string filePath);
+        /// <param name="profileId">Profile ID</param>
+        /// <returns>True if successful</returns>
+        bool ApplyProfile(int profileId);
         
         /// <summary>
-        /// Create a profile from the current system settings
+        /// Import power profile
         /// </summary>
-        BundledPowerProfile CreateProfileFromCurrentSettings(string name, string description);
+        /// <param name="filePath">File path</param>
+        /// <returns>Imported profile</returns>
+        BundledPowerProfile? ImportProfile(string filePath);
         
         /// <summary>
-        /// Delete a power profile
+        /// Export power profile
         /// </summary>
-        bool DeleteProfile(BundledPowerProfile profile);
+        /// <param name="profileId">Profile ID</param>
+        /// <param name="filePath">File path</param>
+        /// <returns>True if successful</returns>
+        bool ExportProfile(int profileId, string filePath);
     }
 }

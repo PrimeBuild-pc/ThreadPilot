@@ -4,58 +4,49 @@ using ThreadPilot.Models;
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Interface for the process service
+    /// Interface for process service
     /// </summary>
     public interface IProcessService
     {
         /// <summary>
         /// Get all processes
         /// </summary>
-        IList<ProcessInfo> GetProcesses();
+        IEnumerable<ProcessInfo> GetAllProcesses();
         
         /// <summary>
-        /// Get a process by ID
+        /// Get process by ID
         /// </summary>
-        ProcessInfo? GetProcessById(int id);
+        /// <param name="processId">Process ID</param>
+        ProcessInfo? GetProcessById(int processId);
         
         /// <summary>
-        /// Set process affinity mask
+        /// Set process affinity
         /// </summary>
+        /// <param name="processId">Process ID</param>
+        /// <param name="affinityMask">Affinity mask</param>
+        /// <returns>True if successful</returns>
         bool SetProcessAffinity(int processId, long affinityMask);
         
         /// <summary>
         /// Set process priority
         /// </summary>
-        bool SetProcessPriority(int processId, int priority);
+        /// <param name="processId">Process ID</param>
+        /// <param name="priority">Priority</param>
+        /// <returns>True if successful</returns>
+        bool SetProcessPriority(int processId, ProcessPriority priority);
         
         /// <summary>
-        /// End a process
+        /// Suspend process
         /// </summary>
-        bool EndProcess(int processId);
+        /// <param name="processId">Process ID</param>
+        /// <returns>True if successful</returns>
+        bool SuspendProcess(int processId);
         
         /// <summary>
-        /// Get all process affinity rules
+        /// Resume process
         /// </summary>
-        IList<ProcessAffinityRule> GetAffinityRules();
-        
-        /// <summary>
-        /// Add or update a process affinity rule
-        /// </summary>
-        bool SaveAffinityRule(ProcessAffinityRule rule);
-        
-        /// <summary>
-        /// Delete a process affinity rule
-        /// </summary>
-        bool DeleteAffinityRule(ProcessAffinityRule rule);
-        
-        /// <summary>
-        /// Apply all enabled affinity rules
-        /// </summary>
-        void ApplyAffinityRules();
-        
-        /// <summary>
-        /// Optimize processes according to predefined rules
-        /// </summary>
-        void OptimizeProcesses();
+        /// <param name="processId">Process ID</param>
+        /// <returns>True if successful</returns>
+        bool ResumeProcess(int processId);
     }
 }

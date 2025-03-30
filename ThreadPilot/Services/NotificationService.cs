@@ -4,57 +4,60 @@ using System.Windows;
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Implementation of the notification service
+    /// Notification service
     /// </summary>
     public class NotificationService : INotificationService
     {
         /// <summary>
-        /// Event that is fired when the status message is updated
+        /// Notification received event
         /// </summary>
-        public event EventHandler<string>? StatusMessageUpdated;
+        public event EventHandler<NotificationEventArgs>? NotificationReceived;
         
         /// <summary>
-        /// Show a success notification
+        /// Show notification
         /// </summary>
-        public void ShowSuccess(string message)
+        public void Show(string message, NotificationType type = NotificationType.Info)
         {
-            OnStatusMessageUpdated($"✓ {message}");
-            MessageBox.Show(message, "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            // Raise event
+            NotificationReceived?.Invoke(this, new NotificationEventArgs(type, message));
+            
+            // Show messagebox for errors
+            if (type == NotificationType.Error)
+            {
+                MessageBox.Show(message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
         
         /// <summary>
-        /// Show an error notification
-        /// </summary>
-        public void ShowError(string message)
-        {
-            OnStatusMessageUpdated($"✕ Error: {message}");
-            MessageBox.Show(message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-        
-        /// <summary>
-        /// Show a warning notification
-        /// </summary>
-        public void ShowWarning(string message)
-        {
-            OnStatusMessageUpdated($"⚠ Warning: {message}");
-            MessageBox.Show(message, "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-        }
-        
-        /// <summary>
-        /// Show an information notification
+        /// Show information notification
         /// </summary>
         public void ShowInfo(string message)
         {
-            OnStatusMessageUpdated($"ℹ {message}");
-            MessageBox.Show(message, "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+            Show(message, NotificationType.Info);
         }
         
         /// <summary>
-        /// Raise the StatusMessageUpdated event
+        /// Show success notification
         /// </summary>
-        protected virtual void OnStatusMessageUpdated(string message)
+        public void ShowSuccess(string message)
         {
-            StatusMessageUpdated?.Invoke(this, message);
+            Show(message, NotificationType.Success);
+        }
+        
+        /// <summary>
+        /// Show warning notification
+        /// </summary>
+        public void ShowWarning(string message)
+        {
+            Show(message, NotificationType.Warning);
+        }
+        
+        /// <summary>
+        /// Show error notification
+        /// </summary>
+        public void ShowError(string message)
+        {
+            Show(message, NotificationType.Error);
         }
     }
 }

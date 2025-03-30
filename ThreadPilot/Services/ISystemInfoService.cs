@@ -3,7 +3,7 @@ using ThreadPilot.Models;
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Interface for the system information service
+    /// Interface for system information service
     /// </summary>
     public interface ISystemInfoService
     {
@@ -13,23 +13,8 @@ namespace ThreadPilot.Services
         SystemInfo GetSystemInfo();
         
         /// <summary>
-        /// Get CPU usage
+        /// Unpark all CPU cores
         /// </summary>
-        double GetCpuUsage();
-        
-        /// <summary>
-        /// Get available memory in GB
-        /// </summary>
-        double GetAvailableMemoryGb();
-        
-        /// <summary>
-        /// Get CPU temperature in Celsius
-        /// </summary>
-        double GetCpuTemperature();
-        
-        /// <summary>
-        /// Get core usage for each CPU core
-        /// </summary>
-        double[] GetCoreUsages();
+        void UnparkAllCores();
     }
 }
