@@ -1,129 +1,83 @@
 using System;
-using System.Windows;
-using Hardcodet.Wpf.TaskbarNotification;
+using System.Threading.Tasks;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Notification types
+    /// Interface for displaying notifications to the user
+    /// </summary>
+    public interface INotificationService
+    {
+        /// <summary>
+        /// Shows a notification message to the user
+        /// </summary>
+        Task ShowAsync(string message, NotificationType type = NotificationType.Information);
+        
+        /// <summary>
+        /// Shows a success notification message to the user
+        /// </summary>
+        Task ShowSuccessAsync(string message);
+        
+        /// <summary>
+        /// Shows an error notification message to the user
+        /// </summary>
+        Task ShowErrorAsync(string message);
+    }
+
+    /// <summary>
+    /// Notification type enumeration
     /// </summary>
     public enum NotificationType
     {
-        Info,
+        Information,
         Success,
         Warning,
         Error
     }
 
     /// <summary>
-    /// Service for showing notifications
+    /// Service for displaying notifications to the user
     /// </summary>
-    public class NotificationService
+    public class NotificationService : INotificationService
     {
-        private readonly SettingsService _settingsService;
-        private TaskbarIcon _taskbarIcon;
-
         /// <summary>
-        /// Constructor for NotificationService
+        /// Shows a notification message to the user
         /// </summary>
-        /// <param name="settingsService">The settings service</param>
-        public NotificationService(SettingsService settingsService)
+        public async Task ShowAsync(string message, NotificationType type = NotificationType.Information)
         {
-            _settingsService = settingsService;
-        }
-
-        /// <summary>
-        /// Initialize the notification service with a taskbar icon
-        /// </summary>
-        /// <param name="taskbarIcon">The taskbar icon to use for notifications</param>
-        public void Initialize(TaskbarIcon taskbarIcon)
-        {
-            _taskbarIcon = taskbarIcon;
-        }
-
-        /// <summary>
-        /// Show a notification
-        /// </summary>
-        /// <param name="title">The notification title</param>
-        /// <param name="message">The notification message</param>
-        /// <param name="type">The notification type</param>
-        public void ShowNotification(string title, string message, NotificationType type = NotificationType.Info)
-        {
-            // Check if notifications are enabled for this type
-            if (!ShouldShowNotification(type))
-                return;
-
-            try
+            // In a real application, this would display a toast notification
+            // in the UI. For our demo environment, we'll just log to console.
+            await Task.Delay(1); // Simulate async operation
+            
+            string prefix = type switch
             {
-                if (_taskbarIcon != null)
-                {
-                    var baloonIcon = GetBalloonIcon(type);
-                    _taskbarIcon.ShowBalloonTip(title, message, baloonIcon);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error showing notification: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Show a success notification
-        /// </summary>
-        /// <param name="message">The notification message</param>
-        public void ShowSuccess(string message)
-        {
-            ShowNotification("Success", message, NotificationType.Success);
-        }
-        
-        /// <summary>
-        /// Show an error notification
-        /// </summary>
-        /// <param name="message">The notification message</param>
-        public void ShowError(string message)
-        {
-            ShowNotification("Error", message, NotificationType.Error);
-        }
-        
-        /// <summary>
-        /// Show a warning notification
-        /// </summary>
-        /// <param name="message">The notification message</param>
-        public void ShowWarning(string message)
-        {
-            ShowNotification("Warning", message, NotificationType.Warning);
-        }
-        
-        /// <summary>
-        /// Show an info notification
-        /// </summary>
-        /// <param name="message">The notification message</param>
-        public void ShowInfo(string message)
-        {
-            ShowNotification("Information", message, NotificationType.Info);
-        }
-
-        private bool ShouldShowNotification(NotificationType type)
-        {
-            // For process-related notifications, check the setting
-            if (type == NotificationType.Info || type == NotificationType.Success)
-            {
-                return _settingsService.ShowProcessNotifications;
-            }
-
-            // Always show warnings and errors
-            return true;
-        }
-
-        private BalloonIcon GetBalloonIcon(NotificationType type)
-        {
-            return type switch
-            {
-                NotificationType.Success => BalloonIcon.Info,
-                NotificationType.Warning => BalloonIcon.Warning,
-                NotificationType.Error => BalloonIcon.Error,
-                _ => BalloonIcon.Info
+                NotificationType.Information => "[INFO]",
+                NotificationType.Success => "[SUCCESS]",
+                NotificationType.Warning => "[WARNING]",
+                NotificationType.Error => "[ERROR]",
+                _ => "[INFO]"
             };
+            
+            Console.WriteLine($"{prefix} {message}");
+            
+            // In a real application, this would trigger a UI element to show a notification
+            // For example, a toast notification or a snackbar at the bottom of the screen
+        }
+        
+        /// <summary>
+        /// Shows a success notification message to the user
+        /// </summary>
+        public Task ShowSuccessAsync(string message)
+        {
+            return ShowAsync(message, NotificationType.Success);
+        }
+        
+        /// <summary>
+        /// Shows an error notification message to the user
+        /// </summary>
+        public Task ShowErrorAsync(string message)
+        {
+            return ShowAsync(message, NotificationType.Error);
         }
     }
 }

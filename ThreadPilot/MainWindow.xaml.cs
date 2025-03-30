@@ -2,162 +2,118 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Shapes;
 using ThreadPilot.Services;
 using ThreadPilot.ViewModels;
+using ThreadPilot.Views;
 
 namespace ThreadPilot
 {
+    /// <summary>
+    /// Interaction logic for MainWindow.xaml
+    /// </summary>
     public partial class MainWindow : Window
     {
-        private readonly MainViewModel _viewModel;
-        private readonly SettingsService _settingsService;
-
         public MainWindow()
         {
             InitializeComponent();
+            
+            // Set the initial view
+            NavigateToPage("Dashboard");
+        }
 
-            // Get services from DI
-            _viewModel = App.GetService<MainViewModel>();
-            _settingsService = App.GetService<SettingsService>();
-
-            // Set data context
-            DataContext = _viewModel;
-
-            // Setup profiles menu in tray context menu
-            SetupProfilesMenu();
-
-            // Update theme icon based on current theme
-            UpdateThemeIcon();
-
-            // Load saved position and size
-            if (_settingsService.WindowSettings != null)
+        private void NavigationMenu_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (NavigationMenu.SelectedItem != null)
             {
-                if (_settingsService.WindowSettings.Width > 0)
-                    Width = _settingsService.WindowSettings.Width;
-                if (_settingsService.WindowSettings.Height > 0)
-                    Height = _settingsService.WindowSettings.Height;
-                if (_settingsService.WindowSettings.Left >= 0)
-                    Left = _settingsService.WindowSettings.Left;
-                if (_settingsService.WindowSettings.Top >= 0)
-                    Top = _settingsService.WindowSettings.Top;
-            }
-
-            // Start minimized if configured
-            if (_settingsService.StartMinimized)
-            {
-                WindowState = WindowState.Minimized;
-                Hide();
+                var selectedItem = (ListBoxItem)NavigationMenu.SelectedItem;
+                string tag = selectedItem.Tag.ToString();
+                
+                NavigateToPage(tag);
             }
         }
 
-        private void SetupProfilesMenu()
+        private void NavigateToPage(string pageName)
         {
-            // Clear existing items
-            ProfilesMenuItem.Items.Clear();
-
-            // Add profiles from view model
-            foreach (var profile in _viewModel.SavedProfiles)
+            // Update the page title
+            PageTitle.Text = pageName;
+            
+            // Clear the current content
+            ContentFrame.Content = null;
+            
+            // Create and navigate to the selected page
+            switch (pageName)
             {
-                var menuItem = new MenuItem
-                {
-                    Header = profile.Name,
-                    Tag = profile
-                };
-                menuItem.Click += ProfileMenuItem_Click;
-                ProfilesMenuItem.Items.Add(menuItem);
-            }
-
-            // Show "No profiles" if none exist
-            if (ProfilesMenuItem.Items.Count == 0)
-            {
-                var noProfilesItem = new MenuItem
-                {
-                    Header = "No profiles available",
-                    IsEnabled = false
-                };
-                ProfilesMenuItem.Items.Add(noProfilesItem);
-            }
-        }
-
-        private void ProfileMenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is MenuItem menuItem && menuItem.Tag is Models.Profile profile)
-            {
-                _viewModel.ApplyProfile(profile);
+                case "Dashboard":
+                    ContentFrame.Content = new DashboardView();
+                    break;
+                case "Processes":
+                    ContentFrame.Content = new ProcessesView();
+                    break;
+                case "PowerProfiles":
+                    ContentFrame.Content = new PowerProfilesView();
+                    break;
+                case "ThreadOptimizer":
+                    ContentFrame.Content = new ThreadOptimizerView();
+                    break;
+                case "Settings":
+                    ContentFrame.Content = new SettingsView();
+                    break;
+                default:
+                    ContentFrame.Content = new DashboardView();
+                    break;
             }
         }
 
-        private void Window_StateChanged(object sender, EventArgs e)
+        private void ThemeToggle_Checked(object sender, RoutedEventArgs e)
         {
-            if (WindowState == WindowState.Minimized && _settingsService.MinimizeToTray)
+            ApplyTheme(true); // Dark theme
+        }
+
+        private void ThemeToggle_Unchecked(object sender, RoutedEventArgs e)
+        {
+            ApplyTheme(false); // Light theme
+        }
+
+        private void ApplyTheme(bool isDarkTheme)
+        {
+            ResourceDictionary resources = Application.Current.Resources;
+            
+            // Update all brushes with the appropriate theme
+            if (isDarkTheme)
             {
-                Hide();
-            }
-        }
-
-        private void MinimizeToTrayButton_Click(object sender, RoutedEventArgs e)
-        {
-            Hide();
-        }
-
-        private void ThemeToggleButton_Click(object sender, RoutedEventArgs e)
-        {
-            _settingsService.ToggleTheme();
-            UpdateThemeIcon();
-        }
-
-        private void UpdateThemeIcon()
-        {
-            if (_settingsService.IsDarkTheme)
-            {
-                ThemeIcon.Data = (Geometry)FindResource("LightThemeIconGeometry");
-                ThemeToggleButton.ToolTip = "Switch to light theme";
+                // Dark theme
+                resources["PrimaryBrush"] = resources["DarkPrimaryBrush"];
+                resources["SecondaryBrush"] = resources["DarkSecondaryBrush"];
+                resources["AccentBrush"] = resources["DarkAccentBrush"];
+                resources["AppBackgroundBrush"] = resources["DarkBackgroundBrush"];
+                resources["CardBackgroundBrush"] = resources["DarkCardBackgroundBrush"];
+                resources["SidebarBackgroundBrush"] = resources["DarkSidebarBackgroundBrush"];
+                resources["PrimaryTextBrush"] = resources["DarkPrimaryTextBrush"];
+                resources["SecondaryTextBrush"] = resources["DarkSecondaryTextBrush"];
+                resources["DisabledTextBrush"] = resources["DarkDisabledTextBrush"];
+                resources["BorderBrush"] = resources["DarkBorderBrush"];
+                resources["HoverBrush"] = resources["DarkHoverBrush"];
+                resources["SeparatorBrush"] = resources["DarkSeparatorBrush"];
             }
             else
             {
-                ThemeIcon.Data = (Geometry)FindResource("DarkThemeIconGeometry");
-                ThemeToggleButton.ToolTip = "Switch to dark theme";
+                // Light theme
+                resources["PrimaryBrush"] = resources["LightPrimaryBrush"];
+                resources["SecondaryBrush"] = resources["LightSecondaryBrush"];
+                resources["AccentBrush"] = resources["LightAccentBrush"];
+                resources["AppBackgroundBrush"] = resources["LightBackgroundBrush"];
+                resources["CardBackgroundBrush"] = resources["LightCardBackgroundBrush"];
+                resources["SidebarBackgroundBrush"] = resources["LightSidebarBackgroundBrush"];
+                resources["PrimaryTextBrush"] = resources["LightPrimaryTextBrush"];
+                resources["SecondaryTextBrush"] = resources["LightSecondaryTextBrush"];
+                resources["DisabledTextBrush"] = resources["LightDisabledTextBrush"];
+                resources["BorderBrush"] = resources["LightBorderBrush"];
+                resources["HoverBrush"] = resources["LightHoverBrush"];
+                resources["SeparatorBrush"] = resources["LightSeparatorBrush"];
             }
-        }
-
-        private void TrayIcon_TrayLeftMouseDown(object sender, RoutedEventArgs e)
-        {
-            Show();
-            WindowState = WindowState.Normal;
-            Activate();
-        }
-
-        private void OpenMenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            Show();
-            WindowState = WindowState.Normal;
-            Activate();
-        }
-
-        private void ExitMenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            Application.Current.Shutdown();
-        }
-
-        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-            // Save window position and size
-            _settingsService.WindowSettings = new Models.WindowSettings
-            {
-                Width = Width,
-                Height = Height,
-                Left = Left,
-                Top = Top
-            };
-            _settingsService.SaveSettings();
-
-            // If close to tray is enabled, just hide the window instead of closing the app
-            if (_settingsService.CloseToTray)
-            {
-                e.Cancel = true;
-                Hide();
-            }
+            
+            // Save the theme preference to settings
+            // SettingsService.Current.SaveThemePreference(isDarkTheme);
         }
     }
 }

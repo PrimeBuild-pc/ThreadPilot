@@ -4,63 +4,74 @@ using System.IO;
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Represents a bundled power profile (.pow file)
+    /// Represents a bundled power profile included with the application
     /// </summary>
     public class BundledPowerProfile
     {
         /// <summary>
-        /// Gets or sets the name of the profile
+        /// Gets or sets the GUID of the power profile
+        /// </summary>
+        public Guid Id { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the name of the power profile
         /// </summary>
         public string Name { get; set; }
         
         /// <summary>
-        /// Gets or sets the path to the profile file
-        /// </summary>
-        public string FilePath { get; set; }
-        
-        /// <summary>
-        /// Gets or sets whether the profile is currently active
-        /// </summary>
-        public bool IsActive { get; set; }
-        
-        /// <summary>
-        /// Gets or sets a description of the profile
+        /// Gets or sets the description of the power profile
         /// </summary>
         public string Description { get; set; }
         
         /// <summary>
-        /// Gets or sets the unique identifier of the profile (used to check if it's imported into Windows)
+        /// Gets or sets the filename of the power profile
         /// </summary>
-        public Guid? GuidInSystem { get; set; }
+        public string Filename { get; set; }
         
         /// <summary>
-        /// Gets the filename of the profile without the path
+        /// Gets or sets the category of the power profile
         /// </summary>
-        public string FileName => Path.GetFileName(FilePath);
+        public string Category { get; set; }
         
         /// <summary>
-        /// Gets the name of the profile without the extension
+        /// Gets or sets whether the profile is installed on the system
         /// </summary>
-        public string ProfileName => Path.GetFileNameWithoutExtension(FilePath);
+        public bool IsInstalled { get; set; }
         
         /// <summary>
-        /// Creates a new bundled power profile
+        /// Gets the full path to the power profile file
         /// </summary>
-        /// <param name="filePath">The path to the .pow file</param>
-        /// <param name="description">An optional description</param>
-        public BundledPowerProfile(string filePath, string description = null)
+        public string FilePath => Path.Combine("PowerProfiles", Filename);
+        
+        /// <summary>
+        /// Gets whether the power profile file exists
+        /// </summary>
+        public bool FileExists => File.Exists(FilePath);
+        
+        /// <summary>
+        /// Creates a new instance of the BundledPowerProfile class
+        /// </summary>
+        public BundledPowerProfile()
         {
-            if (string.IsNullOrEmpty(filePath))
-                throw new ArgumentNullException(nameof(filePath));
-                
-            if (!File.Exists(filePath))
-                throw new FileNotFoundException("Power profile file not found", filePath);
-                
-            FilePath = filePath;
-            Name = Path.GetFileNameWithoutExtension(filePath);
-            Description = description ?? $"Bundled profile: {Name}";
-            IsActive = false;
-            GuidInSystem = null;
+            Id = Guid.NewGuid();
+            Name = string.Empty;
+            Description = string.Empty;
+            Filename = string.Empty;
+            Category = string.Empty;
+            IsInstalled = false;
+        }
+        
+        /// <summary>
+        /// Creates a new instance of the BundledPowerProfile class with the specified parameters
+        /// </summary>
+        public BundledPowerProfile(string name, string description, string filename, string category, bool isInstalled = false)
+        {
+            Id = Guid.NewGuid();
+            Name = name;
+            Description = description;
+            Filename = filename;
+            Category = category;
+            IsInstalled = isInstalled;
         }
     }
 }

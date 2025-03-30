@@ -3,160 +3,256 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:tb="http://www.hardcodet.net/taskbar"
         xmlns:local="clr-namespace:ThreadPilot"
         xmlns:views="clr-namespace:ThreadPilot.Views"
         mc:Ignorable="d"
         Title="ThreadPilot" 
-        Height="650" 
-        Width="900"
-        MinHeight="500" 
+        Height="720" 
+        Width="1280" 
+        MinHeight="600" 
         MinWidth="800"
         WindowStartupLocation="CenterScreen"
-        Background="{DynamicResource BackgroundBrush}"
-        Foreground="{DynamicResource ForegroundBrush}"
-        StateChanged="Window_StateChanged"
-        Closing="Window_Closing">
-    
-    <Window.Resources>
-        <Style TargetType="TabItem" BasedOn="{StaticResource TabItemStyle}"/>
-    </Window.Resources>
+        Background="{StaticResource AppBackgroundBrush}">
     
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-
-        <!-- Header -->
-        <Border Grid.Row="0" Background="{DynamicResource AccentBrush}" Padding="20,15">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="240" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        
+        <!-- Sidebar Navigation -->
+        <Border Grid.Column="0" 
+                Background="{StaticResource SidebarBackgroundBrush}" 
+                BorderThickness="0,0,1,0" 
+                BorderBrush="{StaticResource BorderBrush}">
+            
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="80" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 
-                <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <Path Data="{StaticResource ThreadPilotIconGeometry}" 
-                          Fill="{DynamicResource LogoBrush}" 
-                          Width="32" 
-                          Height="32" 
-                          Margin="0,0,10,0"
-                          Stretch="Uniform"/>
+                <!-- App Logo and Title -->
+                <StackPanel Grid.Row="0" 
+                            Orientation="Horizontal" 
+                            Margin="20,0"
+                            VerticalAlignment="Center">
+                    <Image Source="/Resources/app_icon.ico" 
+                           Width="32" 
+                           Height="32" 
+                           Margin="0,0,10,0" />
                     <TextBlock Text="ThreadPilot" 
-                               FontSize="24" 
+                               FontSize="22" 
                                FontWeight="SemiBold" 
                                VerticalAlignment="Center"
-                               Foreground="{DynamicResource HeaderForegroundBrush}"/>
+                               Foreground="{StaticResource PrimaryTextBrush}" />
                 </StackPanel>
                 
-                <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <Button x:Name="MinimizeToTrayButton" 
-                            Style="{StaticResource IconButtonStyle}"
-                            ToolTip="Minimize to tray"
-                            Click="MinimizeToTrayButton_Click">
-                        <Path Data="{StaticResource MinimizeIconGeometry}" 
-                              Fill="{DynamicResource HeaderForegroundBrush}" 
-                              Width="16" 
-                              Height="16"/>
-                    </Button>
-                    <Button x:Name="ThemeToggleButton" 
-                            Style="{StaticResource IconButtonStyle}"
-                            ToolTip="Toggle theme"
-                            Click="ThemeToggleButton_Click"
-                            Margin="10,0,0,0">
-                        <Path x:Name="ThemeIcon"
-                              Data="{StaticResource LightThemeIconGeometry}" 
-                              Fill="{DynamicResource HeaderForegroundBrush}" 
-                              Width="16" 
-                              Height="16"/>
-                    </Button>
+                <!-- Navigation Menu -->
+                <ListBox Grid.Row="1" 
+                         x:Name="NavigationMenu" 
+                         BorderThickness="0"
+                         Background="Transparent"
+                         Margin="0,20,0,0"
+                         SelectionChanged="NavigationMenu_SelectionChanged">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Height" Value="48" />
+                            <Setter Property="Padding" Value="20,0" />
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="BorderThickness" Value="0" />
+                            <Setter Property="Margin" Value="0" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="border" 
+                                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                                Background="{TemplateBinding Background}" 
+                                                Padding="{TemplateBinding Padding}" 
+                                                SnapsToDevicePixels="true">
+                                            <ContentPresenter HorizontalAlignment="Left" 
+                                                              VerticalAlignment="Center" 
+                                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsSelected" Value="true">
+                                                <Setter Property="Background" Value="{StaticResource HoverBrush}" />
+                                                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PrimaryBrush}" />
+                                                <Setter Property="BorderThickness" TargetName="border" Value="4,0,0,0" />
+                                            </Trigger>
+                                            <Trigger Property="IsMouseOver" Value="true">
+                                                <Setter Property="Background" Value="{StaticResource HoverBrush}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    
+                    <ListBoxItem Tag="Dashboard">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE80F;" 
+                                       FontFamily="Segoe MDL2 Assets" 
+                                       VerticalAlignment="Center" 
+                                       Margin="0,0,10,0" />
+                            <TextBlock Text="Dashboard" 
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ListBoxItem>
+                    
+                    <ListBoxItem Tag="ProcessManager">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE7EE;" 
+                                       FontFamily="Segoe MDL2 Assets" 
+                                       VerticalAlignment="Center" 
+                                       Margin="0,0,10,0" />
+                            <TextBlock Text="Process Manager" 
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ListBoxItem>
+                    
+                    <ListBoxItem Tag="CoreAffinity">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE950;" 
+                                       FontFamily="Segoe MDL2 Assets" 
+                                       VerticalAlignment="Center" 
+                                       Margin="0,0,10,0" />
+                            <TextBlock Text="Core Affinity" 
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ListBoxItem>
+                    
+                    <ListBoxItem Tag="PowerProfiles">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE945;" 
+                                       FontFamily="Segoe MDL2 Assets" 
+                                       VerticalAlignment="Center" 
+                                       Margin="0,0,10,0" />
+                            <TextBlock Text="Power Profiles" 
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ListBoxItem>
+                    
+                    <ListBoxItem Tag="SystemOptimization">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE946;" 
+                                       FontFamily="Segoe MDL2 Assets" 
+                                       VerticalAlignment="Center" 
+                                       Margin="0,0,10,0" />
+                            <TextBlock Text="System Optimization" 
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ListBoxItem>
+                </ListBox>
+                
+                <!-- Settings & About -->
+                <StackPanel Grid.Row="2" Margin="0,0,0,20">
+                    <Separator Margin="20,0" Opacity="0.5" />
+                    
+                    <ListBoxItem Height="48" 
+                                 Padding="20,0" 
+                                 Tag="Settings"
+                                 MouseUp="ListBoxItem_MouseUp">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE713;" 
+                                       FontFamily="Segoe MDL2 Assets" 
+                                       VerticalAlignment="Center" 
+                                       Margin="0,0,10,0" />
+                            <TextBlock Text="Settings" 
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ListBoxItem>
+                    
+                    <ListBoxItem Height="48" 
+                                 Padding="20,0" 
+                                 Tag="About"
+                                 MouseUp="ListBoxItem_MouseUp">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE946;" 
+                                       FontFamily="Segoe MDL2 Assets" 
+                                       VerticalAlignment="Center" 
+                                       Margin="0,0,10,0" />
+                            <TextBlock Text="About" 
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ListBoxItem>
                 </StackPanel>
             </Grid>
         </Border>
-
-        <!-- Main Content -->
-        <TabControl Grid.Row="1" x:Name="MainTabControl" Margin="10" 
-                    BorderThickness="0"
-                    Background="Transparent"
-                    SelectedIndex="{Binding SelectedTabIndex}">
-            <TabItem Header="Processes">
-                <views:ProcessListView />
-            </TabItem>
-            <TabItem Header="Affinity">
-                <views:AffinityView />
-            </TabItem>
-            <TabItem Header="System Optimization">
-                <views:SystemOptimizationView />
-            </TabItem>
-            <TabItem Header="Power Profiles">
-                <views:PowerProfilesView />
-            </TabItem>
-            <TabItem Header="Settings">
-                <views:SettingsView />
-            </TabItem>
-        </TabControl>
-
-        <!-- Status Bar -->
-        <Border Grid.Row="2" Background="{DynamicResource StatusBarBrush}" Padding="10,5">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+        
+        <!-- Content Area -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="60" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            
+            <!-- Header -->
+            <Border Grid.Row="0" 
+                    Background="{StaticResource CardBackgroundBrush}" 
+                    BorderThickness="0,0,0,1" 
+                    BorderBrush="{StaticResource BorderBrush}">
                 
-                <TextBlock Grid.Column="0" 
-                           Text="{Binding StatusMessage}" 
-                           Foreground="{DynamicResource StatusBarForegroundBrush}"/>
-                
-                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <TextBlock Text="{Binding CpuUsage, StringFormat='{}{0}% CPU'}" 
-                               Foreground="{DynamicResource StatusBarForegroundBrush}"
-                               Margin="0,0,10,0"/>
-                    <TextBlock Text="{Binding MemoryUsage, StringFormat='{}{0}% RAM'}" 
-                               Foreground="{DynamicResource StatusBarForegroundBrush}"/>
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <!-- Taskbar Icon -->
-        <tb:TaskbarIcon x:Name="TrayIcon"
-                        IconSource="/Resources/ThreadPilotIcon.ico"
-                        ToolTipText="ThreadPilot"
-                        TrayLeftMouseDown="TrayIcon_TrayLeftMouseDown">
-            <tb:TaskbarIcon.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="Open ThreadPilot" Click="OpenMenuItem_Click">
-                        <MenuItem.Icon>
-                            <Path Data="{StaticResource AppIconGeometry}" 
-                                  Fill="{DynamicResource ForegroundBrush}" 
-                                  Width="16" 
-                                  Height="16"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
-                    <Separator />
-                    <MenuItem Header="Apply Profiles" x:Name="ProfilesMenuItem" 
-                              ItemsSource="{Binding SavedProfiles}">
-                        <MenuItem.Icon>
-                            <Path Data="{StaticResource ProfileIconGeometry}" 
-                                  Fill="{DynamicResource ForegroundBrush}" 
-                                  Width="16" 
-                                  Height="16"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
-                    <Separator />
-                    <MenuItem Header="Exit" Click="ExitMenuItem_Click">
-                        <MenuItem.Icon>
-                            <Path Data="{StaticResource ExitIconGeometry}" 
-                                  Fill="{DynamicResource ForegroundBrush}" 
-                                  Width="16" 
-                                  Height="16"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
-                </ContextMenu>
-            </tb:TaskbarIcon.ContextMenu>
-        </tb:TaskbarIcon>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Page Title -->
+                    <TextBlock x:Name="PageTitle" 
+                               Grid.Column="0" 
+                               Text="Dashboard" 
+                               FontSize="20" 
+                               FontWeight="SemiBold" 
+                               VerticalAlignment="Center" 
+                               Margin="20,0" />
+                    
+                    <!-- Header Tools -->
+                    <StackPanel Grid.Column="1" 
+                                Orientation="Horizontal" 
+                                VerticalAlignment="Center" 
+                                Margin="0,0,20,0">
+                        
+                        <Button Style="{StaticResource ActionButtonStyle}" 
+                                ToolTip="Refresh" 
+                                Margin="5,0" 
+                                Click="RefreshButton_Click">
+                            <TextBlock Text="&#xE72C;" 
+                                       FontFamily="Segoe MDL2 Assets" 
+                                       FontSize="16" />
+                        </Button>
+                        
+                        <Button Style="{StaticResource ActionButtonStyle}" 
+                                ToolTip="Notifications" 
+                                Margin="5,0" 
+                                Click="NotificationsButton_Click">
+                            <TextBlock Text="&#xE7E7;" 
+                                       FontFamily="Segoe MDL2 Assets" 
+                                       FontSize="16" />
+                        </Button>
+                        
+                        <Button Style="{StaticResource ActionButtonStyle}" 
+                                ToolTip="Theme Toggle" 
+                                Margin="5,0" 
+                                Click="ThemeToggleButton_Click">
+                            <TextBlock x:Name="ThemeIcon" 
+                                       Text="&#xE793;" 
+                                       FontFamily="Segoe MDL2 Assets" 
+                                       FontSize="16" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+            
+            <!-- Content Frame -->
+            <Frame x:Name="ContentFrame" 
+                   Grid.Row="1" 
+                   NavigationUIVisibility="Hidden" 
+                   Padding="20" />
+        </Grid>
     </Grid>
 </Window>

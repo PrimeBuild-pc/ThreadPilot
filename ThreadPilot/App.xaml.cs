@@ -1,78 +1,138 @@
 using System;
 using System.Windows;
-using System.Threading;
-using Microsoft.Extensions.DependencyInjection;
+using System.Threading.Tasks;
+using System.IO;
+using System.Windows.Media;
 using ThreadPilot.Services;
-using ThreadPilot.ViewModels;
 
 namespace ThreadPilot
 {
+    /// <summary>
+    /// Interaction logic for App.xaml
+    /// </summary>
     public partial class App : Application
     {
-        private Mutex _appMutex;
-        private static IServiceProvider _serviceProvider;
-
-        public App()
-        {
-            // Check if the app is already running
-            _appMutex = new Mutex(true, "ThreadPilotSingleInstanceMutex", out bool createdNew);
-            if (!createdNew)
-            {
-                MessageBox.Show("ThreadPilot is already running.", "ThreadPilot", MessageBoxButton.OK, MessageBoxImage.Information);
-                Current.Shutdown();
-                return;
-            }
-
-            // Set up dependency injection
-            var services = new ServiceCollection();
-            ConfigureServices(services);
-            _serviceProvider = services.BuildServiceProvider();
-        }
-
-        private void ConfigureServices(ServiceCollection services)
-        {
-            // Register services
-            services.AddSingleton<ProcessService>();
-            services.AddSingleton<AffinityService>();
-            services.AddSingleton<SystemOptimizationService>();
-            services.AddSingleton<IPowerProfileService, PowerProfileService>();
-            services.AddSingleton<PowerProfileService>();
-            services.AddSingleton<IBundledPowerProfilesService, BundledPowerProfilesService>();
-            services.AddSingleton<BundledPowerProfilesService>();
-            services.AddSingleton<IFileDialogService, FileDialogService>();
-            services.AddSingleton<SettingsService>();
-            services.AddSingleton<NotificationService>();
-
-            // Register view models
-            services.AddSingleton<MainViewModel>();
-            services.AddTransient<ProcessListViewModel>();
-            services.AddTransient<AffinityViewModel>();
-            services.AddTransient<SystemOptimizationViewModel>();
-            services.AddTransient<PowerProfilesViewModel>();
-            services.AddTransient<SettingsViewModel>();
-        }
-
-        public static T GetService<T>() where T : class
-        {
-            return _serviceProvider.GetService<T>();
-        }
+        // Service container for the application
+        public static ServiceContainer Services { get; private set; }
 
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+            
+            // Initialize the service container
+            InitializeServices();
+            
+            // Ensure the required directories are created
+            EnsureApplicationDirectories();
+            
+            // Check if the application is running with admin rights
+            CheckAdminRights();
+        }
 
-            // Set the theme based on user preferences or system settings
-            var settingsService = GetService<SettingsService>();
-            if (settingsService != null)
+        private void InitializeServices()
+        {
+            // Create and configure all services
+            Services = new ServiceContainer();
+            
+            // Register all services
+            Services.Register<INotificationService>(new NotificationService());
+            Services.Register<IFileDialogService>(new FileDialogService());
+            Services.Register<IPowerProfileService>(new PowerProfileService());
+            Services.Register<IBundledPowerProfilesService>(new BundledPowerProfilesService());
+            Services.Register<IProcessService>(new ProcessService());
+            Services.Register<IAffinityService>(new AffinityService());
+            Services.Register<ISystemOptimizationService>(new SystemOptimizationService());
+            Services.Register<ISettingsService>(new SettingsService());
+            
+            // Log service registration completion
+            Console.WriteLine("All services have been registered.");
+        }
+
+        private void EnsureApplicationDirectories()
+        {
+            string appDataPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "ThreadPilot");
+            
+            // Create application directories if they don't exist
+            if (!Directory.Exists(appDataPath))
             {
-                settingsService.ApplyTheme();
+                Directory.CreateDirectory(appDataPath);
+            }
+            
+            string profilesDir = Path.Combine(appDataPath, "Profiles");
+            if (!Directory.Exists(profilesDir))
+            {
+                Directory.CreateDirectory(profilesDir);
+            }
+            
+            string settingsDir = Path.Combine(appDataPath, "Settings");
+            if (!Directory.Exists(settingsDir))
+            {
+                Directory.CreateDirectory(settingsDir);
+            }
+            
+            string logsDir = Path.Combine(appDataPath, "Logs");
+            if (!Directory.Exists(logsDir))
+            {
+                Directory.CreateDirectory(logsDir);
             }
         }
 
-        protected override void OnExit(ExitEventArgs e)
+        private void CheckAdminRights()
         {
-            _appMutex?.ReleaseMutex();
-            base.OnExit(e);
+            bool isAdmin = new AdminRightsChecker().IsRunningAsAdmin();
+            
+            if (!isAdmin)
+            {
+                MessageBox.Show(
+                    "ThreadPilot is running without administrative privileges. " +
+                    "Some features may not work correctly.\n\n" +
+                    "To access all features, please restart the application by right-clicking it and selecting 'Run as administrator'.",
+                    "Limited Functionality",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+        }
+        
+        // Simple service container implementation
+        public class ServiceContainer
+        {
+            private readonly System.Collections.Generic.Dictionary<Type, object> _services = 
+                new System.Collections.Generic.Dictionary<Type, object>();
+
+            public void Register<T>(T service) where T : class
+            {
+                _services[typeof(T)] = service;
+            }
+
+            public T Resolve<T>() where T : class
+            {
+                if (_services.TryGetValue(typeof(T), out object service))
+                {
+                    return (T)service;
+                }
+
+                throw new InvalidOperationException($"Service of type {typeof(T).Name} is not registered.");
+            }
+        }
+        
+        // Helper class to check admin rights
+        private class AdminRightsChecker
+        {
+            public bool IsRunningAsAdmin()
+            {
+                try
+                {
+                    System.Security.Principal.WindowsIdentity identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+                    System.Security.Principal.WindowsPrincipal principal = new System.Security.Principal.WindowsPrincipal(identity);
+                    return principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+                }
+                catch
+                {
+                    return false;
+                }
+            }
         }
     }
 }

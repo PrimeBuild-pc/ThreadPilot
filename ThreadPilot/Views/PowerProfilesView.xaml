@@ -4,188 +4,252 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:ThreadPilot.Views"
-             xmlns:converters="clr-namespace:ThreadPilot.Converters"
-             Loaded="PowerProfilesView_Loaded"
+             xmlns:vm="clr-namespace:ThreadPilot.ViewModels"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
-    
-    <UserControl.Resources>
-        <converters:BoolToInvisibilityConverter x:Key="BoolToInvisibilityConverter" />
-        <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="18" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Margin" Value="0,0,0,10" />
-        </Style>
-        <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="16" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Margin" Value="0,15,0,10" />
-        </Style>
-        <Style x:Key="ProfileItemStyle" TargetType="ListViewItem">
-            <Setter Property="Padding" Value="10" />
-            <Setter Property="Margin" Value="0,2" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-            <Setter Property="Background" Value="{DynamicResource BackgroundBrushSecondary}" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-        </Style>
-    </UserControl.Resources>
+             d:DesignHeight="650" d:DesignWidth="800">
     
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         
         <!-- Header -->
-        <TextBlock Text="Power Profiles" Style="{StaticResource HeaderTextStyle}" Grid.Row="0" />
+        <TextBlock Grid.Row="0" Text="Power Profiles" Style="{StaticResource HeaderTextStyle}" />
         
-        <!-- Bundled Profiles Section -->
-        <Grid Grid.Row="1" Margin="0,20,0,0">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
+        <!-- Search and Actions Toolbar -->
+        <Grid Grid.Row="1" Margin="0,10,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
             
-            <TextBlock Text="Bundled Power Profiles" Style="{StaticResource SectionHeaderStyle}" Grid.Row="0" />
+            <!-- Search Box -->
+            <Border Grid.Column="0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Background="White" Padding="8,4">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="🔍" FontSize="14" Margin="0,0,8,0" VerticalAlignment="Center" />
+                    <TextBox Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             BorderThickness="0" Background="Transparent"
+                             VerticalAlignment="Center" Width="Auto"
+                             VerticalContentAlignment="Center"
+                             Padding="0,4" />
+                </Grid>
+            </Border>
             
-            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10,0,10">
-                <Button Command="{Binding RefreshProfilesCommand}" Margin="0,0,10,0" Padding="8,4" 
-                        ToolTip="Refresh the list of power profiles">
-                    <StackPanel Orientation="Horizontal">
-                        <Path Data="M4.609,12.8a8,8,0,1,1,6.876,3.86V15.32a6.566,6.566,0,1,0-5.6-3.16H7.891l-2.2,2.209L4.5,16.5l-4-4,4-4,1.182,1.182L7.9,11.9Z" 
-                              Fill="{DynamicResource ForegroundBrush}" Width="16" Height="16" Stretch="Uniform" />
-                        <TextBlock Text="Refresh" Margin="5,0,0,0" />
-                    </StackPanel>
-                </Button>
-                
-                <Button Command="{Binding ImportProfileCommand}" Padding="8,4" 
-                        ToolTip="Import a power profile from a .pow file">
-                    <StackPanel Orientation="Horizontal">
-                        <Path Data="M15.375,9.75v3.751l-1.524-1.524-.75.75L16,15.625l2.899-2.899-.75-.75-1.524,1.524V9.75ZM16,2C8.82,2,3,7.82,3,15s5.82,13,13,13,13-5.82,13-13S23.18,2,16,2Zm0,24C9.925,26,5,21.075,5,15S9.925,4,16,4s11,4.925,11,11-4.925,11-11,11Z" 
-                              Fill="{DynamicResource ForegroundBrush}" Width="16" Height="16" Stretch="Uniform" />
-                        <TextBlock Text="Import" Margin="5,0,0,0" />
-                    </StackPanel>
-                </Button>
-            </StackPanel>
+            <!-- Toolbar Buttons -->
+            <Button Grid.Column="1" Margin="10,0,5,0" Command="{Binding RefreshCommand}" ToolTip="Refresh Profiles">
+                <StackPanel Orientation="Horizontal">
+                    <Path Width="16" Height="16" Stretch="Uniform" Fill="{StaticResource PrimaryBrush}" Data="{StaticResource RefreshIcon}" />
+                    <TextBlock Text="Refresh" Margin="5,0,0,0" />
+                </StackPanel>
+            </Button>
+            
+            <Button Grid.Column="2" Margin="5,0" Command="{Binding ImportProfileCommand}" ToolTip="Import Profile">
+                <StackPanel Orientation="Horizontal">
+                    <Path Width="16" Height="16" Stretch="Uniform" Fill="{StaticResource PrimaryBrush}" Data="{StaticResource ImportIcon}" />
+                    <TextBlock Text="Import" Margin="5,0,0,0" />
+                </StackPanel>
+            </Button>
+            
+            <Button Grid.Column="3" Margin="5,0" Command="{Binding ExportProfileCommand}" ToolTip="Export Selected Profile">
+                <StackPanel Orientation="Horizontal">
+                    <Path Width="16" Height="16" Stretch="Uniform" Fill="{StaticResource PrimaryBrush}" Data="{StaticResource ExportIcon}" />
+                    <TextBlock Text="Export" Margin="5,0,0,0" />
+                </StackPanel>
+            </Button>
+            
+            <Button Grid.Column="4" Margin="5,0,0,0" Command="{Binding DeleteProfileCommand}" ToolTip="Delete Selected Profile">
+                <StackPanel Orientation="Horizontal">
+                    <Path Width="16" Height="16" Stretch="Uniform" Fill="{StaticResource AccentBrush}" Data="{StaticResource DeleteIcon}" />
+                    <TextBlock Text="Delete" Margin="5,0,0,0" />
+                </StackPanel>
+            </Button>
         </Grid>
         
-        <!-- Profile List -->
+        <!-- Profiles Section -->
         <Grid Grid.Row="2">
-            <ListView ItemsSource="{Binding BundledProfiles}" 
-                      SelectedItem="{Binding SelectedBundledProfile}"
-                      BorderThickness="0"
-                      Background="Transparent"
-                      ItemContainerStyle="{StaticResource ProfileItemStyle}">
-                <ListView.ItemTemplate>
-                    <DataTemplate>
-                        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*" />
+                <ColumnDefinition Width="4*" />
+            </Grid.ColumnDefinitions>
+            
+            <!-- Profiles List -->
+            <Border Grid.Column="0" Style="{StaticResource CardPanelStyle}" Margin="0,0,10,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Available Profiles" Style="{StaticResource SubheaderTextStyle}" Margin="0,0,0,10" />
+                    
+                    <ListView Grid.Row="1" ItemsSource="{Binding FilteredProfiles}" 
+                              SelectedItem="{Binding SelectedProfile}" BorderThickness="0"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem" BasedOn="{StaticResource ProcessListItemStyle}" />
+                        </ListView.ItemContainerStyle>
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    
+                                    <!-- Profile icon -->
+                                    <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Width="40" Height="40" 
+                                            Background="{StaticResource PrimaryLightBrush}" CornerRadius="20" Margin="0,0,10,0">
+                                        <Path Width="20" Height="20" Stretch="Uniform" Fill="White" 
+                                              Data="{StaticResource WindowsProfileIcon}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    
+                                    <!-- Active indicator -->
+                                    <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Width="12" Height="12" 
+                                            Background="{StaticResource AccentBrush}" CornerRadius="6" 
+                                            HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,5,0"
+                                            Visibility="{Binding IsActive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Path Width="8" Height="8" Stretch="Uniform" Fill="White" 
+                                              Data="M4,10L2,8L1,9L4,12L9,7L8,6Z"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    
+                                    <!-- Profile name and description -->
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold" />
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Description}" 
+                                               TextWrapping="Wrap" Opacity="0.7" FontSize="12" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                    
+                    <!-- Loading indicator -->
+                    <Grid Grid.Row="1" Background="#80FFFFFF" 
+                          Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="Loading profiles..." HorizontalAlignment="Center" />
+                            <ProgressBar IsIndeterminate="True" Width="150" Height="4" Margin="0,10,0,0" />
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+            
+            <!-- Profile Details -->
+            <Border Grid.Column="1" Style="{StaticResource CardPanelStyle}" Margin="10,0,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Profile Details" Style="{StaticResource SubheaderTextStyle}" Margin="0,0,0,10" />
+                    
+                    <!-- No selection message -->
+                    <TextBlock Grid.Row="1" Text="Select a power profile to view details" 
+                               HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.7"
+                               Visibility="{Binding SelectedProfile, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=inverse}" />
+                    
+                    <!-- Profile details -->
+                    <StackPanel Grid.Row="1" Visibility="{Binding SelectedProfile, Converter={StaticResource NullToVisibilityConverter}}">
+                        <!-- Profile header -->
+                        <Grid Margin="0,0,0,20">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <Border Grid.Column="0" Width="64" Height="64" Background="{StaticResource PrimaryBrush}" 
+                                    CornerRadius="32" Margin="0,0,15,0">
+                                <Path Width="32" Height="32" Stretch="Uniform" Fill="White" 
+                                      Data="{StaticResource WindowsProfileIcon}"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            
+                            <StackPanel Grid.Column="1">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                    <TextBlock Text="{Binding SelectedProfile.Name}" FontSize="18" FontWeight="SemiBold" />
+                                    <Border Background="{StaticResource AccentBrush}" CornerRadius="10" Padding="5,1" Margin="10,0,0,0"
+                                            Visibility="{Binding SelectedProfile.IsActive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock Text="Active" Foreground="White" FontSize="12" FontWeight="SemiBold" />
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock Text="{Binding SelectedProfile.Description}" TextWrapping="Wrap" Opacity="0.8" />
+                                <TextBlock Text="{Binding SelectedProfile.Tags}" Opacity="0.7" FontSize="12" Margin="0,5,0,0" />
+                            </StackPanel>
+                        </Grid>
+                        
+                        <!-- Profile details -->
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
                             
-                            <!-- Profile name -->
-                            <TextBlock Text="{Binding Name}" 
-                                       FontWeight="SemiBold" 
-                                       FontSize="14" 
-                                       Grid.Row="0" 
-                                       Grid.Column="0" />
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Type:" Margin="0,5" FontWeight="SemiBold" />
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedProfile.IsBuiltIn, Converter={StaticResource BooleanToBuiltInConverter}}" Margin="0,5" />
                             
-                            <!-- Active indicator -->
-                            <Border Grid.Row="0" 
-                                    Grid.Column="1" 
-                                    Margin="0,0,10,0"
-                                    Padding="6,2" 
-                                    Background="{DynamicResource AccentBrush}" 
-                                    CornerRadius="4"
-                                    Visibility="{Binding IsActive, Converter={StaticResource BoolToInvisibilityConverter}}">
-                                <TextBlock Text="ACTIVE" 
-                                           FontSize="10" 
-                                           FontWeight="Bold" 
-                                           Foreground="White" />
-                            </Border>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Date Added:" Margin="0,5" FontWeight="SemiBold" />
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedProfile.DateCreated, StringFormat={}{0:MM/dd/yyyy hh:mm tt}}" Margin="0,5" />
                             
-                            <!-- Imported indicator -->
-                            <Border Grid.Row="0" 
-                                    Grid.Column="2" 
-                                    Padding="6,2" 
-                                    Background="{DynamicResource BackgroundBrushTertiary}" 
-                                    CornerRadius="4"
-                                    Visibility="{Binding GuidInSystem, Converter={StaticResource BoolToInvisibilityConverter}}">
-                                <TextBlock Text="IMPORTED" 
-                                           FontSize="10" 
-                                           FontWeight="Bold" 
-                                           Foreground="{DynamicResource ForegroundBrushSecondary}" />
-                            </Border>
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="File Location:" Margin="0,5" FontWeight="SemiBold" 
+                                      Visibility="{Binding SelectedProfile.FilePath, Converter={StaticResource EmptyStringToVisibilityConverter}}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedProfile.FilePath}" Margin="0,5" TextWrapping="Wrap"
+                                      Visibility="{Binding SelectedProfile.FilePath, Converter={StaticResource EmptyStringToVisibilityConverter}}"/>
                             
-                            <!-- Description -->
-                            <TextBlock Text="{Binding Description}" 
-                                       Grid.Row="1" 
-                                       Grid.Column="0" 
-                                       Grid.ColumnSpan="3" 
-                                       TextWrapping="Wrap" 
-                                       Margin="0,5,0,0" 
-                                       Foreground="{DynamicResource ForegroundBrushSecondary}" />
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="GUID:" Margin="0,5" FontWeight="SemiBold"
+                                      Visibility="{Binding SelectedProfile.Guid, Converter={StaticResource EmptyStringToVisibilityConverter}}"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedProfile.Guid}" Margin="0,5" TextWrapping="Wrap"
+                                      Visibility="{Binding SelectedProfile.Guid, Converter={StaticResource EmptyStringToVisibilityConverter}}"/>
                         </Grid>
-                    </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
-            
-            <!-- No profiles message -->
-            <TextBlock Text="No power profiles found. Click 'Import' to add a power profile." 
-                       HorizontalAlignment="Center" 
-                       VerticalAlignment="Center" 
-                       Foreground="{DynamicResource ForegroundBrushSecondary}"
-                       Visibility="{Binding BundledProfiles.Count, Converter={StaticResource BoolToInvisibilityConverter}, ConverterParameter=Inverse}" />
-            
-            <!-- Loading indicator -->
-            <StackPanel HorizontalAlignment="Center" 
-                        VerticalAlignment="Center" 
-                        Visibility="{Binding IsLoading, Converter={StaticResource BoolToInvisibilityConverter}}">
-                <TextBlock Text="Loading profiles..." 
-                           HorizontalAlignment="Center" 
-                           Foreground="{DynamicResource ForegroundBrushSecondary}" />
-                <ProgressBar IsIndeterminate="True" 
-                             Width="200" 
-                             Height="4" 
-                             Margin="0,10,0,0" />
-            </StackPanel>
+                        
+                        <!-- Profile effects description -->
+                        <StackPanel Margin="0,20,0,0">
+                            <TextBlock Text="What This Profile Does" FontWeight="SemiBold" Margin="0,0,0,10" />
+                            <TextBlock Text="Power profiles control how your system manages power consumption and performance. This includes settings like CPU performance states, display brightness, sleep timers, and more."
+                                      TextWrapping="Wrap" Margin="0,0,0,10" />
+                            
+                            <TextBlock Text="Typical Effects:" FontWeight="SemiBold" Margin="0,10,0,5" />
+                            <StackPanel Margin="10,0,0,0">
+                                <TextBlock Text="• CPU performance and power states management" TextWrapping="Wrap" Margin="0,2" />
+                                <TextBlock Text="• Power settings for PCI Express and USB connections" TextWrapping="Wrap" Margin="0,2" />
+                                <TextBlock Text="• Sleep and display timeouts" TextWrapping="Wrap" Margin="0,2" />
+                                <TextBlock Text="• Hard disk and devices power management" TextWrapping="Wrap" Margin="0,2" />
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                    
+                    <!-- Action button -->
+                    <Button Grid.Row="2" Content="Activate Profile" Command="{Binding ActivateProfileCommand}" 
+                            HorizontalAlignment="Left" Margin="0,15,0,0" MinWidth="120"
+                            Visibility="{Binding SelectedProfile, Converter={StaticResource NullToVisibilityConverter}}"/>
+                </Grid>
+            </Border>
         </Grid>
         
-        <!-- Profile Actions -->
-        <Border Grid.Row="2" 
-                VerticalAlignment="Bottom" 
-                HorizontalAlignment="Right" 
-                Background="{DynamicResource BackgroundBrushSecondary}" 
-                BorderBrush="{DynamicResource BorderBrush}" 
-                BorderThickness="1"
-                CornerRadius="4"
-                Padding="10"
-                Margin="0,0,0,10"
-                Visibility="{Binding IsProfileSelected, Converter={StaticResource BoolToInvisibilityConverter}}">
-            <StackPanel Orientation="Horizontal">
-                <Button Command="{Binding ActivateProfileCommand}" 
-                        Padding="8,4" 
-                        Margin="0,0,10,0"
-                        Visibility="{Binding IsProfileActive, Converter={StaticResource BoolToInvisibilityConverter}, ConverterParameter=Inverse}">
-                    <StackPanel Orientation="Horizontal">
-                        <Path Data="M8,5V19l11-7L8,5z" 
-                              Fill="{DynamicResource AccentBrush}" 
-                              Width="12" 
-                              Height="12" 
-                              Stretch="Uniform" />
-                        <TextBlock Text="Activate Profile" 
-                                   Margin="5,0,0,0" />
-                    </StackPanel>
-                </Button>
-            </StackPanel>
-        </Border>
+        <!-- Description footer -->
+        <TextBlock Grid.Row="3" Text="Note: Changing power profiles requires administrative privileges." 
+                   Style="{StaticResource BodyTextStyle}" Margin="0,15,0,0" />
     </Grid>
 </UserControl>

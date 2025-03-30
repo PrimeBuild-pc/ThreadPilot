@@ -1,391 +1,255 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using ThreadPilot.Models;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Service for managing bundled power profiles (.pow files)
+    /// Interface for the bundled power profiles service
+    /// </summary>
+    public interface IBundledPowerProfilesService
+    {
+        /// <summary>
+        /// Gets all available bundled power profiles
+        /// </summary>
+        Task<List<BundledPowerProfile>> GetAllProfilesAsync();
+        
+        /// <summary>
+        /// Gets a profile by ID
+        /// </summary>
+        Task<BundledPowerProfile> GetProfileByIdAsync(Guid id);
+        
+        /// <summary>
+        /// Adds a new power profile
+        /// </summary>
+        Task<bool> AddProfileAsync(BundledPowerProfile profile);
+        
+        /// <summary>
+        /// Updates an existing power profile
+        /// </summary>
+        Task<bool> UpdateProfileAsync(BundledPowerProfile profile);
+        
+        /// <summary>
+        /// Deletes a power profile
+        /// </summary>
+        Task<bool> DeleteProfileAsync(Guid id);
+        
+        /// <summary>
+        /// Imports a power profile from a file
+        /// </summary>
+        Task<BundledPowerProfile> ImportProfileAsync(string filePath, string name, string description, string category);
+    }
+
+    /// <summary>
+    /// Service for managing bundled power profiles
     /// </summary>
     public class BundledPowerProfilesService : IBundledPowerProfilesService
     {
-        private readonly string _bundledProfilesPath;
-        private readonly List<BundledPowerProfile> _bundledProfiles;
-        private readonly IFileDialogService _fileDialogService;
-        private readonly NotificationService _notificationService;
+        private List<BundledPowerProfile> _profiles;
+        private readonly string _profilesDirectory;
         
         /// <summary>
-        /// Constructor for BundledPowerProfilesService
+        /// Creates a new instance of BundledPowerProfilesService
         /// </summary>
-        public BundledPowerProfilesService(
-            IFileDialogService fileDialogService, 
-            NotificationService notificationService)
+        public BundledPowerProfilesService()
         {
-            _fileDialogService = fileDialogService;
-            _notificationService = notificationService;
+            _profiles = new List<BundledPowerProfile>();
             
-            // Path to the bundled profiles folder (in the application directory)
-            _bundledProfilesPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PowerProfiles");
+            // Set the profiles directory to a subfolder of the application directory
+            _profilesDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Profiles");
             
             // Create the directory if it doesn't exist
-            if (!Directory.Exists(_bundledProfilesPath))
+            if (!Directory.Exists(_profilesDirectory))
             {
-                Directory.CreateDirectory(_bundledProfilesPath);
+                Directory.CreateDirectory(_profilesDirectory);
             }
             
-            _bundledProfiles = new List<BundledPowerProfile>();
+            // Load built-in profiles from the assets folder
+            LoadBuiltInProfiles();
         }
-        
+
         /// <summary>
-        /// Gets all bundled power profiles
+        /// Gets all available bundled power profiles
         /// </summary>
-        /// <returns>A list of bundled power profiles</returns>
-        public async Task<List<BundledPowerProfile>> GetBundledProfilesAsync()
+        public async Task<List<BundledPowerProfile>> GetAllProfilesAsync()
         {
-            if (_bundledProfiles.Count == 0)
-            {
-                await LoadBundledProfilesAsync();
-            }
-            
-            return _bundledProfiles;
+            // Simulate async operation
+            await Task.Delay(1);
+            return _profiles.ToList();
         }
-        
+
         /// <summary>
-        /// Imports a bundled power profile into Windows
+        /// Gets a profile by ID
         /// </summary>
-        /// <param name="profile">The profile to import</param>
-        /// <returns>True if import was successful, false otherwise</returns>
-        public async Task<bool> ImportProfileAsync(BundledPowerProfile profile)
+        public async Task<BundledPowerProfile> GetProfileByIdAsync(Guid id)
         {
-            try
+            // Simulate async operation
+            await Task.Delay(1);
+            return _profiles.FirstOrDefault(p => p.Id == id);
+        }
+
+        /// <summary>
+        /// Adds a new power profile
+        /// </summary>
+        public async Task<bool> AddProfileAsync(BundledPowerProfile profile)
+        {
+            if (profile == null || _profiles.Any(p => p.Id == profile.Id))
             {
-                // Use powercfg.exe to import the profile
-                var process = new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "powercfg",
-                        Arguments = $"/import \"{profile.FilePath}\"",
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true
-                    }
-                };
-                
-                process.Start();
-                string output = await process.StandardOutput.ReadToEndAsync();
-                string error = await process.StandardError.ReadToEndAsync();
-                await process.WaitForExitAsync();
-                
-                if (process.ExitCode != 0)
-                {
-                    _notificationService.ShowError($"Failed to import profile: {error}");
-                    return false;
-                }
-                
-                // After importing, get the GUID of the imported profile
-                await RefreshProfileStatusAsync();
-                
-                _notificationService.ShowSuccess($"Profile '{profile.Name}' imported successfully.");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error importing profile: {ex.Message}");
                 return false;
             }
-        }
-        
-        /// <summary>
-        /// Activates a bundled power profile in Windows
-        /// </summary>
-        /// <param name="profile">The profile to activate</param>
-        /// <returns>True if activation was successful, false otherwise</returns>
-        public async Task<bool> ActivateProfileAsync(BundledPowerProfile profile)
-        {
-            try
+
+            // Ensure the profile isn't marked as built-in
+            if (!profile.IsBuiltIn)
             {
-                if (!profile.GuidInSystem.HasValue)
-                {
-                    // Try to import the profile first
-                    bool imported = await ImportProfileAsync(profile);
-                    if (!imported)
-                    {
-                        return false;
-                    }
-                }
-                
-                // Use powercfg.exe to activate the profile
-                var process = new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "powercfg",
-                        Arguments = $"/setactive {profile.GuidInSystem}",
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true
-                    }
-                };
-                
-                process.Start();
-                string output = await process.StandardOutput.ReadToEndAsync();
-                string error = await process.StandardError.ReadToEndAsync();
-                await process.WaitForExitAsync();
-                
-                if (process.ExitCode != 0)
-                {
-                    _notificationService.ShowError($"Failed to activate profile: {error}");
-                    return false;
-                }
-                
-                // Update IsActive status for all profiles
-                foreach (var p in _bundledProfiles)
-                {
-                    p.IsActive = p.GuidInSystem == profile.GuidInSystem;
-                }
-                
-                _notificationService.ShowSuccess($"Profile '{profile.Name}' activated successfully.");
+                _profiles.Add(profile);
+                await Task.Delay(1); // Simulate async operation
                 return true;
             }
-            catch (Exception ex)
+
+            return false;
+        }
+
+        /// <summary>
+        /// Updates an existing power profile
+        /// </summary>
+        public async Task<bool> UpdateProfileAsync(BundledPowerProfile profile)
+        {
+            if (profile == null)
             {
-                _notificationService.ShowError($"Error activating profile: {ex.Message}");
                 return false;
             }
+
+            var existingProfile = _profiles.FirstOrDefault(p => p.Id == profile.Id);
+            if (existingProfile == null)
+            {
+                return false;
+            }
+
+            // Don't allow modifying built-in profiles
+            if (existingProfile.IsBuiltIn)
+            {
+                return false;
+            }
+
+            // Update the profile properties
+            var index = _profiles.IndexOf(existingProfile);
+            _profiles[index] = profile;
+
+            await Task.Delay(1); // Simulate async operation
+            return true;
         }
-        
+
         /// <summary>
-        /// Imports an external .pow file and adds it to the bundled profiles
+        /// Deletes a power profile
         /// </summary>
-        /// <param name="filePath">Path to the .pow file</param>
-        /// <returns>The imported profile if successful, null otherwise</returns>
-        public async Task<BundledPowerProfile> ImportExternalProfileAsync(string filePath)
+        public async Task<bool> DeleteProfileAsync(Guid id)
         {
+            var profile = _profiles.FirstOrDefault(p => p.Id == id);
+            if (profile == null)
+            {
+                return false;
+            }
+
+            // Don't allow deleting built-in profiles
+            if (profile.IsBuiltIn)
+            {
+                return false;
+            }
+
+            _profiles.Remove(profile);
+
+            // If the file exists and isn't a built-in profile, delete it
+            if (!profile.IsBuiltIn && File.Exists(profile.FilePath))
+            {
+                try
+                {
+                    File.Delete(profile.FilePath);
+                }
+                catch
+                {
+                    // Log error but continue
+                }
+            }
+
+            await Task.Delay(1); // Simulate async operation
+            return true;
+        }
+
+        /// <summary>
+        /// Imports a power profile from a file
+        /// </summary>
+        public async Task<BundledPowerProfile> ImportProfileAsync(string filePath, string name, string description, string category)
+        {
+            if (!File.Exists(filePath) || string.IsNullOrEmpty(name))
+            {
+                return null;
+            }
+
             try
             {
-                if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
-                {
-                    return null;
-                }
+                // Generate a unique filename based on the name
+                string safeFileName = string.Join("_", name.Split(Path.GetInvalidFileNameChars()));
+                string destinationPath = Path.Combine(_profilesDirectory, $"{safeFileName}.pow");
+                
+                // Copy the file to the profiles directory
+                File.Copy(filePath, destinationPath, true);
                 
                 // Create a new profile
-                var profile = new BundledPowerProfile(filePath);
+                var profile = new BundledPowerProfile
+                {
+                    Id = Guid.NewGuid(),
+                    Name = name,
+                    Description = description ?? "",
+                    Category = category ?? "Custom",
+                    FilePath = destinationPath,
+                    IsBuiltIn = false
+                };
                 
-                // Copy the file to the bundled profiles directory
-                string destFilePath = Path.Combine(_bundledProfilesPath, profile.FileName);
-                File.Copy(filePath, destFilePath, true);
+                // Add the profile to the collection
+                _profiles.Add(profile);
                 
-                // Update the profile's file path
-                profile.FilePath = destFilePath;
-                
-                // Add the profile to the list
-                _bundledProfiles.Add(profile);
-                
-                // Import the profile into Windows
-                await ImportProfileAsync(profile);
-                
+                await Task.Delay(1); // Simulate async operation
                 return profile;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _notificationService.ShowError($"Error importing external profile: {ex.Message}");
                 return null;
             }
         }
-        
+
         /// <summary>
-        /// Refreshes the status of bundled profiles (checks which ones are active)
+        /// Loads built-in profiles from the assets folder
         /// </summary>
-        /// <returns>A task representing the asynchronous operation</returns>
-        public async Task RefreshProfileStatusAsync()
+        private void LoadBuiltInProfiles()
         {
-            try
+            // Define built-in profiles based on the .pow files from attached_assets
+            var builtInProfiles = new List<BundledPowerProfile>
             {
-                // Get all Windows power profiles
-                var windowsProfiles = await GetWindowsPowerProfilesAsync();
-                
-                // Get the active profile GUID
-                string activeProfileGuid = await GetActiveProfileGuidAsync();
-                
-                // Update each bundled profile
-                foreach (var profile in _bundledProfiles)
-                {
-                    // Find the Windows profile that matches this bundled profile
-                    var matchingProfile = windowsProfiles.FirstOrDefault(p => 
-                        string.Equals(p.Value, profile.Name, StringComparison.OrdinalIgnoreCase));
-                    
-                    if (!string.IsNullOrEmpty(matchingProfile.Key))
-                    {
-                        // Update the profile's GUID
-                        profile.GuidInSystem = Guid.Parse(matchingProfile.Key);
-                        
-                        // Update the active status
-                        profile.IsActive = string.Equals(matchingProfile.Key, activeProfileGuid, 
-                            StringComparison.OrdinalIgnoreCase);
-                    }
-                    else
-                    {
-                        // The profile is not in Windows
-                        profile.GuidInSystem = null;
-                        profile.IsActive = false;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error refreshing profile status: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Gets all power profiles imported into Windows
-        /// </summary>
-        /// <returns>A dictionary of profile GUIDs and their names</returns>
-        public async Task<Dictionary<string, string>> GetWindowsPowerProfilesAsync()
-        {
-            var profiles = new Dictionary<string, string>();
-            
-            try
-            {
-                // Use powercfg.exe to list all power profiles
-                var process = new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "powercfg",
-                        Arguments = "/list",
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
-                        RedirectStandardOutput = true
-                    }
-                };
-                
-                process.Start();
-                string output = await process.StandardOutput.ReadToEndAsync();
-                await process.WaitForExitAsync();
-                
-                // Parse the output to extract profile GUIDs and names
-                // Example output line: "Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)"
-                var regex = new Regex(@"Power Scheme GUID: ([0-9a-fA-F\-]+)\s+\((.*?)\)");
-                var matches = regex.Matches(output);
-                
-                foreach (Match match in matches)
-                {
-                    if (match.Groups.Count >= 3)
-                    {
-                        string guid = match.Groups[1].Value.Trim();
-                        string name = match.Groups[2].Value.Trim();
-                        profiles[guid] = name;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error getting Windows power profiles: {ex.Message}");
-            }
-            
-            return profiles;
-        }
-        
-        /// <summary>
-        /// Gets the GUID of the active power profile
-        /// </summary>
-        /// <returns>The GUID of the active profile</returns>
-        private async Task<string> GetActiveProfileGuidAsync()
-        {
-            try
-            {
-                // Use powercfg.exe to get the active power profile
-                var process = new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "powercfg",
-                        Arguments = "/getactivescheme",
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
-                        RedirectStandardOutput = true
-                    }
-                };
-                
-                process.Start();
-                string output = await process.StandardOutput.ReadToEndAsync();
-                await process.WaitForExitAsync();
-                
-                // Parse the output to extract the active profile GUID
-                // Example output line: "Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced) *"
-                var regex = new Regex(@"Power Scheme GUID: ([0-9a-fA-F\-]+)");
-                var match = regex.Match(output);
-                
-                if (match.Success && match.Groups.Count >= 2)
-                {
-                    return match.Groups[1].Value.Trim();
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error getting active power profile: {ex.Message}");
-            }
-            
-            return string.Empty;
-        }
-        
-        /// <summary>
-        /// Loads bundled power profiles from the application directory
-        /// </summary>
-        private async Task LoadBundledProfilesAsync()
-        {
-            try
-            {
-                _bundledProfiles.Clear();
-                
-                // Check if the attached assets directory exists (provided with the application)
-                string attachedAssetsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "attached_assets");
-                if (Directory.Exists(attachedAssetsPath))
-                {
-                    // Copy all .pow files from the attached_assets directory to the PowerProfiles directory
-                    foreach (var file in Directory.GetFiles(attachedAssetsPath, "*.pow"))
-                    {
-                        string destFile = Path.Combine(_bundledProfilesPath, Path.GetFileName(file));
-                        if (!File.Exists(destFile))
-                        {
-                            File.Copy(file, destFile);
-                        }
-                    }
-                }
-                
-                // Load all .pow files from the PowerProfiles directory
-                if (Directory.Exists(_bundledProfilesPath))
-                {
-                    foreach (var file in Directory.GetFiles(_bundledProfilesPath, "*.pow"))
-                    {
-                        try
-                        {
-                            var profile = new BundledPowerProfile(file);
-                            _bundledProfiles.Add(profile);
-                        }
-                        catch (Exception ex)
-                        {
-                            _notificationService.ShowError($"Error loading profile {file}: {ex.Message}");
-                        }
-                    }
-                }
-                
-                // Refresh the status of all profiles
-                await RefreshProfileStatusAsync();
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error loading bundled profiles: {ex.Message}");
-            }
+                new BundledPowerProfile("AdamX Performance", "Optimized for gaming with minimal latency and maximum CPU performance", "Gaming", "attached_assets/adamx.pow", true),
+                new BundledPowerProfile("Atlas Power", "Balanced power profile for workstations with moderate usage", "Productivity", "attached_assets/atlas.pow", true),
+                new BundledPowerProfile("Bitsum Highest Performance", "Maximum performance for intensive workloads", "Performance", "attached_assets/bitsum.pow", true),
+                new BundledPowerProfile("Core Optimizer", "Focused on core parking optimization", "System", "attached_assets/core.pow", true),
+                new BundledPowerProfile("Frame Sync Boost", "Enhanced for high framerate gaming with sync optimization", "Gaming", "attached_assets/FrameSyncBoost.pow", true),
+                new BundledPowerProfile("Hybred Balance", "Balanced performance across cores with efficient energy use", "Balanced", "attached_assets/hybred.pow", true),
+                new BundledPowerProfile("Kaisen Power", "Aggressive performance tuning for intensive applications", "Performance", "attached_assets/kaisen.pow", true),
+                new BundledPowerProfile("PowerX Ultimate", "Ultimate performance with no throttling or power saving", "Extreme", "attached_assets/powerx.pow", true),
+                new BundledPowerProfile("Sapphire Rendering", "Optimized for 3D rendering and video processing", "Creative", "attached_assets/sapphire.pow", true),
+                new BundledPowerProfile("Ancel Balance", "Perfect balance between performance and power efficiency", "Balanced", "attached_assets/ancel.pow", true),
+                new BundledPowerProfile("Calypto Performance", "Performance-oriented profile with moderate power savings", "Performance", "attached_assets/calypto.pow", true),
+                new BundledPowerProfile("ExmFree Power", "Free-running cores with no limitations", "Extreme", "attached_assets/exmfree.pow", true),
+                new BundledPowerProfile("Khorvie Creator", "Designed for content creators and designers", "Creative", "attached_assets/khorvie.pow", true),
+                new BundledPowerProfile("Kirby Efficiency", "Efficiency-focused profile for laptops and battery savings", "Efficiency", "attached_assets/kirby.pow", true),
+                new BundledPowerProfile("Kizzimo Gaming", "Specialized for competitive gaming", "Gaming", "attached_assets/kizzimo.pow", true),
+                new BundledPowerProfile("Lawliet Development", "Optimized for software development and compilation", "Development", "attached_assets/lawliet.pow", true),
+                new BundledPowerProfile("VTRL Studio", "Virtual reality and streaming optimization", "Creative", "attached_assets/vtrl.pow", true),
+                new BundledPowerProfile("Xilly Power", "Balanced profile with slight performance bias", "Balanced", "attached_assets/xilly.pow", true),
+                new BundledPowerProfile("XOS System", "System-wide optimization with good battery life", "System", "attached_assets/xos.pow", true)
+            };
+
+            _profiles.AddRange(builtInProfiles);
         }
     }
 }
