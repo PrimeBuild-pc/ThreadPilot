@@ -8,7 +8,7 @@ namespace ThreadPilot
     public partial class MainWindow : Window
     {
         /// <summary>
-        /// Constructor
+        /// Initializes a new instance of the <see cref="MainWindow"/> class
         /// </summary>
         public MainWindow()
         {

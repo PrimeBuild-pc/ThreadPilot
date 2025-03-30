@@ -4,37 +4,58 @@ using ThreadPilot.Models;
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Interface for process service
+    /// Service for managing system processes
     /// </summary>
     public interface IProcessService
     {
         /// <summary>
-        /// Get all running processes
+        /// Get a list of all running processes
         /// </summary>
         /// <returns>List of process information</returns>
-        List<ProcessInfo> GetProcesses();
+        List<ProcessInfo> GetRunningProcesses();
+        
+        /// <summary>
+        /// Get process information by ID
+        /// </summary>
+        /// <param name="processId">The process ID</param>
+        /// <returns>Process information, or null if not found</returns>
+        ProcessInfo? GetProcessById(int processId);
+        
+        /// <summary>
+        /// Terminate a process
+        /// </summary>
+        /// <param name="processId">The process ID</param>
+        /// <returns>True if successful, false otherwise</returns>
+        bool TerminateProcess(int processId);
         
         /// <summary>
         /// Set process priority
         /// </summary>
-        /// <param name="processId">Process ID</param>
-        /// <param name="priority">New priority</param>
-        /// <returns>True if successful</returns>
+        /// <param name="processId">The process ID</param>
+        /// <param name="priority">The priority level</param>
+        /// <returns>True if successful, false otherwise</returns>
         bool SetProcessPriority(int processId, ProcessPriority priority);
         
         /// <summary>
-        /// Set process affinity
+        /// Set process core affinity
         /// </summary>
-        /// <param name="processId">Process ID</param>
-        /// <param name="affinityMask">New affinity mask</param>
-        /// <returns>True if successful</returns>
+        /// <param name="processId">The process ID</param>
+        /// <param name="affinityMask">The CPU affinity mask (bit field)</param>
+        /// <returns>True if successful, false otherwise</returns>
         bool SetProcessAffinity(int processId, long affinityMask);
         
         /// <summary>
-        /// Apply a process affinity rule
+        /// Get process affinity mask
         /// </summary>
-        /// <param name="rule">Rule to apply</param>
-        /// <returns>Number of processes affected</returns>
-        int ApplyAffinityRule(ProcessAffinityRule rule);
+        /// <param name="processId">The process ID</param>
+        /// <returns>The process affinity mask or -1 if failed</returns>
+        long GetProcessAffinity(int processId);
+        
+        /// <summary>
+        /// Apply process affinity rules from a power profile
+        /// </summary>
+        /// <param name="profile">The power profile</param>
+        /// <returns>Number of successfully applied rules</returns>
+        int ApplyProcessAffinityRules(PowerProfile profile);
     }
 }

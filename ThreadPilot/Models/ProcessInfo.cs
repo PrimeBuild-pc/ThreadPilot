@@ -1,102 +1,84 @@
-using System;
-using System.Collections.Generic;
-
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Information about a running process
+    /// Represents information about a system process
     /// </summary>
     public class ProcessInfo
     {
         /// <summary>
-        /// Process ID
+        /// Gets or sets the process ID
         /// </summary>
-        public int Id { get; set; }
+        public int ProcessId { get; set; }
         
         /// <summary>
-        /// Process name
+        /// Gets or sets the process name
         /// </summary>
         public string Name { get; set; } = string.Empty;
         
         /// <summary>
-        /// Process description
+        /// Gets or sets the CPU usage percentage
         /// </summary>
-        public string Description { get; set; } = string.Empty;
+        public double CpuUsagePercent { get; set; }
         
         /// <summary>
-        /// Process executable path
-        /// </summary>
-        public string ExecutablePath { get; set; } = string.Empty;
-        
-        /// <summary>
-        /// CPU usage percentage
-        /// </summary>
-        public double CpuUsage { get; set; }
-        
-        /// <summary>
-        /// Memory usage in MB
+        /// Gets or sets the memory usage in MB
         /// </summary>
         public double MemoryUsageMB { get; set; }
         
         /// <summary>
-        /// Process start time
+        /// Gets or sets the thread count
         /// </summary>
-        public DateTime StartTime { get; set; }
+        public int ThreadCount { get; set; }
         
         /// <summary>
-        /// Process runtime
+        /// Gets or sets the process priority
         /// </summary>
-        public TimeSpan Runtime => DateTime.Now - StartTime;
+        public ProcessPriority Priority { get; set; }
         
         /// <summary>
-        /// Whether the process is a system process
+        /// Gets or sets the process affinity mask
+        /// </summary>
+        public long AffinityMask { get; set; }
+        
+        /// <summary>
+        /// Gets or sets a value indicating whether the process is a system process
         /// </summary>
         public bool IsSystemProcess { get; set; }
+    }
+    
+    /// <summary>
+    /// Represents process priority levels
+    /// </summary>
+    public enum ProcessPriority
+    {
+        /// <summary>
+        /// Idle priority class
+        /// </summary>
+        Idle = 64,
         
         /// <summary>
-        /// Process priority
+        /// Below normal priority class
         /// </summary>
-        public ProcessPriority? Priority { get; set; }
+        BelowNormal = 16384,
         
         /// <summary>
-        /// Process CPU affinity mask
+        /// Normal priority class
         /// </summary>
-        public long? AffinityMask { get; set; }
+        Normal = 32,
         
         /// <summary>
-        /// List of CPU cores the process is allowed to run on
+        /// Above normal priority class
         /// </summary>
-        public List<int> AffinityCores
-        {
-            get
-            {
-                var cores = new List<int>();
-                
-                if (AffinityMask.HasValue)
-                {
-                    long mask = AffinityMask.Value;
-                    
-                    for (int i = 0; i < 64; i++)
-                    {
-                        if ((mask & (1L << i)) != 0)
-                        {
-                            cores.Add(i);
-                        }
-                    }
-                }
-                
-                return cores;
-            }
-        }
+        AboveNormal = 32768,
         
         /// <summary>
-        /// Process status information
+        /// High priority class
         /// </summary>
-        public string Status { get; set; } = "Running";
+        High = 128,
         
         /// <summary>
-        /// Whether the process is elevated (running as administrator)
+        /// Real-time priority class (use with caution)
         /// </summary>
-        public bool IsElevated { get; set; }
+        RealTime = 256
     }
 }

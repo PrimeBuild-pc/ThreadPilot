@@ -4,16 +4,14 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ThreadPilot"
-        xmlns:viewmodels="clr-namespace:ThreadPilot.ViewModels"
+        xmlns:vm="clr-namespace:ThreadPilot.ViewModels"
         mc:Ignorable="d"
-        Title="ThreadPilot - Advanced CPU Thread Management"
-        Height="700" Width="1100"
-        MinHeight="500" MinWidth="800"
+        Title="ThreadPilot" Height="700" Width="1000"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource WindowBackgroundBrush}">
     
     <Window.DataContext>
-        <viewmodels:MainViewModel/>
+        <vm:MainViewModel/>
     </Window.DataContext>
     
     <Grid>
@@ -24,7 +22,11 @@
         </Grid.RowDefinitions>
         
         <!-- Header -->
-        <Border Grid.Row="0" Background="{StaticResource PrimaryBrush}" Padding="20,10">
+        <Border Grid.Row="0" 
+                Background="{StaticResource SurfaceBrush}"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="15">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -32,17 +34,29 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 
-                <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <Image Source="/Resources/app.ico" Width="32" Height="32" Margin="0,0,10,0"/>
-                    <TextBlock Text="ThreadPilot" Foreground="{StaticResource InverseTextBrush}" 
-                                FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="0"
+                            Orientation="Horizontal" 
+                            VerticalAlignment="Center">
+                    <TextBlock Text="ThreadPilot"
+                               FontSize="22"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource PrimaryBrush}"/>
+                    <TextBlock Text="Beta"
+                               FontSize="12"
+                               Foreground="{StaticResource SecondaryBrush}"
+                               Margin="8,0,0,0"
+                               VerticalAlignment="Bottom"/>
                 </StackPanel>
                 
-                <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <Button Content="Refresh" Style="{StaticResource SecondaryButtonStyle}" 
-                            Margin="5,0" Padding="10,5" Command="{Binding RefreshDataCommand}"/>
-                    <Button Content="Settings" Style="{StaticResource SecondaryButtonStyle}" 
-                            Margin="5,0" Padding="10,5" Command="{Binding OpenSettingsCommand}"/>
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <CheckBox Content="Auto-refresh"
+                              IsChecked="{Binding IsAutoRefreshEnabled}"
+                              Margin="0,0,15,0"/>
+                    <Button Content="Refresh"
+                            Command="{Binding RefreshCommand}"
+                            Style="{StaticResource SecondaryButtonStyle}"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -50,25 +64,26 @@
         <!-- Main Content -->
         <Grid Grid.Row="1" Margin="15">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="300"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="3*"/>
             </Grid.ColumnDefinitions>
             
-            <!-- System Info Panel -->
-            <Grid Grid.Column="0">
+            <!-- Left Panel - System Info & Profiles -->
+            <Grid Grid.Column="0" Margin="0,0,10,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 
-                <!-- System Stats -->
-                <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,10,10">
+                <!-- System Info Card -->
+                <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}">
                     <StackPanel>
-                        <TextBlock Text="System Information" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                        <TextBlock Text="System Information"
+                                   Style="{StaticResource SubtitleTextBlockStyle}"/>
                         
                         <Grid Margin="0,10,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
@@ -77,42 +92,73 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="OS:" Style="{StaticResource StatLabelTextBlockStyle}" Margin="0,2"/>
-                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SystemInfo.OperatingSystem}" Style="{StaticResource StatValueTextBlockStyle}" Margin="0,2"/>
+                            <!-- CPU -->
+                            <TextBlock Grid.Row="0" Grid.Column="0"
+                                       Text="CPU:"
+                                       Style="{StaticResource StatLabelTextBlockStyle}"
+                                       Margin="0,0,10,5"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1"
+                                       Text="{Binding CpuName}"
+                                       Style="{StaticResource StatValueTextBlockStyle}"
+                                       Margin="0,0,0,5"/>
                             
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="CPU:" Style="{StaticResource StatLabelTextBlockStyle}" Margin="0,2"/>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SystemInfo.ProcessorName}" Style="{StaticResource StatValueTextBlockStyle}" Margin="0,2"/>
-                            
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Cores:" Style="{StaticResource StatLabelTextBlockStyle}" Margin="0,2"/>
-                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SystemInfo.ProcessorCores}" Style="{StaticResource StatValueTextBlockStyle}" Margin="0,2"/>
-                            
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="CPU Usage:" Style="{StaticResource StatLabelTextBlockStyle}" Margin="0,2"/>
-                            <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Vertical" Margin="0,2">
-                                <TextBlock Text="{Binding SystemInfo.CpuUsage, StringFormat={}{0:F1}%}" Style="{StaticResource StatValueTextBlockStyle}"/>
-                                <ProgressBar Value="{Binding SystemInfo.CpuUsage}" Maximum="100" Height="4" Margin="0,2,0,0" Style="{StaticResource CustomProgressBarStyle}"/>
+                            <!-- CPU Usage -->
+                            <TextBlock Grid.Row="1" Grid.Column="0"
+                                       Text="CPU Usage:"
+                                       Style="{StaticResource StatLabelTextBlockStyle}"
+                                       Margin="0,0,10,5"/>
+                            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Vertical"
+                                        Margin="0,0,0,5">
+                                <TextBlock Text="{Binding CpuUsagePercent, StringFormat={}{0:0.0}%}"
+                                           Style="{StaticResource StatValueTextBlockStyle}"/>
+                                <ProgressBar Value="{Binding CpuUsagePercent}"
+                                             Maximum="100"
+                                             Height="6"
+                                             Margin="0,2,0,0"/>
                             </StackPanel>
                             
-                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Memory:" Style="{StaticResource StatLabelTextBlockStyle}" Margin="0,2"/>
-                            <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Vertical" Margin="0,2">
-                                <TextBlock Text="{Binding SystemInfo.MemoryUsagePercent, StringFormat={}{0:F1}%}" Style="{StaticResource StatValueTextBlockStyle}"/>
-                                <ProgressBar Value="{Binding SystemInfo.MemoryUsagePercent}" Maximum="100" Height="4" Margin="0,2,0,0" Style="{StaticResource CustomProgressBarStyle}"/>
+                            <!-- Memory -->
+                            <TextBlock Grid.Row="2" Grid.Column="0"
+                                       Text="Memory:"
+                                       Style="{StaticResource StatLabelTextBlockStyle}"
+                                       Margin="0,0,10,5"/>
+                            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Vertical"
+                                        Margin="0,0,0,5">
+                                <TextBlock Text="{Binding MemoryUsage}"
+                                           Style="{StaticResource StatValueTextBlockStyle}"/>
+                                <ProgressBar Value="{Binding MemoryUsagePercent}"
+                                             Maximum="100"
+                                             Height="6"
+                                             Margin="0,2,0,0"/>
                             </StackPanel>
                             
-                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Power Profile:" Style="{StaticResource StatLabelTextBlockStyle}" Margin="0,2"/>
-                            <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SystemInfo.CurrentPowerProfile}" Style="{StaticResource StatValueTextBlockStyle}" Margin="0,2"/>
+                            <!-- OS -->
+                            <TextBlock Grid.Row="3" Grid.Column="0"
+                                       Text="OS:"
+                                       Style="{StaticResource StatLabelTextBlockStyle}"
+                                       Margin="0,0,10,5"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1"
+                                       Text="{Binding OperatingSystem}"
+                                       Style="{StaticResource StatValueTextBlockStyle}"
+                                       Margin="0,0,0,5"/>
                             
-                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Uptime:" Style="{StaticResource StatLabelTextBlockStyle}" Margin="0,2"/>
-                            <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SystemInfo.UpTime, StringFormat={}{0:d\\:hh\\:mm\\:ss}}" Style="{StaticResource StatValueTextBlockStyle}" Margin="0,2"/>
+                            <!-- Power Plan -->
+                            <TextBlock Grid.Row="4" Grid.Column="0"
+                                       Text="Power Plan:"
+                                       Style="{StaticResource StatLabelTextBlockStyle}"
+                                       Margin="0,0,10,5"/>
+                            <TextBlock Grid.Row="4" Grid.Column="1"
+                                       Text="{Binding CurrentPowerPlan}"
+                                       Style="{StaticResource StatValueTextBlockStyle}"
+                                       Margin="0,0,0,5"/>
                         </Grid>
                     </StackPanel>
                 </Border>
                 
-                <!-- Power Profiles -->
-                <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
+                <!-- Profiles Card -->
+                <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" Margin="0,15,0,0">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -120,313 +166,173 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         
-                        <TextBlock Grid.Row="0" Text="Power Profiles" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                        <TextBlock Grid.Row="0" Text="Power Profiles"
+                                   Style="{StaticResource SubtitleTextBlockStyle}"/>
                         
-                        <ListView Grid.Row="1" ItemsSource="{Binding PowerProfiles}" SelectedItem="{Binding SelectedPowerProfile}"
-                                  BorderThickness="0" Background="Transparent" Margin="0,10">
+                        <ListView Grid.Row="1"
+                                  ItemsSource="{Binding PowerProfiles}"
+                                  SelectedItem="{Binding SelectedProfile}"
+                                  BorderThickness="0"
+                                  Margin="0,10,0,0"
+                                  Background="Transparent">
                             <ListView.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Padding="10,8" BorderThickness="0,0,0,1" BorderBrush="#EEEEEE">
+                                    <Border Padding="10" Margin="0,2">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
+                                            
                                             <StackPanel Grid.Column="0">
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                                <TextBlock Text="{Binding Description}" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" 
-                                                            TextWrapping="Wrap" MaxWidth="200"/>
+                                                <TextBlock Text="{Binding Description}" 
+                                                           Foreground="{StaticResource SecondaryTextBrush}"
+                                                           TextWrapping="Wrap"/>
                                             </StackPanel>
-                                            <TextBlock Grid.Column="1" Text="{Binding ProcessRules.Count, StringFormat={}{0} rules}" 
-                                                       VerticalAlignment="Center" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11"/>
+                                            
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Category}"
+                                                       Foreground="{StaticResource SecondaryTextBrush}"
+                                                       VerticalAlignment="Top"/>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
                             </ListView.ItemTemplate>
                         </ListView>
                         
-                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Content="Import" Style="{StaticResource SecondaryButtonStyle}" Margin="5,0" Padding="10,5"
-                                    Command="{Binding ImportProfileCommand}"/>
-                            <Button Content="Create" Style="{StaticResource SecondaryButtonStyle}" Margin="5,0" Padding="10,5"
-                                    Command="{Binding CreateProfileCommand}"/>
-                            <Button Content="Apply" Style="{StaticResource PrimaryButtonStyle}" Margin="5,0" Padding="10,5"
-                                    Command="{Binding ApplyProfileCommand}" CommandParameter="{Binding SelectedPowerProfile}"/>
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10,0,0">
+                            <Button Content="Apply" 
+                                    Command="{Binding ApplyProfileCommand}"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Margin="0,0,5,0"/>
+                            <Button Content="Import" 
+                                    Command="{Binding ImportProfileCommand}"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Margin="0,0,5,0"/>
+                            <Button Content="Export" 
+                                    Command="{Binding ExportProfileCommand}"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Margin="0,0,5,0"/>
+                            <Button Content="Create" 
+                                    Command="{Binding CreateProfileCommand}"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Margin="0,0,5,0"/>
+                            <Button Content="Delete" 
+                                    Command="{Binding DeleteProfileCommand}"
+                                    Style="{StaticResource SecondaryButtonStyle}"/>
                         </StackPanel>
                     </Grid>
                 </Border>
             </Grid>
             
-            <!-- Main Tabs -->
-            <TabControl Grid.Column="1" Style="{StaticResource CustomTabControlStyle}">
+            <!-- Right Panel - Processes & Cores -->
+            <TabControl Grid.Column="1" 
+                       Style="{StaticResource CustomTabControlStyle}"
+                       Margin="10,0,0,0">
                 <TabItem Header="Processes" Style="{StaticResource CustomTabItemStyle}">
-                    <Grid Margin="10">
+                    <Grid Margin="0,15,0,0">
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         
-                        <!-- Processes Control Panel -->
-                        <Grid Grid.Row="0" Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            
-                            <TextBox Grid.Column="0" Margin="0,0,10,0" Style="{StaticResource CustomTextBoxStyle}"
-                                     Text="{Binding ProcessesViewModel.FilterText, UpdateSourceTrigger=PropertyChanged}" 
-                                     PlaceholderText="Filter processes..."/>
-                            
-                            <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                <CheckBox Content="Show System Processes" Style="{StaticResource CustomCheckBoxStyle}" 
-                                          IsChecked="{Binding ProcessesViewModel.ShowSystemProcesses}" 
-                                          VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                <Button Content="Refresh" Style="{StaticResource SecondaryButtonStyle}" Padding="10,5"
-                                        Command="{Binding ProcessesViewModel.RefreshProcessesCommand}"/>
-                            </StackPanel>
-                        </Grid>
-                        
-                        <!-- Processes List -->
-                        <DataGrid Grid.Row="1" Style="{StaticResource CustomDataGridStyle}"
-                                  ItemsSource="{Binding ProcessesViewModel.FilteredProcesses}"
-                                  SelectedItem="{Binding ProcessesViewModel.SelectedProcess}">
+                        <DataGrid Grid.Row="0"
+                                 ItemsSource="{Binding Processes}"
+                                 SelectedItem="{Binding SelectedProcess}"
+                                 Style="{StaticResource CustomDataGridStyle}"
+                                 Margin="0,0,0,10">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60"/>
-                                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="160"/>
-                                <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
-                                <DataGridTextColumn Header="CPU %" Binding="{Binding CpuUsage, StringFormat={}{0:F1}%}" Width="70"/>
-                                <DataGridTextColumn Header="Memory (MB)" Binding="{Binding MemoryUsageMB, StringFormat={}{0:F0}}" Width="100"/>
+                                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                                <DataGridTextColumn Header="ID" Binding="{Binding ProcessId}" Width="70"/>
+                                <DataGridTextColumn Header="CPU %" Binding="{Binding CpuUsagePercent, StringFormat={}{0:0.0}}" Width="70"/>
+                                <DataGridTextColumn Header="Memory (MB)" Binding="{Binding MemoryUsageMB, StringFormat={}{0:0.0}}" Width="100"/>
+                                <DataGridTextColumn Header="Threads" Binding="{Binding ThreadCount}" Width="70"/>
                                 <DataGridTextColumn Header="Priority" Binding="{Binding Priority}" Width="100"/>
-                                <DataGridTemplateColumn Header="Actions" Width="120">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Orientation="Horizontal" Margin="5">
-                                                <Button Content="Priority" Style="{StaticResource IconButtonStyle}"
-                                                        ToolTip="Set process priority"/>
-                                                <Button Content="Affinity" Style="{StaticResource IconButtonStyle}" 
-                                                        ToolTip="Set CPU affinity"/>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
+                        
+                        <StackPanel Grid.Row="1" Orientation="Horizontal">
+                            <Button Content="Set Affinity" 
+                                   Command="{Binding SetProcessAffinityCommand}"
+                                   Style="{StaticResource SecondaryButtonStyle}"
+                                   Margin="0,0,5,0"/>
+                            <Button Content="Set Priority" 
+                                   Command="{Binding SetProcessPriorityCommand}"
+                                   CommandParameter="{x:Static local:ProcessPriority.High}"
+                                   Style="{StaticResource SecondaryButtonStyle}"
+                                   Margin="0,0,5,0"/>
+                            <Button Content="Terminate" 
+                                   Command="{Binding TerminateProcessCommand}"
+                                   Style="{StaticResource SecondaryButtonStyle}"/>
+                        </StackPanel>
                     </Grid>
                 </TabItem>
                 
                 <TabItem Header="CPU Cores" Style="{StaticResource CustomTabItemStyle}">
-                    <Grid Margin="10">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        
-                        <!-- Cores Control Panel -->
-                        <Grid Grid.Row="0" Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            
-                            <StackPanel Grid.Column="0" Orientation="Horizontal">
-                                <CheckBox Content="Show P-Cores" Style="{StaticResource CustomCheckBoxStyle}" 
-                                          IsChecked="{Binding CpuCoresViewModel.ShowPerformanceCores}" 
-                                          VerticalAlignment="Center" Margin="0,0,15,0"/>
-                                <CheckBox Content="Show E-Cores" Style="{StaticResource CustomCheckBoxStyle}" 
-                                          IsChecked="{Binding CpuCoresViewModel.ShowEfficiencyCores}" 
-                                          VerticalAlignment="Center"/>
-                            </StackPanel>
-                            
-                            <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                <Button Content="Reset All Cores" Style="{StaticResource SecondaryButtonStyle}" Padding="10,5"
-                                        Command="{Binding CpuCoresViewModel.ResetAllCoresCommand}" Margin="0,0,10,0"/>
-                                <Button Content="Optimize" Style="{StaticResource PrimaryButtonStyle}" Padding="10,5"
-                                        Command="{Binding CpuCoresViewModel.OptimizeCommand}"/>
-                            </StackPanel>
-                        </Grid>
-                        
-                        <!-- Cores Grid -->
-                        <ItemsControl Grid.Row="1" ItemsSource="{Binding CpuCoresViewModel.FilteredCores}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Style="{StaticResource CardBorderStyle}" Width="200" Height="150">
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="*"/>
-                                            </Grid.RowDefinitions>
-                                            
-                                            <TextBlock Grid.Row="0" Text="{Binding CoreDescription}" FontWeight="SemiBold"/>
-                                            
-                                            <Grid Grid.Row="1" Margin="0,10,0,0">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="120"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                </Grid.RowDefinitions>
-                                                
-                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Usage:" Style="{StaticResource CaptionTextBlockStyle}"/>
-                                                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Vertical">
-                                                    <TextBlock Text="{Binding CpuUsage, StringFormat={}{0:F1}%}" FontWeight="SemiBold"/>
-                                                    <ProgressBar Value="{Binding CpuUsage}" Maximum="100" Height="3" Margin="0,2,0,0"
-                                                                Style="{StaticResource CustomProgressBarStyle}"/>
-                                                </StackPanel>
-                                                
-                                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Clock:" Style="{StaticResource CaptionTextBlockStyle}"/>
-                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding CurrentClockMHz, StringFormat={}{0} MHz}" FontWeight="SemiBold"/>
-                                                
-                                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Temperature:" Style="{StaticResource CaptionTextBlockStyle}"/>
-                                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding TemperatureCelsius, StringFormat={}{0:F1}°C}" FontWeight="SemiBold"/>
-                                                
-                                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Status:" Style="{StaticResource CaptionTextBlockStyle}"/>
-                                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding IsParked, Converter={StaticResource BoolToParkedConverter}}" FontWeight="SemiBold"/>
-                                            </Grid>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </Grid>
-                </TabItem>
-                
-                <TabItem Header="Profiles Editor" Style="{StaticResource CustomTabItemStyle}">
-                    <Grid Margin="10">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        
-                        <!-- Profile Details -->
-                        <TextBlock Grid.Row="0" Text="Edit Profile" Style="{StaticResource SubtitleTextBlockStyle}"/>
-                        
-                        <Grid Grid.Row="1" Margin="0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="120"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Name:" Style="{StaticResource StatLabelTextBlockStyle}" VerticalAlignment="Center"/>
-                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding ProfileEditorViewModel.CurrentProfile.Name}" 
-                                     Style="{StaticResource CustomTextBoxStyle}" Margin="0,5"/>
-                            
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Description:" Style="{StaticResource StatLabelTextBlockStyle}" VerticalAlignment="Center"/>
-                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ProfileEditorViewModel.CurrentProfile.Description}" 
-                                     Style="{StaticResource CustomTextBoxStyle}" Margin="0,5"/>
-                            
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Power Scheme:" Style="{StaticResource StatLabelTextBlockStyle}" VerticalAlignment="Center"/>
-                            <ComboBox Grid.Row="2" Grid.Column="1" Text="{Binding ProfileEditorViewModel.CurrentProfile.WindowsPowerScheme}" 
-                                      Style="{StaticResource CustomComboBoxStyle}" Margin="0,5">
-                                <ComboBoxItem Content="Power saver"/>
-                                <ComboBoxItem Content="Balanced"/>
-                                <ComboBoxItem Content="High performance"/>
-                                <ComboBoxItem Content="Ultimate performance"/>
-                            </ComboBox>
-                        </Grid>
-                        
-                        <!-- Process Rules -->
-                        <Grid Grid.Row="2">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-                            
-                            <TextBlock Grid.Row="0" Text="Process Rules" Style="{StaticResource StatLabelTextBlockStyle}" Margin="0,10,0,5"/>
-                            
-                            <Grid Grid.Row="1" Margin="0,5,0,10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                
-                                <TextBox Grid.Column="0" Text="{Binding ProfileEditorViewModel.NewProcessPattern, UpdateSourceTrigger=PropertyChanged}" 
-                                         Style="{StaticResource CustomTextBoxStyle}" PlaceholderText="Enter process pattern (e.g. chrome.exe, *games*.exe)" Margin="0,0,10,0"/>
-                                
-                                <Button Grid.Column="1" Content="Add Rule" Style="{StaticResource PrimaryButtonStyle}" Padding="15,5"
-                                        Command="{Binding ProfileEditorViewModel.AddRuleCommand}"/>
-                            </Grid>
-                            
-                            <DataGrid Grid.Row="2" Style="{StaticResource CustomDataGridStyle}"
-                                      ItemsSource="{Binding ProfileEditorViewModel.Rules}"
-                                      SelectedItem="{Binding ProfileEditorViewModel.SelectedRule}">
-                                <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Process Pattern" Binding="{Binding ProcessNamePattern}" Width="200"/>
-                                    <DataGridTextColumn Header="Priority" Binding="{Binding Priority}" Width="100"/>
-                                    <DataGridCheckBoxColumn Header="Exclude" Binding="{Binding IsExcludeList}" Width="70"/>
-                                    <DataGridTextColumn Header="Core Count" Binding="{Binding CoreList.Count}" Width="100"/>
-                                    <DataGridTemplateColumn Header="Actions" Width="*">
-                                        <DataGridTemplateColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <StackPanel Orientation="Horizontal" Margin="5">
-                                                    <Button Content="Move Up" Style="{StaticResource IconButtonStyle}"
-                                                            Command="{Binding DataContext.MoveRuleUpCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                            ToolTip="Move rule up"/>
-                                                    <Button Content="Move Down" Style="{StaticResource IconButtonStyle}"
-                                                            Command="{Binding DataContext.MoveRuleDownCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                            ToolTip="Move rule down"/>
-                                                    <Button Content="Remove" Style="{StaticResource IconButtonStyle}"
-                                                            Command="{Binding DataContext.RemoveRuleCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                            ToolTip="Remove rule"/>
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </DataGridTemplateColumn.CellTemplate>
-                                    </DataGridTemplateColumn>
-                                </DataGrid.Columns>
-                            </DataGrid>
-                        </Grid>
-                        
-                        <!-- Action Buttons -->
-                        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
-                            <Button Content="Apply Profile" Style="{StaticResource SecondaryButtonStyle}" Padding="15,8" Margin="0,0,10,0"
-                                    Command="{Binding ProfileEditorViewModel.ApplyProfileCommand}"/>
-                            <Button Content="Export" Style="{StaticResource SecondaryButtonStyle}" Padding="15,8" Margin="0,0,10,0"
-                                    Command="{Binding ProfileEditorViewModel.ExportProfileCommand}"/>
-                            <Button Content="Save Profile" Style="{StaticResource PrimaryButtonStyle}" Padding="15,8"
-                                    Command="{Binding ProfileEditorViewModel.SaveProfileCommand}"/>
-                        </StackPanel>
-                    </Grid>
+                    <ItemsControl ItemsSource="{Binding CpuCores}"
+                                 Margin="0,15,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource CardBorderStyle}"
+                                       Width="150"
+                                       Height="120"
+                                       Margin="5">
+                                    <StackPanel>
+                                        <TextBlock>
+                                            <Run Text="Core " FontWeight="SemiBold"/>
+                                            <Run Text="{Binding CoreId}"/>
+                                            <Run Text=" / CPU "/>
+                                            <Run Text="{Binding ProcessorId}"/>
+                                        </TextBlock>
+                                        
+                                        <TextBlock>
+                                            <Run Text="Status: "/>
+                                            <Run Text="{Binding IsParked, Converter={StaticResource BoolToParkedConverter}}"
+                                               Foreground="{Binding IsParked, Converter={StaticResource BoolToParkedConverter}}"/>
+                                        </TextBlock>
+                                        
+                                        <TextBlock>
+                                            <Run Text="Usage: "/>
+                                            <Run Text="{Binding UsagePercent, StringFormat={}{0:0.0}%}"/>
+                                        </TextBlock>
+                                        
+                                        <ProgressBar Value="{Binding UsagePercent}"
+                                                   Maximum="100"
+                                                   Height="6"
+                                                   Margin="0,5,0,0"/>
+                                        
+                                        <TextBlock Margin="0,5,0,0">
+                                            <Run Text="Frequency: "/>
+                                            <Run Text="{Binding CurrentFrequencyMhz, StringFormat={}{0:0.00} MHz}"/>
+                                        </TextBlock>
+                                        
+                                        <TextBlock>
+                                            <Run Text="Temperature: "/>
+                                            <Run Text="{Binding TemperatureCelsius, StringFormat={}{0:0.0}°C}"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </TabItem>
             </TabControl>
         </Grid>
         
         <!-- Status Bar -->
-        <Border Grid.Row="2" Background="{StaticResource ToolbarBackgroundBrush}" Padding="10,5">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                
-                <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" Foreground="{StaticResource SecondaryTextBrush}" 
-                           VerticalAlignment="Center"/>
-                
-                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <TextBlock Text="CPU:" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                    <TextBlock Text="{Binding SystemInfo.CpuUsage, StringFormat={}{0:F1}%}" Style="{StaticResource CaptionTextBlockStyle}" 
-                               VerticalAlignment="Center" Margin="0,0,15,0"/>
-                    
-                    <TextBlock Text="Memory:" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                    <TextBlock Text="{Binding SystemInfo.MemoryUsagePercent, StringFormat={}{0:F1}%}" Style="{StaticResource CaptionTextBlockStyle}" 
-                               VerticalAlignment="Center"/>
-                </StackPanel>
-            </Grid>
+        <Border Grid.Row="2" 
+                Background="{StaticResource SurfaceBrush}"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="15,8">
+            <TextBlock Text="{Binding StatusMessage}"
+                       Foreground="{StaticResource SecondaryTextBrush}"/>
         </Border>
     </Grid>
 </Window>

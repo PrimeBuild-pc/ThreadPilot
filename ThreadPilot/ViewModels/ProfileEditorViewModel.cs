@@ -1,7 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Windows.Input;
 using ThreadPilot.Commands;
 using ThreadPilot.Models;
 using ThreadPilot.Services;
@@ -9,15 +8,14 @@ using ThreadPilot.Services;
 namespace ThreadPilot.ViewModels
 {
     /// <summary>
-    /// View model for the profile editor
+    /// View model for profile editor tab
     /// </summary>
     public class ProfileEditorViewModel : ViewModelBase
     {
-        private readonly IFileDialogService _fileDialogService;
-        private readonly IPowerProfileService _powerProfileService;
         private readonly INotificationService _notificationService;
+        private readonly IPowerProfileService _powerProfileService;
         
-        private PowerProfile _currentProfile = new PowerProfile();
+        private PowerProfile? _currentProfile;
         private ProcessAffinityRule? _selectedRule;
         private string _newProcessPattern = string.Empty;
         
@@ -26,66 +24,47 @@ namespace ThreadPilot.ViewModels
         /// </summary>
         public ProfileEditorViewModel()
         {
-            _fileDialogService = ServiceLocator.Get<IFileDialogService>();
-            _powerProfileService = ServiceLocator.Get<IPowerProfileService>();
+            // Get services
             _notificationService = ServiceLocator.Get<INotificationService>();
+            _powerProfileService = ServiceLocator.Get<IPowerProfileService>();
+            
+            // Initialize rules collection
+            Rules = new ObservableCollection<ProcessAffinityRule>();
             
             // Initialize commands
-            SaveProfileCommand = new RelayCommand(SaveProfile, CanSaveProfile);
-            ExportProfileCommand = new RelayCommand(ExportProfile, CanExportProfile);
             AddRuleCommand = new RelayCommand(AddRule, CanAddRule);
             RemoveRuleCommand = new RelayCommand(RemoveRule, CanRemoveRule);
             MoveRuleUpCommand = new RelayCommand(MoveRuleUp, CanMoveRuleUp);
             MoveRuleDownCommand = new RelayCommand(MoveRuleDown, CanMoveRuleDown);
-            ApplyProfileCommand = new RelayCommand(ApplyProfile, CanApplyProfile);
+            SaveProfileCommand = new RelayCommand(SaveProfile, CanSaveProfile);
+            ExportProfileCommand = new RelayCommand(ExportProfile, CanSaveProfile);
+            ApplyProfileCommand = new RelayCommand(ApplyProfile, CanSaveProfile);
         }
-        
-        /// <summary>
-        /// Command to save the profile
-        /// </summary>
-        public ICommand SaveProfileCommand { get; }
-        
-        /// <summary>
-        /// Command to export the profile
-        /// </summary>
-        public ICommand ExportProfileCommand { get; }
-        
-        /// <summary>
-        /// Command to add a rule
-        /// </summary>
-        public ICommand AddRuleCommand { get; }
-        
-        /// <summary>
-        /// Command to remove a rule
-        /// </summary>
-        public ICommand RemoveRuleCommand { get; }
-        
-        /// <summary>
-        /// Command to move a rule up
-        /// </summary>
-        public ICommand MoveRuleUpCommand { get; }
-        
-        /// <summary>
-        /// Command to move a rule down
-        /// </summary>
-        public ICommand MoveRuleDownCommand { get; }
-        
-        /// <summary>
-        /// Command to apply the profile
-        /// </summary>
-        public ICommand ApplyProfileCommand { get; }
         
         /// <summary>
         /// Current profile being edited
         /// </summary>
-        public PowerProfile CurrentProfile
+        public PowerProfile? CurrentProfile
         {
             get => _currentProfile;
-            private set => SetProperty(ref _currentProfile, value);
+            set
+            {
+                if (SetProperty(ref _currentProfile, value))
+                {
+                    // Update rules collection
+                    UpdateRulesCollection();
+                    
+                    // Update command states
+                    (AddRuleCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                    (SaveProfileCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                    (ExportProfileCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                    (ApplyProfileCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                }
+            }
         }
         
         /// <summary>
-        /// Selected rule in the rules list
+        /// Selected rule
         /// </summary>
         public ProcessAffinityRule? SelectedRule
         {
@@ -94,15 +73,16 @@ namespace ThreadPilot.ViewModels
             {
                 if (SetProperty(ref _selectedRule, value))
                 {
-                    ((RelayCommand)RemoveRuleCommand).RaiseCanExecuteChanged();
-                    ((RelayCommand)MoveRuleUpCommand).RaiseCanExecuteChanged();
-                    ((RelayCommand)MoveRuleDownCommand).RaiseCanExecuteChanged();
+                    // Update command states
+                    (RemoveRuleCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                    (MoveRuleUpCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                    (MoveRuleDownCommand as RelayCommand)?.RaiseCanExecuteChanged();
                 }
             }
         }
         
         /// <summary>
-        /// Process pattern for new rules
+        /// New process pattern
         /// </summary>
         public string NewProcessPattern
         {
@@ -111,59 +91,228 @@ namespace ThreadPilot.ViewModels
             {
                 if (SetProperty(ref _newProcessPattern, value))
                 {
-                    ((RelayCommand)AddRuleCommand).RaiseCanExecuteChanged();
+                    (AddRuleCommand as RelayCommand)?.RaiseCanExecuteChanged();
                 }
             }
         }
         
         /// <summary>
-        /// Rules collection for the current profile
+        /// Rules collection
         /// </summary>
-        public ObservableCollection<ProcessAffinityRule> Rules => new ObservableCollection<ProcessAffinityRule>(_currentProfile.ProcessRules);
+        public ObservableCollection<ProcessAffinityRule> Rules { get; }
         
         /// <summary>
-        /// Available process priorities
+        /// Add rule command
         /// </summary>
-        public ProcessPriority[] Priorities => Enum.GetValues<ProcessPriority>();
+        public RelayCommand AddRuleCommand { get; }
         
         /// <summary>
-        /// Load a profile for editing
+        /// Remove rule command
         /// </summary>
-        /// <param name="profile">Profile to load</param>
-        public void LoadProfile(PowerProfile profile)
+        public RelayCommand RemoveRuleCommand { get; }
+        
+        /// <summary>
+        /// Move rule up command
+        /// </summary>
+        public RelayCommand MoveRuleUpCommand { get; }
+        
+        /// <summary>
+        /// Move rule down command
+        /// </summary>
+        public RelayCommand MoveRuleDownCommand { get; }
+        
+        /// <summary>
+        /// Save profile command
+        /// </summary>
+        public RelayCommand SaveProfileCommand { get; }
+        
+        /// <summary>
+        /// Export profile command
+        /// </summary>
+        public RelayCommand ExportProfileCommand { get; }
+        
+        /// <summary>
+        /// Apply profile command
+        /// </summary>
+        public RelayCommand ApplyProfileCommand { get; }
+        
+        /// <summary>
+        /// Update rules collection from current profile
+        /// </summary>
+        private void UpdateRulesCollection()
         {
-            // Create a deep copy to avoid modifying the original
-            CurrentProfile = profile.Clone();
+            // Clear existing rules
+            Rules.Clear();
             
-            // Reset selection
-            SelectedRule = null;
-            NewProcessPattern = string.Empty;
-            
-            // Refresh command states
-            ((RelayCommand)SaveProfileCommand).RaiseCanExecuteChanged();
-            ((RelayCommand)ExportProfileCommand).RaiseCanExecuteChanged();
-            ((RelayCommand)ApplyProfileCommand).RaiseCanExecuteChanged();
-            
-            // Notify UI to refresh the rules collection
-            OnPropertyChanged(nameof(Rules));
+            // Add rules from current profile
+            if (CurrentProfile != null)
+            {
+                foreach (var rule in CurrentProfile.ProcessRules)
+                {
+                    Rules.Add(rule);
+                }
+            }
         }
         
         /// <summary>
-        /// Save the current profile
+        /// Add a rule
         /// </summary>
-        private void SaveProfile()
+        private void AddRule()
         {
+            if (CurrentProfile == null || string.IsNullOrWhiteSpace(NewProcessPattern))
+            {
+                return;
+            }
+            
             try
             {
-                if (string.IsNullOrWhiteSpace(CurrentProfile.Name))
+                // Create new rule
+                var rule = new ProcessAffinityRule
                 {
-                    _notificationService.ShowError("Profile name cannot be empty");
+                    ProcessNamePattern = NewProcessPattern,
+                    Priority = ProcessPriority.Normal,
+                    IsExcludeList = false
+                };
+                
+                // Add to current profile
+                CurrentProfile.ProcessRules.Add(rule);
+                
+                // Add to rules collection
+                Rules.Add(rule);
+                
+                // Clear pattern
+                NewProcessPattern = string.Empty;
+                
+                // Select the new rule
+                SelectedRule = rule;
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError($"Error adding rule: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Remove a rule
+        /// </summary>
+        private void RemoveRule()
+        {
+            if (CurrentProfile == null || SelectedRule == null)
+            {
+                return;
+            }
+            
+            try
+            {
+                // Remove from current profile
+                CurrentProfile.ProcessRules.Remove(SelectedRule);
+                
+                // Remove from rules collection
+                Rules.Remove(SelectedRule);
+                
+                // Clear selection
+                SelectedRule = null;
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError($"Error removing rule: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Move rule up
+        /// </summary>
+        private void MoveRuleUp()
+        {
+            if (CurrentProfile == null || SelectedRule == null)
+            {
+                return;
+            }
+            
+            try
+            {
+                // Get index of selected rule
+                int index = Rules.IndexOf(SelectedRule);
+                if (index <= 0)
+                {
                     return;
                 }
                 
-                if (_powerProfileService.SaveProfile(CurrentProfile))
+                // Remove from current position
+                Rules.RemoveAt(index);
+                CurrentProfile.ProcessRules.RemoveAt(index);
+                
+                // Insert at new position
+                Rules.Insert(index - 1, SelectedRule);
+                CurrentProfile.ProcessRules.Insert(index - 1, SelectedRule);
+                
+                // Update command states
+                (MoveRuleUpCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                (MoveRuleDownCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError($"Error moving rule: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Move rule down
+        /// </summary>
+        private void MoveRuleDown()
+        {
+            if (CurrentProfile == null || SelectedRule == null)
+            {
+                return;
+            }
+            
+            try
+            {
+                // Get index of selected rule
+                int index = Rules.IndexOf(SelectedRule);
+                if (index < 0 || index >= Rules.Count - 1)
                 {
-                    _notificationService.ShowSuccess($"Profile '{CurrentProfile.Name}' saved successfully");
+                    return;
+                }
+                
+                // Remove from current position
+                Rules.RemoveAt(index);
+                CurrentProfile.ProcessRules.RemoveAt(index);
+                
+                // Insert at new position
+                Rules.Insert(index + 1, SelectedRule);
+                CurrentProfile.ProcessRules.Insert(index + 1, SelectedRule);
+                
+                // Update command states
+                (MoveRuleUpCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                (MoveRuleDownCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError($"Error moving rule: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Save profile
+        /// </summary>
+        private void SaveProfile()
+        {
+            if (CurrentProfile == null)
+            {
+                return;
+            }
+            
+            try
+            {
+                // Update profile in service
+                if (_powerProfileService.UpdateProfile(CurrentProfile))
+                {
+                    _notificationService.ShowSuccess($"Profile '{CurrentProfile.Name}' saved.");
+                }
+                else
+                {
+                    _notificationService.ShowError($"Failed to save profile '{CurrentProfile.Name}'.");
                 }
             }
             catch (Exception ex)
@@ -173,23 +322,25 @@ namespace ThreadPilot.ViewModels
         }
         
         /// <summary>
-        /// Export the current profile
+        /// Export profile
         /// </summary>
         private void ExportProfile()
         {
+            if (CurrentProfile == null)
+            {
+                return;
+            }
+            
             try
             {
-                string? filePath = _fileDialogService.ShowSaveFileDialog(
-                    "Export Power Profile",
-                    "JSON Files (*.json)|*.json|POW Files (*.pow)|*.pow|All Files (*.*)|*.*",
-                    $"{CurrentProfile.Name}.json");
-                
-                if (!string.IsNullOrEmpty(filePath))
+                // Export profile from service
+                if (_powerProfileService.ExportProfile(CurrentProfile))
                 {
-                    if (_powerProfileService.ExportProfile(CurrentProfile, filePath))
-                    {
-                        _notificationService.ShowSuccess($"Profile exported to {filePath}");
-                    }
+                    _notificationService.ShowSuccess($"Profile '{CurrentProfile.Name}' exported.");
+                }
+                else
+                {
+                    _notificationService.ShowError($"Failed to export profile '{CurrentProfile.Name}'.");
                 }
             }
             catch (Exception ex)
@@ -199,125 +350,26 @@ namespace ThreadPilot.ViewModels
         }
         
         /// <summary>
-        /// Add a new rule to the profile
-        /// </summary>
-        private void AddRule()
-        {
-            try
-            {
-                var newRule = new ProcessAffinityRule
-                {
-                    ProcessNamePattern = NewProcessPattern,
-                    Priority = ProcessPriority.Normal
-                };
-                
-                CurrentProfile.ProcessRules.Add(newRule);
-                SelectedRule = newRule;
-                NewProcessPattern = string.Empty;
-                
-                // Notify UI to refresh the rules collection
-                OnPropertyChanged(nameof(Rules));
-                
-                _notificationService.ShowSuccess($"Rule for '{newRule.ProcessNamePattern}' added");
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error adding rule: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Remove the selected rule
-        /// </summary>
-        private void RemoveRule()
-        {
-            try
-            {
-                if (_selectedRule != null)
-                {
-                    string pattern = _selectedRule.ProcessNamePattern;
-                    CurrentProfile.ProcessRules.Remove(_selectedRule);
-                    SelectedRule = null;
-                    
-                    // Notify UI to refresh the rules collection
-                    OnPropertyChanged(nameof(Rules));
-                    
-                    _notificationService.ShowSuccess($"Rule for '{pattern}' removed");
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error removing rule: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Move the selected rule up in the list
-        /// </summary>
-        private void MoveRuleUp()
-        {
-            try
-            {
-                if (_selectedRule != null)
-                {
-                    int index = CurrentProfile.ProcessRules.IndexOf(_selectedRule);
-                    
-                    if (index > 0)
-                    {
-                        CurrentProfile.ProcessRules.RemoveAt(index);
-                        CurrentProfile.ProcessRules.Insert(index - 1, _selectedRule);
-                        
-                        // Notify UI to refresh the rules collection
-                        OnPropertyChanged(nameof(Rules));
-                        
-                        _notificationService.ShowSuccess("Rule moved up");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error moving rule: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Move the selected rule down in the list
-        /// </summary>
-        private void MoveRuleDown()
-        {
-            try
-            {
-                if (_selectedRule != null)
-                {
-                    int index = CurrentProfile.ProcessRules.IndexOf(_selectedRule);
-                    
-                    if (index < CurrentProfile.ProcessRules.Count - 1)
-                    {
-                        CurrentProfile.ProcessRules.RemoveAt(index);
-                        CurrentProfile.ProcessRules.Insert(index + 1, _selectedRule);
-                        
-                        // Notify UI to refresh the rules collection
-                        OnPropertyChanged(nameof(Rules));
-                        
-                        _notificationService.ShowSuccess("Rule moved down");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error moving rule: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Apply the current profile
+        /// Apply profile
         /// </summary>
         private void ApplyProfile()
         {
+            if (CurrentProfile == null)
+            {
+                return;
+            }
+            
             try
             {
-                int ruleCount = _powerProfileService.ApplyProfile(CurrentProfile);
-                _notificationService.ShowSuccess($"Profile applied: {ruleCount} rules affected processes");
+                // Apply profile from service
+                if (_powerProfileService.ApplyProfile(CurrentProfile))
+                {
+                    _notificationService.ShowSuccess($"Profile '{CurrentProfile.Name}' applied.");
+                }
+                else
+                {
+                    _notificationService.ShowError($"Failed to apply profile '{CurrentProfile.Name}'.");
+                }
             }
             catch (Exception ex)
             {
@@ -326,78 +378,60 @@ namespace ThreadPilot.ViewModels
         }
         
         /// <summary>
-        /// Determine if the profile can be saved
+        /// Check if rule can be added
         /// </summary>
-        /// <returns>True if the profile can be saved</returns>
-        private bool CanSaveProfile()
-        {
-            return !string.IsNullOrWhiteSpace(CurrentProfile.Name);
-        }
-        
-        /// <summary>
-        /// Determine if the profile can be exported
-        /// </summary>
-        /// <returns>True if the profile can be exported</returns>
-        private bool CanExportProfile()
-        {
-            return !string.IsNullOrWhiteSpace(CurrentProfile.Name);
-        }
-        
-        /// <summary>
-        /// Determine if a rule can be added
-        /// </summary>
-        /// <returns>True if a rule can be added</returns>
+        /// <returns>True if can add rule</returns>
         private bool CanAddRule()
         {
-            return !string.IsNullOrWhiteSpace(NewProcessPattern);
+            return CurrentProfile != null && !string.IsNullOrWhiteSpace(NewProcessPattern);
         }
         
         /// <summary>
-        /// Determine if the selected rule can be removed
+        /// Check if rule can be removed
         /// </summary>
-        /// <returns>True if the selected rule can be removed</returns>
+        /// <returns>True if can remove rule</returns>
         private bool CanRemoveRule()
         {
-            return SelectedRule != null;
+            return CurrentProfile != null && SelectedRule != null;
         }
         
         /// <summary>
-        /// Determine if the selected rule can be moved up
+        /// Check if rule can be moved up
         /// </summary>
-        /// <returns>True if the selected rule can be moved up</returns>
+        /// <returns>True if can move up</returns>
         private bool CanMoveRuleUp()
         {
-            if (SelectedRule == null)
+            if (CurrentProfile == null || SelectedRule == null)
             {
                 return false;
             }
             
-            int index = CurrentProfile.ProcessRules.IndexOf(SelectedRule);
+            int index = Rules.IndexOf(SelectedRule);
             return index > 0;
         }
         
         /// <summary>
-        /// Determine if the selected rule can be moved down
+        /// Check if rule can be moved down
         /// </summary>
-        /// <returns>True if the selected rule can be moved down</returns>
+        /// <returns>True if can move down</returns>
         private bool CanMoveRuleDown()
         {
-            if (SelectedRule == null)
+            if (CurrentProfile == null || SelectedRule == null)
             {
                 return false;
             }
             
-            int index = CurrentProfile.ProcessRules.IndexOf(SelectedRule);
-            return index < CurrentProfile.ProcessRules.Count - 1;
+            int index = Rules.IndexOf(SelectedRule);
+            return index >= 0 && index < Rules.Count - 1;
         }
         
         /// <summary>
-        /// Determine if the current profile can be applied
+        /// Check if profile can be saved
         /// </summary>
-        /// <returns>True if the current profile can be applied</returns>
-        private bool CanApplyProfile()
+        /// <returns>True if can save profile</returns>
+        private bool CanSaveProfile()
         {
-            return CurrentProfile.ProcessRules.Count > 0;
+            return CurrentProfile != null;
         }
     }
 }

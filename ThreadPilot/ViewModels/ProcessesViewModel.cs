@@ -1,7 +1,9 @@
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
-using System.Windows.Input;
+using System.Threading.Tasks;
+using System.Windows.Data;
 using ThreadPilot.Commands;
 using ThreadPilot.Models;
 using ThreadPilot.Services;
@@ -9,45 +11,65 @@ using ThreadPilot.Services;
 namespace ThreadPilot.ViewModels
 {
     /// <summary>
-    /// View model for the processes view
+    /// View model for processes tab
     /// </summary>
     public class ProcessesViewModel : ViewModelBase
     {
-        private readonly IProcessService _processService;
         private readonly INotificationService _notificationService;
+        private readonly IProcessService _processService;
+        
+        private ObservableCollection<ProcessInfo> _processes = new ObservableCollection<ProcessInfo>();
+        private ICollectionView _filteredProcesses;
         private ProcessInfo? _selectedProcess;
         private string _filterText = string.Empty;
-        private bool _showSystemProcesses = false;
+        private bool _showSystemProcesses;
         
         /// <summary>
         /// Constructor
         /// </summary>
         public ProcessesViewModel()
         {
-            _processService = ServiceLocator.Get<IProcessService>();
+            // Get services
             _notificationService = ServiceLocator.Get<INotificationService>();
+            _processService = ServiceLocator.Get<IProcessService>();
             
             // Initialize commands
             RefreshProcessesCommand = new RelayCommand(RefreshProcesses);
-            SetPriorityCommand = new RelayCommand<ProcessPriority>(SetPriority);
-            SetAffinityCommand = new RelayCommand<long>(SetAffinity);
+            SetProcessPriorityCommand = new RelayCommand<ProcessPriority>(SetProcessPriority, CanManageProcess);
+            SetProcessAffinityCommand = new RelayCommand(SetProcessAffinity, CanManageProcess);
             
-            // Initial load of processes
+            // Initialize collection view
+            _filteredProcesses = CollectionViewSource.GetDefaultView(_processes);
+            _filteredProcesses.Filter = ProcessFilter;
+            
+            // Load data
             RefreshProcesses();
         }
         
         /// <summary>
-        /// Collection of processes
+        /// All processes
         /// </summary>
-        public ObservableCollection<ProcessInfo> Processes { get; } = new ObservableCollection<ProcessInfo>();
+        public ObservableCollection<ProcessInfo> Processes
+        {
+            get => _processes;
+            set
+            {
+                if (SetProperty(ref _processes, value))
+                {
+                    _filteredProcesses = CollectionViewSource.GetDefaultView(_processes);
+                    _filteredProcesses.Filter = ProcessFilter;
+                    OnPropertyChanged(nameof(FilteredProcesses));
+                }
+            }
+        }
         
         /// <summary>
-        /// Collection of processes after filtering
+        /// Filtered processes (based on filter text and system process flag)
         /// </summary>
-        public ObservableCollection<ProcessInfo> FilteredProcesses { get; } = new ObservableCollection<ProcessInfo>();
+        public ICollectionView FilteredProcesses => _filteredProcesses;
         
         /// <summary>
-        /// Currently selected process
+        /// Selected process
         /// </summary>
         public ProcessInfo? SelectedProcess
         {
@@ -56,18 +78,15 @@ namespace ThreadPilot.ViewModels
             {
                 if (SetProperty(ref _selectedProcess, value))
                 {
-                    OnPropertyChanged(nameof(IsProcessSelected));
+                    // Update command states
+                    (SetProcessPriorityCommand as RelayCommand<ProcessPriority>)?.RaiseCanExecuteChanged();
+                    (SetProcessAffinityCommand as RelayCommand)?.RaiseCanExecuteChanged();
                 }
             }
         }
         
         /// <summary>
-        /// Whether a process is currently selected
-        /// </summary>
-        public bool IsProcessSelected => _selectedProcess != null;
-        
-        /// <summary>
-        /// Text used to filter the process list
+        /// Filter text
         /// </summary>
         public string FilterText
         {
@@ -76,7 +95,7 @@ namespace ThreadPilot.ViewModels
             {
                 if (SetProperty(ref _filterText, value))
                 {
-                    ApplyFilter();
+                    FilteredProcesses.Refresh();
                 }
             }
         }
@@ -91,45 +110,45 @@ namespace ThreadPilot.ViewModels
             {
                 if (SetProperty(ref _showSystemProcesses, value))
                 {
-                    ApplyFilter();
+                    FilteredProcesses.Refresh();
                 }
             }
         }
         
         /// <summary>
-        /// Command to refresh the process list
+        /// Refresh processes command
         /// </summary>
-        public ICommand RefreshProcessesCommand { get; }
+        public RelayCommand RefreshProcessesCommand { get; }
         
         /// <summary>
-        /// Command to set process priority
+        /// Set process priority command
         /// </summary>
-        public ICommand SetPriorityCommand { get; }
+        public RelayCommand<ProcessPriority> SetProcessPriorityCommand { get; }
         
         /// <summary>
-        /// Command to set process affinity
+        /// Set process affinity command
         /// </summary>
-        public ICommand SetAffinityCommand { get; }
+        public RelayCommand SetProcessAffinityCommand { get; }
         
         /// <summary>
-        /// Refresh the process list
+        /// Refresh processes
         /// </summary>
-        public void RefreshProcesses()
+        public async void RefreshProcesses()
         {
             try
             {
-                // Get all processes
-                var processes = _processService.GetProcesses();
+                // Get processes on background thread
+                var processes = await Task.Run(() => _processService.GetProcesses());
                 
-                // Update the collection
-                Processes.Clear();
-                foreach (var process in processes)
+                // Update collection on UI thread
+                App.Current.Dispatcher.Invoke(() =>
                 {
-                    Processes.Add(process);
-                }
-                
-                // Apply filter
-                ApplyFilter();
+                    Processes.Clear();
+                    foreach (var process in processes)
+                    {
+                        Processes.Add(process);
+                    }
+                });
             }
             catch (Exception ex)
             {
@@ -138,99 +157,88 @@ namespace ThreadPilot.ViewModels
         }
         
         /// <summary>
-        /// Apply filter to the process list
-        /// </summary>
-        private void ApplyFilter()
-        {
-            try
-            {
-                // Filter processes
-                var filtered = Processes.AsEnumerable();
-                
-                // Apply text filter if specified
-                if (!string.IsNullOrWhiteSpace(_filterText))
-                {
-                    filtered = filtered.Where(p =>
-                        p.Name.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
-                        p.Description.Contains(_filterText, StringComparison.OrdinalIgnoreCase));
-                }
-                
-                // Filter system processes if requested
-                if (!_showSystemProcesses)
-                {
-                    filtered = filtered.Where(p => !p.IsSystemProcess);
-                }
-                
-                // Sort by CPU usage
-                filtered = filtered.OrderByDescending(p => p.CpuUsage);
-                
-                // Update the filtered collection
-                FilteredProcesses.Clear();
-                foreach (var process in filtered)
-                {
-                    FilteredProcesses.Add(process);
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error applying filter: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Set the priority of the selected process
+        /// Set process priority
         /// </summary>
         /// <param name="priority">New priority</param>
-        private void SetPriority(ProcessPriority priority)
+        private void SetProcessPriority(ProcessPriority priority)
         {
-            if (_selectedProcess == null)
+            if (SelectedProcess == null)
             {
                 return;
             }
             
             try
             {
-                if (_processService.SetProcessPriority(_selectedProcess.Id, priority))
+                if (_processService.SetProcessPriority(SelectedProcess.Id, priority))
                 {
-                    _notificationService.ShowSuccess($"Priority for {_selectedProcess.Name} set to {priority}");
-                    
-                    // Update the process info
-                    _selectedProcess.Priority = priority;
-                    OnPropertyChanged(nameof(SelectedProcess));
+                    SelectedProcess.Priority = priority;
+                    _notificationService.ShowSuccess(
+                        $"Process '{SelectedProcess.Name}' priority set to {priority}.");
+                }
+                else
+                {
+                    _notificationService.ShowError(
+                        $"Failed to set priority for process '{SelectedProcess.Name}'.");
                 }
             }
             catch (Exception ex)
             {
-                _notificationService.ShowError($"Error setting priority: {ex.Message}");
+                _notificationService.ShowError(
+                    $"Error setting process priority: {ex.Message}");
             }
         }
         
         /// <summary>
-        /// Set the affinity of the selected process
+        /// Set process affinity
         /// </summary>
-        /// <param name="affinityMask">New affinity mask</param>
-        private void SetAffinity(long affinityMask)
+        private void SetProcessAffinity()
         {
-            if (_selectedProcess == null)
+            if (SelectedProcess == null)
             {
                 return;
             }
             
-            try
+            // TODO: Implement affinity dialog
+            _notificationService.ShowInfo("Affinity dialog will be implemented in a future version.");
+        }
+        
+        /// <summary>
+        /// Check if process can be managed
+        /// </summary>
+        /// <param name="parameter">Parameter</param>
+        /// <returns>True if can manage</returns>
+        private bool CanManageProcess(object? parameter)
+        {
+            return SelectedProcess != null;
+        }
+        
+        /// <summary>
+        /// Process filter
+        /// </summary>
+        /// <param name="item">Process to filter</param>
+        /// <returns>True if process should be shown</returns>
+        private bool ProcessFilter(object item)
+        {
+            if (item is not ProcessInfo process)
             {
-                if (_processService.SetProcessAffinity(_selectedProcess.Id, affinityMask))
-                {
-                    _notificationService.ShowSuccess($"Affinity for {_selectedProcess.Name} updated");
-                    
-                    // Update the process info
-                    _selectedProcess.AffinityMask = affinityMask;
-                    OnPropertyChanged(nameof(SelectedProcess));
-                }
+                return false;
             }
-            catch (Exception ex)
+            
+            // Filter by system process flag
+            if (!ShowSystemProcesses && process.IsSystemProcess)
             {
-                _notificationService.ShowError($"Error setting affinity: {ex.Message}");
+                return false;
             }
+            
+            // Filter by text
+            if (string.IsNullOrWhiteSpace(FilterText))
+            {
+                return true;
+            }
+            
+            // Check if process name or description contains filter text
+            return process.Name.Contains(FilterText, StringComparison.OrdinalIgnoreCase) ||
+                   process.Description.Contains(FilterText, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

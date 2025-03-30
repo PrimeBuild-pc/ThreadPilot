@@ -1,77 +1,42 @@
-using System.Collections.Generic;
-
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Rule for process affinity
+    /// Represents a process affinity rule
     /// </summary>
     public class ProcessAffinityRule
     {
         /// <summary>
-        /// Process name pattern (supports wildcards * and ?)
+        /// Gets or sets the process name pattern (supports wildcard *)
         /// </summary>
         public string ProcessNamePattern { get; set; } = string.Empty;
         
         /// <summary>
-        /// Optional process description
+        /// Gets or sets the CPU affinity mask (bit field)
+        /// </summary>
+        public long AffinityMask { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the process priority
+        /// </summary>
+        public ProcessPriority Priority { get; set; } = ProcessPriority.Normal;
+        
+        /// <summary>
+        /// Gets or sets a value indicating whether this rule is enabled
+        /// </summary>
+        public bool IsEnabled { get; set; } = true;
+        
+        /// <summary>
+        /// Gets or sets the description
         /// </summary>
         public string Description { get; set; } = string.Empty;
         
         /// <summary>
-        /// Process priority to set (if null, don't change priority)
+        /// Creates a string representation of the rule
         /// </summary>
-        public ProcessPriority? Priority { get; set; }
-        
-        /// <summary>
-        /// Affinity mask to set (if null, don't change affinity)
-        /// </summary>
-        public long? AffinityMask { get; set; }
-        
-        /// <summary>
-        /// Whether this is an exclude list rather than an include list
-        /// </summary>
-        public bool IsExcludeList { get; set; }
-        
-        /// <summary>
-        /// The list of cores to include or exclude
-        /// </summary>
-        public List<int> CoreList { get; set; } = new List<int>();
-        
-        /// <summary>
-        /// Create affinity mask from core list
-        /// </summary>
-        /// <returns>Computed affinity mask</returns>
-        public long ComputeAffinityMask()
+        /// <returns>A string representation</returns>
+        public override string ToString()
         {
-            long mask = 0;
-            
-            foreach (int core in CoreList)
-            {
-                mask |= 1L << core;
-            }
-            
-            return mask;
-        }
-        
-        /// <summary>
-        /// Create a deep copy of this rule
-        /// </summary>
-        /// <returns>A new rule with the same properties</returns>
-        public ProcessAffinityRule Clone()
-        {
-            var clone = new ProcessAffinityRule
-            {
-                ProcessNamePattern = ProcessNamePattern,
-                Description = Description,
-                Priority = Priority,
-                AffinityMask = AffinityMask,
-                IsExcludeList = IsExcludeList
-            };
-            
-            // Copy core list
-            clone.CoreList.AddRange(CoreList);
-            
-            return clone;
+            return $"{ProcessNamePattern} -> {AffinityMask:X} ({Priority})";
         }
     }
 }

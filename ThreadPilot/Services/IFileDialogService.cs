@@ -1,33 +1,25 @@
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Interface for file dialog service
+    /// Service for interacting with file dialogs
     /// </summary>
     public interface IFileDialogService
     {
         /// <summary>
         /// Show an open file dialog
         /// </summary>
-        /// <param name="title">Dialog title</param>
-        /// <param name="filter">File filter</param>
-        /// <param name="defaultExtension">Default file extension</param>
-        /// <returns>Selected file path or null if cancelled</returns>
-        string? ShowOpenFileDialog(string title, string filter, string defaultExtension);
+        /// <param name="title">The dialog title</param>
+        /// <param name="filter">The file filter (e.g., "Text files|*.txt")</param>
+        /// <returns>The selected file path, or null if canceled</returns>
+        string? ShowOpenFileDialog(string title, string filter);
         
         /// <summary>
         /// Show a save file dialog
         /// </summary>
-        /// <param name="title">Dialog title</param>
-        /// <param name="filter">File filter</param>
-        /// <param name="defaultFileName">Default file name</param>
-        /// <returns>Selected file path or null if cancelled</returns>
-        string? ShowSaveFileDialog(string title, string filter, string defaultFileName);
-        
-        /// <summary>
-        /// Show a folder browser dialog
-        /// </summary>
-        /// <param name="title">Dialog title</param>
-        /// <returns>Selected folder path or null if cancelled</returns>
-        string? ShowFolderBrowserDialog(string title);
+        /// <param name="title">The dialog title</param>
+        /// <param name="filter">The file filter (e.g., "Text files|*.txt")</param>
+        /// <param name="defaultFileName">The default file name</param>
+        /// <returns>The selected file path, or null if canceled</returns>
+        string? ShowSaveFileDialog(string title, string filter, string defaultFileName = "");
     }
 }

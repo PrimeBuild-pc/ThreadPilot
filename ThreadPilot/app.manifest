@@ -4,13 +4,14 @@
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <!-- UAC Manifest Options
+        <!-- 
+        UAC Manifest Options
         If you want to change the Windows User Account Control level replace the 
         requestedExecutionLevel node with one of the following.
-        
-        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
-        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
-        <requestedExecutionLevel level="highestAvailable" uiAccess="false" />
+
+        <requestedExecutionLevel  level="asInvoker" uiAccess="false" />
+        <requestedExecutionLevel  level="requireAdministrator" uiAccess="false" />
+        <requestedExecutionLevel  level="highestAvailable" uiAccess="false" />
 
         Specifying requestedExecutionLevel element will disable file and registry virtualization. 
         Remove this element if your application requires this virtualization for backwards
@@ -23,15 +24,10 @@
 
   <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
     <application>
-      <!-- A list of the Windows versions that this application has been tested on
-           and is designed to work with. Uncomment the appropriate elements
-           and Windows will automatically select the most compatible environment. -->
-
       <!-- Windows 10 -->
       <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" />
-      
-      <!-- Windows 11 -->
-      <maxversiontested Id="10.0.22000.0"/>
+      <!-- Windows 11 compatibility -->
+      <!-- Note: Windows 11 uses the same GUID as Windows 10 -->
     </application>
   </compatibility>
 

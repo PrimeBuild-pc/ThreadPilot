@@ -4,48 +4,56 @@ using System.Collections.Generic;
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Service locator singleton for dependency injection
+    /// A simple service locator for managing application services
     /// </summary>
     public static class ServiceLocator
     {
-        private static readonly Dictionary<Type, object> _services = new Dictionary<Type, object>();
+        private static readonly Dictionary<Type, object> Services = new Dictionary<Type, object>();
+        private static bool _isInitialized;
         
         /// <summary>
-        /// Initialize services
+        /// Initialize the service locator with all required services
         /// </summary>
         public static void Initialize()
         {
-            // Register services
-            Register<INotificationService>(new NotificationService());
-            Register<IFileDialogService>(new FileDialogService());
-            Register<ISystemInfoService>(new SystemInfoService());
-            Register<IProcessService>(new ProcessService());
-            Register<IPowerProfileService>(new PowerProfileService());
+            if (_isInitialized)
+            {
+                return;
+            }
+            
+            // Register all services
+            RegisterService<INotificationService>(new NotificationService());
+            RegisterService<IFileDialogService>(new FileDialogService());
+            RegisterService<ISystemInfoService>(new SystemInfoService());
+            RegisterService<IProcessService>(new ProcessService());
+            RegisterService<IPowerProfileService>(new PowerProfileService());
+            
+            _isInitialized = true;
         }
         
         /// <summary>
         /// Register a service
         /// </summary>
-        /// <typeparam name="T">Service type</typeparam>
-        /// <param name="implementation">Service implementation</param>
-        public static void Register<T>(T implementation) where T : class
+        /// <typeparam name="T">The service interface type</typeparam>
+        /// <param name="service">The service implementation</param>
+        public static void RegisterService<T>(T service) where T : class
         {
-            _services[typeof(T)] = implementation ?? throw new ArgumentNullException(nameof(implementation));
+            Services[typeof(T)] = service;
         }
         
         /// <summary>
-        /// Get a service
+        /// Get a registered service
         /// </summary>
-        /// <typeparam name="T">Service type</typeparam>
-        /// <returns>Service implementation</returns>
-        public static T Get<T>() where T : class
+        /// <typeparam name="T">The service interface type</typeparam>
+        /// <returns>The service implementation</returns>
+        public static T GetService<T>() where T : class
         {
-            if (_services.TryGetValue(typeof(T), out var service))
+            if (Services.TryGetValue(typeof(T), out var service))
             {
                 return (T)service;
             }
             
-            throw new InvalidOperationException($"Service of type {typeof(T).Name} is not registered.");
+            throw new InvalidOperationException($"Service of type {typeof(T).Name} is not registered");
         }
     }
 }

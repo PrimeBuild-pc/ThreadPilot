@@ -1,81 +1,38 @@
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// CPU core information
+    /// Represents information about a CPU core
     /// </summary>
     public class CpuCore
     {
         /// <summary>
-        /// Core index
+        /// Gets or sets the core ID (0-based)
         /// </summary>
-        public int Index { get; set; }
+        public int CoreId { get; set; }
         
         /// <summary>
-        /// Physical core number
+        /// Gets or sets the processor ID (physical CPU number)
         /// </summary>
-        public int PhysicalCore { get; set; }
+        public int ProcessorId { get; set; }
         
         /// <summary>
-        /// Whether this is a logical core (hyperthreading)
-        /// </summary>
-        public bool IsLogicalCore { get; set; }
-        
-        /// <summary>
-        /// Whether this is an efficiency core (E-core)
-        /// </summary>
-        public bool IsEfficiencyCore { get; set; }
-        
-        /// <summary>
-        /// Current CPU usage percentage
-        /// </summary>
-        public double CpuUsage { get; set; }
-        
-        /// <summary>
-        /// Base clock speed in MHz
-        /// </summary>
-        public int BaseClockMHz { get; set; }
-        
-        /// <summary>
-        /// Current clock speed in MHz
-        /// </summary>
-        public int CurrentClockMHz { get; set; }
-        
-        /// <summary>
-        /// Maximum clock speed in MHz
-        /// </summary>
-        public int MaxClockMHz { get; set; }
-        
-        /// <summary>
-        /// Core power usage in watts
-        /// </summary>
-        public double PowerUsageWatts { get; set; }
-        
-        /// <summary>
-        /// Core temperature in Celsius
-        /// </summary>
-        public double TemperatureCelsius { get; set; }
-        
-        /// <summary>
-        /// Whether the core is parked
+        /// Gets or sets a value indicating whether the core is parked
         /// </summary>
         public bool IsParked { get; set; }
         
         /// <summary>
-        /// Gets the core type string
+        /// Gets or sets the current usage percentage
         /// </summary>
-        public string CoreType => IsEfficiencyCore ? "E-Core" : "P-Core";
+        public double UsagePercent { get; set; }
         
         /// <summary>
-        /// Gets the core description
+        /// Gets or sets the current frequency in MHz
         /// </summary>
-        public string CoreDescription
-        {
-            get
-            {
-                string coreType = IsEfficiencyCore ? "E" : "P";
-                string logicalInfo = IsLogicalCore ? " (HT)" : "";
-                return $"Core {Index} ({coreType}-Core{logicalInfo})";
-            }
-        }
+        public double CurrentFrequencyMhz { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the temperature in Celsius
+        /// </summary>
+        public double TemperatureCelsius { get; set; }
     }
 }

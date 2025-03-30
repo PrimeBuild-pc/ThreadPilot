@@ -1,28 +1,39 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows.Input;
 
 namespace ThreadPilot.ViewModels
 {
     /// <summary>
-    /// Base class for all ViewModels in the application
+    /// Base class for all view models
     /// </summary>
     public abstract class ViewModelBase : INotifyPropertyChanged
     {
         /// <summary>
-        /// Event raised when a property changes
+        /// Occurs when a property value changes
         /// </summary>
         public event PropertyChangedEventHandler? PropertyChanged;
         
         /// <summary>
-        /// Set a property value and raise PropertyChanged if the value changes
+        /// Raises the PropertyChanged event
         /// </summary>
-        /// <typeparam name="T">Property type</typeparam>
-        /// <param name="field">Reference to the backing field</param>
-        /// <param name="value">New value</param>
-        /// <param name="propertyName">Property name (set automatically by compiler)</param>
-        /// <returns>True if the property was changed</returns>
-        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = "")
+        /// <param name="propertyName">The property name</param>
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+        
+        /// <summary>
+        /// Sets a property value and raises the PropertyChanged event if the value has changed
+        /// </summary>
+        /// <typeparam name="T">The property type</typeparam>
+        /// <param name="field">The backing field reference</param>
+        /// <param name="value">The new value</param>
+        /// <param name="propertyName">The property name</param>
+        /// <returns>True if the value was changed, false otherwise</returns>
+        protected virtual bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
         {
             if (EqualityComparer<T>.Default.Equals(field, value))
             {
@@ -33,14 +44,61 @@ namespace ThreadPilot.ViewModels
             OnPropertyChanged(propertyName);
             return true;
         }
+    }
+    
+    /// <summary>
+    /// Implementation of the ICommand interface
+    /// </summary>
+    public class RelayCommand : ICommand
+    {
+        private readonly Action<object?> _execute;
+        private readonly Func<object?, bool>? _canExecute;
         
         /// <summary>
-        /// Raise the PropertyChanged event for a property
+        /// Initializes a new instance of the <see cref="RelayCommand"/> class
         /// </summary>
-        /// <param name="propertyName">Name of the property that changed</param>
-        protected void OnPropertyChanged([CallerMemberName] string propertyName = "")
+        /// <param name="execute">The execution logic</param>
+        /// <param name="canExecute">The execution status logic</param>
+        public RelayCommand(Action<object?> execute, Func<object?, bool>? canExecute = null)
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+            _canExecute = canExecute;
+        }
+        
+        /// <summary>
+        /// Occurs when changes occur that affect whether or not the command should execute
+        /// </summary>
+        public event EventHandler? CanExecuteChanged
+        {
+            add => CommandManager.RequerySuggested += value;
+            remove => CommandManager.RequerySuggested -= value;
+        }
+        
+        /// <summary>
+        /// Defines the method that determines whether the command can execute in its current state
+        /// </summary>
+        /// <param name="parameter">Data used by the command</param>
+        /// <returns>True if this command can be executed; otherwise, false</returns>
+        public bool CanExecute(object? parameter)
+        {
+            return _canExecute == null || _canExecute(parameter);
+        }
+        
+        /// <summary>
+        /// Defines the method to be called when the command is invoked
+        /// </summary>
+        /// <param name="parameter">Data used by the command</param>
+        public void Execute(object? parameter)
+        {
+            _execute(parameter);
+        }
+        
+        /// <summary>
+        /// Method used to raise the CanExecuteChanged event to force a re-query of the command
+        /// </summary>
+        public void RaiseCanExecuteChanged()
+        {
+            CommandManager.InvalidateRequerySuggested();
         }
     }
 }

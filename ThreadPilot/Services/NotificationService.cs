@@ -1,31 +1,21 @@
+using System;
 using System.Windows;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Implementation of notification service
+    /// Implementation of the notification service
     /// </summary>
     public class NotificationService : INotificationService
     {
         /// <summary>
-        /// Show an information message
+        /// Show a success notification
         /// </summary>
-        /// <param name="message">Message to show</param>
-        public void ShowInfo(string message)
-        {
-            MessageBox.Show(
-                message,
-                "Information",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
-        }
-        
-        /// <summary>
-        /// Show a success message
-        /// </summary>
-        /// <param name="message">Message to show</param>
+        /// <param name="message">The message to display</param>
         public void ShowSuccess(string message)
         {
+            // In a real app, this would show a non-blocking toast notification
+            // For now, we'll use a simple message box
             MessageBox.Show(
                 message,
                 "Success",
@@ -34,26 +24,22 @@ namespace ThreadPilot.Services
         }
         
         /// <summary>
-        /// Show a warning message
+        /// Show an error notification
         /// </summary>
-        /// <param name="message">Message to show</param>
-        public void ShowWarning(string message)
+        /// <param name="message">The message to display</param>
+        /// <param name="detail">Optional detailed error information</param>
+        public void ShowError(string message, string detail = null)
         {
+            // For errors, we'll show a message box with an error icon
+            string displayMessage = message;
+            
+            if (!string.IsNullOrEmpty(detail))
+            {
+                displayMessage += Environment.NewLine + Environment.NewLine + detail;
+            }
+            
             MessageBox.Show(
-                message,
-                "Warning",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
-        }
-        
-        /// <summary>
-        /// Show an error message
-        /// </summary>
-        /// <param name="message">Message to show</param>
-        public void ShowError(string message)
-        {
-            MessageBox.Show(
-                message,
+                displayMessage,
                 "Error",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);

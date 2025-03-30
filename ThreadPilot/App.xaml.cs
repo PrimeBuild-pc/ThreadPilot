@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Windows;
 using ThreadPilot.Services;
 
@@ -9,70 +10,30 @@ namespace ThreadPilot
     /// </summary>
     public partial class App : Application
     {
-        /// <summary>
-        /// Application startup
-        /// </summary>
-        /// <param name="e">Startup event arguments</param>
+        private static readonly Mutex SingleInstanceMutex = new Mutex(true, "ThreadPilot_SingleInstance");
+        
         protected override void OnStartup(StartupEventArgs e)
         {
-            base.OnStartup(e);
-            
-            // Register services
-            RegisterServices();
-            
-            // Register unhandled exception handlers
-            AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
-            Current.DispatcherUnhandledException += OnDispatcherUnhandledException;
-        }
-        
-        /// <summary>
-        /// Register application services
-        /// </summary>
-        private void RegisterServices()
-        {
-            // Create and register service implementations
-            ServiceLocator.Register<INotificationService>(new NotificationService());
-            ServiceLocator.Register<IFileDialogService>(new FileDialogService());
-            ServiceLocator.Register<ISystemInfoService>(new SystemInfoService());
-            ServiceLocator.Register<IProcessService>(new ProcessService());
-            ServiceLocator.Register<IPowerProfileService>(new PowerProfileService());
-        }
-        
-        /// <summary>
-        /// Handle unhandled exceptions in the application domain
-        /// </summary>
-        private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
-        {
-            var exception = e.ExceptionObject as Exception;
-            
-            MessageBox.Show(
-                $"An unhandled exception occurred: {exception?.Message}\n\n" +
-                $"Details: {exception?.ToString()}",
-                "Error",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
-            
-            if (e.IsTerminating)
+            // Ensure only one instance of the application is running
+            if (!SingleInstanceMutex.WaitOne(TimeSpan.Zero, true))
             {
-                // The application is terminating, perform any necessary cleanup
-                Shutdown(-1);
+                MessageBox.Show("ThreadPilot is already running.", "ThreadPilot", MessageBoxButton.OK, MessageBoxImage.Information);
+                Shutdown();
+                return;
             }
+            
+            // Initialize the service locator
+            ServiceLocator.Initialize();
+            
+            base.OnStartup(e);
         }
         
-        /// <summary>
-        /// Handle unhandled exceptions in the dispatcher
-        /// </summary>
-        private void OnDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+        protected override void OnExit(ExitEventArgs e)
         {
-            MessageBox.Show(
-                $"An unhandled exception occurred: {e.Exception.Message}\n\n" +
-                $"Details: {e.Exception}",
-                "Error",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+            // Release the mutex
+            SingleInstanceMutex.ReleaseMutex();
             
-            // Mark the exception as handled to prevent application crash
-            e.Handled = true;
+            base.OnExit(e);
         }
     }
 }

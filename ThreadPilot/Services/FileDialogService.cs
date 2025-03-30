@@ -1,35 +1,29 @@
 using Microsoft.Win32;
-using System;
 using System.IO;
-using System.Windows.Forms;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Implementation of file dialog service
+    /// Implementation of the file dialog service
     /// </summary>
     public class FileDialogService : IFileDialogService
     {
         /// <summary>
         /// Show an open file dialog
         /// </summary>
-        /// <param name="title">Dialog title</param>
-        /// <param name="filter">File filter</param>
-        /// <param name="defaultExtension">Default file extension</param>
-        /// <returns>Selected file path or null if cancelled</returns>
-        public string? ShowOpenFileDialog(string title, string filter, string defaultExtension)
+        /// <param name="title">The dialog title</param>
+        /// <param name="filter">The file filter (e.g., "Text files|*.txt")</param>
+        /// <returns>The selected file path, or null if canceled</returns>
+        public string? ShowOpenFileDialog(string title, string filter)
         {
-            var dialog = new Microsoft.Win32.OpenFileDialog
+            var dialog = new OpenFileDialog
             {
                 Title = title,
                 Filter = filter,
-                DefaultExt = defaultExtension,
                 CheckFileExists = true
             };
             
-            bool? result = dialog.ShowDialog();
-            
-            if (result == true)
+            if (dialog.ShowDialog() == true)
             {
                 return dialog.FileName;
             }
@@ -40,23 +34,20 @@ namespace ThreadPilot.Services
         /// <summary>
         /// Show a save file dialog
         /// </summary>
-        /// <param name="title">Dialog title</param>
-        /// <param name="filter">File filter</param>
-        /// <param name="defaultFileName">Default file name</param>
-        /// <returns>Selected file path or null if cancelled</returns>
-        public string? ShowSaveFileDialog(string title, string filter, string defaultFileName)
+        /// <param name="title">The dialog title</param>
+        /// <param name="filter">The file filter (e.g., "Text files|*.txt")</param>
+        /// <param name="defaultFileName">The default file name</param>
+        /// <returns>The selected file path, or null if canceled</returns>
+        public string? ShowSaveFileDialog(string title, string filter, string defaultFileName = "")
         {
-            var dialog = new Microsoft.Win32.SaveFileDialog
+            var dialog = new SaveFileDialog
             {
                 Title = title,
                 Filter = filter,
-                FileName = defaultFileName,
-                OverwritePrompt = true
+                FileName = SanitizeFileName(defaultFileName)
             };
             
-            bool? result = dialog.ShowDialog();
-            
-            if (result == true)
+            if (dialog.ShowDialog() == true)
             {
                 return dialog.FileName;
             }
@@ -65,27 +56,25 @@ namespace ThreadPilot.Services
         }
         
         /// <summary>
-        /// Show a folder browser dialog
+        /// Sanitize a filename to remove invalid characters
         /// </summary>
-        /// <param name="title">Dialog title</param>
-        /// <returns>Selected folder path or null if cancelled</returns>
-        public string? ShowFolderBrowserDialog(string title)
+        /// <param name="fileName">The file name to sanitize</param>
+        /// <returns>The sanitized file name</returns>
+        private string SanitizeFileName(string fileName)
         {
-            using (var dialog = new FolderBrowserDialog
+            if (string.IsNullOrEmpty(fileName))
             {
-                Description = title,
-                ShowNewFolderButton = true
-            })
-            {
-                DialogResult result = dialog.ShowDialog();
-                
-                if (result == DialogResult.OK && !string.IsNullOrWhiteSpace(dialog.SelectedPath))
-                {
-                    return dialog.SelectedPath;
-                }
+                return string.Empty;
             }
             
-            return null;
+            // Remove invalid characters from the filename
+            char[] invalidChars = Path.GetInvalidFileNameChars();
+            foreach (char c in invalidChars)
+            {
+                fileName = fileName.Replace(c, '_');
+            }
+            
+            return fileName;
         }
     }
 }

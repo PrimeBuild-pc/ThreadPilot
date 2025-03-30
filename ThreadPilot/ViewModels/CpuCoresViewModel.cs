@@ -1,7 +1,9 @@
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
-using System.Windows.Input;
+using System.Threading.Tasks;
+using System.Windows.Data;
 using ThreadPilot.Commands;
 using ThreadPilot.Models;
 using ThreadPilot.Services;
@@ -9,45 +11,65 @@ using ThreadPilot.Services;
 namespace ThreadPilot.ViewModels
 {
     /// <summary>
-    /// View model for the CPU cores view
+    /// View model for CPU cores tab
     /// </summary>
     public class CpuCoresViewModel : ViewModelBase
     {
-        private readonly ISystemInfoService _systemInfoService;
         private readonly INotificationService _notificationService;
+        private readonly ISystemInfoService _systemInfoService;
+        
+        private ObservableCollection<CpuCore> _cores = new ObservableCollection<CpuCore>();
+        private ICollectionView _filteredCores;
         private CpuCore? _selectedCore;
-        private bool _showEfficiencyCores = true;
         private bool _showPerformanceCores = true;
+        private bool _showEfficiencyCores = true;
         
         /// <summary>
         /// Constructor
         /// </summary>
         public CpuCoresViewModel()
         {
-            _systemInfoService = ServiceLocator.Get<ISystemInfoService>();
+            // Get services
             _notificationService = ServiceLocator.Get<INotificationService>();
+            _systemInfoService = ServiceLocator.Get<ISystemInfoService>();
             
             // Initialize commands
-            UpdateCoresCommand = new RelayCommand(UpdateCores);
             ResetAllCoresCommand = new RelayCommand(ResetAllCores);
-            OptimizeCommand = new RelayCommand(OptimizeCores);
+            OptimizeCommand = new RelayCommand(Optimize);
+            ParkCoreCommand = new RelayCommand<bool>(ParkCore, CanParkCore);
             
-            // Load cores
-            UpdateCores();
+            // Initialize collection view
+            _filteredCores = CollectionViewSource.GetDefaultView(_cores);
+            _filteredCores.Filter = CoreFilter;
+            
+            // Load data
+            RefreshCores();
         }
         
         /// <summary>
-        /// Collection of CPU cores
+        /// All cores
         /// </summary>
-        public ObservableCollection<CpuCore> Cores { get; } = new ObservableCollection<CpuCore>();
+        public ObservableCollection<CpuCore> Cores
+        {
+            get => _cores;
+            set
+            {
+                if (SetProperty(ref _cores, value))
+                {
+                    _filteredCores = CollectionViewSource.GetDefaultView(_cores);
+                    _filteredCores.Filter = CoreFilter;
+                    OnPropertyChanged(nameof(FilteredCores));
+                }
+            }
+        }
         
         /// <summary>
-        /// Collection of CPU cores after filtering
+        /// Filtered cores (based on core type filters)
         /// </summary>
-        public ObservableCollection<CpuCore> FilteredCores { get; } = new ObservableCollection<CpuCore>();
+        public ICollectionView FilteredCores => _filteredCores;
         
         /// <summary>
-        /// Selected CPU core
+        /// Selected core
         /// </summary>
         public CpuCore? SelectedCore
         {
@@ -56,27 +78,8 @@ namespace ThreadPilot.ViewModels
             {
                 if (SetProperty(ref _selectedCore, value))
                 {
-                    OnPropertyChanged(nameof(IsCoreSelected));
-                }
-            }
-        }
-        
-        /// <summary>
-        /// Whether a core is selected
-        /// </summary>
-        public bool IsCoreSelected => _selectedCore != null;
-        
-        /// <summary>
-        /// Whether to show efficiency cores
-        /// </summary>
-        public bool ShowEfficiencyCores
-        {
-            get => _showEfficiencyCores;
-            set
-            {
-                if (SetProperty(ref _showEfficiencyCores, value))
-                {
-                    ApplyFilter();
+                    // Update command states
+                    (ParkCoreCommand as RelayCommand<bool>)?.RaiseCanExecuteChanged();
                 }
             }
         }
@@ -91,120 +94,82 @@ namespace ThreadPilot.ViewModels
             {
                 if (SetProperty(ref _showPerformanceCores, value))
                 {
-                    ApplyFilter();
+                    FilteredCores.Refresh();
                 }
             }
         }
         
         /// <summary>
-        /// Command to update cores
+        /// Whether to show efficiency cores
         /// </summary>
-        public ICommand UpdateCoresCommand { get; }
+        public bool ShowEfficiencyCores
+        {
+            get => _showEfficiencyCores;
+            set
+            {
+                if (SetProperty(ref _showEfficiencyCores, value))
+                {
+                    FilteredCores.Refresh();
+                }
+            }
+        }
         
         /// <summary>
-        /// Command to reset all cores
+        /// Reset all cores command
         /// </summary>
-        public ICommand ResetAllCoresCommand { get; }
+        public RelayCommand ResetAllCoresCommand { get; }
         
         /// <summary>
-        /// Command to optimize cores
+        /// Optimize command
         /// </summary>
-        public ICommand OptimizeCommand { get; }
+        public RelayCommand OptimizeCommand { get; }
         
         /// <summary>
-        /// Update the CPU cores
+        /// Park core command
         /// </summary>
-        public void UpdateCores()
+        public RelayCommand<bool> ParkCoreCommand { get; }
+        
+        /// <summary>
+        /// Refresh cores
+        /// </summary>
+        public async void RefreshCores()
         {
             try
             {
-                var cores = _systemInfoService.GetCpuCores();
-                UpdateCores(cores);
+                // Get cores on background thread
+                var cores = await Task.Run(() => _systemInfoService.GetCpuCores());
+                
+                // Update collection on UI thread
+                App.Current.Dispatcher.Invoke(() =>
+                {
+                    Cores.Clear();
+                    foreach (var core in cores)
+                    {
+                        Cores.Add(core);
+                    }
+                });
             }
             catch (Exception ex)
             {
-                _notificationService.ShowError($"Error updating CPU cores: {ex.Message}");
+                _notificationService.ShowError($"Error refreshing CPU cores: {ex.Message}");
             }
         }
         
         /// <summary>
-        /// Update the CPU cores with the provided collection
-        /// </summary>
-        /// <param name="cores">Collection of CPU cores</param>
-        public void UpdateCores(System.Collections.Generic.IEnumerable<CpuCore> cores)
-        {
-            try
-            {
-                // Update the collection
-                Cores.Clear();
-                foreach (var core in cores)
-                {
-                    Cores.Add(core);
-                }
-                
-                // Apply filter
-                ApplyFilter();
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error updating CPU cores: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Apply filter to the cores list
-        /// </summary>
-        private void ApplyFilter()
-        {
-            try
-            {
-                // Filter cores
-                var filtered = Cores.AsEnumerable();
-                
-                // Filter by core type
-                if (!_showEfficiencyCores)
-                {
-                    filtered = filtered.Where(c => !c.IsEfficiencyCore);
-                }
-                
-                if (!_showPerformanceCores)
-                {
-                    filtered = filtered.Where(c => c.IsEfficiencyCore);
-                }
-                
-                // Sort by index
-                filtered = filtered.OrderBy(c => c.Index);
-                
-                // Update the filtered collection
-                FilteredCores.Clear();
-                foreach (var core in filtered)
-                {
-                    FilteredCores.Add(core);
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error applying filter: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Reset all CPU cores to default settings
+        /// Reset all cores
         /// </summary>
         private void ResetAllCores()
         {
             try
             {
-                var result = _systemInfoService.ResetCpuCores();
-                
-                if (result)
+                if (_systemInfoService.ResetCpuCores())
                 {
-                    _notificationService.ShowSuccess("All CPU cores reset to default settings");
-                    UpdateCores();
+                    _notificationService.ShowSuccess("CPU cores reset to default settings.");
+                    RefreshCores();
                 }
                 else
                 {
-                    _notificationService.ShowError("Failed to reset CPU cores");
+                    _notificationService.ShowError("Failed to reset CPU cores.");
                 }
             }
             catch (Exception ex)
@@ -214,27 +179,73 @@ namespace ThreadPilot.ViewModels
         }
         
         /// <summary>
-        /// Optimize the CPU cores
+        /// Optimize CPU cores
         /// </summary>
-        private void OptimizeCores()
+        private void Optimize()
         {
             try
             {
-                var result = _systemInfoService.OptimizeCpuCores();
-                
-                if (result)
+                if (_systemInfoService.OptimizeCpuCores())
                 {
-                    _notificationService.ShowSuccess("CPU cores optimized for best performance");
-                    UpdateCores();
+                    _notificationService.ShowSuccess("CPU cores optimized for best performance.");
+                    RefreshCores();
                 }
                 else
                 {
-                    _notificationService.ShowError("Failed to optimize CPU cores");
+                    _notificationService.ShowError("Failed to optimize CPU cores.");
                 }
             }
             catch (Exception ex)
             {
                 _notificationService.ShowError($"Error optimizing CPU cores: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Park or unpark a core
+        /// </summary>
+        /// <param name="park">Whether to park or unpark</param>
+        private void ParkCore(bool park)
+        {
+            if (SelectedCore == null)
+            {
+                return;
+            }
+            
+            // TODO: Implement core parking
+            _notificationService.ShowInfo("Core parking will be implemented in a future version.");
+        }
+        
+        /// <summary>
+        /// Check if core can be parked
+        /// </summary>
+        /// <param name="parameter">Parameter</param>
+        /// <returns>True if can park</returns>
+        private bool CanParkCore(object? parameter)
+        {
+            return SelectedCore != null;
+        }
+        
+        /// <summary>
+        /// Core filter
+        /// </summary>
+        /// <param name="item">Core to filter</param>
+        /// <returns>True if core should be shown</returns>
+        private bool CoreFilter(object item)
+        {
+            if (item is not CpuCore core)
+            {
+                return false;
+            }
+            
+            // Filter by core type
+            if (core.IsEfficiencyCore)
+            {
+                return ShowEfficiencyCores;
+            }
+            else
+            {
+                return ShowPerformanceCores;
             }
         }
     }

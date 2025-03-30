@@ -4,32 +4,44 @@ using ThreadPilot.Models;
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Interface for system information service
+    /// Service for retrieving system information
     /// </summary>
     public interface ISystemInfoService
     {
         /// <summary>
-        /// Get system information
+        /// Get current system information
         /// </summary>
         /// <returns>System information</returns>
         SystemInfo GetSystemInfo();
         
         /// <summary>
-        /// Get CPU cores
+        /// Get information about CPU cores
         /// </summary>
         /// <returns>List of CPU cores</returns>
         List<CpuCore> GetCpuCores();
         
         /// <summary>
-        /// Reset CPU cores to default settings
+        /// Get current memory usage
         /// </summary>
-        /// <returns>True if successful</returns>
-        bool ResetCpuCores();
+        /// <returns>Memory usage in MB and percentage</returns>
+        (double TotalMB, double UsedMB, double UsagePercent) GetMemoryUsage();
         
         /// <summary>
-        /// Optimize CPU cores for best performance
+        /// Get current CPU usage percentage
         /// </summary>
-        /// <returns>True if successful</returns>
-        bool OptimizeCpuCores();
+        /// <returns>CPU usage percentage</returns>
+        double GetCpuUsagePercentage();
+        
+        /// <summary>
+        /// Get active CPU cores count (not parked)
+        /// </summary>
+        /// <returns>Number of active cores</returns>
+        int GetActiveCoresCount();
+        
+        /// <summary>
+        /// Get the total number of CPU cores
+        /// </summary>
+        /// <returns>Total number of cores</returns>
+        int GetTotalCoresCount();
     }
 }
