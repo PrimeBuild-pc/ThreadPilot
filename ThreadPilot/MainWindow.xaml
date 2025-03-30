@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ThreadPilot"
         xmlns:viewmodels="clr-namespace:ThreadPilot.ViewModels"
+        xmlns:ui="using:CommunityToolkit.WinUI.UI.Controls"
         mc:Ignorable="d"
         Title="ThreadPilot - System Optimization Tool" Height="720" Width="1280"
         WindowStartupLocation="CenterScreen"
