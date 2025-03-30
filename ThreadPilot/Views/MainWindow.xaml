@@ -22,14 +22,14 @@
         </Grid.RowDefinitions>
         
         <!-- Top Menu/Toolbar -->
-        <Border Grid.Row="0" Background="#0078D7" Padding="10">
+        <Border Grid.Row="0" Background="#0078D7" Margin="15,10,15,10">
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="ThreadPilot" Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" Margin="5,0,20,0"/>
                 
-                <Button Command="{Binding NavigateToDashboardCommand}" Content="Dashboard" Margin="5,0" Padding="15,8"/>
-                <Button Command="{Binding NavigateToProcessesCommand}" Content="Processes" Margin="5,0" Padding="15,8"/>
-                <Button Command="{Binding NavigateToCpuCoresCommand}" Content="CPU Cores" Margin="5,0" Padding="15,8"/>
-                <Button Command="{Binding NavigateToProfileEditorCommand}" Content="Profile Editor" Margin="5,0" Padding="15,8"/>
+                <Button Command="{Binding NavigateToDashboardCommand}" Content="Dashboard" Margin="5,0"/>
+                <Button Command="{Binding NavigateToProcessesCommand}" Content="Processes" Margin="5,0"/>
+                <Button Command="{Binding NavigateToCpuCoresCommand}" Content="CPU Cores" Margin="5,0"/>
+                <Button Command="{Binding NavigateToProfileEditorCommand}" Content="Profile Editor" Margin="5,0"/>
             </StackPanel>
         </Border>
         
@@ -38,7 +38,7 @@
         
         <!-- Status Bar -->
         <Border Grid.Row="2" Background="#F0F0F0" BorderBrush="#CCCCCC" BorderThickness="0,1,0,0">
-            <Grid Padding="10,5">
+            <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>

@@ -149,7 +149,22 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         
-                        <TextBox Grid.Column="0" Text="{Binding ProcessFilter, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,10,0" PlaceholderText="Filter processes..."/>
+                        <TextBox Grid.Column="0" Text="{Binding ProcessFilter, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,10,0">
+                            <TextBox.Style>
+                                <Style TargetType="TextBox">
+                                    <Setter Property="Foreground" Value="Gray" />
+                                    <Style.Triggers>
+                                        <Trigger Property="Text" Value="">
+                                            <Setter Property="Text" Value="Filter processes..." />
+                                            <Setter Property="Foreground" Value="Gray" />
+                                        </Trigger>
+                                        <Trigger Property="Text" Value="{x:Null}">
+                                            <Setter Property="Foreground" Value="Black" />
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
                         <Button Grid.Column="1" Content="Refresh" Command="{Binding RefreshProcessesCommand}"/>
                     </Grid>
                     
