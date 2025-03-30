@@ -1,47 +1,69 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Management;
-using System.Text.RegularExpressions;
 using ThreadPilot.Models;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Implementation of process service
+    /// Process service implementation
     /// </summary>
     public class ProcessService : IProcessService
     {
+        private readonly Dictionary<int, string> _processDescriptions = new Dictionary<int, string>();
+        
         /// <summary>
-        /// Gets all running processes
+        /// Get processes
         /// </summary>
-        /// <returns>List of process information</returns>
-        public IEnumerable<ProcessInfo> GetProcesses()
+        /// <param name="limit">Maximum number of processes to return (0 for all)</param>
+        /// <returns>Process information collection</returns>
+        public IEnumerable<ProcessInfo> GetProcesses(int limit = 0)
         {
             var processes = new List<ProcessInfo>();
             
             try
             {
-                foreach (var process in Process.GetProcesses())
+                var rawProcesses = Process.GetProcesses();
+                
+                foreach (var process in rawProcesses)
                 {
                     try
                     {
-                        var processInfo = GetProcessInfo(process);
-                        if (processInfo != null)
+                        var processInfo = new ProcessInfo
                         {
-                            processes.Add(processInfo);
-                        }
+                            Id = process.Id,
+                            Name = process.ProcessName,
+                            Description = GetProcessDescription(process.Id, process.ProcessName),
+                            ThreadCount = process.Threads.Count,
+                            MemoryUsageMB = process.WorkingSet64 / (1024 * 1024),
+                            Priority = ConvertPriorityClass(process.PriorityClass),
+                            Affinity = (long)process.ProcessorAffinity
+                        };
+                        
+                        // Get CPU usage - approximate since WMI is expensive
+                        processInfo.CpuUsagePercentage = GetProcessCpuUsage(process.Id);
+                        
+                        processes.Add(processInfo);
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"Error getting process info for {process.ProcessName}: {ex.Message}");
+                        Debug.WriteLine($"Error adding process {process.Id}: {ex.Message}");
                     }
                     finally
                     {
                         process.Dispose();
                     }
+                }
+                
+                // Sort by CPU usage
+                processes = processes.OrderByDescending(p => p.CpuUsagePercentage).ToList();
+                
+                // Apply limit
+                if (limit > 0 && processes.Count > limit)
+                {
+                    processes = processes.Take(limit).ToList();
                 }
             }
             catch (Exception ex)
@@ -53,328 +75,255 @@ namespace ThreadPilot.Services
         }
         
         /// <summary>
-        /// Gets process by ID
+        /// Get process by ID
         /// </summary>
         /// <param name="processId">Process ID</param>
-        /// <returns>Process information or null if not found</returns>
-        public ProcessInfo GetProcessById(int processId)
+        /// <returns>Process information</returns>
+        public ProcessInfo GetProcess(int processId)
         {
             try
             {
-                using (var process = Process.GetProcessById(processId))
+                var process = Process.GetProcessById(processId);
+                
+                var processInfo = new ProcessInfo
                 {
-                    return GetProcessInfo(process);
-                }
+                    Id = process.Id,
+                    Name = process.ProcessName,
+                    Description = GetProcessDescription(process.Id, process.ProcessName),
+                    ThreadCount = process.Threads.Count,
+                    MemoryUsageMB = process.WorkingSet64 / (1024 * 1024),
+                    Priority = ConvertPriorityClass(process.PriorityClass),
+                    Affinity = (long)process.ProcessorAffinity
+                };
+                
+                // Get CPU usage
+                processInfo.CpuUsagePercentage = GetProcessCpuUsage(process.Id);
+                
+                process.Dispose();
+                
+                return processInfo;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error getting process by ID {processId}: {ex.Message}");
+                Debug.WriteLine($"Error getting process {processId}: {ex.Message}");
                 return null;
             }
         }
         
         /// <summary>
-        /// Gets processes by name
-        /// </summary>
-        /// <param name="processName">Process name</param>
-        /// <returns>List of process information</returns>
-        public IEnumerable<ProcessInfo> GetProcessesByName(string processName)
-        {
-            var processes = new List<ProcessInfo>();
-            
-            try
-            {
-                foreach (var process in Process.GetProcessesByName(processName))
-                {
-                    try
-                    {
-                        var processInfo = GetProcessInfo(process);
-                        if (processInfo != null)
-                        {
-                            processes.Add(processInfo);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error getting process info for {process.ProcessName}: {ex.Message}");
-                    }
-                    finally
-                    {
-                        process.Dispose();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error getting processes by name {processName}: {ex.Message}");
-            }
-            
-            return processes;
-        }
-        
-        /// <summary>
-        /// Sets process affinity (which cores the process can use)
+        /// Set process priority
         /// </summary>
         /// <param name="processId">Process ID</param>
-        /// <param name="affinityMask">Affinity mask (bit mask where each bit represents a core)</param>
-        /// <returns>True if successful, false otherwise</returns>
-        public bool SetProcessAffinity(int processId, long affinityMask)
-        {
-            try
-            {
-                using (var process = Process.GetProcessById(processId))
-                {
-                    process.ProcessorAffinity = new IntPtr(affinityMask);
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error setting process affinity for ID {processId}: {ex.Message}");
-                return false;
-            }
-        }
-        
-        /// <summary>
-        /// Sets process priority
-        /// </summary>
-        /// <param name="processId">Process ID</param>
-        /// <param name="priority">Process priority</param>
+        /// <param name="priority">Priority</param>
         /// <returns>True if successful, false otherwise</returns>
         public bool SetProcessPriority(int processId, ProcessPriority priority)
         {
             try
             {
-                using (var process = Process.GetProcessById(processId))
-                {
-                    process.PriorityClass = GetSystemPriorityClass(priority);
-                    return true;
-                }
+                var process = Process.GetProcessById(processId);
+                process.PriorityClass = ConvertPriority(priority);
+                process.Dispose();
+                
+                return true;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error setting process priority for ID {processId}: {ex.Message}");
+                Debug.WriteLine($"Error setting process priority: {ex.Message}");
                 return false;
             }
         }
         
         /// <summary>
-        /// Applies process affinity rules to matching processes
+        /// Set process affinity
         /// </summary>
-        /// <param name="rules">List of process affinity rules</param>
-        /// <returns>Number of processes affected</returns>
-        public int ApplyAffinityRules(IEnumerable<ProcessAffinityRule> rules)
+        /// <param name="processId">Process ID</param>
+        /// <param name="coreIndices">Core indices</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool SetProcessAffinity(int processId, IEnumerable<int> coreIndices)
         {
-            int affectedCount = 0;
-            
             try
             {
-                var processes = Process.GetProcesses();
-                
-                foreach (var rule in rules.Where(r => r.IsEnabled))
+                if (coreIndices == null || !coreIndices.Any())
                 {
-                    var regex = new Regex(rule.ProcessNamePattern, RegexOptions.IgnoreCase);
-                    var affinityMask = GetAffinityMask(rule.CoreIndices);
-                    
-                    foreach (var process in processes)
-                    {
-                        try
-                        {
-                            if (regex.IsMatch(process.ProcessName))
-                            {
-                                // Set process affinity
-                                process.ProcessorAffinity = new IntPtr(affinityMask);
-                                
-                                // Set process priority
-                                process.PriorityClass = GetSystemPriorityClass(rule.ProcessPriority);
-                                
-                                affectedCount++;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.WriteLine($"Error applying rule to process {process.ProcessName}: {ex.Message}");
-                        }
-                    }
+                    return false;
                 }
                 
-                // Dispose all processes
-                foreach (var process in processes)
+                // Convert core indices to affinity mask
+                long affinityMask = 0;
+                foreach (var coreIndex in coreIndices)
                 {
-                    process.Dispose();
+                    affinityMask |= (1L << coreIndex);
                 }
+                
+                var process = Process.GetProcessById(processId);
+                process.ProcessorAffinity = (IntPtr)affinityMask;
+                process.Dispose();
+                
+                return true;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error applying process affinity rules: {ex.Message}");
+                Debug.WriteLine($"Error setting process affinity: {ex.Message}");
+                return false;
             }
-            
-            return affectedCount;
         }
         
         /// <summary>
-        /// Gets process information
+        /// Terminate process
         /// </summary>
-        /// <param name="process">Process</param>
-        /// <returns>Process information</returns>
-        private ProcessInfo GetProcessInfo(Process process)
+        /// <param name="processId">Process ID</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool TerminateProcess(int processId)
         {
-            if (process == null || process.Id == 0)
-            {
-                return null;
-            }
-            
             try
             {
-                var processInfo = new ProcessInfo
-                {
-                    Id = process.Id,
-                    Name = process.ProcessName,
-                    Description = GetProcessDescription(process),
-                    Priority = GetProcessPriority(process.PriorityClass),
-                    Affinity = (long)process.ProcessorAffinity,
-                    ThreadCount = process.Threads.Count
-                };
+                var process = Process.GetProcessById(processId);
+                process.Kill();
+                process.Dispose();
                 
-                // Get CPU and memory usage if process has not exited
-                if (!process.HasExited)
-                {
-                    try
-                    {
-                        process.Refresh();
-                        processInfo.CpuUsagePercentage = GetProcessCpuUsage(process);
-                        processInfo.MemoryUsageMB = process.WorkingSet64 / (1024 * 1024);
-                    }
-                    catch (Exception)
-                    {
-                        // Ignore errors getting CPU/memory usage
-                    }
-                }
-                
-                return processInfo;
+                return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return null;
+                Debug.WriteLine($"Error terminating process: {ex.Message}");
+                return false;
             }
         }
         
         /// <summary>
-        /// Gets process description from file version info
+        /// Get process description
         /// </summary>
-        /// <param name="process">Process</param>
-        /// <returns>Process description or empty string if not available</returns>
-        private string GetProcessDescription(Process process)
+        /// <param name="processId">Process ID</param>
+        /// <param name="processName">Process name</param>
+        /// <returns>Process description</returns>
+        private string GetProcessDescription(int processId, string processName)
         {
-            try
+            if (_processDescriptions.TryGetValue(processId, out var description))
             {
-                if (process.MainModule != null && !string.IsNullOrEmpty(process.MainModule.FileName))
-                {
-                    var fileVersionInfo = FileVersionInfo.GetVersionInfo(process.MainModule.FileName);
-                    return fileVersionInfo.FileDescription ?? process.ProcessName;
-                }
+                return description;
             }
-            catch (Exception)
-            {
-                // Ignore errors getting file description
-            }
-            
-            return process.ProcessName;
-        }
-        
-        /// <summary>
-        /// Gets process CPU usage
-        /// </summary>
-        /// <param name="process">Process</param>
-        /// <returns>CPU usage percentage</returns>
-        private float GetProcessCpuUsage(Process process)
-        {
-            // This is a simplified implementation 
-            // Real implementation would require performance counters for accurate CPU usage per process
             
             try
             {
-                using (var searcher = new ManagementObjectSearcher(
-                    $"SELECT PercentProcessorTime FROM Win32_PerfFormattedData_PerfProc_Process WHERE IDProcess = {process.Id}"))
+                // Try to get description from WMI
+                using (var searcher = new ManagementObjectSearcher($"SELECT * FROM Win32_Process WHERE ProcessId = {processId}"))
                 {
                     foreach (var obj in searcher.Get())
                     {
-                        var cpuUsage = Convert.ToSingle(obj["PercentProcessorTime"]);
-                        return cpuUsage;
+                        description = obj["Description"]?.ToString() ?? string.Empty;
+                        
+                        if (string.IsNullOrEmpty(description))
+                        {
+                            description = processName;
+                        }
+                        
+                        _processDescriptions[processId] = description;
+                        return description;
                     }
                 }
+                
+                // Fallback to process name
+                description = processName;
+                _processDescriptions[processId] = description;
+                return description;
             }
             catch (Exception)
             {
-                // Ignore errors getting CPU usage
+                // Fallback to process name in case of error
+                description = processName;
+                _processDescriptions[processId] = description;
+                return description;
             }
-            
-            // Return estimate based on process priority
-            return process.PriorityClass switch
-            {
-                ProcessPriorityClass.RealTime => 90,
-                ProcessPriorityClass.High => 70,
-                ProcessPriorityClass.AboveNormal => 50,
-                ProcessPriorityClass.Normal => 30,
-                ProcessPriorityClass.BelowNormal => 15,
-                ProcessPriorityClass.Idle => 5,
-                _ => 0
-            };
         }
         
         /// <summary>
-        /// Converts system priority class to process priority enum
+        /// Get process CPU usage percentage
         /// </summary>
-        /// <param name="priorityClass">System priority class</param>
-        /// <returns>Process priority enum</returns>
-        private ProcessPriority GetProcessPriority(ProcessPriorityClass priorityClass)
+        /// <param name="processId">Process ID</param>
+        /// <returns>CPU usage percentage</returns>
+        private float GetProcessCpuUsage(int processId)
         {
-            return priorityClass switch
+            try
             {
-                ProcessPriorityClass.RealTime => ProcessPriority.Realtime,
-                ProcessPriorityClass.High => ProcessPriority.High,
-                ProcessPriorityClass.AboveNormal => ProcessPriority.AboveNormal,
-                ProcessPriorityClass.Normal => ProcessPriority.Normal,
-                ProcessPriorityClass.BelowNormal => ProcessPriority.BelowNormal,
-                ProcessPriorityClass.Idle => ProcessPriority.Idle,
-                _ => ProcessPriority.Normal
-            };
-        }
-        
-        /// <summary>
-        /// Converts process priority enum to system priority class
-        /// </summary>
-        /// <param name="priority">Process priority enum</param>
-        /// <returns>System priority class</returns>
-        private ProcessPriorityClass GetSystemPriorityClass(ProcessPriority priority)
-        {
-            return priority switch
-            {
-                ProcessPriority.Realtime => ProcessPriorityClass.RealTime,
-                ProcessPriority.High => ProcessPriorityClass.High,
-                ProcessPriority.AboveNormal => ProcessPriorityClass.AboveNormal,
-                ProcessPriority.Normal => ProcessPriorityClass.Normal,
-                ProcessPriority.BelowNormal => ProcessPriorityClass.BelowNormal,
-                ProcessPriority.Idle => ProcessPriorityClass.Idle,
-                _ => ProcessPriorityClass.Normal
-            };
-        }
-        
-        /// <summary>
-        /// Gets affinity mask from core indices
-        /// </summary>
-        /// <param name="coreIndices">Core indices</param>
-        /// <returns>Affinity mask</returns>
-        private long GetAffinityMask(IEnumerable<int> coreIndices)
-        {
-            long affinityMask = 0;
-            
-            foreach (var coreIndex in coreIndices)
-            {
-                affinityMask |= (1L << coreIndex);
+                using (var searcher = new ManagementObjectSearcher($"SELECT * FROM Win32_PerfFormattedData_PerfProc_Process WHERE IDProcess = {processId}"))
+                {
+                    foreach (var obj in searcher.Get())
+                    {
+                        return float.Parse(obj["PercentProcessorTime"]?.ToString() ?? "0");
+                    }
+                }
+                
+                return 0;
             }
-            
-            return affinityMask == 0 ? (1L << Environment.ProcessorCount) - 1 : affinityMask;
+            catch (Exception)
+            {
+                // If we can't get real CPU usage, approximate it using thread count
+                try
+                {
+                    var process = Process.GetProcessById(processId);
+                    int threadCount = process.Threads.Count;
+                    process.Dispose();
+                    
+                    // Very rough approximation
+                    return Math.Min(threadCount * 0.5f, 100);
+                }
+                catch (Exception)
+                {
+                    return 0;
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Convert ProcessPriorityClass to ProcessPriority
+        /// </summary>
+        /// <param name="priorityClass">Priority class</param>
+        /// <returns>Process priority</returns>
+        private ProcessPriority ConvertPriorityClass(ProcessPriorityClass priorityClass)
+        {
+            switch (priorityClass)
+            {
+                case ProcessPriorityClass.Idle:
+                    return ProcessPriority.Idle;
+                case ProcessPriorityClass.BelowNormal:
+                    return ProcessPriority.BelowNormal;
+                case ProcessPriorityClass.Normal:
+                    return ProcessPriority.Normal;
+                case ProcessPriorityClass.AboveNormal:
+                    return ProcessPriority.AboveNormal;
+                case ProcessPriorityClass.High:
+                    return ProcessPriority.High;
+                case ProcessPriorityClass.RealTime:
+                    return ProcessPriority.Realtime;
+                default:
+                    return ProcessPriority.Normal;
+            }
+        }
+        
+        /// <summary>
+        /// Convert ProcessPriority to ProcessPriorityClass
+        /// </summary>
+        /// <param name="priority">Process priority</param>
+        /// <returns>Priority class</returns>
+        private ProcessPriorityClass ConvertPriority(ProcessPriority priority)
+        {
+            switch (priority)
+            {
+                case ProcessPriority.Idle:
+                    return ProcessPriorityClass.Idle;
+                case ProcessPriority.BelowNormal:
+                    return ProcessPriorityClass.BelowNormal;
+                case ProcessPriority.Normal:
+                    return ProcessPriorityClass.Normal;
+                case ProcessPriority.AboveNormal:
+                    return ProcessPriorityClass.AboveNormal;
+                case ProcessPriority.High:
+                    return ProcessPriorityClass.High;
+                case ProcessPriority.Realtime:
+                    return ProcessPriorityClass.RealTime;
+                default:
+                    return ProcessPriorityClass.Normal;
+            }
         }
     }
 }

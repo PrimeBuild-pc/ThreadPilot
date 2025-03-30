@@ -1,10 +1,24 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Process information class
+    /// Process priority level
+    /// </summary>
+    public enum ProcessPriority
+    {
+        Idle,
+        BelowNormal,
+        Normal,
+        AboveNormal,
+        High,
+        RealTime
+    }
+    
+    /// <summary>
+    /// Information about a running process
     /// </summary>
     public class ProcessInfo
     {
@@ -16,27 +30,27 @@ namespace ThreadPilot.Models
         /// <summary>
         /// Process name
         /// </summary>
-        public string Name { get; set; } = string.Empty;
+        public string Name { get; set; }
         
         /// <summary>
         /// Process description
         /// </summary>
-        public string Description { get; set; } = string.Empty;
+        public string Description { get; set; }
+        
+        /// <summary>
+        /// Process window title
+        /// </summary>
+        public string WindowTitle { get; set; }
         
         /// <summary>
         /// Process CPU usage percentage
         /// </summary>
-        public float CpuUsagePercentage { get; set; }
+        public double CpuUsage { get; set; }
         
         /// <summary>
         /// Process memory usage in MB
         /// </summary>
-        public long MemoryUsageMB { get; set; }
-        
-        /// <summary>
-        /// Process thread count
-        /// </summary>
-        public int ThreadCount { get; set; }
+        public double MemoryUsage { get; set; }
         
         /// <summary>
         /// Process priority
@@ -44,43 +58,157 @@ namespace ThreadPilot.Models
         public ProcessPriority Priority { get; set; }
         
         /// <summary>
-        /// Process affinity mask (each bit represents a core)
+        /// Current thread affinity mask
         /// </summary>
-        public long Affinity { get; set; }
+        public long AffinityMask { get; set; }
         
         /// <summary>
-        /// Gets the list of CPU cores associated with the process affinity
+        /// Whether the process is a system process
         /// </summary>
-        /// <returns>List of core indices</returns>
-        public IEnumerable<int> GetAffinityCores()
+        public bool IsSystemProcess { get; set; }
+        
+        /// <summary>
+        /// Whether the process can be modified
+        /// </summary>
+        public bool CanModify { get; set; }
+        
+        /// <summary>
+        /// Process path
+        /// </summary>
+        public string Path { get; set; }
+        
+        /// <summary>
+        /// Process start time
+        /// </summary>
+        public DateTime StartTime { get; set; }
+        
+        /// <summary>
+        /// Number of threads in the process
+        /// </summary>
+        public int ThreadCount { get; set; }
+        
+        /// <summary>
+        /// List of CPU cores the process is using
+        /// </summary>
+        public List<int> UsedCores { get; set; }
+        
+        /// <summary>
+        /// Convert from System.Diagnostics.Process to ProcessInfo
+        /// </summary>
+        /// <param name="process">Process object</param>
+        /// <returns>ProcessInfo object</returns>
+        public static ProcessInfo FromProcess(Process process)
         {
-            var coreIndices = new List<int>();
-            
-            for (int i = 0; i < 64; i++)
+            try
             {
-                if ((Affinity & (1L << i)) != 0)
+                var info = new ProcessInfo
                 {
-                    coreIndices.Add(i);
-                }
+                    Id = process.Id,
+                    Name = process.ProcessName,
+                    // Description would come from a version info reader
+                    WindowTitle = string.IsNullOrEmpty(process.MainWindowTitle) ? "-" : process.MainWindowTitle,
+                    // CpuUsage would come from performance counter
+                    MemoryUsage = process.WorkingSet64 / 1024.0 / 1024.0, // Convert to MB
+                    Priority = ConvertPriorityClass(process.PriorityClass),
+                    AffinityMask = (long)process.ProcessorAffinity,
+                    IsSystemProcess = IsSystemProcess(process),
+                    CanModify = CanBeModified(process),
+                    Path = process.MainModule?.FileName ?? "-",
+                    StartTime = process.StartTime,
+                    ThreadCount = process.Threads.Count,
+                    UsedCores = new List<int>() // This would be populated by a thread analysis service
+                };
+                
+                return info;
             }
-            
-            return coreIndices;
+            catch (Exception)
+            {
+                // Return a limited info object for processes we can't fully access
+                return new ProcessInfo
+                {
+                    Id = process.Id,
+                    Name = process.ProcessName,
+                    Description = "Access Denied",
+                    WindowTitle = "-",
+                    MemoryUsage = 0,
+                    Priority = ProcessPriority.Normal,
+                    IsSystemProcess = true,
+                    CanModify = false,
+                    Path = "-",
+                    ThreadCount = 0,
+                    UsedCores = new List<int>()
+                };
+            }
         }
         
         /// <summary>
-        /// Sets the process affinity for the specified cores
+        /// Convert a System.Diagnostics.ProcessPriorityClass to ProcessPriority
         /// </summary>
-        /// <param name="coreIndices">Core indices</param>
-        public void SetAffinity(IEnumerable<int> coreIndices)
+        /// <param name="priorityClass">Process priority class</param>
+        /// <returns>ProcessPriority enum value</returns>
+        private static ProcessPriority ConvertPriorityClass(ProcessPriorityClass priorityClass)
         {
-            long affinityMask = 0;
-            
-            foreach (var coreIndex in coreIndices)
+            switch (priorityClass)
             {
-                affinityMask |= (1L << coreIndex);
+                case ProcessPriorityClass.Idle:
+                    return ProcessPriority.Idle;
+                case ProcessPriorityClass.BelowNormal:
+                    return ProcessPriority.BelowNormal;
+                case ProcessPriorityClass.Normal:
+                    return ProcessPriority.Normal;
+                case ProcessPriorityClass.AboveNormal:
+                    return ProcessPriority.AboveNormal;
+                case ProcessPriorityClass.High:
+                    return ProcessPriority.High;
+                case ProcessPriorityClass.RealTime:
+                    return ProcessPriority.RealTime;
+                default:
+                    return ProcessPriority.Normal;
+            }
+        }
+        
+        /// <summary>
+        /// Check if a process is a system process
+        /// </summary>
+        /// <param name="process">Process to check</param>
+        /// <returns>True if the process is a system process</returns>
+        private static bool IsSystemProcess(Process process)
+        {
+            // This is a simplified check, a real implementation would be more thorough
+            string[] systemProcessNames = { "System", "svchost", "services", "smss", "csrss", "wininit", "lsass", "winlogon" };
+            
+            foreach (string name in systemProcessNames)
+            {
+                if (process.ProcessName.ToLower() == name.ToLower())
+                {
+                    return true;
+                }
             }
             
-            Affinity = affinityMask;
+            return false;
+        }
+        
+        /// <summary>
+        /// Check if a process can be modified
+        /// </summary>
+        /// <param name="process">Process to check</param>
+        /// <returns>True if the process can be modified</returns>
+        private static bool CanBeModified(Process process)
+        {
+            // This is a simplified check, a real implementation would be more thorough
+            if (IsSystemProcess(process))
+            {
+                return false;
+            }
+            
+            try
+            {
+                return process.MainModule != null;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

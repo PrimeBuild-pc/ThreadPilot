@@ -1,48 +1,64 @@
-using System;
 using System.Collections.Generic;
 using ThreadPilot.Models;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// System information service interface
+    /// Interface for system information retrieval service
     /// </summary>
     public interface ISystemInfoService
     {
         /// <summary>
-        /// Get system information
+        /// Get current system information
         /// </summary>
-        /// <returns>System information</returns>
+        /// <returns>SystemInfo with current hardware and OS details</returns>
         SystemInfo GetSystemInfo();
         
         /// <summary>
-        /// Get CPU cores
+        /// Get information about CPU cores
         /// </summary>
-        /// <returns>CPU cores</returns>
-        IEnumerable<CpuCore> GetCpuCores();
+        /// <returns>List of CPU cores</returns>
+        List<CpuCore> GetCpuCores();
         
         /// <summary>
-        /// Get CPU usage
+        /// Refresh CPU core information and usage statistics
+        /// </summary>
+        void RefreshCpuCoreStats();
+        
+        /// <summary>
+        /// Get the current CPU usage as a percentage
         /// </summary>
         /// <returns>CPU usage percentage</returns>
-        float GetCpuUsage();
+        int GetCpuUsage();
         
         /// <summary>
-        /// Get memory usage
+        /// Get the current memory usage as a percentage
         /// </summary>
-        /// <returns>Memory usage in MB</returns>
-        long GetMemoryUsage();
+        /// <returns>Memory usage percentage</returns>
+        int GetMemoryUsage();
         
         /// <summary>
-        /// Get total memory
+        /// Check if core parking is enabled in the current power plan
         /// </summary>
-        /// <returns>Total memory in MB</returns>
-        long GetTotalMemory();
+        /// <returns>True if core parking is enabled</returns>
+        bool IsCoreParkingEnabled();
         
         /// <summary>
-        /// Get current power plan name
+        /// Get the current processor performance boost mode
         /// </summary>
-        /// <returns>Power plan name</returns>
-        string GetCurrentPowerPlanName();
+        /// <returns>Boost mode (0-3)</returns>
+        int GetProcessorBoostMode();
+        
+        /// <summary>
+        /// Get the current system responsiveness value
+        /// </summary>
+        /// <returns>System responsiveness value (0-100)</returns>
+        int GetSystemResponsiveness();
+        
+        /// <summary>
+        /// Get the current network throttling index
+        /// </summary>
+        /// <returns>Network throttling index</returns>
+        int GetNetworkThrottlingIndex();
     }
 }

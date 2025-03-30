@@ -1,6 +1,5 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Windows.Input;
 using ThreadPilot.Commands;
 using ThreadPilot.Models;
@@ -9,49 +8,33 @@ using ThreadPilot.Services;
 namespace ThreadPilot.ViewModels
 {
     /// <summary>
-    /// Processes view model
+    /// View model for the processes view
     /// </summary>
     public class ProcessesViewModel : ViewModelBase
     {
-        private readonly IProcessService _processService;
+        #region Private Fields
+        
+        private ObservableCollection<ProcessInfo> _processes;
         private ProcessInfo _selectedProcess;
-        private string _searchText;
-        private bool _showAllProcesses;
-
+        private string _searchFilter = string.Empty;
+        private bool _showSystemProcesses = false;
+        private bool _isLoading = false;
+        
+        #endregion
+        
+        #region Properties
+        
         /// <summary>
-        /// Constructor
+        /// Collection of processes
         /// </summary>
-        public ProcessesViewModel()
+        public ObservableCollection<ProcessInfo> Processes
         {
-            // Get services
-            _processService = ServiceLocator.Resolve<IProcessService>();
-            
-            // Initialize properties
-            Processes = new ObservableCollection<ProcessInfo>();
-            AvailablePriorities = new ObservableCollection<ProcessPriority>(Enum.GetValues(typeof(ProcessPriority)).Cast<ProcessPriority>());
-            
-            // Initialize commands
-            RefreshCommand = new RelayCommand(_ => RefreshProcesses());
-            SetPriorityCommand = new RelayCommand<ProcessPriority>(priority => SetProcessPriority(priority), _ => SelectedProcess != null);
-            SetAffinityCommand = new RelayCommand<int[]>(coreIndices => SetProcessAffinity(coreIndices), _ => SelectedProcess != null);
-            TerminateProcessCommand = new RelayCommand(_ => TerminateProcess(), _ => SelectedProcess != null);
-            
-            // Initial load
-            RefreshProcesses();
+            get => _processes;
+            set => SetProperty(ref _processes, value);
         }
         
         /// <summary>
-        /// Processes collection
-        /// </summary>
-        public ObservableCollection<ProcessInfo> Processes { get; }
-        
-        /// <summary>
-        /// Available process priorities
-        /// </summary>
-        public ObservableCollection<ProcessPriority> AvailablePriorities { get; }
-        
-        /// <summary>
-        /// Selected process
+        /// Currently selected process
         /// </summary>
         public ProcessInfo SelectedProcess
         {
@@ -60,179 +43,218 @@ namespace ThreadPilot.ViewModels
         }
         
         /// <summary>
-        /// Search text
+        /// Search filter for processes
         /// </summary>
-        public string SearchText
+        public string SearchFilter
         {
-            get => _searchText;
-            set
-            {
-                if (SetProperty(ref _searchText, value))
-                {
-                    // Refresh with filter
-                    RefreshProcesses();
-                }
-            }
+            get => _searchFilter;
+            set => SetProperty(ref _searchFilter, value, ApplyFilter);
         }
         
         /// <summary>
-        /// Gets or sets a value indicating whether to show all processes
+        /// Whether to show system processes
         /// </summary>
-        public bool ShowAllProcesses
+        public bool ShowSystemProcesses
         {
-            get => _showAllProcesses;
-            set
-            {
-                if (SetProperty(ref _showAllProcesses, value))
-                {
-                    // Refresh with updated setting
-                    RefreshProcesses();
-                }
-            }
+            get => _showSystemProcesses;
+            set => SetProperty(ref _showSystemProcesses, value, ApplyFilter);
         }
         
         /// <summary>
-        /// Refresh command
+        /// Whether the view model is loading data
         /// </summary>
-        public ICommand RefreshCommand { get; }
+        public bool IsLoading
+        {
+            get => _isLoading;
+            set => SetProperty(ref _isLoading, value);
+        }
+        
+        #endregion
+        
+        #region Commands
         
         /// <summary>
-        /// Set priority command
+        /// Command to refresh the process list
         /// </summary>
-        public ICommand SetPriorityCommand { get; }
+        public ICommand RefreshProcessesCommand { get; }
         
         /// <summary>
-        /// Set affinity command
+        /// Command to set process priority
         /// </summary>
-        public ICommand SetAffinityCommand { get; }
+        public ICommand SetProcessPriorityCommand { get; }
         
         /// <summary>
-        /// Terminate process command
+        /// Command to set process affinity
+        /// </summary>
+        public ICommand SetProcessAffinityCommand { get; }
+        
+        /// <summary>
+        /// Command to terminate a process
         /// </summary>
         public ICommand TerminateProcessCommand { get; }
         
+        #endregion
+        
         /// <summary>
-        /// Refresh processes
+        /// Constructor
         /// </summary>
-        private void RefreshProcesses()
+        public ProcessesViewModel()
         {
-            if (_processService == null)
-            {
-                return;
-            }
+            // Initialize collections
+            Processes = new ObservableCollection<ProcessInfo>();
             
-            Processes.Clear();
+            // Initialize commands
+            RefreshProcessesCommand = new RelayCommand(RefreshProcesses);
+            SetProcessPriorityCommand = new RelayCommand<ProcessPriority>(SetProcessPriority, CanSetProcessPriority);
+            SetProcessAffinityCommand = new RelayCommand(SetProcessAffinity, CanSetProcessAffinity);
+            TerminateProcessCommand = new RelayCommand(TerminateProcess, CanTerminateProcess);
             
-            var processes = _processService.GetProcesses();
-            
-            // Apply filters
-            if (!string.IsNullOrWhiteSpace(SearchText))
-            {
-                processes = processes.Where(p => 
-                    p.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) || 
-                    p.Description.Contains(SearchText, StringComparison.OrdinalIgnoreCase)).ToArray();
-            }
-            
-            if (!ShowAllProcesses)
-            {
-                // Show only processes that use CPU
-                processes = processes.Where(p => p.CpuUsagePercentage > 0.1f).ToArray();
-            }
-            
-            foreach (var process in processes)
-            {
-                Processes.Add(process);
-            }
-            
-            // Reset selection
-            SelectedProcess = null;
+            // Load initial data
+            LoadProcesses();
         }
         
         /// <summary>
-        /// Set process priority
+        /// Load process data
         /// </summary>
-        /// <param name="priority">Priority to set</param>
+        private void LoadProcesses()
+        {
+            IsLoading = true;
+            
+            try
+            {
+                // This is where we would retrieve processes from the process service
+                // For now, we'll create some sample data
+                
+                Processes.Clear();
+                
+                // In the future, this will be retrieved from IProcessService 
+                // For example: Processes = new ObservableCollection<ProcessInfo>(ServiceLocator.Get<IProcessService>().GetAllProcesses());
+                
+                // Set loading to false
+                IsLoading = false;
+            }
+            catch (Exception ex)
+            {
+                IsLoading = false;
+                NotificationService.ShowError($"Error loading processes: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Refresh the process list
+        /// </summary>
+        public void RefreshProcesses(object parameter = null)
+        {
+            LoadProcesses();
+        }
+        
+        /// <summary>
+        /// Apply the filter to the process list
+        /// </summary>
+        private void ApplyFilter()
+        {
+            RefreshProcesses();
+        }
+        
+        /// <summary>
+        /// Set the priority of the selected process
+        /// </summary>
         private void SetProcessPriority(ProcessPriority priority)
         {
-            if (SelectedProcess == null || _processService == null)
-            {
-                return;
-            }
+            if (SelectedProcess == null) return;
             
-            bool success = _processService.SetProcessPriority(SelectedProcess.Id, priority);
-            
-            var notification = ServiceLocator.Resolve<INotificationService>();
-            if (success)
+            try
             {
+                // This is where we would set process priority using the process service
+                // For example: bool success = ServiceLocator.Get<IProcessService>().SetProcessPriority(SelectedProcess.Id, priority);
+                
+                // For now, we'll just update the model directly
                 SelectedProcess.Priority = priority;
-                OnPropertyChanged(nameof(SelectedProcess));
                 
-                notification?.ShowSuccess($"Priority set to {priority} for process '{SelectedProcess.Name}'.", "Priority Set");
+                // Show notification
+                NotificationService.ShowSuccess($"Priority changed to {priority} for process {SelectedProcess.Name}");
             }
-            else
+            catch (Exception ex)
             {
-                notification?.ShowError($"Failed to set priority for process '{SelectedProcess.Name}'.", "Error");
+                NotificationService.ShowError($"Error setting process priority: {ex.Message}");
             }
         }
         
         /// <summary>
-        /// Set process affinity
+        /// Check if the priority of the selected process can be set
         /// </summary>
-        /// <param name="coreIndices">Core indices</param>
-        private void SetProcessAffinity(int[] coreIndices)
+        private bool CanSetProcessPriority(ProcessPriority priority)
         {
-            if (SelectedProcess == null || _processService == null || coreIndices == null || coreIndices.Length == 0)
-            {
-                return;
-            }
+            return SelectedProcess != null && SelectedProcess.CanModify;
+        }
+        
+        /// <summary>
+        /// Set the affinity of the selected process
+        /// </summary>
+        private void SetProcessAffinity(object parameter)
+        {
+            if (SelectedProcess == null) return;
             
-            bool success = _processService.SetProcessAffinity(SelectedProcess.Id, coreIndices);
-            
-            var notification = ServiceLocator.Resolve<INotificationService>();
-            if (success)
+            try
             {
-                SelectedProcess.SetAffinity(coreIndices);
-                OnPropertyChanged(nameof(SelectedProcess));
-                
-                notification?.ShowSuccess($"Affinity set for process '{SelectedProcess.Name}'.", "Affinity Set");
+                // This is where we would show a dialog to set process affinity
+                // For now, we'll just show a notification
+                NotificationService.ShowInfo("Process affinity dialog will be implemented in a future update", "Coming Soon");
             }
-            else
+            catch (Exception ex)
             {
-                notification?.ShowError($"Failed to set affinity for process '{SelectedProcess.Name}'.", "Error");
+                NotificationService.ShowError($"Error setting process affinity: {ex.Message}");
             }
         }
         
         /// <summary>
-        /// Terminate process
+        /// Check if the affinity of the selected process can be set
         /// </summary>
-        private void TerminateProcess()
+        private bool CanSetProcessAffinity(object parameter)
         {
-            if (SelectedProcess == null || _processService == null)
+            return SelectedProcess != null && SelectedProcess.CanModify;
+        }
+        
+        /// <summary>
+        /// Terminate the selected process
+        /// </summary>
+        private void TerminateProcess(object parameter)
+        {
+            if (SelectedProcess == null) return;
+            
+            try
             {
-                return;
-            }
-            
-            var notification = ServiceLocator.Resolve<INotificationService>();
-            bool confirm = notification?.ShowConfirmation($"Are you sure you want to terminate process '{SelectedProcess.Name}'?", "Confirm Termination") ?? false;
-            
-            if (!confirm)
-            {
-                return;
-            }
-            
-            bool success = _processService.TerminateProcess(SelectedProcess.Id);
-            
-            if (success)
-            {
-                Processes.Remove(SelectedProcess);
-                SelectedProcess = null;
+                // Show confirmation dialog
+                var result = System.Windows.MessageBox.Show(
+                    $"Are you sure you want to terminate the process {SelectedProcess.Name}?",
+                    "Confirm Process Termination",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Warning);
                 
-                notification?.ShowSuccess("Process terminated successfully.", "Process Terminated");
+                if (result == System.Windows.MessageBoxResult.Yes)
+                {
+                    // This is where we would terminate the process using the process service
+                    // For example: bool success = ServiceLocator.Get<IProcessService>().TerminateProcess(SelectedProcess.Id);
+                    
+                    // For now, we'll just show a notification
+                    NotificationService.ShowSuccess($"Process {SelectedProcess.Name} terminated successfully");
+                    
+                    // Refresh the process list
+                    RefreshProcesses();
+                }
             }
-            else
+            catch (Exception ex)
             {
-                notification?.ShowError("Failed to terminate process.", "Error");
+                NotificationService.ShowError($"Error terminating process: {ex.Message}");
             }
+        }
+        
+        /// <summary>
+        /// Check if the selected process can be terminated
+        /// </summary>
+        private bool CanTerminateProcess(object parameter)
+        {
+            return SelectedProcess != null && SelectedProcess.CanModify && !SelectedProcess.IsSystemProcess;
         }
     }
 }

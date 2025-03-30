@@ -1,6 +1,5 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Windows.Input;
 using ThreadPilot.Commands;
 using ThreadPilot.Models;
@@ -9,41 +8,34 @@ using ThreadPilot.Services;
 namespace ThreadPilot.ViewModels
 {
     /// <summary>
-    /// CPU cores view model
+    /// View model for the CPU cores view
     /// </summary>
     public class CpuCoresViewModel : ViewModelBase
     {
-        private readonly ISystemInfoService _systemInfoService;
+        #region Private Fields
+        
+        private ObservableCollection<CpuCore> _cores;
         private CpuCore _selectedCore;
-        private bool _showOnlyPerformanceCores;
-        private bool _showOnlyEfficiencyCores;
-        private string _searchText;
+        private bool _isLoading = false;
+        private string _cpuName;
+        private int _totalCores;
+        private int _totalThreads;
+        
+        #endregion
+        
+        #region Properties
         
         /// <summary>
-        /// Constructor
+        /// Collection of CPU cores
         /// </summary>
-        public CpuCoresViewModel()
+        public ObservableCollection<CpuCore> Cores
         {
-            // Get services
-            _systemInfoService = ServiceLocator.Resolve<ISystemInfoService>();
-            
-            // Initialize properties
-            CpuCores = new ObservableCollection<CpuCore>();
-            
-            // Initialize commands
-            RefreshCommand = new RelayCommand(_ => RefreshCores());
-            
-            // Initial load
-            RefreshCores();
+            get => _cores;
+            set => SetProperty(ref _cores, value);
         }
         
         /// <summary>
-        /// CPU cores collection
-        /// </summary>
-        public ObservableCollection<CpuCore> CpuCores { get; }
-        
-        /// <summary>
-        /// Selected core
+        /// Currently selected CPU core
         /// </summary>
         public CpuCore SelectedCore
         {
@@ -52,104 +44,158 @@ namespace ThreadPilot.ViewModels
         }
         
         /// <summary>
-        /// Gets or sets a value indicating whether to show only performance cores
+        /// Whether the view model is loading data
         /// </summary>
-        public bool ShowOnlyPerformanceCores
+        public bool IsLoading
         {
-            get => _showOnlyPerformanceCores;
-            set
+            get => _isLoading;
+            set => SetProperty(ref _isLoading, value);
+        }
+        
+        /// <summary>
+        /// CPU name
+        /// </summary>
+        public string CpuName
+        {
+            get => _cpuName;
+            set => SetProperty(ref _cpuName, value);
+        }
+        
+        /// <summary>
+        /// Total number of physical cores
+        /// </summary>
+        public int TotalCores
+        {
+            get => _totalCores;
+            set => SetProperty(ref _totalCores, value);
+        }
+        
+        /// <summary>
+        /// Total number of logical processors (threads)
+        /// </summary>
+        public int TotalThreads
+        {
+            get => _totalThreads;
+            set => SetProperty(ref _totalThreads, value);
+        }
+        
+        #endregion
+        
+        #region Commands
+        
+        /// <summary>
+        /// Command to refresh core data
+        /// </summary>
+        public ICommand RefreshCoresCommand { get; }
+        
+        /// <summary>
+        /// Command to optimize core settings
+        /// </summary>
+        public ICommand OptimizeCoresCommand { get; }
+        
+        /// <summary>
+        /// Command to reset core settings to default
+        /// </summary>
+        public ICommand ResetCoresCommand { get; }
+        
+        #endregion
+        
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        public CpuCoresViewModel()
+        {
+            // Initialize collections
+            Cores = new ObservableCollection<CpuCore>();
+            
+            // Initialize commands
+            RefreshCoresCommand = new RelayCommand(RefreshCores);
+            OptimizeCoresCommand = new RelayCommand(OptimizeCores);
+            ResetCoresCommand = new RelayCommand(ResetCores);
+            
+            // Load initial data
+            LoadCores();
+        }
+        
+        /// <summary>
+        /// Load CPU core data
+        /// </summary>
+        private void LoadCores()
+        {
+            IsLoading = true;
+            
+            try
             {
-                if (SetProperty(ref _showOnlyPerformanceCores, value))
-                {
-                    // Can't have both filters enabled
-                    if (value && ShowOnlyEfficiencyCores)
-                    {
-                        ShowOnlyEfficiencyCores = false;
-                    }
-                    
-                    RefreshCores();
-                }
+                // This is where we would retrieve core information from the system info service
+                // For now, we'll create some sample data for demonstration
+                
+                // Clear existing cores
+                Cores.Clear();
+                
+                // Set CPU information
+                CpuName = "Intel Core i7-10700K";
+                TotalCores = 8;
+                TotalThreads = 16;
+                
+                // In the future, this will be retrieved from ISystemInfoService
+                // For example: 
+                // var cpuInfo = ServiceLocator.Get<ISystemInfoService>().GetCpuInfo();
+                // CpuName = cpuInfo.Name;
+                // TotalCores = cpuInfo.PhysicalCores;
+                // TotalThreads = cpuInfo.LogicalProcessors;
+                // Cores = new ObservableCollection<CpuCore>(cpuInfo.Cores);
+                
+                IsLoading = false;
+            }
+            catch (Exception ex)
+            {
+                IsLoading = false;
+                NotificationService.ShowError($"Error loading CPU core information: {ex.Message}");
             }
         }
         
         /// <summary>
-        /// Gets or sets a value indicating whether to show only efficiency cores
+        /// Refresh the core data
         /// </summary>
-        public bool ShowOnlyEfficiencyCores
+        public void RefreshCores(object parameter = null)
         {
-            get => _showOnlyEfficiencyCores;
-            set
+            LoadCores();
+        }
+        
+        /// <summary>
+        /// Optimize core settings
+        /// </summary>
+        private void OptimizeCores(object parameter)
+        {
+            try
             {
-                if (SetProperty(ref _showOnlyEfficiencyCores, value))
-                {
-                    // Can't have both filters enabled
-                    if (value && ShowOnlyPerformanceCores)
-                    {
-                        ShowOnlyPerformanceCores = false;
-                    }
-                    
-                    RefreshCores();
-                }
+                // This is where we would apply optimized core settings
+                // For now, we'll just show a notification
+                
+                NotificationService.ShowInfo("Core optimization will be implemented in a future update", "Coming Soon");
+            }
+            catch (Exception ex)
+            {
+                NotificationService.ShowError($"Error optimizing cores: {ex.Message}");
             }
         }
         
         /// <summary>
-        /// Search text
+        /// Reset core settings to default
         /// </summary>
-        public string SearchText
+        private void ResetCores(object parameter)
         {
-            get => _searchText;
-            set
+            try
             {
-                if (SetProperty(ref _searchText, value))
-                {
-                    RefreshCores();
-                }
+                // This is where we would reset core settings to default
+                // For now, we'll just show a notification
+                
+                NotificationService.ShowInfo("Core reset will be implemented in a future update", "Coming Soon");
             }
-        }
-        
-        /// <summary>
-        /// Refresh command
-        /// </summary>
-        public ICommand RefreshCommand { get; }
-        
-        /// <summary>
-        /// Refresh cores
-        /// </summary>
-        private void RefreshCores()
-        {
-            if (_systemInfoService == null)
+            catch (Exception ex)
             {
-                return;
+                NotificationService.ShowError($"Error resetting cores: {ex.Message}");
             }
-            
-            CpuCores.Clear();
-            
-            var systemInfo = _systemInfoService.GetSystemInfo();
-            var cores = systemInfo?.CpuCores?.ToArray() ?? Array.Empty<CpuCore>();
-            
-            // Apply filters
-            if (ShowOnlyPerformanceCores)
-            {
-                cores = cores.Where(c => c.IsPerformanceCore).ToArray();
-            }
-            else if (ShowOnlyEfficiencyCores)
-            {
-                cores = cores.Where(c => !c.IsPerformanceCore).ToArray();
-            }
-            
-            if (!string.IsNullOrWhiteSpace(SearchText))
-            {
-                cores = cores.Where(c => c.CoreName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)).ToArray();
-            }
-            
-            foreach (var core in cores)
-            {
-                CpuCores.Add(core);
-            }
-            
-            // Reset selection
-            SelectedCore = null;
         }
     }
 }

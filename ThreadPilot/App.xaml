@@ -2,27 +2,14 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:ThreadPilot"
-             StartupUri="Views/MainWindow.xaml">
+             StartupUri="MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <!-- Application theme -->
-                <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
-                <ResourceDictionary Source="Resources/Styles/Buttons.xaml" />
-                <ResourceDictionary Source="Resources/Styles/TextElements.xaml" />
-                <ResourceDictionary Source="Resources/Styles/Panels.xaml" />
-                <ResourceDictionary Source="Resources/Styles/Controls.xaml" />
+                <!-- Application theme and styles -->
+                <ResourceDictionary Source="/Resources/Styles.xaml"/>
+                <ResourceDictionary Source="/Resources/Colors.xaml"/>
             </ResourceDictionary.MergedDictionaries>
-            
-            <!-- Global application resources -->
-            <FontFamily x:Key="DefaultFontFamily">Segoe UI</FontFamily>
-            <FontFamily x:Key="MonoFontFamily">Consolas</FontFamily>
-            
-            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="DefaultFontSize">12</system:Double>
-            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="SmallFontSize">11</system:Double>
-            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="LargeFontSize">14</system:Double>
-            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="HeaderFontSize">16</system:Double>
-            <system:Double xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="TitleFontSize">20</system:Double>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

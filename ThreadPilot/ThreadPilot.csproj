@@ -5,32 +5,32 @@
     <TargetFramework>net6.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
-    <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>1.0.0</Version>
+    <Authors>ThreadPilot Team</Authors>
+    <Description>Advanced CPU Thread Optimization</Description>
+    <Copyright>Copyright © 2024</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Assets\" />
-    <Folder Include="Resources\" />
-    <Folder Include="Views\Controls\" />
-    <Folder Include="Views\Pages\" />
+    <None Remove="Resources\**" />
+    <None Remove="Images\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="6.0.1" />
     <PackageReference Include="System.Management" Version="6.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Assets\*.pow">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Assets\*.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Assets\*.ico">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <Resource Include="Resources\**" />
+    <Resource Include="Images\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="BundledProfiles\" />
+    <Folder Include="Logs\" />
+    <Folder Include="Profiles\" />
+    <Folder Include="Views\" />
   </ItemGroup>
 
 </Project>

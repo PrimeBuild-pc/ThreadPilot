@@ -1,46 +1,36 @@
-using System;
-
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Notification service interface
+    /// Service for displaying notifications to the user
     /// </summary>
     public interface INotificationService
     {
         /// <summary>
-        /// Show success notification
+        /// Show a success notification
         /// </summary>
-        /// <param name="message">Message</param>
-        /// <param name="title">Title</param>
+        /// <param name="message">Message to display</param>
+        /// <param name="title">Notification title</param>
         void ShowSuccess(string message, string title = "Success");
         
         /// <summary>
-        /// Show error notification
+        /// Show an error notification
         /// </summary>
-        /// <param name="message">Message</param>
-        /// <param name="title">Title</param>
+        /// <param name="message">Message to display</param>
+        /// <param name="title">Notification title</param>
         void ShowError(string message, string title = "Error");
         
         /// <summary>
-        /// Show information notification
+        /// Show an information notification
         /// </summary>
-        /// <param name="message">Message</param>
-        /// <param name="title">Title</param>
-        void ShowInformation(string message, string title = "Information");
+        /// <param name="message">Message to display</param>
+        /// <param name="title">Notification title</param>
+        void ShowInfo(string message, string title = "Information");
         
         /// <summary>
-        /// Show warning notification
+        /// Show a warning notification
         /// </summary>
-        /// <param name="message">Message</param>
-        /// <param name="title">Title</param>
+        /// <param name="message">Message to display</param>
+        /// <param name="title">Notification title</param>
         void ShowWarning(string message, string title = "Warning");
-        
-        /// <summary>
-        /// Show confirmation dialog
-        /// </summary>
-        /// <param name="message">Message</param>
-        /// <param name="title">Title</param>
-        /// <returns>True if confirmed, false otherwise</returns>
-        bool ShowConfirmation(string message, string title = "Confirmation");
     }
 }

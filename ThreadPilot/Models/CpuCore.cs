@@ -1,60 +1,65 @@
-using System;
+using System.Collections.Generic;
 
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// CPU core class
+    /// Represents a CPU core (logical processor)
     /// </summary>
     public class CpuCore
     {
         /// <summary>
-        /// Core ID
+        /// Core/Thread index (zero-based)
         /// </summary>
-        public int Id { get; set; }
+        public int Index { get; set; }
         
         /// <summary>
-        /// Core number (0-based)
+        /// True if this is a physical core, false if it's a logical core (hyperthreading/SMT)
         /// </summary>
-        public int Number { get; set; }
+        public bool IsPhysicalCore { get; set; }
         
         /// <summary>
-        /// Processor ID (for multi-CPU systems)
+        /// Physical core number this logical core belongs to
         /// </summary>
-        public int ProcessorId { get; set; }
+        public int PhysicalCoreIndex { get; set; }
         
         /// <summary>
-        /// NUMA node
+        /// Current utilization percentage
+        /// </summary>
+        public int UtilizationPercentage { get; set; }
+        
+        /// <summary>
+        /// Current frequency in MHz
+        /// </summary>
+        public int CurrentFrequency { get; set; }
+        
+        /// <summary>
+        /// Current temperature in Celsius (if available)
+        /// </summary>
+        public float? Temperature { get; set; }
+        
+        /// <summary>
+        /// List of processes currently assigned to this core
+        /// </summary>
+        public List<int> AssignedProcessIds { get; set; } = new List<int>();
+        
+        /// <summary>
+        /// True if core parking is active for this core (if available)
+        /// </summary>
+        public bool IsParked { get; set; }
+        
+        /// <summary>
+        /// NUMA node this core belongs to
         /// </summary>
         public int NumaNode { get; set; }
         
         /// <summary>
-        /// Core usage percentage
+        /// User-friendly name for display
         /// </summary>
-        public float UsagePercentage { get; set; }
+        public string DisplayName => $"Core {Index}";
         
         /// <summary>
-        /// Core frequency in MHz
+        /// Detailed label for display
         /// </summary>
-        public int FrequencyMHz { get; set; }
-        
-        /// <summary>
-        /// Gets a value indicating whether the core is a performance core (as opposed to efficiency core)
-        /// </summary>
-        public bool IsPerformanceCore { get; set; }
-        
-        /// <summary>
-        /// Gets the core name
-        /// </summary>
-        public string CoreName => $"Core {Number}";
-        
-        /// <summary>
-        /// Gets the core type name
-        /// </summary>
-        public string CoreTypeName => IsPerformanceCore ? "Performance" : "Efficiency";
-        
-        /// <summary>
-        /// Gets the core frequency in GHz
-        /// </summary>
-        public float FrequencyGHz => FrequencyMHz / 1000f;
+        public string DetailedLabel => $"Core {Index} ({(IsPhysicalCore ? "Physical" : "Logical")} - {UtilizationPercentage}%)";
     }
 }

@@ -1,70 +1,99 @@
 using System;
+using System.Collections.Generic;
 
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// System information class
+    /// Represents system hardware and OS information
     /// </summary>
     public class SystemInfo
     {
         /// <summary>
-        /// Processor name
+        /// CPU model name
         /// </summary>
-        public string ProcessorName { get; set; } = string.Empty;
+        public string CpuName { get; set; } = string.Empty;
         
         /// <summary>
-        /// CPU usage percentage
+        /// Number of physical CPU cores
         /// </summary>
-        public float CpuUsagePercentage { get; set; }
+        public int PhysicalCores { get; set; }
         
         /// <summary>
-        /// Memory usage in MB
+        /// Number of logical CPU cores/threads
         /// </summary>
-        public ulong MemoryUsageMB { get; set; }
+        public int LogicalCores { get; set; }
         
         /// <summary>
-        /// Total memory in MB
+        /// Base CPU clock speed in MHz
         /// </summary>
-        public ulong TotalMemoryMB { get; set; }
+        public int BaseCpuSpeed { get; set; }
         
         /// <summary>
-        /// Logical processor count
+        /// Current CPU clock speed in MHz (if available)
         /// </summary>
-        public int LogicalProcessorCount { get; set; }
+        public int CurrentCpuSpeed { get; set; }
         
         /// <summary>
-        /// Physical processor count
+        /// CPU temperature in Celsius (if available)
         /// </summary>
-        public int PhysicalProcessorCount { get; set; }
+        public float? CpuTemperature { get; set; }
         
         /// <summary>
-        /// Performance core count (hybrid CPUs)
+        /// CPU architecture (x64, ARM64, etc.)
         /// </summary>
-        public int PerformanceCoreCount { get; set; }
+        public string CpuArchitecture { get; set; } = string.Empty;
         
         /// <summary>
-        /// Efficiency core count (hybrid CPUs)
+        /// Total system RAM in MB
         /// </summary>
-        public int EfficiencyCoreCount { get; set; }
+        public long TotalRam { get; set; }
         
         /// <summary>
-        /// Operating system information
+        /// Available system RAM in MB
         /// </summary>
-        public string OperatingSystem { get; set; } = string.Empty;
+        public long AvailableRam { get; set; }
         
         /// <summary>
-        /// Machine name
+        /// RAM usage percentage
         /// </summary>
-        public string MachineName { get; set; } = string.Empty;
+        public int RamUsagePercentage { get; set; }
         
         /// <summary>
-        /// Gets the memory usage percentage
+        /// CPU usage percentage (average across all cores)
         /// </summary>
-        public float MemoryUsagePercentage => TotalMemoryMB > 0 ? (float)MemoryUsageMB / TotalMemoryMB * 100 : 0;
+        public int CpuUsagePercentage { get; set; }
         
         /// <summary>
-        /// Gets a value indicating whether the system has a hybrid CPU
+        /// CPU usage per core as percentage
         /// </summary>
-        public bool HasHybridCpu => PerformanceCoreCount > 0 && EfficiencyCoreCount > 0;
+        public List<int> CpuCoreUsagePercentages { get; set; } = new List<int>();
+        
+        /// <summary>
+        /// Windows OS version
+        /// </summary>
+        public string OsVersion { get; set; } = string.Empty;
+        
+        /// <summary>
+        /// Current active power plan/profile name
+        /// </summary>
+        public string CurrentPowerPlan { get; set; } = string.Empty;
+        
+        /// <summary>
+        /// System uptime
+        /// </summary>
+        public TimeSpan Uptime { get; set; }
+        
+        /// <summary>
+        /// Current date and time when the information was retrieved
+        /// </summary>
+        public DateTime Timestamp { get; set; } = DateTime.Now;
+        
+        /// <summary>
+        /// Returns a formatted brief description of the system
+        /// </summary>
+        public string GetSystemSummary()
+        {
+            return $"{CpuName} | {LogicalCores} Threads | {TotalRam / 1024} GB RAM | {OsVersion}";
+        }
     }
 }

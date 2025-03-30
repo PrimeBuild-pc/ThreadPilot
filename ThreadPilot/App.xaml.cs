@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Windows;
+using System.Windows.Threading;
 using ThreadPilot.Services;
 
 namespace ThreadPilot
@@ -10,141 +11,68 @@ namespace ThreadPilot
     /// </summary>
     public partial class App : Application
     {
-        /// <summary>
-        /// Current application version
-        /// </summary>
-        public static readonly Version Version = new Version(1, 0, 0, 0);
-        
-        /// <summary>
-        /// Application data directory
-        /// </summary>
-        public static readonly string AppDataDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "ThreadPilot");
-        
-        /// <summary>
-        /// Profile directory
-        /// </summary>
-        public static readonly string ProfileDirectory = Path.Combine(AppDataDirectory, "Profiles");
-        
-        /// <summary>
-        /// Log directory
-        /// </summary>
-        public static readonly string LogDirectory = Path.Combine(AppDataDirectory, "Logs");
-        
-        /// <summary>
-        /// Settings file path
-        /// </summary>
-        public static readonly string SettingsFilePath = Path.Combine(AppDataDirectory, "settings.json");
-        
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
             
-            // Ensure application directories exist
+            // Initialize service locator
+            ServiceLocator.Initialize();
+            
+            // Setup unhandled exception handling
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+            Application.Current.DispatcherUnhandledException += App_DispatcherUnhandledException;
+            
+            // Create application directories if they don't exist
             EnsureDirectoriesExist();
-            
-            // Register services
-            RegisterServices();
-            
-            // Set up unhandled exception handling
-            SetupExceptionHandling();
         }
-        
-        /// <summary>
-        /// Ensures application directories exist
-        /// </summary>
-        private void EnsureDirectoriesExist()
+
+        private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
-            var directories = new[]
-            {
-                AppDataDirectory,
-                ProfileDirectory,
-                LogDirectory
-            };
+            LogException(e.Exception);
+            e.Handled = true;
             
-            foreach (var directory in directories)
+            MessageBox.Show($"An unexpected error occurred: {e.Exception.Message}\n\nThe error has been logged.",
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+        private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            if (e.ExceptionObject is Exception ex)
             {
-                if (!Directory.Exists(directory))
-                {
-                    Directory.CreateDirectory(directory);
-                }
+                LogException(ex);
             }
         }
         
-        /// <summary>
-        /// Registers application services
-        /// </summary>
-        private void RegisterServices()
-        {
-            // Register services in the service locator
-            ServiceLocator.Register<INotificationService>(new NotificationService());
-            ServiceLocator.Register<IFileDialogService>(new FileDialogService());
-            ServiceLocator.Register<ISystemInfoService>(new SystemInfoService());
-            ServiceLocator.Register<IProcessService>(new ProcessService());
-            ServiceLocator.Register<IPowerProfileService>(new PowerProfileService());
-        }
-        
-        /// <summary>
-        /// Sets up global exception handling
-        /// </summary>
-        private void SetupExceptionHandling()
-        {
-            // Handle UI thread exceptions
-            DispatcherUnhandledException += (sender, e) =>
-            {
-                HandleException(e.Exception);
-                e.Handled = true;
-            };
-            
-            // Handle non-UI thread exceptions
-            AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
-            {
-                if (e.ExceptionObject is Exception exception)
-                {
-                    HandleException(exception);
-                }
-            };
-            
-            // Handle task exceptions
-            TaskScheduler.UnobservedTaskException += (sender, e) =>
-            {
-                HandleException(e.Exception);
-                e.SetObserved();
-            };
-        }
-        
-        /// <summary>
-        /// Handles exceptions
-        /// </summary>
-        /// <param name="exception">Exception</param>
-        private void HandleException(Exception exception)
-        {
-            // Log the exception
-            LogException(exception);
-            
-            // Show error message
-            var notificationService = ServiceLocator.Resolve<INotificationService>();
-            notificationService?.ShowError($"An error occurred: {exception.Message}");
-        }
-        
-        /// <summary>
-        /// Logs exceptions to file
-        /// </summary>
-        /// <param name="exception">Exception</param>
-        private void LogException(Exception exception)
+        private void LogException(Exception ex)
         {
             try
             {
-                var logFile = Path.Combine(LogDirectory, $"error_{DateTime.Now:yyyyMMdd}.log");
-                var logMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {exception.GetType().Name}: {exception.Message}\r\n{exception.StackTrace}\r\n\r\n";
+                string logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
+                
+                if (!Directory.Exists(logDirectory))
+                {
+                    Directory.CreateDirectory(logDirectory);
+                }
+                
+                string logFile = Path.Combine(logDirectory, $"error_{DateTime.Now:yyyyMMdd}.log");
+                string logMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}\n\n";
                 
                 File.AppendAllText(logFile, logMessage);
             }
             catch
             {
-                // Ignore errors in the error handler
+                // If logging fails, there's not much we can do
             }
+        }
+        
+        private void EnsureDirectoriesExist()
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            
+            // Make sure these directories exist
+            Directory.CreateDirectory(Path.Combine(baseDir, "Profiles"));
+            Directory.CreateDirectory(Path.Combine(baseDir, "Logs"));
+            Directory.CreateDirectory(Path.Combine(baseDir, "BundledProfiles"));
         }
     }
 }

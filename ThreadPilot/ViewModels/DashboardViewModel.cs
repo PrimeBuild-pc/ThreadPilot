@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Timers;
 using System.Windows.Input;
 using ThreadPilot.Commands;
 using ThreadPilot.Models;
@@ -10,39 +11,14 @@ namespace ThreadPilot.ViewModels
     /// <summary>
     /// Dashboard view model
     /// </summary>
-    public class DashboardViewModel : ViewModelBase
+    public class DashboardViewModel : ViewModelBase, IRefreshable
     {
         private readonly ISystemInfoService _systemInfoService;
         private readonly IPowerProfileService _powerProfileService;
         private SystemInfo _systemInfo;
-        private PowerProfile _currentProfile;
-        private bool _isAutoOptimizationEnabled;
-
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        public DashboardViewModel()
-        {
-            // Get services
-            _systemInfoService = ServiceLocator.Resolve<ISystemInfoService>();
-            _powerProfileService = ServiceLocator.Resolve<IPowerProfileService>();
-            
-            // Initialize properties
-            SystemInfo = _systemInfoService?.GetSystemInfo() ?? new SystemInfo();
-            TopProcesses = new ObservableCollection<ProcessInfo>();
-            AvailableProfiles = new ObservableCollection<PowerProfile>();
-            
-            // Initialize commands
-            RefreshCommand = new RelayCommand(_ => Refresh());
-            ApplyProfileCommand = new RelayCommand(_ => ApplyProfile(), _ => CurrentProfile != null);
-            EnableAutoOptimizationCommand = new RelayCommand(_ => ToggleAutoOptimization());
-            
-            // Load available profiles
-            LoadProfiles();
-            
-            // Load top processes
-            LoadTopProcesses();
-        }
+        private Timer _updateTimer;
+        private ObservableCollection<PowerProfile> _powerProfiles;
+        private PowerProfile _selectedPowerProfile;
         
         /// <summary>
         /// System information
@@ -54,37 +30,22 @@ namespace ThreadPilot.ViewModels
         }
         
         /// <summary>
-        /// Current selected power profile
+        /// Power profiles
         /// </summary>
-        public PowerProfile CurrentProfile
+        public ObservableCollection<PowerProfile> PowerProfiles
         {
-            get => _currentProfile;
-            set => SetProperty(ref _currentProfile, value);
+            get => _powerProfiles;
+            set => SetProperty(ref _powerProfiles, value);
         }
         
         /// <summary>
-        /// Top processes by CPU usage
+        /// Selected power profile
         /// </summary>
-        public ObservableCollection<ProcessInfo> TopProcesses { get; }
-        
-        /// <summary>
-        /// Available power profiles
-        /// </summary>
-        public ObservableCollection<PowerProfile> AvailableProfiles { get; }
-        
-        /// <summary>
-        /// Gets or sets a value indicating whether auto optimization is enabled
-        /// </summary>
-        public bool IsAutoOptimizationEnabled
+        public PowerProfile SelectedPowerProfile
         {
-            get => _isAutoOptimizationEnabled;
-            set => SetProperty(ref _isAutoOptimizationEnabled, value);
+            get => _selectedPowerProfile;
+            set => SetProperty(ref _selectedPowerProfile, value);
         }
-        
-        /// <summary>
-        /// Refresh command
-        /// </summary>
-        public ICommand RefreshCommand { get; }
         
         /// <summary>
         /// Apply profile command
@@ -92,99 +53,102 @@ namespace ThreadPilot.ViewModels
         public ICommand ApplyProfileCommand { get; }
         
         /// <summary>
-        /// Enable auto optimization command
+        /// Constructor
         /// </summary>
-        public ICommand EnableAutoOptimizationCommand { get; }
-        
-        /// <summary>
-        /// Refresh dashboard
-        /// </summary>
-        private void Refresh()
+        public DashboardViewModel()
         {
-            // Refresh system info
-            SystemInfo = _systemInfoService?.GetSystemInfo() ?? new SystemInfo();
+            _systemInfoService = ServiceLocator.Resolve<ISystemInfoService>();
+            _powerProfileService = ServiceLocator.Resolve<IPowerProfileService>();
             
-            // Reload top processes
-            LoadTopProcesses();
+            PowerProfiles = new ObservableCollection<PowerProfile>();
+            
+            // Initialize commands
+            ApplyProfileCommand = new RelayCommand(ApplyProfile, CanApplyProfile);
+            
+            // Initialize timer for auto-refresh
+            _updateTimer = new Timer(2000);
+            _updateTimer.Elapsed += (s, e) => Refresh();
+            _updateTimer.Start();
+            
+            // Initial refresh
+            Refresh();
         }
         
         /// <summary>
-        /// Apply the selected power profile
+        /// Refresh dashboard data
         /// </summary>
-        private void ApplyProfile()
+        public void Refresh()
         {
-            if (CurrentProfile == null)
+            try
             {
-                return;
+                // Update system info
+                SystemInfo = _systemInfoService.GetSystemInfo();
+                
+                // Update power profiles
+                var profiles = _powerProfileService.GetAllProfiles();
+                
+                // Execute on UI thread
+                App.Current.Dispatcher.Invoke(() =>
+                {
+                    PowerProfiles.Clear();
+                    foreach (var profile in profiles)
+                    {
+                        PowerProfiles.Add(profile);
+                        
+                        // Select active profile
+                        if (profile.IsActive)
+                        {
+                            SelectedPowerProfile = profile;
+                        }
+                    }
+                });
             }
-            
-            var notificationService = ServiceLocator.Resolve<INotificationService>();
-            bool success = _powerProfileService?.ApplyProfile(CurrentProfile) ?? false;
-            
-            if (success)
+            catch (Exception ex)
             {
-                notificationService?.ShowSuccess($"Profile '{CurrentProfile.Name}' applied successfully.", "Profile Applied");
-            }
-            else
-            {
-                notificationService?.ShowError($"Failed to apply profile '{CurrentProfile.Name}'.", "Error");
-            }
-        }
-        
-        /// <summary>
-        /// Toggle auto optimization
-        /// </summary>
-        private void ToggleAutoOptimization()
-        {
-            IsAutoOptimizationEnabled = !IsAutoOptimizationEnabled;
-            
-            // TODO: Implement auto optimization logic
-            
-            var notificationService = ServiceLocator.Resolve<INotificationService>();
-            if (IsAutoOptimizationEnabled)
-            {
-                notificationService?.ShowSuccess("Auto optimization enabled.", "Auto Optimization");
-            }
-            else
-            {
-                notificationService?.ShowInformation("Auto optimization disabled.", "Auto Optimization");
-            }
-        }
-        
-        /// <summary>
-        /// Load available power profiles
-        /// </summary>
-        private void LoadProfiles()
-        {
-            AvailableProfiles.Clear();
-            
-            var profiles = _powerProfileService?.GetAllProfiles() ?? Array.Empty<PowerProfile>();
-            foreach (var profile in profiles)
-            {
-                AvailableProfiles.Add(profile);
-            }
-            
-            // Set default profile if available
-            if (AvailableProfiles.Count > 0)
-            {
-                CurrentProfile = AvailableProfiles[0];
+                var notificationService = ServiceLocator.Resolve<INotificationService>();
+                notificationService.ShowError($"Error refreshing dashboard: {ex.Message}");
             }
         }
         
         /// <summary>
-        /// Load top processes by CPU usage
+        /// Apply selected power profile
         /// </summary>
-        private void LoadTopProcesses()
+        /// <param name="parameter">Command parameter</param>
+        private void ApplyProfile(object parameter)
         {
-            TopProcesses.Clear();
-            
-            var processService = ServiceLocator.Resolve<IProcessService>();
-            var processes = processService?.GetProcesses(10) ?? Array.Empty<ProcessInfo>();
-            
-            foreach (var process in processes)
+            try
             {
-                TopProcesses.Add(process);
+                if (SelectedPowerProfile != null)
+                {
+                    var result = _powerProfileService.ActivateProfile(SelectedPowerProfile);
+                    
+                    var notificationService = ServiceLocator.Resolve<INotificationService>();
+                    if (result)
+                    {
+                        notificationService.ShowSuccess($"Profile '{SelectedPowerProfile.Name}' activated successfully.");
+                        Refresh();
+                    }
+                    else
+                    {
+                        notificationService.ShowError($"Failed to activate profile '{SelectedPowerProfile.Name}'.");
+                    }
+                }
             }
+            catch (Exception ex)
+            {
+                var notificationService = ServiceLocator.Resolve<INotificationService>();
+                notificationService.ShowError($"Error applying profile: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Check if a profile can be applied
+        /// </summary>
+        /// <param name="parameter">Command parameter</param>
+        /// <returns>True if a profile can be applied, false otherwise</returns>
+        private bool CanApplyProfile(object parameter)
+        {
+            return SelectedPowerProfile != null && !SelectedPowerProfile.IsActive;
         }
     }
 }

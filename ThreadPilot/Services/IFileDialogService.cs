@@ -1,34 +1,32 @@
-using System;
-
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// File dialog service interface
+    /// Service for displaying file dialogs to the user
     /// </summary>
     public interface IFileDialogService
     {
         /// <summary>
-        /// Open file dialog
+        /// Show an open file dialog
         /// </summary>
+        /// <param name="filter">File filter</param>
         /// <param name="title">Dialog title</param>
-        /// <param name="filter">File filter (e.g. "Text files (*.txt)|*.txt")</param>
-        /// <returns>Selected file path or null if canceled</returns>
-        string OpenFileDialog(string title, string filter);
+        /// <returns>Selected file path or null if dialog was canceled</returns>
+        string OpenFile(string filter = null, string title = null);
         
         /// <summary>
-        /// Save file dialog
+        /// Show a save file dialog
         /// </summary>
-        /// <param name="title">Dialog title</param>
-        /// <param name="filter">File filter (e.g. "Text files (*.txt)|*.txt")</param>
+        /// <param name="filter">File filter</param>
         /// <param name="defaultFileName">Default file name</param>
-        /// <returns>Selected file path or null if canceled</returns>
-        string SaveFileDialog(string title, string filter, string defaultFileName = "");
+        /// <param name="title">Dialog title</param>
+        /// <returns>Selected file path or null if dialog was canceled</returns>
+        string SaveFile(string filter = null, string defaultFileName = null, string title = null);
         
         /// <summary>
-        /// Open folder dialog
+        /// Show a folder browser dialog
         /// </summary>
         /// <param name="title">Dialog title</param>
-        /// <returns>Selected folder path or null if canceled</returns>
-        string OpenFolderDialog(string title);
+        /// <returns>Selected folder path or null if dialog was canceled</returns>
+        string BrowseFolder(string title = null);
     }
 }

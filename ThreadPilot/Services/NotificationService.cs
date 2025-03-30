@@ -1,59 +1,50 @@
-using System;
 using System.Windows;
 
 namespace ThreadPilot.Services
 {
     /// <summary>
-    /// Implementation of notification service using MessageBox
+    /// Default implementation of the notification service
     /// </summary>
     public class NotificationService : INotificationService
     {
         /// <summary>
-        /// Shows success notification
+        /// Show a success notification
         /// </summary>
-        /// <param name="message">Message</param>
-        public void ShowSuccess(string message)
+        /// <param name="message">Message to display</param>
+        /// <param name="title">Notification title</param>
+        public void ShowSuccess(string message, string title = "Success")
         {
-            MessageBox.Show(message, "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
         }
         
         /// <summary>
-        /// Shows information notification
+        /// Show an error notification
         /// </summary>
-        /// <param name="message">Message</param>
-        public void ShowInformation(string message)
+        /// <param name="message">Message to display</param>
+        /// <param name="title">Notification title</param>
+        public void ShowError(string message, string title = "Error")
         {
-            MessageBox.Show(message, "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
         
         /// <summary>
-        /// Shows warning notification
+        /// Show an information notification
         /// </summary>
-        /// <param name="message">Message</param>
-        public void ShowWarning(string message)
+        /// <param name="message">Message to display</param>
+        /// <param name="title">Notification title</param>
+        public void ShowInfo(string message, string title = "Information")
         {
-            MessageBox.Show(message, "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
         }
         
         /// <summary>
-        /// Shows error notification
+        /// Show a warning notification
         /// </summary>
-        /// <param name="message">Message</param>
-        public void ShowError(string message)
+        /// <param name="message">Message to display</param>
+        /// <param name="title">Notification title</param>
+        public void ShowWarning(string message, string title = "Warning")
         {
-            MessageBox.Show(message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-        
-        /// <summary>
-        /// Shows confirmation dialog
-        /// </summary>
-        /// <param name="message">Message</param>
-        /// <param name="title">Title</param>
-        /// <returns>True if confirmed, false otherwise</returns>
-        public bool ShowConfirmation(string message, string title = "Confirmation")
-        {
-            var result = MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Question);
-            return result == MessageBoxResult.Yes;
+            MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 }
