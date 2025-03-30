@@ -1,0 +1,20 @@
+C:\Users\Administrator\ThreadPilot>dotnet build -c Release
+Restore complete (0,4s)
+  ThreadPilot failed with 5 error(s) and 2 warning(s) (0,4s)
+    C:\Users\Administrator\.nuget\packages\microsoft.windowsappsdk\1.7.250310001\buildTransitive\Microsoft.WindowsAppSDK.SingleFile.targets(36,9): warning :
+      PublishSingleFile is recommended only for Windows App SDK Self-Contained apps:
+          <PropertyGroup>
+              <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+          </PropertyGroup>
+
+    C:\Users\Administrator\.nuget\packages\microsoft.windowsappsdk\1.7.250310001\buildTransitive\Microsoft.WindowsAppSDK.SingleFile.targets(50,9): warning :
+      PublishSingleFile requires MICROSOFT_WINDOWSAPPRUNTIME_BASE_DIRECTORY to be set before program entry:
+          Environment.SetEnvironmentVariable("MICROSOFT_WINDOWSAPPRUNTIME_BASE_DIRECTORY", AppContext.BaseDirectory);
+
+    C:\Users\Administrator\ThreadPilot\ThreadPilot\MainWindow.xaml(152,136): error MC3072: The property 'PlaceholderText' does not exist in XML namespace 'http://schemas.microsoft.com/winfx/2006/xaml/presentation'. Line 152 Position 136.
+    C:\Users\Administrator\ThreadPilot\ThreadPilot\Views\MainWindow.xaml(41,19): error MC3072: The property 'Padding' does not exist in XML namespace 'http://schemas.microsoft.com/winfx/2006/xaml/presentation'. Line 41 Position 19.
+    C:\Users\Administrator\ThreadPilot\ThreadPilot\Views\PowerProfilesView.xaml(37,70): error MC3072: The property 'Spacing' does not exist in XML namespace 'http://schemas.microsoft.com/winfx/2006/xaml/presentation'. Line 37 Position 70.
+    C:\Users\Administrator\ThreadPilot\ThreadPilot\Views\SettingsView.xaml(59,30): error MC3074: The tag 'ToggleSwitch' does not exist in XML namespace 'http://schemas.microsoft.com/winfx/2006/xaml/presentation'. Line 59 Position 30.
+    C:\Users\Administrator\ThreadPilot\ThreadPilot\Views\SystemOptimizationView.xaml(116,26): error MC3074: The tag 'ToggleSwitch' does not exist in XML namespace 'http://schemas.microsoft.com/winfx/2006/xaml/presentation'. Line 116 Position 26.
+
+Build failed with 5 error(s) and 2 warning(s) in 1,1s
