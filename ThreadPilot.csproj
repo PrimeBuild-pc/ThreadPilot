@@ -1,0 +1,64 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>ico.ico</ApplicationIcon>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishTrimmed>false</PublishTrimmed>
+    <TrimMode>link</TrimMode>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>CS1998;CS0067;CS0414;WFAC010;IL3000;MVVMTK0034</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
+    <PackageReference Include="System.Drawing.Common" Version="9.0.7" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="9.0.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="ico.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Ensure XAML for ProcessPowerPlanAssociationView generates InitializeComponent -->
+  <ItemGroup>
+    <Page Update="Views/ProcessPowerPlanAssociationView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+
+  <!-- Exclude upstream CPUSetSetter reference files from this project build -->
+  <ItemGroup>
+    <Compile Remove="CPUSetSetter-main\**\*.cs" />
+    <Page Remove="CPUSetSetter-main\**\*.xaml" />
+    <Resource Remove="CPUSetSetter-main\**\*.*" />
+    <None Remove="CPUSetSetter-main\**\*.*" />
+    <!-- Remove Activity Logs screen -->
+    <Compile Remove="ViewModels\LogViewerViewModel.cs" />
+    <Compile Remove="Views\LogViewerView.xaml.cs" />
+    <Page Remove="Views\LogViewerView.xaml" />
+    <!-- Remove Game Boost feature and tests from build -->
+    <Compile Remove="Services\GameBoostService.cs" />
+    <Compile Remove="Services\IGameBoostService.cs" />
+    <Compile Remove="Services\GameDetectionService.cs" />
+    <Compile Remove="Services\IGameDetectionService.cs" />
+    <Compile Remove="Tests\TestRunner.cs" />
+    <Compile Remove="Tests\GameBoostIntegrationTest.cs" />
+  </ItemGroup>
+
+</Project>
