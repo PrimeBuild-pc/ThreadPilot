@@ -22,11 +22,7 @@ It is designed for power users, gamers, and professionals who want precise contr
 - System tweaks and performance-related Windows settings  
 - Profile-based configuration and persistence  
 
----
-
 [![Thread-Pilotbanner.png](https://i.postimg.cc/sDZLXMqr/Thread-Pilotbanner.png)](https://postimg.cc/cr0hkLd9)
-
----
 
 ## 📦 Installation
 
