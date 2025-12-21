@@ -100,11 +100,6 @@ namespace ThreadPilot.Services
         void UpdateSettings(ApplicationSettingsModel settings);
 
         /// <summary>
-        /// Updates the Game Boost status in the tray
-        /// </summary>
-        void UpdateGameBoostStatus(bool isGameBoostActive, string? currentGameName = null);
-
-        /// <summary>
         /// Updates the available power plans in the context menu
         /// </summary>
         void UpdatePowerPlans(IEnumerable<PowerPlanModel> powerPlans, PowerPlanModel? activePlan);
@@ -169,7 +164,6 @@ namespace ThreadPilot.Services
         Normal,
         Monitoring,
         Error,
-        Disabled,
-        GameBoost
+        Disabled
     }
 }

@@ -234,15 +234,6 @@ namespace ThreadPilot.Services
                     IsEnabled = true,
                     IsGlobal = true
                 },
-                [ShortcutActions.GameBoostToggle] = new KeyboardShortcut
-                {
-                    ActionName = ShortcutActions.GameBoostToggle,
-                    Key = Key.G,
-                    Modifiers = ModifierKeys.Control | ModifierKeys.Shift,
-                    Description = "Toggle Game Boost mode",
-                    IsEnabled = true,
-                    IsGlobal = true
-                },
                 [ShortcutActions.PowerPlanHighPerformance] = new KeyboardShortcut
                 {
                     ActionName = ShortcutActions.PowerPlanHighPerformance,
@@ -331,7 +322,6 @@ namespace ThreadPilot.Services
                 ShortcutActions.PowerPlanBalanced => "Switch to Balanced power plan",
                 ShortcutActions.PowerPlanHighPerformance => "Switch to High Performance power plan",
                 ShortcutActions.PowerPlanPowerSaver => "Switch to Power Saver power plan",
-                ShortcutActions.GameBoostToggle => "Toggle Game Boost mode",
                 ShortcutActions.RefreshProcessList => "Refresh process list",
                 ShortcutActions.OpenSettings => "Open Settings tab",
                 ShortcutActions.OpenTweaks => "Open System Tweaks tab",

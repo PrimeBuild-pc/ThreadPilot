@@ -70,6 +70,9 @@
                 <TabItem Header="🔧 Process Management">
                     <views:ProcessView/>
                 </TabItem>
+                <TabItem Header="🎯 Core Masks">
+                    <views:MasksView/>
+                </TabItem>
                 <TabItem Header="⚡ Power Plans">
                     <views:PowerPlanView/>
                 </TabItem>
@@ -79,11 +82,8 @@
                 <TabItem Header="🔧 Tweaks">
                     <views:SystemTweaksView x:Name="SystemTweaksView"/>
                 </TabItem>
-                <TabItem Header="📋 Activity Logs">
-                    <views:LogViewerView/>
-                </TabItem>
                 <TabItem Header="⚙️ Settings">
-                    <views:SettingsView/>
+                    <views:SettingsView x:Name="SettingsView"/>
                 </TabItem>
             </TabControl>
         </Grid>
@@ -92,17 +92,6 @@
         <StatusBar Grid.Row="3" Height="25">
             <StatusBarItem>
                 <TextBlock Text="{Binding StatusMessage}"/>
-            </StatusBarItem>
-            <Separator/>
-            <StatusBarItem>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="{Binding GameBoostStatusText}"
-                               FontWeight="{Binding IsGameBoostActive, Converter={StaticResource BoolToFontWeightConverter}}"
-                               Foreground="{Binding IsGameBoostActive, Converter={StaticResource BoolToColorConverter}}"/>
-                    <TextBlock Text="🛡️"
-                               Margin="5,0,0,0"
-                               Visibility="{Binding IsGameBoostActive, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                </StackPanel>
             </StatusBarItem>
             <Separator/>
             <StatusBarItem>

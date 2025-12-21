@@ -19,8 +19,8 @@ namespace ThreadPilot.ViewModels
         private readonly INotificationService _notificationService;
         private readonly IAutostartService _autostartService;
         private readonly IPowerPlanService _powerPlanService;
-        private readonly IGameBoostService _gameBoostService;
         private readonly IProcessMonitorManagerService _processMonitorManagerService;
+        private bool _isSyncingFromService = false;
 
         [ObservableProperty]
         private ApplicationSettingsModel settings;
@@ -37,23 +37,12 @@ namespace ThreadPilot.ViewModels
         [ObservableProperty]
         private ObservableCollection<PowerPlanModel> availablePowerPlans = new();
 
-        [ObservableProperty]
-        private ObservableCollection<string> knownGameExecutables = new();
-
-        [ObservableProperty]
-        private string newGameExecutableName = string.Empty;
-
-        [ObservableProperty]
-        private string? selectedKnownGame;
-
         public ICommand SaveSettingsCommand { get; }
         public ICommand ResetToDefaultsCommand { get; }
         public ICommand ExportSettingsCommand { get; }
         public ICommand ImportSettingsCommand { get; }
         public ICommand TestNotificationCommand { get; }
         public ICommand RefreshPowerPlansCommand { get; }
-        public ICommand AddKnownGameCommand { get; }
-        public ICommand RemoveKnownGameCommand { get; }
 
         public SettingsViewModel(
             ILogger<SettingsViewModel> logger,
@@ -61,7 +50,6 @@ namespace ThreadPilot.ViewModels
             INotificationService notificationService,
             IAutostartService autostartService,
             IPowerPlanService powerPlanService,
-            IGameBoostService gameBoostService,
             IProcessMonitorManagerService processMonitorManagerService,
             IEnhancedLoggingService? enhancedLoggingService = null)
             : base(logger, enhancedLoggingService)
@@ -70,7 +58,6 @@ namespace ThreadPilot.ViewModels
             _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
             _autostartService = autostartService ?? throw new ArgumentNullException(nameof(autostartService));
             _powerPlanService = powerPlanService ?? throw new ArgumentNullException(nameof(powerPlanService));
-            _gameBoostService = gameBoostService ?? throw new ArgumentNullException(nameof(gameBoostService));
             _processMonitorManagerService = processMonitorManagerService ?? throw new ArgumentNullException(nameof(processMonitorManagerService));
 
             // Initialize with current settings
@@ -83,36 +70,31 @@ namespace ThreadPilot.ViewModels
             ImportSettingsCommand = new AsyncRelayCommand(ImportSettingsAsync);
             TestNotificationCommand = new AsyncRelayCommand(TestNotificationAsync);
             RefreshPowerPlansCommand = new AsyncRelayCommand(RefreshPowerPlansAsync);
-            AddKnownGameCommand = new AsyncRelayCommand(AddKnownGameAsync, CanAddKnownGame);
-            RemoveKnownGameCommand = new AsyncRelayCommand(RemoveKnownGameAsync, CanRemoveKnownGame);
 
             // Subscribe to property changes to track unsaved changes
             Settings.PropertyChanged += OnSettingsPropertyChanged;
-            PropertyChanged += OnViewModelPropertyChanged;
+
+            // Keep viewmodel in sync with persisted settings
+            _settingsService.SettingsChanged += OnSettingsServiceSettingsChanged;
+
+            // Ensure we load the latest persisted settings on startup
+            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () => await RefreshSettingsAsync());
 
             // Initialize data - marshal to UI thread to prevent cross-thread access exceptions
             _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () => await RefreshPowerPlansAsync());
-            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () => await LoadKnownGamesAsync());
 
             Logger.LogInformation("Settings ViewModel initialized");
         }
 
         private void OnSettingsPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
+            if (_isSyncingFromService)
+            {
+                return;
+            }
+
             HasUnsavedChanges = true;
             StatusMessage = "Settings have been modified";
-        }
-
-        private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == nameof(NewGameExecutableName))
-            {
-                ((AsyncRelayCommand)AddKnownGameCommand).NotifyCanExecuteChanged();
-            }
-            else if (e.PropertyName == nameof(SelectedKnownGame))
-            {
-                ((AsyncRelayCommand)RemoveKnownGameCommand).NotifyCanExecuteChanged();
-            }
         }
 
         private async Task SaveSettingsAsync()
@@ -283,7 +265,9 @@ namespace ThreadPilot.ViewModels
                 StatusMessage = "Loading settings...";
 
                 await _settingsService.LoadSettingsAsync();
+                _isSyncingFromService = true;
                 Settings.CopyFrom(_settingsService.Settings);
+                _isSyncingFromService = false;
 
                 HasUnsavedChanges = false;
                 StatusMessage = "Settings loaded";
@@ -297,6 +281,7 @@ namespace ThreadPilot.ViewModels
             }
             finally
             {
+                _isSyncingFromService = false;
                 IsLoading = false;
             }
         }
@@ -307,6 +292,25 @@ namespace ThreadPilot.ViewModels
         public bool CanClose()
         {
             return !HasUnsavedChanges;
+        }
+
+        private void OnSettingsServiceSettingsChanged(object? sender, ApplicationSettingsChangedEventArgs e)
+        {
+            // Marshal to UI thread to avoid cross-thread property change issues
+            System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                _isSyncingFromService = true;
+                try
+                {
+                    Settings.CopyFrom(e.NewSettings);
+                    HasUnsavedChanges = false;
+                    StatusMessage = "Settings synchronized";
+                }
+                finally
+                {
+                    _isSyncingFromService = false;
+                }
+            });
         }
 
         private async Task RefreshPowerPlansAsync()
@@ -327,105 +331,6 @@ namespace ThreadPilot.ViewModels
             {
                 Logger.LogError(ex, "Failed to refresh power plans");
             }
-        }
-
-        /// <summary>
-        /// Loads known games from the GameBoostService
-        /// </summary>
-        private async Task LoadKnownGamesAsync()
-        {
-            try
-            {
-                var knownGames = _gameBoostService.GetKnownGameExecutables();
-                KnownGameExecutables.Clear();
-                foreach (var game in knownGames)
-                {
-                    KnownGameExecutables.Add(game);
-                }
-                Logger.LogDebug("Loaded {Count} known games", KnownGameExecutables.Count);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Error loading known games");
-            }
-        }
-
-        /// <summary>
-        /// Adds a new known game executable
-        /// </summary>
-        private async Task AddKnownGameAsync()
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(NewGameExecutableName))
-                    return;
-
-                var success = await _gameBoostService.AddKnownGameAsync(NewGameExecutableName);
-                if (success)
-                {
-                    await LoadKnownGamesAsync();
-                    var gameName = NewGameExecutableName;
-                    NewGameExecutableName = string.Empty;
-                    StatusMessage = $"Added game: {gameName}";
-                    Logger.LogInformation("Added known game: {GameName}", gameName);
-                }
-                else
-                {
-                    StatusMessage = "Game already exists or invalid name";
-                }
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"Error adding game: {ex.Message}";
-                Logger.LogError(ex, "Error adding known game: {GameName}", NewGameExecutableName);
-            }
-        }
-
-        /// <summary>
-        /// Removes the selected known game executable
-        /// </summary>
-        private async Task RemoveKnownGameAsync()
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(SelectedKnownGame))
-                    return;
-
-                var gameName = SelectedKnownGame;
-                var success = await _gameBoostService.RemoveKnownGameAsync(gameName);
-                if (success)
-                {
-                    await LoadKnownGamesAsync();
-                    SelectedKnownGame = null;
-                    StatusMessage = $"Removed game: {gameName}";
-                    Logger.LogInformation("Removed known game: {GameName}", gameName);
-                }
-                else
-                {
-                    StatusMessage = "Game not found";
-                }
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"Error removing game: {ex.Message}";
-                Logger.LogError(ex, "Error removing known game: {GameName}", SelectedKnownGame);
-            }
-        }
-
-        /// <summary>
-        /// Determines if a new game can be added
-        /// </summary>
-        private bool CanAddKnownGame()
-        {
-            return !string.IsNullOrWhiteSpace(NewGameExecutableName);
-        }
-
-        /// <summary>
-        /// Determines if the selected game can be removed
-        /// </summary>
-        private bool CanRemoveKnownGame()
-        {
-            return !string.IsNullOrWhiteSpace(SelectedKnownGame);
         }
     }
 }

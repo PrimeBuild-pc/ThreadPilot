@@ -67,7 +67,7 @@ namespace ThreadPilot.Services
             return await RestartWithElevation();
         }
 
-        public async Task<bool> RestartWithElevation(string[] arguments = null)
+        public async Task<bool> RestartWithElevation(string[]? arguments = null)
         {
             try
             {

@@ -20,12 +20,27 @@ namespace ThreadPilot.ViewModels
         private readonly IPowerPlanService _powerPlanService;
         private readonly IProcessService _processService;
         private readonly IProcessMonitorManagerService _monitorManagerService;
+        private readonly ICoreMaskService _coreMaskService;
 
         [ObservableProperty]
         private ObservableCollection<ProcessPowerPlanAssociation> associations = new();
 
         [ObservableProperty]
         private ObservableCollection<PowerPlanModel> availablePowerPlans = new();
+
+        [ObservableProperty]
+        private ObservableCollection<CoreMask> availableCoreMasks = new();
+
+        [ObservableProperty]
+        private ObservableCollection<string> availablePriorities = new()
+        {
+            "Idle",
+            "BelowNormal",
+            "Normal",
+            "AboveNormal",
+            "High",
+            "RealTime"
+        };
 
         [ObservableProperty]
         private ObservableCollection<ProcessModel> runningProcesses = new();
@@ -35,6 +50,12 @@ namespace ThreadPilot.ViewModels
 
         [ObservableProperty]
         private PowerPlanModel? selectedPowerPlan;
+
+        [ObservableProperty]
+        private CoreMask? selectedCoreMask;
+
+        [ObservableProperty]
+        private string? selectedProcessPriority;
 
         [ObservableProperty]
         private ProcessModel? selectedProcess;
@@ -97,6 +118,7 @@ namespace ThreadPilot.ViewModels
             IPowerPlanService powerPlanService,
             IProcessService processService,
             IProcessMonitorManagerService monitorManagerService,
+            ICoreMaskService coreMaskService,
             IEnhancedLoggingService? enhancedLoggingService = null)
             : base(logger, enhancedLoggingService)
         {
@@ -104,6 +126,7 @@ namespace ThreadPilot.ViewModels
             _powerPlanService = powerPlanService ?? throw new ArgumentNullException(nameof(powerPlanService));
             _processService = processService ?? throw new ArgumentNullException(nameof(processService));
             _monitorManagerService = monitorManagerService ?? throw new ArgumentNullException(nameof(monitorManagerService));
+            _coreMaskService = coreMaskService ?? throw new ArgumentNullException(nameof(coreMaskService));
 
             // Subscribe to events
             _associationService.ConfigurationChanged += OnConfigurationChanged;
@@ -134,6 +157,10 @@ namespace ThreadPilot.ViewModels
                 // Load power plans
                 var powerPlans = await _powerPlanService.GetPowerPlansAsync();
                 AvailablePowerPlans = powerPlans;
+
+                // Load core masks
+                await _coreMaskService.InitializeAsync();
+                AvailableCoreMasks = _coreMaskService.AvailableMasks;
 
                 // Load running processes
                 var processes = await _processService.GetProcessesAsync();
@@ -178,6 +205,9 @@ namespace ThreadPilot.ViewModels
                     ExecutablePath = NewExecutablePath.Trim(),
                     PowerPlanGuid = SelectedPowerPlan.Guid,
                     PowerPlanName = SelectedPowerPlan.Name,
+                    CoreMaskId = SelectedCoreMask?.Id,
+                    CoreMaskName = SelectedCoreMask?.Name,
+                    ProcessPriority = SelectedProcessPriority,
                     MatchByPath = MatchByPath,
                     Priority = Priority,
                     Description = Description.Trim(),
@@ -191,6 +221,8 @@ namespace ThreadPilot.ViewModels
                     NewExecutableName = string.Empty;
                     NewExecutablePath = string.Empty;
                     SelectedPowerPlan = null;
+                    SelectedCoreMask = null;
+                    SelectedProcessPriority = null;
                     MatchByPath = false;
                     Priority = 0;
                     Description = string.Empty;

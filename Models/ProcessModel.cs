@@ -21,7 +21,7 @@ namespace ThreadPilot.Models
                     {
                         ProcessorAffinity = (long)value.ProcessorAffinity;
                         Priority = value.PriorityClass;
-                        MemoryUsage = value.WorkingSet64;
+                        MemoryUsage = value.PrivateMemorySize64;
                         ExecutablePath = value.MainModule?.FileName ?? string.Empty;
                         MainWindowHandle = value.MainWindowHandle;
                         MainWindowTitle = value.MainWindowTitle ?? string.Empty;
@@ -70,5 +70,14 @@ namespace ThreadPilot.Models
 
         [ObservableProperty]
         private bool isRegistryPriorityEnabled;
+
+        /// <summary>
+        /// Forces PropertyChanged notification for ProcessorAffinity.
+        /// Used to update DataGrid binding when affinity changes from background thread.
+        /// </summary>
+        public void ForceNotifyProcessorAffinityChanged()
+        {
+            OnPropertyChanged(nameof(ProcessorAffinity));
+        }
     }
 }

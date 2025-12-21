@@ -36,23 +36,6 @@ namespace ThreadPilot.Models
         }
 
         /// <summary>
-        /// Game boost related events
-        /// </summary>
-        public static class GameBoost
-        {
-            public const string Activated = "GameBoostActivated";
-            public const string Deactivated = "GameBoostDeactivated";
-            public const string GameDetected = "GameDetected";
-            public const string GameAdded = "GameAdded";
-            public const string GameRemoved = "GameRemoved";
-            public const string PrioritySet = "ProcessPrioritySet";
-            public const string PriorityFailed = "ProcessPriorityFailed";
-            public const string AffinitySet = "CpuAffinitySet";
-            public const string AffinityFailed = "CpuAffinityFailed";
-            public const string ConfigurationChanged = "GameBoostConfigurationChanged";
-        }
-
-        /// <summary>
         /// User action events
         /// </summary>
         public static class UserActions
@@ -123,7 +106,6 @@ namespace ThreadPilot.Models
     {
         public const string PowerPlan = "PowerPlan";
         public const string ProcessMonitoring = "ProcessMonitoring";
-        public const string GameBoost = "GameBoost";
         public const string UserAction = "UserAction";
         public const string System = "System";
         public const string Error = "Error";

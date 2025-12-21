@@ -1,6 +1,13 @@
 # Escludi tutti gli .exe
 *.exe
 
+# Escludi la sorgente CPUSetSetter upstream
+/CPUSetSetter-main/
+
+# Escludi Markdown tranne il README principale
+*.md
+!README.md
+
 # Escludi directory di build comuni
 /bin/
 /obj/

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -27,7 +27,6 @@ namespace ThreadPilot
         private readonly INotificationService _notificationService;
         private readonly IProcessMonitorService _processMonitorService;
         private readonly IProcessMonitorManagerService _processMonitorManagerService;
-        private readonly IGameBoostService _gameBoostService;
         private readonly SettingsViewModel _settingsViewModel;
         private readonly MainWindowViewModel _mainWindowViewModel;
         private readonly SystemTweaksViewModel _systemTweaksViewModel;
@@ -56,7 +55,6 @@ namespace ThreadPilot
             INotificationService notificationService,
             IProcessMonitorService processMonitorService,
             IProcessMonitorManagerService processMonitorManagerService,
-            IGameBoostService gameBoostService,
             SettingsViewModel settingsViewModel,
             MainWindowViewModel mainWindowViewModel,
             SystemTweaksViewModel systemTweaksViewModel,
@@ -85,7 +83,6 @@ namespace ThreadPilot
                 _notificationService = notificationService;
                 _processMonitorService = processMonitorService;
                 _processMonitorManagerService = processMonitorManagerService;
-                _gameBoostService = gameBoostService;
                 _settingsViewModel = settingsViewModel;
                 _mainWindowViewModel = mainWindowViewModel;
                 _systemTweaksViewModel = systemTweaksViewModel;
@@ -102,8 +99,6 @@ namespace ThreadPilot
                 // Start async initialization - marshal to UI thread to prevent cross-thread access exceptions
                 _ = Dispatcher.InvokeAsync(async () => await InitializeApplicationAsync());
                 System.Diagnostics.Debug.WriteLine("Async initialization started");
-
-                SetupTestKeyBinding();
                 System.Diagnostics.Debug.WriteLine("MainWindow constructor completed successfully");
             }
             catch (Exception ex)
@@ -125,60 +120,36 @@ namespace ThreadPilot
 
             // Set DataContext for the system tweaks view
             SystemTweaksView.DataContext = _systemTweaksViewModel;
-        }
 
-        private void LogDebug(string message)
-        {
-            var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
-            var logMessage = $"[{timestamp}] {message}";
-
-            try
-            {
-                System.Diagnostics.Debug.WriteLine(logMessage);
-                File.AppendAllText(_debugLogPath, logMessage + Environment.NewLine);
-            }
-            catch
-            {
-                // Ignore file write errors
-            }
+            // Set DataContext for the settings view
+            SettingsView.DataContext = _settingsViewModel;
         }
 
         private void InitializeLoadingOverlay()
         {
             try
             {
-                // Load application icon for loading overlay
-                var iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ico.ico");
-                if (File.Exists(iconPath))
+                var loadingOverlay = FindName("LoadingOverlay") as Grid;
+                var mainContent = FindName("MainContent") as Grid;
+
+                // Ensure overlay is visible while initialization runs
+                if (loadingOverlay != null)
                 {
-                    var loadingIcon = FindName("LoadingIcon") as System.Windows.Controls.Image;
-                    if (loadingIcon != null)
-                    {
-                        var bitmap = new BitmapImage();
-                        bitmap.BeginInit();
-                        bitmap.UriSource = new Uri(iconPath, UriKind.Absolute);
-                        bitmap.DecodePixelWidth = 64;
-                        bitmap.EndInit();
-                        loadingIcon.Source = bitmap;
-                    }
+                    loadingOverlay.Visibility = Visibility.Visible;
                 }
 
-                // Start spinner animation
+                // Start spinner animation if available
                 var spinnerAnimation = FindResource("SpinnerAnimation") as Storyboard;
                 spinnerAnimation?.Begin();
 
-                // Start fade-in animation
-                var fadeInAnimation = FindResource("FadeInAnimation") as Storyboard;
-                fadeInAnimation?.Begin();
-
-                // Set up initialization timeout (15 seconds)
-                _initializationTimeoutTimer = new System.Timers.Timer(15000);
+                // Set a timeout guard for initialization
+                _initializationTimeoutTimer = new System.Timers.Timer(15000)
+                {
+                    AutoReset = false
+                };
                 _initializationTimeoutTimer.Elapsed += OnInitializationTimeout;
-                _initializationTimeoutTimer.AutoReset = false;
                 _initializationTimeoutTimer.Start();
 
-                // Block main content interaction
-                var mainContent = FindName("MainContent") as Grid;
                 if (mainContent != null)
                 {
                     mainContent.IsHitTestVisible = false;
@@ -485,10 +456,6 @@ namespace ThreadPilot
             InitializeNotifications();
             LogDebug("Notifications initialized successfully");
 
-            LogDebug("About to initialize game boost...");
-            InitializeGameBoost();
-            LogDebug("Game boost initialized successfully");
-
             LogDebug("About to initialize monitoring...");
             await InitializeMonitoringAsync();
             LogDebug("Monitoring initialized successfully");
@@ -618,9 +585,114 @@ namespace ThreadPilot
             Activate();
         }
 
-        private void OnExitRequested(object? sender, EventArgs e)
+        private async void OnExitRequested(object? sender, EventArgs e)
         {
-            System.Windows.Application.Current.Shutdown();
+            await PerformGracefulShutdownAsync();
+        }
+
+        /// <summary>
+        /// Performs graceful shutdown with cleanup of all applied optimizations
+        /// Similar to CPU Set Setter's ExitAppGracefully
+        /// </summary>
+        private async Task PerformGracefulShutdownAsync()
+        {
+            try
+            {
+                LogDebug("Starting graceful shutdown...");
+
+                // 1. Stop monitoring services
+                try
+                {
+                    LogDebug("Stopping process monitoring manager...");
+                    await _processMonitorManagerService.StopAsync();
+                    LogDebug("Process monitoring manager stopped");
+                }
+                catch (Exception ex)
+                {
+                    LogDebug($"Error stopping process monitoring: {ex.Message}");
+                }
+
+                // 2. Cleanup applied CPU masks (like CPU Set Setter's ClearAllProcessMasksNoSave)
+                if (_settingsService.Settings.ClearMasksOnClose)
+                {
+                    try
+                    {
+                        LogDebug("Clearing all applied CPU masks...");
+                        var processService = _serviceProvider.GetRequiredService<IProcessService>();
+                        await processService.ClearAllAppliedMasksAsync();
+                        LogDebug("CPU masks cleared");
+                    }
+                    catch (Exception ex)
+                    {
+                        LogDebug($"Error clearing CPU masks: {ex.Message}");
+                    }
+
+                    // Also reset priorities
+                    try
+                    {
+                        LogDebug("Resetting all process priorities...");
+                        var processService = _serviceProvider.GetRequiredService<IProcessService>();
+                        await processService.ResetAllProcessPrioritiesAsync();
+                        LogDebug("Process priorities reset");
+                    }
+                    catch (Exception ex)
+                    {
+                        LogDebug($"Error resetting priorities: {ex.Message}");
+                    }
+                }
+
+                // 3. Restore default power plan if configured
+                if (_settingsService.Settings.RestoreDefaultPowerPlanOnExit && 
+                    !string.IsNullOrEmpty(_settingsService.Settings.DefaultPowerPlanId))
+                {
+                    try
+                    {
+                        LogDebug("Restoring default power plan...");
+                        var powerPlanService = _serviceProvider.GetRequiredService<IPowerPlanService>();
+                        await powerPlanService.SetActivePowerPlanByGuidAsync(_settingsService.Settings.DefaultPowerPlanId);
+                        LogDebug("Default power plan restored");
+                    }
+                    catch (Exception ex)
+                    {
+                        LogDebug($"Error restoring power plan: {ex.Message}");
+                    }
+                }
+
+                // 4. Save settings
+                try
+                {
+                    LogDebug("Saving settings...");
+                    await _settingsService.SaveSettingsAsync();
+                    LogDebug("Settings saved");
+                }
+                catch (Exception ex)
+                {
+                    LogDebug($"Error saving settings: {ex.Message}");
+                }
+
+                // 5. Dispose tray service
+                try
+                {
+                    LogDebug("Disposing system tray...");
+                    _systemTrayService.Dispose();
+                    LogDebug("System tray disposed");
+                }
+                catch (Exception ex)
+                {
+                    LogDebug($"Error disposing tray: {ex.Message}");
+                }
+
+                LogDebug("Graceful shutdown completed");
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"Error during graceful shutdown: {ex.Message}");
+            }
+            finally
+            {
+                // Ensure application exits
+                System.Windows.Application.Current.Shutdown();
+            }
         }
 
         private async void OnMonitoringToggleRequested(object? sender, MonitoringToggleEventArgs e)
@@ -822,11 +894,6 @@ namespace ThreadPilot
                     await _notificationService.ShowNotificationAsync("Keyboard Shortcut", "Toggle monitoring shortcut activated");
                     break;
 
-                case ShortcutActions.GameBoostToggle:
-                    // Toggle game boost mode - implementation can be added later
-                    await _notificationService.ShowNotificationAsync("Keyboard Shortcut", "Game Boost toggle shortcut activated");
-                    break;
-
                 case ShortcutActions.PowerPlanHighPerformance:
                     // Switch to high performance power plan - implementation can be added later
                     await _notificationService.ShowNotificationAsync("Keyboard Shortcut", "High Performance power plan shortcut activated");
@@ -883,7 +950,8 @@ namespace ThreadPilot
                 {
                     profileNames = Directory.GetFiles(profilesDirectory, "*.json")
                         .Select(Path.GetFileNameWithoutExtension)
-                        .ToList();
+                        .Where(name => !string.IsNullOrWhiteSpace(name))
+                        .ToList()!;
                 }
 
                 _systemTrayService.UpdateProfiles(profileNames);
@@ -983,28 +1051,6 @@ namespace ThreadPilot
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to initialize notifications: {ex.Message}");
-            }
-        }
-
-        private void InitializeGameBoost()
-        {
-            try
-            {
-                // Subscribe to Game Boost events
-                _gameBoostService.GameBoostActivated += OnGameBoostActivated;
-                _gameBoostService.GameBoostDeactivated += OnGameBoostDeactivated;
-
-                // Update initial Game Boost status in tray and main window
-                _systemTrayService.UpdateGameBoostStatus(
-                    _gameBoostService.IsGameBoostActive,
-                    _gameBoostService.CurrentGameProcess?.Name);
-                _mainWindowViewModel.UpdateGameBoostStatus(
-                    _gameBoostService.IsGameBoostActive,
-                    _gameBoostService.CurrentGameProcess?.Name);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Failed to initialize Game Boost: {ex.Message}");
             }
         }
 
@@ -1109,46 +1155,6 @@ namespace ThreadPilot
             }
         }
 
-        private void OnGameBoostActivated(object? sender, GameBoostActivatedEventArgs e)
-        {
-            try
-            {
-                // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
-                Dispatcher.InvokeAsync(() =>
-                {
-                    // Update tray with Game Boost active status
-                    _systemTrayService.UpdateGameBoostStatus(true, e.GameProcess.Name);
-
-                    // Update main window status
-                    _mainWindowViewModel.UpdateGameBoostStatus(true, e.GameProcess.Name);
-                });
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error handling Game Boost activation: {ex.Message}");
-            }
-        }
-
-        private void OnGameBoostDeactivated(object? sender, GameBoostDeactivatedEventArgs e)
-        {
-            try
-            {
-                // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
-                Dispatcher.InvokeAsync(() =>
-                {
-                    // Update tray with Game Boost inactive status
-                    _systemTrayService.UpdateGameBoostStatus(false);
-
-                    // Update main window status
-                    _mainWindowViewModel.UpdateGameBoostStatus(false);
-                });
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error handling Game Boost deactivation: {ex.Message}");
-            }
-        }
-
         protected override void OnStateChanged(EventArgs e)
         {
             try
@@ -1181,6 +1187,20 @@ namespace ThreadPilot
             base.OnStateChanged(e);
         }
 
+        private void LogDebug(string message)
+        {
+            try
+            {
+                var timestampedMessage = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [MainWindow] {message}";
+                System.Diagnostics.Debug.WriteLine(timestampedMessage);
+                File.AppendAllText(_debugLogPath, timestampedMessage + Environment.NewLine);
+            }
+            catch
+            {
+                // Swallow logging failures to avoid impacting runtime behavior
+            }
+        }
+
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
             // Check settings for close behavior
@@ -1194,59 +1214,6 @@ namespace ThreadPilot
             {
                 // Actually close the application
                 System.Windows.Application.Current.Shutdown();
-            }
-        }
-
-        private void SetupTestKeyBinding()
-        {
-            // Add Ctrl+Shift+T to run Game Boost tests
-            var testCommand = new RoutedCommand();
-            var testBinding = new KeyBinding(testCommand, Key.T, ModifierKeys.Control | ModifierKeys.Shift);
-            InputBindings.Add(testBinding);
-            CommandBindings.Add(new CommandBinding(testCommand, RunGameBoostTests));
-        }
-
-        private async void RunGameBoostTests(object sender, ExecutedRoutedEventArgs e)
-        {
-            try
-            {
-                _mainWindowViewModel.StatusMessage = "Running Game Boost integration tests...";
-
-                // Validate service configuration first
-                if (!ThreadPilot.Tests.TestRunner.ValidateServiceConfiguration(_serviceProvider))
-                {
-                    _mainWindowViewModel.StatusMessage = "Service configuration validation failed";
-                    await _notificationService.ShowErrorNotificationAsync(
-                        "Test Failed",
-                        "Service configuration validation failed");
-                    return;
-                }
-
-                // Run integration tests
-                var testResult = await ThreadPilot.Tests.TestRunner.RunGameBoostTestsAsync(_serviceProvider);
-
-                if (testResult)
-                {
-                    _mainWindowViewModel.StatusMessage = "All Game Boost tests passed successfully!";
-                    await _notificationService.ShowSuccessNotificationAsync(
-                        "Tests Passed",
-                        "All Game Boost integration tests completed successfully");
-                }
-                else
-                {
-                    _mainWindowViewModel.StatusMessage = "Game Boost tests failed - check logs for details";
-                    await _notificationService.ShowErrorNotificationAsync(
-                        "Tests Failed",
-                        "One or more Game Boost tests failed - check logs for details");
-                }
-            }
-            catch (Exception ex)
-            {
-                _mainWindowViewModel.StatusMessage = $"Test execution failed: {ex.Message}";
-                await _notificationService.ShowErrorNotificationAsync(
-                    "Test Error",
-                    "Failed to execute Game Boost tests",
-                    ex);
             }
         }
 

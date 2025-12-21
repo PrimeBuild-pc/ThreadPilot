@@ -15,7 +15,6 @@ namespace ThreadPilot.Services
         System,
         Process,
         Performance,
-        GameBoost,
         PowerPlan,
         Error,
         Warning,

@@ -111,10 +111,7 @@
                     <DataGridTextColumn Header="Memory (MB)"
                                       Binding="{Binding MemoryUsage, Converter={StaticResource BytesToMbConverter}}"
                                       Width="80"/>
-                    <DataGridTextColumn Header="Priority" Binding="{Binding Priority}" Width="80"/>
-                    <DataGridTextColumn Header="Affinity"
-                                      Binding="{Binding ProcessorAffinity, Converter={StaticResource AffinityMaskConverter}}"
-                                      Width="*"/>
+                    <DataGridTextColumn Header="Priority" Binding="{Binding Priority}" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>
 
@@ -154,6 +151,7 @@
                 
             <Grid Grid.Row="0">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
@@ -197,8 +195,36 @@
                     </StackPanel>
                 </GroupBox>
 
+                <!-- Core Mask Selection -->
+                <GroupBox Grid.Column="1" Header="Core Mask" Margin="5,0,5,0">
+                    <StackPanel Margin="5">
+                        <TextBlock Text="Quick apply a predefined core mask:" FontSize="10" Margin="0,0,0,5" Foreground="Gray"/>
+                        <ComboBox ItemsSource="{Binding AvailableCoreMasks}"
+                                  SelectedItem="{Binding SelectedCoreMask, Mode=TwoWay}"
+                                  Margin="0,0,0,5">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                                        <TextBlock Text="{Binding SelectedCoreCount, StringFormat='({0} cores)'}"
+                                                   FontSize="10" Foreground="Gray" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <Button Content="➕ Create Custom Mask"
+                                Command="{Binding CreateCustomMaskCommand}"
+                                Padding="8,5"
+                                Margin="0,0,0,5"
+                                ToolTip="Open Core Masks tab to create a new custom mask"/>
+                        <TextBlock FontSize="9" Foreground="DarkGreen" TextWrapping="Wrap">
+                            <Run Text="ℹ️ Selecting a mask applies it immediately to the selected process."/>
+                        </TextBlock>
+                    </StackPanel>
+                </GroupBox>
+
                 <!-- Power Plan Selection -->
-                <GroupBox Grid.Column="1" Header="Power Plan" Margin="5,0,5,0">
+                <GroupBox Grid.Column="2" Header="Power Plan" Margin="5,0,5,0">
                     <StackPanel Margin="5">
                         <ComboBox ItemsSource="{Binding PowerPlans}"
                                   SelectedItem="{Binding SelectedPowerPlan}"
@@ -212,12 +238,9 @@
                 </GroupBox>
 
                 <!-- Advanced CPU Affinity Controls -->
-                <GroupBox Grid.Column="2" Header="Advanced CPU Affinity" Margin="5,0,0,0">
+                <GroupBox Grid.Column="3" Header="Advanced CPU Affinity" Margin="5,0,0,0">
                     <Grid Margin="5">
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
@@ -234,67 +257,8 @@
                                        ToolTip="Shows whether Hyper-Threading (Intel) or SMT (AMD) is present and active on this system"/>
                         </StackPanel>
 
-                        <!-- Quick Selection Presets -->
-                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,5">
-                            <Button Command="{Binding SelectAllCoresCommand}"
-                                    Content="All"
-                                    Padding="5,2"
-                                    Margin="0,0,3,0"
-                                    FontSize="10"
-                                    ToolTip="Select all CPU cores"/>
-                            <Button Command="{Binding SelectPhysicalCoresOnlyCommand}"
-                                    Content="Physical"
-                                    Padding="5,2"
-                                    Margin="0,0,3,0"
-                                    FontSize="10"
-                                    IsEnabled="{Binding CpuTopology.HasHyperThreading}"
-                                    ToolTip="Select only physical cores (no hyperthreading)"/>
-                            <Button Command="{Binding SelectPerformanceCoresCommand}"
-                                    Content="P-Cores"
-                                    Padding="5,2"
-                                    Margin="0,0,3,0"
-                                    FontSize="10"
-                                    IsEnabled="{Binding CpuTopology.HasIntelHybrid}"
-                                    ToolTip="Select performance cores (Intel hybrid architecture)"/>
-                            <Button Command="{Binding SelectEfficiencyCoresCommand}"
-                                    Content="E-Cores"
-                                    Padding="5,2"
-                                    Margin="0,0,3,0"
-                                    FontSize="10"
-                                    IsEnabled="{Binding CpuTopology.HasIntelHybrid}"
-                                    ToolTip="Select efficiency cores (Intel hybrid architecture)"/>
-                            <Button Command="{Binding ClearCoreSelectionCommand}"
-                                    Content="Clear"
-                                    Padding="5,2"
-                                    Margin="0,0,3,0"
-                                    FontSize="10"
-                                    ToolTip="Clear all core selections"/>
-                        </StackPanel>
-
-                        <!-- CCD Selection (AMD) -->
-                        <ItemsControl Grid.Row="2"
-                                      ItemsSource="{Binding CpuTopology.AvailableCcds}"
-                                      Visibility="{Binding CpuTopology.HasAmdCcd, Converter={StaticResource BoolToVisibilityConverter}}"
-                                      Margin="0,0,0,5">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Button Command="{Binding DataContext.SelectCcdCoresCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            CommandParameter="{Binding}"
-                                            Content="{Binding StringFormat=CCD {0}}"
-                                            Padding="5,2"
-                                            Margin="0,0,3,0"
-                                            FontSize="10"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
                         <!-- CPU Core Grid -->
-                        <ScrollViewer Grid.Row="3"
+                        <ScrollViewer Grid.Row="1"
                                       MaxHeight="120"
                                       VerticalScrollBarVisibility="Auto"
                                       HorizontalScrollBarVisibility="Disabled"
@@ -308,11 +272,13 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <CheckBox Content="{Binding Label}"
-                                                  IsChecked="{Binding IsSelected}"
+                                                  IsChecked="{Binding IsSelected, Mode=OneWay}"
+                                                  IsHitTestVisible="False"
+                                                  Focusable="False"
                                                   IsEnabled="{Binding IsEnabled}"
                                                   Margin="2"
                                                   FontSize="9"
-                                                  ToolTip="{Binding StringFormat=Core {0}: {1}}">
+                                                  ToolTip="Read-only - modify cores in Core Mask tab">
                                             <CheckBox.Foreground>
                                                 <MultiBinding Converter="{StaticResource CoreTypeToColorConverter}">
                                                     <Binding Path="CoreType"/>
@@ -324,50 +290,65 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </ScrollViewer>
-
-                        <!-- Action Buttons -->
-                        <StackPanel Grid.Row="4" Orientation="Horizontal">
-                            <Button Command="{Binding SetAffinityCommand}"
-                                    Content="Set Affinity"
-                                    Padding="10,5"
-                                    Margin="0,0,5,0"
-                                    ToolTip="Apply the selected CPU core affinity to the process"/>
-                            <Button Command="{Binding QuickApplyAffinityAndPowerPlanCommand}"
-                                    Content="Quick Apply"
-                                    Padding="10,5"
-                                    Margin="0,0,5,0"
-                                    ToolTip="Apply both CPU affinity and power plan"/>
-                            <Button Command="{Binding RefreshTopologyCommand}"
-                                    Content="Refresh"
-                                    Padding="5,5"
-                                    FontSize="10"
-                                    ToolTip="Refresh CPU topology detection"/>
-                        </StackPanel>
                     </Grid>
                 </GroupBox>
             </Grid>
 
-            <!-- Profile Management -->
-            <GroupBox Grid.Row="1" Header="Profile Management" Margin="0,10,0,0">
+            <!-- Profile Management & Process Association -->
+            <GroupBox Grid.Row="1" Header="Profile Management &amp; Process Association" Margin="0,10,0,0">
                 <Grid Margin="5">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                    <TextBox Grid.Column="0" 
-                            Text="{Binding ProfileName, UpdateSourceTrigger=PropertyChanged}"
-                            Margin="0,0,10,0"/>
-                    <Button Grid.Column="1" 
-                            Command="{Binding SaveProfileCommand}"
-                            Content="Save Profile"
-                            Padding="10,5"
-                            Margin="0,0,5,0"/>
-                    <Button Grid.Column="2" 
-                            Command="{Binding LoadProfileCommand}"
-                            Content="Load Profile"
-                            Padding="10,5"/>
+                    <!-- Profile Management Row -->
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox Grid.Column="0"
+                                Text="{Binding ProfileName, UpdateSourceTrigger=PropertyChanged}"
+                                Margin="0,0,10,0"
+                                ToolTip="Enter a profile name to save current settings"/>
+                        <Button Grid.Column="1"
+                                Command="{Binding SaveProfileCommand}"
+                                Content="Save Profile"
+                                Padding="10,5"
+                                Margin="0,0,5,0"
+                                ToolTip="Save current CPU affinity and priority as a reusable profile"/>
+                        <Button Grid.Column="2"
+                                Command="{Binding LoadProfileCommand}"
+                                Content="Load Profile"
+                                Padding="10,5"
+                                ToolTip="Load a previously saved profile"/>
+                    </Grid>
+
+                    <!-- Process Association Row -->
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   VerticalAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   Foreground="Gray"
+                                   FontSize="11">
+                            <Run Text="💾 Save current settings (CPU mask, priority, power plan) as an automatic association for this process"/>
+                        </TextBlock>
+                        <Button Grid.Column="1"
+                                Command="{Binding SaveCurrentAsAssociationCommand}"
+                                Content="💾 Save as Association"
+                                Padding="12,6"
+                                FontWeight="SemiBold"
+                                IsEnabled="{Binding SelectedProcess, Converter={StaticResource BoolToVisibilityConverter}}"
+                                ToolTip="Save current process settings as an association. These settings will be automatically applied when this process starts in the future."/>
+                    </Grid>
                 </Grid>
             </GroupBox>
         </Grid>

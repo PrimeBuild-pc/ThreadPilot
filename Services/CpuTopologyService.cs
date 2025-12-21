@@ -39,7 +39,7 @@ namespace ThreadPilot.Services
         public async Task<CpuTopologyModel> DetectTopologyAsync()
         {
             // PERFORMANCE IMPROVEMENT: Check cache first to avoid expensive WMI calls
-            if (_cache.TryGetValue(TOPOLOGY_CACHE_KEY, out CpuTopologyModel? cachedTopology))
+            if (_cache.TryGetValue(TOPOLOGY_CACHE_KEY, out CpuTopologyModel? cachedTopology) && cachedTopology != null)
             {
                 _logger.LogInformation("CPU topology retrieved from cache");
                 _currentTopology = cachedTopology;
@@ -173,8 +173,9 @@ namespace ThreadPilot.Services
                 for (int logicalId = 0; logicalId < logicalCoreCount; logicalId++)
                 {
                     var physicalId = logicalId / threadsPerCore;
-                    var isHyperThreaded = hasHyperThreading && (logicalId % threadsPerCore != 0);
-                    var htSibling = hasHyperThreading ? (logicalId % threadsPerCore == 0 ? logicalId + 1 : logicalId - 1) : (int?)null;
+                    var threadIndexOnCore = logicalId % threadsPerCore;
+                    var isHyperThreaded = hasHyperThreading && (threadIndexOnCore != 0);
+                    var htSibling = hasHyperThreading ? (threadIndexOnCore == 0 ? logicalId + 1 : logicalId - 1) : (int?)null;
 
                     var core = new CpuCoreModel
                     {
@@ -182,6 +183,7 @@ namespace ThreadPilot.Services
                         PhysicalCoreId = physicalId,
                         SocketId = 0, // Will be refined later
                         Label = $"Core {logicalId}",
+                        LogicalProcessorName = $"Core{physicalId}_T{threadIndexOnCore}", // T0 = physical, T1+ = SMT
                         IsEnabled = true,
                         IsHyperThreaded = isHyperThreaded,
                         HyperThreadSibling = htSibling
@@ -212,9 +214,10 @@ namespace ThreadPilot.Services
                     SocketId = 0,
                     CoreType = CpuCoreType.Standard,
                     Label = $"Core {i}",
+                    LogicalProcessorName = $"Core{i}_T0", // All physical cores in basic fallback (no HT detected)
                     IsEnabled = true
                 };
-                
+
                 topology.LogicalCores.Add(core);
             }
         }
@@ -377,6 +380,14 @@ namespace ThreadPilot.Services
             return topology;
         }
 
+        private long CalculateFullAffinityMask(int logicalCoreCount)
+        {
+            // For 64 logical cores the mask needs all bits set; shifting by 64 would wrap to zero
+            return logicalCoreCount >= 63
+                ? -1L
+                : (1L << logicalCoreCount) - 1;
+        }
+
         public IEnumerable<CpuAffinityPreset> GetAffinityPresets()
         {
             if (_currentTopology == null)
@@ -389,7 +400,7 @@ namespace ThreadPilot.Services
             {
                 Name = "All Cores",
                 Description = $"All {_currentTopology.TotalLogicalCores} logical cores",
-                AffinityMask = (1L << _currentTopology.TotalLogicalCores) - 1,
+                AffinityMask = CalculateFullAffinityMask(_currentTopology.TotalLogicalCores),
                 IsAvailable = true
             });
 
@@ -398,7 +409,7 @@ namespace ThreadPilot.Services
             {
                 presets.Add(new CpuAffinityPreset
                 {
-                    Name = "Physical Cores Only",
+                    Name = "No HT",
                     Description = $"All {_currentTopology.TotalPhysicalCores} physical cores (no HyperThreading)",
                     AffinityMask = _currentTopology.GetPhysicalCoresAffinityMask(),
                     IsAvailable = true
@@ -451,8 +462,8 @@ namespace ThreadPilot.Services
         public bool IsAffinityMaskValid(long affinityMask)
         {
             if (_currentTopology == null) return false;
-            
-            var maxMask = (1L << _currentTopology.TotalLogicalCores) - 1;
+
+            var maxMask = CalculateFullAffinityMask(_currentTopology.TotalLogicalCores);
             return affinityMask > 0 && affinityMask <= maxMask;
         }
 

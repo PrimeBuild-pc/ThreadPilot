@@ -28,16 +28,57 @@ namespace ThreadPilot.Helpers
         {
             if (value is long mask)
             {
-                var cores = new System.Text.StringBuilder();
-                for (int i = 0; i < 16; i++)
+                var selectedIndices = new System.Collections.Generic.List<int>();
+                // Dynamic core count based on system, limited to 64 (long is 64-bit)
+                int maxCores = Math.Min(64, Environment.ProcessorCount);
+
+                for (int i = 0; i < maxCores; i++)
                 {
                     if ((mask & (1L << i)) != 0)
                     {
-                        if (cores.Length > 0) cores.Append(", ");
-                        cores.Append(i);
+                        selectedIndices.Add(i);
                     }
                 }
-                return $"CPU {cores}";
+
+                if (selectedIndices.Count == 0)
+                    return "None";
+
+                // Build the display string
+                var indicesStr = string.Join(", ", selectedIndices);
+                int selectedCount = selectedIndices.Count;
+
+                // Detect if this is likely physical cores only (every other logical processor)
+                // This heuristic checks if selected indices are evenly spaced by 2 (e.g., 0,2,4,6,8...)
+                bool isProbablyPhysicalCoresOnly = false;
+                if (selectedCount > 1 && selectedCount <= maxCores / 2)
+                {
+                    isProbablyPhysicalCoresOnly = true;
+                    for (int i = 1; i < selectedIndices.Count; i++)
+                    {
+                        if (selectedIndices[i] - selectedIndices[i - 1] != 2)
+                        {
+                            isProbablyPhysicalCoresOnly = false;
+                            break;
+                        }
+                    }
+                }
+
+                // Choose terminology based on what's selected
+                string label;
+                if (selectedCount == maxCores)
+                {
+                    label = $"All threads (0-{maxCores - 1})";
+                }
+                else if (isProbablyPhysicalCoresOnly && selectedIndices[0] == 0)
+                {
+                    label = $"Physical cores ({indicesStr}) - {selectedCount} cores";
+                }
+                else
+                {
+                    label = $"Threads ({indicesStr}) - {selectedCount} threads";
+                }
+
+                return label;
             }
             return "Unknown";
         }

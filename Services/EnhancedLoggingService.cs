@@ -110,19 +110,6 @@ namespace ThreadPilot.Services
             await LogStructuredEventAsync("ProcessMonitoring", message, LogLevel.Information, properties);
         }
 
-        public async Task LogGameBoostEventAsync(string eventType, string gameName, string details)
-        {
-            var properties = new Dictionary<string, object>
-            {
-                ["EventType"] = eventType,
-                ["GameName"] = gameName,
-                ["Details"] = details
-            };
-
-            var message = $"Game Boost {eventType}: {gameName} - {details}";
-            await LogStructuredEventAsync("GameBoost", message, LogLevel.Information, properties);
-        }
-
         public async Task LogUserActionAsync(string action, string details, string? context = null)
         {
             var properties = new Dictionary<string, object>
@@ -532,7 +519,7 @@ namespace ThreadPilot.Services
             _loggingService._correlationId.Value = null;
 
             // Use the public logging method instead of accessing private _logger
-            _loggingService.LogSystemEventAsync("OperationCompleted",
+            _ = _loggingService.LogSystemEventAsync("OperationCompleted",
                 $"Operation {_operationName} completed with correlation {_correlationId} in {duration.TotalMilliseconds}ms");
 
             _disposed = true;

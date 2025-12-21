@@ -12,7 +12,6 @@ This document defines the UI standards, terminology, and style guidelines for th
   - 🔧 Process Management
   - ⚡ Power Plans  
   - 🔗 Process Associations
-  - 📋 Activity Logs
   - ⚙️ Settings
 
 ### Status Bar

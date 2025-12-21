@@ -60,9 +60,6 @@ namespace ThreadPilot.Services
             // Service factory for advanced service management
             services.AddSingleton<IServiceFactory, ServiceFactory>();
 
-            // Data access services
-            services.AddSingleton<ThreadPilot.Data.IDataAccessService, ThreadPilot.Data.DataAccessService>();
-
             return services;
         }
 
@@ -77,6 +74,14 @@ namespace ThreadPilot.Services
             services.AddSingleton<IConditionalProfileService, ConditionalProfileService>();
             services.AddSingleton<IPowerPlanService, PowerPlanService>();
             services.AddSingleton<ICpuTopologyService, CpuTopologyService>();
+            
+            // CoreMaskService needs IServiceProvider for checking profile references
+            services.AddSingleton<ICoreMaskService>(sp => 
+            {
+                var logger = sp.GetRequiredService<ILogger<CoreMaskService>>();
+                var cpuTopologyService = sp.GetRequiredService<ICpuTopologyService>();
+                return new CoreMaskService(logger, cpuTopologyService, sp);
+            });
 
             return services;
         }
@@ -90,12 +95,8 @@ namespace ThreadPilot.Services
             services.AddSingleton<IProcessMonitorService, ProcessMonitorService>();
             services.AddSingleton<IProcessPowerPlanAssociationService, ProcessPowerPlanAssociationService>();
             services.AddSingleton<IProcessMonitorManagerService, ProcessMonitorManagerService>();
-            
-            // Game boost and optimization services
-            services.AddSingleton<IGameBoostService, GameBoostService>();
 
-            // Game detection and performance monitoring services
-            services.AddSingleton<IGameDetectionService, GameDetectionService>();
+            // Performance monitoring services
             services.AddSingleton<IPerformanceMonitoringService, PerformanceMonitoringService>();
 
             return services;
@@ -116,6 +117,9 @@ namespace ThreadPilot.Services
             
             // System integration services
             services.AddSingleton<IAutostartService, AutostartService>();
+
+            // System optimization services
+            services.AddSingleton<IGameModeService, GameModeService>();
 
             // Security and elevation services
             services.AddSingleton<ISecurityService, SecurityService>();
@@ -140,10 +144,10 @@ namespace ThreadPilot.Services
 
             // ViewModels - ProcessViewModel as Singleton to share state across views, others as Transient
             services.AddSingleton<ProcessViewModel>();
+            services.AddSingleton<MasksViewModel>();
             services.AddTransient<PowerPlanViewModel>();
             services.AddTransient<ProcessPowerPlanAssociationViewModel>();
             services.AddTransient<SettingsViewModel>();
-            services.AddTransient<LogViewerViewModel>();
             services.AddTransient<MainWindowViewModel>();
             services.AddTransient<PerformanceViewModel>();
             services.AddTransient<SystemTweaksViewModel>();

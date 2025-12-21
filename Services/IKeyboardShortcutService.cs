@@ -121,7 +121,6 @@ namespace ThreadPilot.Services
         public const string PowerPlanBalanced = "PowerPlanBalanced";
         public const string PowerPlanHighPerformance = "PowerPlanHighPerformance";
         public const string PowerPlanPowerSaver = "PowerPlanPowerSaver";
-        public const string GameBoostToggle = "GameBoostToggle";
         public const string RefreshProcessList = "RefreshProcessList";
         public const string OpenSettings = "OpenSettings";
         public const string OpenTweaks = "OpenTweaks";

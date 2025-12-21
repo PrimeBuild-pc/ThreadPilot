@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,9 +18,10 @@ namespace ThreadPilot.Services
         private readonly IProcessMonitorService _processMonitorService;
         private readonly IProcessPowerPlanAssociationService _associationService;
         private readonly IPowerPlanService _powerPlanService;
-        private readonly IGameBoostService _gameBoostService;
         private readonly INotificationService _notificationService;
         private readonly IApplicationSettingsService _settingsService;
+        private readonly IProcessService _processService;
+        private readonly ICoreMaskService _coreMaskService;
         private readonly ILogger<ProcessMonitorManagerService> _logger;
         private readonly IEnhancedLoggingService _enhancedLogger;
         private readonly object _lockObject = new();
@@ -44,18 +46,20 @@ namespace ThreadPilot.Services
             IProcessMonitorService processMonitorService,
             IProcessPowerPlanAssociationService associationService,
             IPowerPlanService powerPlanService,
-            IGameBoostService gameBoostService,
             INotificationService notificationService,
             IApplicationSettingsService settingsService,
+            IProcessService processService,
+            ICoreMaskService coreMaskService,
             ILogger<ProcessMonitorManagerService> logger,
             IEnhancedLoggingService enhancedLogger)
         {
             _processMonitorService = processMonitorService ?? throw new ArgumentNullException(nameof(processMonitorService));
             _associationService = associationService ?? throw new ArgumentNullException(nameof(associationService));
             _powerPlanService = powerPlanService ?? throw new ArgumentNullException(nameof(powerPlanService));
-            _gameBoostService = gameBoostService ?? throw new ArgumentNullException(nameof(gameBoostService));
             _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
             _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+            _processService = processService ?? throw new ArgumentNullException(nameof(processService));
+            _coreMaskService = coreMaskService ?? throw new ArgumentNullException(nameof(coreMaskService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _enhancedLogger = enhancedLogger ?? throw new ArgumentNullException(nameof(enhancedLogger));
 
@@ -243,9 +247,6 @@ namespace ThreadPilot.Services
                 await _enhancedLogger.LogProcessMonitoringEventAsync(LogEventTypes.ProcessMonitoring.Started,
                     e.Process.Name, e.Process.ProcessId, "Process started and detected by monitoring");
 
-                // Check for Game Boost first
-                await CheckForGameBoostAsync(e.Process);
-
                 var association = _configuration.FindMatchingAssociation(e.Process);
                 if (association != null)
                 {
@@ -254,6 +255,9 @@ namespace ThreadPilot.Services
                     await _enhancedLogger.LogProcessMonitoringEventAsync(LogEventTypes.ProcessMonitoring.AssociationTriggered,
                         e.Process.Name, e.Process.ProcessId,
                         $"Process matched association for power plan: {association.PowerPlanName}");
+
+                    // Apply CPU affinity mask if configured
+                    await ApplyCoreMaskAndPriorityAsync(e.Process, association);
 
                     // Schedule power plan change with delay if configured
                     if (_configuration.PowerPlanChangeDelayMs > 0)
@@ -287,9 +291,6 @@ namespace ThreadPilot.Services
 
             try
             {
-                // Check if this was a game process and deactivate Game Boost if needed
-                await CheckForGameBoostDeactivationAsync(e.Process);
-
                 if (_runningAssociatedProcesses.TryRemove(e.Process.ProcessId, out var removedProcess))
                 {
                     // Check if there are any other associated processes still running
@@ -427,56 +428,123 @@ namespace ThreadPilot.Services
             }
         }
 
-        /// <summary>
-        /// Checks if a process is a game and activates Game Boost if enabled
-        /// </summary>
-        private async Task CheckForGameBoostAsync(ProcessModel process)
-        {
-            try
-            {
-                if (_gameBoostService.IsGameProcess(process))
-                {
-                    _logger.LogInformation("Game detected: {ProcessName} (PID: {ProcessId})", process.Name, process.ProcessId);
-
-                    // Activate Game Boost if enabled and not already active for this process
-                    if (!_gameBoostService.IsGameBoostActive || _gameBoostService.CurrentGameProcess?.ProcessId != process.ProcessId)
-                    {
-                        await _gameBoostService.ActivateGameBoostAsync(process);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error checking for Game Boost activation for process {ProcessName}", process.Name);
-            }
-        }
-
-        /// <summary>
-        /// Checks if a stopped process was the current game and deactivates Game Boost if needed
-        /// </summary>
-        private async Task CheckForGameBoostDeactivationAsync(ProcessModel process)
-        {
-            try
-            {
-                if (_gameBoostService.IsGameBoostActive &&
-                    _gameBoostService.CurrentGameProcess?.ProcessId == process.ProcessId)
-                {
-                    _logger.LogInformation("Game process stopped: {ProcessName} (PID: {ProcessId})", process.Name, process.ProcessId);
-                    await _gameBoostService.DeactivateGameBoostAsync();
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error checking for Game Boost deactivation for process {ProcessName}", process.Name);
-            }
-        }
-
         public void UpdateSettings()
         {
             // Update the process monitor service with new settings
             _processMonitorService.UpdateSettings();
 
             _logger.LogDebug("ProcessMonitorManagerService settings updated");
+        }
+
+        /// <summary>
+        /// Applies CPU affinity mask and process priority from association when a process starts
+        /// Based on CPUSetSetter's ProgramRule.SetMask pattern
+        /// </summary>
+        private async Task ApplyCoreMaskAndPriorityAsync(ProcessModel process, ProcessPowerPlanAssociation association)
+        {
+            try
+            {
+                // Apply CPU affinity mask if configured
+                if (!string.IsNullOrEmpty(association.CoreMaskId))
+                {
+                    var coreMask = _coreMaskService.AvailableMasks.FirstOrDefault(m => m.Id == association.CoreMaskId);
+                    if (coreMask != null)
+                    {
+                        try
+                        {
+                            var affinity = coreMask.ToProcessorAffinity();
+                            if (affinity > 0)
+                            {
+                                await _processService.SetProcessorAffinity(process, affinity);
+
+                                _logger.LogInformation(
+                                    "Applied CPU mask '{MaskName}' (affinity: 0x{Affinity:X}) to process {ProcessName} (PID: {ProcessId})",
+                                    coreMask.Name, affinity, process.Name, process.ProcessId);
+
+                                await _enhancedLogger.LogProcessMonitoringEventAsync(
+                                    LogEventTypes.ProcessMonitoring.AssociationTriggered,
+                                    process.Name, process.ProcessId,
+                                    $"CPU mask '{coreMask.Name}' applied automatically from association");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex,
+                                "Failed to apply CPU mask '{MaskName}' to process {ProcessName} (PID: {ProcessId})",
+                                coreMask.Name, process.Name, process.ProcessId);
+
+                            await _enhancedLogger.LogErrorAsync(ex, "ProcessMonitorManagerService.ApplyCoreMaskAndPriorityAsync",
+                                new Dictionary<string, object>
+                                {
+                                    ["ProcessName"] = process.Name,
+                                    ["ProcessId"] = process.ProcessId,
+                                    ["MaskName"] = coreMask.Name
+                                });
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Core mask ID '{CoreMaskId}' not found for process {ProcessName}, skipping affinity application",
+                            association.CoreMaskId, process.Name);
+                    }
+                }
+
+                // Apply process priority if configured
+                if (!string.IsNullOrEmpty(association.ProcessPriority))
+                {
+                    if (Enum.TryParse<ProcessPriorityClass>(association.ProcessPriority, out var priority))
+                    {
+                        try
+                        {
+                            await _processService.SetProcessPriority(process, priority);
+
+                            _logger.LogInformation(
+                                "Applied priority '{Priority}' to process {ProcessName} (PID: {ProcessId})",
+                                priority, process.Name, process.ProcessId);
+
+                            await _enhancedLogger.LogProcessMonitoringEventAsync(
+                                LogEventTypes.ProcessMonitoring.AssociationTriggered,
+                                process.Name, process.ProcessId,
+                                $"Priority '{priority}' applied automatically from association");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex,
+                                "Failed to apply priority '{Priority}' to process {ProcessName} (PID: {ProcessId})",
+                                priority, process.Name, process.ProcessId);
+
+                            await _enhancedLogger.LogErrorAsync(ex, "ProcessMonitorManagerService.ApplyCoreMaskAndPriorityAsync",
+                                new Dictionary<string, object>
+                                {
+                                    ["ProcessName"] = process.Name,
+                                    ["ProcessId"] = process.ProcessId,
+                                    ["Priority"] = priority.ToString()
+                                });
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Invalid priority value '{Priority}' for process {ProcessName}, skipping priority application",
+                            association.ProcessPriority, process.Name);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Error applying CPU mask and priority to process {ProcessName} (PID: {ProcessId})",
+                    process.Name, process.ProcessId);
+
+                await _enhancedLogger.LogErrorAsync(ex, "ProcessMonitorManagerService.ApplyCoreMaskAndPriorityAsync",
+                    new Dictionary<string, object>
+                    {
+                        ["ProcessName"] = process.Name,
+                        ["ProcessId"] = process.ProcessId,
+                        ["AssociationId"] = association.Id
+                    });
+            }
         }
 
         public void Dispose()

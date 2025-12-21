@@ -19,6 +19,7 @@ namespace ThreadPilot.Models
         public bool IsHyperThreaded { get; set; }
         public int? HyperThreadSibling { get; set; }
         public string Label { get; set; } = string.Empty;
+        public string LogicalProcessorName { get; set; } = string.Empty; // e.g., "Core0_T0", "Core0_T1" (T0 = physical, T1+ = SMT)
 
         [ObservableProperty]
         private bool isEnabled = true;

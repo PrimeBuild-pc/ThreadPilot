@@ -46,11 +46,6 @@ namespace ThreadPilot.Services
         Task LogProcessMonitoringEventAsync(string eventType, string processName, int processId, string details);
 
         /// <summary>
-        /// Log a game boost event
-        /// </summary>
-        Task LogGameBoostEventAsync(string eventType, string gameName, string details);
-
-        /// <summary>
         /// Log a user action
         /// </summary>
         Task LogUserActionAsync(string action, string details, string? context = null);

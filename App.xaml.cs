@@ -1,18 +1,20 @@
-﻿using System.Windows;
-using System.Windows.Threading;
+﻿using System;
+using System.Linq;
+using System.Security.Principal;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ThreadPilot.Services;
 using ThreadPilot.ViewModels;
-using System;
-using System.Linq;
-using System.Security.Principal;
 
 namespace ThreadPilot
 {
     public partial class App : System.Windows.Application
     {
+        private Mutex? _singleInstanceMutex;
         public IServiceProvider ServiceProvider { get; private set; }
 
         public App()
@@ -32,6 +34,21 @@ namespace ThreadPilot
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            // Enforce single-instance: bail out if another instance is already running
+            bool createdNew;
+            _singleInstanceMutex = new Mutex(initiallyOwned: true, name: "Global\\ThreadPilot_SingleInstance", createdNew: out createdNew);
+            if (!createdNew)
+            {
+                System.Windows.MessageBox.Show(
+                    "ThreadPilot è già in esecuzione.",
+                    "Istanza già aperta",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+
+                Shutdown();
+                return;
+            }
+
             // Set up global exception handlers first
             AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
             DispatcherUnhandledException += OnDispatcherUnhandledException;
@@ -108,9 +125,14 @@ namespace ThreadPilot
 
                 // Show the window with explicit visibility settings
                 mainWindow.Visibility = Visibility.Visible;
+                mainWindow.WindowState = (startMinimized || isAutostart)
+                    ? WindowState.Minimized
+                    : WindowState.Normal;
                 mainWindow.Show();
-                mainWindow.WindowState = WindowState.Normal;
-                mainWindow.Activate();
+                if (mainWindow.WindowState != WindowState.Minimized)
+                {
+                    mainWindow.Activate();
+                }
 
                 logger.LogInformation("Main window displayed successfully");
             }
@@ -127,6 +149,25 @@ namespace ThreadPilot
                 Shutdown(1);
                 return;
             }
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            if (_singleInstanceMutex != null)
+            {
+                try
+                {
+                    _singleInstanceMutex.ReleaseMutex();
+                }
+                catch
+                {
+                    // Ignore; we just want to clean up quietly
+                }
+                _singleInstanceMutex.Dispose();
+                _singleInstanceMutex = null;
+            }
+
+            base.OnExit(e);
         }
 
         [System.Runtime.InteropServices.DllImport("kernel32.dll")]

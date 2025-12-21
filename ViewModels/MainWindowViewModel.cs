@@ -11,20 +11,10 @@ namespace ThreadPilot
 {
     public partial class MainWindowViewModel : BaseViewModel
     {
-        private readonly IGameBoostService? _gameBoostService;
         private readonly IProcessMonitorManagerService? _processMonitorManagerService;
         private readonly INotificationService? _notificationService;
         private readonly IElevationService? _elevationService;
         private readonly ISecurityService? _securityService;
-
-        [ObservableProperty]
-        private bool isGameBoostActive = false;
-
-        [ObservableProperty]
-        private string gameBoostStatusText = "Game Boost: Inactive";
-
-        [ObservableProperty]
-        private string? currentGameName = null;
 
         [ObservableProperty]
         private bool isProcessMonitoringActive = false;
@@ -44,14 +34,12 @@ namespace ThreadPilot
         public MainWindowViewModel(
             ILogger<MainWindowViewModel> logger,
             IEnhancedLoggingService? enhancedLoggingService = null,
-            IGameBoostService? gameBoostService = null,
             IProcessMonitorManagerService? processMonitorManagerService = null,
             INotificationService? notificationService = null,
             IElevationService? elevationService = null,
             ISecurityService? securityService = null)
             : base(logger, enhancedLoggingService)
         {
-            _gameBoostService = gameBoostService;
             _processMonitorManagerService = processMonitorManagerService;
             _notificationService = notificationService;
             _elevationService = elevationService;
@@ -63,12 +51,6 @@ namespace ThreadPilot
             await ExecuteAsync(async () =>
             {
                 // Subscribe to service events
-                if (_gameBoostService != null)
-                {
-                    _gameBoostService.GameBoostActivated += OnGameBoostActivated;
-                    _gameBoostService.GameBoostDeactivated += OnGameBoostDeactivated;
-                }
-
                 if (_processMonitorManagerService != null)
                 {
                     _processMonitorManagerService.ServiceStatusChanged += OnServiceStatusChanged;
@@ -103,26 +85,6 @@ namespace ThreadPilot
         }
 
         [RelayCommand]
-        private async Task ToggleGameBoostAsync()
-        {
-            if (_gameBoostService == null) return;
-
-            await ExecuteAsync(async () =>
-            {
-                if (IsGameBoostActive)
-                {
-                    await _gameBoostService.DeactivateGameBoostAsync();
-                    await LogUserActionAsync("GameBoost", "Deactivated game boost", "User action");
-                }
-                else
-                {
-                    // Game boost is typically activated automatically, but we can force it
-                    await LogUserActionAsync("GameBoost", "Attempted to activate game boost", "User action");
-                }
-            }, "Toggling game boost...");
-        }
-
-        [RelayCommand]
         private async Task RequestElevationAsync()
         {
             if (_elevationService == null) return;
@@ -145,14 +107,6 @@ namespace ThreadPilot
         {
             try
             {
-                // Update game boost status
-                if (_gameBoostService != null)
-                {
-                    IsGameBoostActive = _gameBoostService.IsGameBoostActive;
-                    CurrentGameName = _gameBoostService.CurrentGameProcess?.Name;
-                    UpdateGameBoostStatusText();
-                }
-
                 // Update process monitoring status
                 if (_processMonitorManagerService != null)
                 {
@@ -186,67 +140,6 @@ namespace ThreadPilot
             ShowElevationPrompt = !IsRunningAsAdministrator;
         }
 
-        private void UpdateGameBoostStatusText()
-        {
-            if (IsGameBoostActive && !string.IsNullOrEmpty(CurrentGameName))
-            {
-                GameBoostStatusText = $"Game Boost: Active ({CurrentGameName})";
-            }
-            else if (IsGameBoostActive)
-            {
-                GameBoostStatusText = "Game Boost: Active";
-            }
-            else
-            {
-                GameBoostStatusText = "Game Boost: Inactive";
-            }
-        }
-
-        public void UpdateGameBoostStatus(bool isActive, string? gameName = null)
-        {
-            IsGameBoostActive = isActive;
-            CurrentGameName = gameName;
-            UpdateGameBoostStatusText();
-        }
-
-        private async void OnGameBoostActivated(object? sender, GameBoostActivatedEventArgs e)
-        {
-            // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
-            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                IsGameBoostActive = true;
-                CurrentGameName = e.GameProcess?.Name;
-                UpdateGameBoostStatusText();
-            });
-
-            if (_notificationService != null)
-            {
-                await _notificationService.ShowNotificationAsync(
-                    "Game Boost Activated",
-                    $"Performance boost enabled for {CurrentGameName}",
-                    NotificationType.Information);
-            }
-        }
-
-        private async void OnGameBoostDeactivated(object? sender, GameBoostDeactivatedEventArgs e)
-        {
-            // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
-            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                IsGameBoostActive = false;
-                CurrentGameName = null;
-                UpdateGameBoostStatusText();
-            });
-
-            if (_notificationService != null)
-            {
-                await _notificationService.ShowNotificationAsync(
-                    "Game Boost Deactivated",
-                    "Performance boost disabled",
-                    NotificationType.Information);
-            }
-        }
-
         private void OnServiceStatusChanged(object? sender, ServiceStatusEventArgs e)
         {
             // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
@@ -265,13 +158,6 @@ namespace ThreadPilot
 
         protected override void OnDispose()
         {
-            // Unsubscribe from events
-            if (_gameBoostService != null)
-            {
-                _gameBoostService.GameBoostActivated -= OnGameBoostActivated;
-                _gameBoostService.GameBoostDeactivated -= OnGameBoostDeactivated;
-            }
-
             if (_processMonitorManagerService != null)
             {
                 _processMonitorManagerService.ServiceStatusChanged -= OnServiceStatusChanged;

@@ -59,5 +59,47 @@ namespace ThreadPilot.Services
         /// Sets registry-based priority enforcement for a process
         /// </summary>
         Task<bool> SetRegistryPriorityAsync(ProcessModel process, bool enable, ProcessPriorityClass priority);
+
+        /// <summary>
+        /// Enables or disables the use of Windows CPU Sets for affinity management
+        /// </summary>
+        void SetUseCpuSets(bool useCpuSets);
+
+        /// <summary>
+        /// Gets whether CPU Sets are currently enabled for affinity management
+        /// </summary>
+        bool GetUseCpuSets();
+
+        /// <summary>
+        /// Clears the CPU Set for a process (allows it to run on all cores)
+        /// </summary>
+        Task<bool> ClearProcessCpuSetAsync(ProcessModel process);
+
+        /// <summary>
+        /// Clears all applied CPU masks/affinities from all tracked processes
+        /// Processes return to using all cores (used on application exit)
+        /// </summary>
+        Task ClearAllAppliedMasksAsync();
+
+        /// <summary>
+        /// Resets all modified process priorities to Normal
+        /// (used on application exit)
+        /// </summary>
+        Task ResetAllProcessPrioritiesAsync();
+
+        /// <summary>
+        /// Registers that a mask has been applied to a process (for tracking)
+        /// </summary>
+        void TrackAppliedMask(int processId, string maskId);
+
+        /// <summary>
+        /// Registers that a priority has been changed for a process (for tracking)
+        /// </summary>
+        void TrackPriorityChange(int processId, ProcessPriorityClass originalPriority);
+
+        /// <summary>
+        /// Unregisters tracking when a process exits
+        /// </summary>
+        void UntrackProcess(int processId);
     }
 }

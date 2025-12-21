@@ -1,11 +1,11 @@
-using System.Windows.Controls;
+using WpfUserControl = System.Windows.Controls.UserControl;
 
 namespace ThreadPilot.Views
 {
     /// <summary>
     /// Interaction logic for ProcessPowerPlanAssociationView.xaml
     /// </summary>
-    public partial class ProcessPowerPlanAssociationView : System.Windows.Controls.UserControl
+    public partial class ProcessPowerPlanAssociationView : WpfUserControl
     {
         public ProcessPowerPlanAssociationView()
         {

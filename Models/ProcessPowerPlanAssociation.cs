@@ -25,6 +25,24 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private string powerPlanName = string.Empty;
 
+        /// <summary>
+        /// Core mask ID to apply to this process (optional)
+        /// </summary>
+        [ObservableProperty]
+        private string? coreMaskId = null;
+
+        /// <summary>
+        /// Core mask name for display (optional)
+        /// </summary>
+        [ObservableProperty]
+        private string? coreMaskName = null;
+
+        /// <summary>
+        /// Process priority to apply (optional)
+        /// </summary>
+        [ObservableProperty]
+        private string? processPriority = null;
+
         [ObservableProperty]
         private bool isEnabled = true;
 
@@ -116,6 +134,9 @@ namespace ThreadPilot.Models
                 ExecutablePath = this.ExecutablePath,
                 PowerPlanGuid = this.PowerPlanGuid,
                 PowerPlanName = this.PowerPlanName,
+                CoreMaskId = this.CoreMaskId,
+                CoreMaskName = this.CoreMaskName,
+                ProcessPriority = this.ProcessPriority,
                 IsEnabled = this.IsEnabled,
                 Description = this.Description,
                 MatchByPath = this.MatchByPath,

@@ -18,7 +18,6 @@ namespace ThreadPilot.Services
         private ToolStripMenuItem? _quickApplyMenuItem;
         private ToolStripMenuItem? _selectedProcessMenuItem;
         private ToolStripMenuItem? _monitoringToggleMenuItem;
-        private ToolStripMenuItem? _gameBoostStatusMenuItem;
         private ToolStripMenuItem? _settingsMenuItem;
         private ToolStripMenuItem? _powerPlansMenuItem;
         private ToolStripMenuItem? _profilesMenuItem;
@@ -27,8 +26,6 @@ namespace ThreadPilot.Services
         private ApplicationSettingsModel _settings;
         private bool _isMonitoring = true;
         private bool _isWmiAvailable = true;
-        private bool _isGameBoostActive = false;
-        private string? _currentGameName = null;
         private TrayIconState _currentIconState = TrayIconState.Normal;
         private bool _disposed = false;
 
@@ -67,47 +64,8 @@ namespace ThreadPilot.Services
                     Visible = false
                 };
 
-                // Try to load the same icon as the main application
-                try
-                {
-                    // First try to use the application's icon (same as main window)
-                    var app = System.Windows.Application.Current;
-                    if (app?.MainWindow?.Icon != null)
-                    {
-                        // Convert WPF ImageSource to System.Drawing.Icon
-                        var iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ico.ico");
-                        if (File.Exists(iconPath))
-                        {
-                            _notifyIcon.Icon = new Icon(iconPath);
-                            _logger.LogInformation("Loaded custom tray icon from ico.ico file (same as main application)");
-                        }
-                        else
-                        {
-                            _logger.LogWarning("ico.ico file not found, using default system icon");
-                            _notifyIcon.Icon = SystemIcons.Application;
-                        }
-                    }
-                    else
-                    {
-                        // Fallback to file-based loading
-                        var iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ico.ico");
-                        if (File.Exists(iconPath))
-                        {
-                            _notifyIcon.Icon = new Icon(iconPath);
-                            _logger.LogInformation("Loaded custom tray icon from ico.ico file");
-                        }
-                        else
-                        {
-                            _logger.LogWarning("ico.ico file not found at {IconPath}, using default system icon", iconPath);
-                            _notifyIcon.Icon = SystemIcons.Application;
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to load custom tray icon, using default");
-                    _notifyIcon.Icon = SystemIcons.Application;
-                }
+                // Load the tray icon (custom path if enabled, otherwise bundled ico.ico)
+                TryLoadTrayIcon();
 
                 // Create context menu
                 CreateContextMenu();
@@ -182,14 +140,6 @@ namespace ThreadPilot.Services
             _monitoringToggleMenuItem = new ToolStripMenuItem("🔍 Disable Process Monitoring");
             _monitoringToggleMenuItem.Click += OnMonitoringToggleClick;
             _contextMenu.Items.Add(_monitoringToggleMenuItem);
-
-            // Game Boost status (disabled, for display only)
-            _gameBoostStatusMenuItem = new ToolStripMenuItem("🎮 Game Boost: Inactive")
-            {
-                Enabled = false,
-                Font = new Font(_contextMenu.Font, FontStyle.Italic)
-            };
-            _contextMenu.Items.Add(_gameBoostStatusMenuItem);
 
             // Separator
             _contextMenu.Items.Add(new ToolStripSeparator());
@@ -346,36 +296,7 @@ namespace ThreadPilot.Services
 
             _currentIconState = state;
 
-            try
-            {
-                // Always use the custom ThreadPilot icon regardless of state
-                // The tooltip will indicate the current state instead
-                var iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ico.ico");
-                if (File.Exists(iconPath))
-                {
-                    // Use custom icon for all states
-                    _notifyIcon.Icon = new Icon(iconPath);
-                    _logger.LogDebug("Tray icon updated to state: {State} using custom icon", state);
-                }
-                else
-                {
-                    // Fallback to system icons if custom icon is not available
-                    _notifyIcon.Icon = state switch
-                    {
-                        TrayIconState.Normal => SystemIcons.Application,
-                        TrayIconState.Monitoring => SystemIcons.Information,
-                        TrayIconState.Error => SystemIcons.Error,
-                        TrayIconState.Disabled => SystemIcons.Warning,
-                        TrayIconState.GameBoost => SystemIcons.Shield,
-                        _ => SystemIcons.Application
-                    };
-                    _logger.LogDebug("Tray icon updated to state: {State} using system icon (custom icon not found)", state);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to update tray icon");
-            }
+            TryLoadTrayIcon(state);
         }
 
         public void ShowTrayNotification(string title, string message, NotificationType type = NotificationType.Information, int timeoutMs = 3000)
@@ -409,49 +330,10 @@ namespace ThreadPilot.Services
             if (_notifyIcon != null)
             {
                 _notifyIcon.Visible = settings.ShowTrayIcon;
+                TryLoadTrayIcon(_currentIconState);
             }
 
             _logger.LogDebug("Tray service settings updated");
-        }
-
-        public void UpdateGameBoostStatus(bool isGameBoostActive, string? currentGameName = null)
-        {
-            _isGameBoostActive = isGameBoostActive;
-            _currentGameName = currentGameName;
-
-            // Update Game Boost status menu item
-            if (_gameBoostStatusMenuItem != null)
-            {
-                if (isGameBoostActive && !string.IsNullOrEmpty(currentGameName))
-                {
-                    _gameBoostStatusMenuItem.Text = $"Game Boost: Active ({currentGameName})";
-                    _gameBoostStatusMenuItem.Font = new Font(_gameBoostStatusMenuItem.Font, FontStyle.Bold);
-                }
-                else if (isGameBoostActive)
-                {
-                    _gameBoostStatusMenuItem.Text = "Game Boost: Active";
-                    _gameBoostStatusMenuItem.Font = new Font(_gameBoostStatusMenuItem.Font, FontStyle.Bold);
-                }
-                else
-                {
-                    _gameBoostStatusMenuItem.Text = "Game Boost: Inactive";
-                    _gameBoostStatusMenuItem.Font = new Font(_gameBoostStatusMenuItem.Font, FontStyle.Italic);
-                }
-            }
-
-            // Update tray icon state - Game Boost takes priority over monitoring state
-            var iconState = !_isWmiAvailable ? TrayIconState.Error :
-                           isGameBoostActive ? TrayIconState.GameBoost :
-                           _isMonitoring ? TrayIconState.Monitoring : TrayIconState.Disabled;
-            UpdateTrayIcon(iconState);
-
-            // Update tooltip
-            var status = !_isWmiAvailable ? "WMI Error" :
-                        isGameBoostActive ? $"Game Boost Active{(!string.IsNullOrEmpty(currentGameName) ? $" - {currentGameName}" : "")}" :
-                        _isMonitoring ? "Monitoring Active" : "Monitoring Disabled";
-            UpdateTooltip($"ThreadPilot - {status}");
-
-            _logger.LogDebug("Game Boost status updated: Active={IsActive}, Game={GameName}", isGameBoostActive, currentGameName);
         }
 
         public void UpdatePowerPlans(IEnumerable<PowerPlanModel> powerPlans, PowerPlanModel? activePlan)
@@ -560,6 +442,49 @@ namespace ThreadPilot.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error disposing system tray service");
+            }
+        }
+
+        private string? ResolveTrayIconPath()
+        {
+            if (_settings.UseCustomTrayIcon && !string.IsNullOrWhiteSpace(_settings.CustomTrayIconPath) && File.Exists(_settings.CustomTrayIconPath))
+            {
+                return _settings.CustomTrayIconPath;
+            }
+
+            var bundledIcon = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ico.ico");
+            return File.Exists(bundledIcon) ? bundledIcon : null;
+        }
+
+        private void TryLoadTrayIcon(TrayIconState? stateOverride = null)
+        {
+            if (_notifyIcon == null) return;
+
+            try
+            {
+                var iconPath = ResolveTrayIconPath();
+                if (iconPath != null)
+                {
+                    _notifyIcon.Icon = new Icon(iconPath);
+                    _logger.LogDebug("Tray icon set from {IconPath}", iconPath);
+                    return;
+                }
+
+                // Fallback to system icons if no custom/bundled icon is available
+                var state = stateOverride ?? _currentIconState;
+                _notifyIcon.Icon = state switch
+                {
+                    TrayIconState.Normal => SystemIcons.Application,
+                    TrayIconState.Monitoring => SystemIcons.Information,
+                    TrayIconState.Error => SystemIcons.Error,
+                    TrayIconState.Disabled => SystemIcons.Warning,
+                    _ => SystemIcons.Application
+                };
+                _logger.LogDebug("Tray icon set to system icon for state {State}", state);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load tray icon");
             }
         }
     }

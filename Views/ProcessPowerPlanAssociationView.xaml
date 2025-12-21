@@ -59,20 +59,26 @@
                                     <DataGridCheckBoxColumn Header="Enabled" 
                                                            Binding="{Binding IsEnabled}" 
                                                            Width="60"/>
-                                    <DataGridTextColumn Header="Executable" 
-                                                       Binding="{Binding ExecutableName}" 
+                                    <DataGridTextColumn Header="Executable"
+                                                       Binding="{Binding ExecutableName}"
                                                        Width="150"/>
-                                    <DataGridTextColumn Header="Power Plan" 
-                                                       Binding="{Binding PowerPlanName}" 
-                                                       Width="150"/>
-                                    <DataGridTextColumn Header="Priority" 
-                                                       Binding="{Binding Priority}" 
+                                    <DataGridTextColumn Header="Power Plan"
+                                                       Binding="{Binding PowerPlanName}"
+                                                       Width="120"/>
+                                    <DataGridTextColumn Header="Core Mask"
+                                                       Binding="{Binding CoreMaskName}"
+                                                       Width="100"/>
+                                    <DataGridTextColumn Header="Priority"
+                                                       Binding="{Binding ProcessPriority}"
+                                                       Width="80"/>
+                                    <DataGridTextColumn Header="Assoc. Priority"
+                                                       Binding="{Binding Priority}"
                                                        Width="60"/>
-                                    <DataGridCheckBoxColumn Header="Match by Path" 
-                                                           Binding="{Binding MatchByPath}" 
+                                    <DataGridCheckBoxColumn Header="Match by Path"
+                                                           Binding="{Binding MatchByPath}"
                                                            Width="100"/>
-                                    <DataGridTextColumn Header="Description" 
-                                                       Binding="{Binding Description}" 
+                                    <DataGridTextColumn Header="Description"
+                                                       Binding="{Binding Description}"
                                                        Width="*"/>
                                 </DataGrid.Columns>
                             </DataGrid>
@@ -93,7 +99,8 @@
 
                     <!-- Add New Association -->
                     <GroupBox Grid.Column="2" Header="Add New Association">
-                        <StackPanel>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
                             <!-- Executable Selection Section -->
                             <TextBlock Text="Select Executable:" FontWeight="Bold" Margin="0,0,0,5"/>
 
@@ -136,9 +143,23 @@
                                      DisplayMemberPath="Name"
                                      Padding="5" Margin="0,0,0,10"/>
 
-                            <TextBlock Text="Priority:" Margin="0,0,0,5"/>
+                            <TextBlock Text="Core Mask:" Margin="0,0,0,5"/>
+                            <ComboBox ItemsSource="{Binding AvailableCoreMasks}"
+                                     SelectedItem="{Binding SelectedCoreMask}"
+                                     DisplayMemberPath="Name"
+                                     Padding="5" Margin="0,0,0,10"
+                                     ToolTip="Optional: Select a CPU core mask to apply when this process starts"/>
+
+                            <TextBlock Text="Process Priority:" Margin="0,0,0,5"/>
+                            <ComboBox ItemsSource="{Binding AvailablePriorities}"
+                                     SelectedItem="{Binding SelectedProcessPriority}"
+                                     Padding="5" Margin="0,0,0,10"
+                                     ToolTip="Optional: Select the process priority to apply when this process starts"/>
+
+                            <TextBlock Text="Association Priority:" Margin="0,0,0,5"/>
                             <TextBox Text="{Binding Priority}"
-                                    Padding="5" Margin="0,0,0,10"/>
+                                    Padding="5" Margin="0,0,0,10"
+                                    ToolTip="Higher priority associations take precedence when multiple match"/>
 
                             <TextBlock Text="Description:" Margin="0,0,0,5"/>
                             <TextBox Text="{Binding Description}"
@@ -163,7 +184,8 @@
                                    Command="{Binding UseSelectedProcessForAssociationCommand}"
                                    Padding="10,5"
                                    ToolTip="Use the executable from the selected running process"/>
-                        </StackPanel>
+                            </StackPanel>
+                        </ScrollViewer>
                     </GroupBox>
                 </Grid>
             </TabItem>

@@ -24,7 +24,7 @@ namespace ThreadPilot.Services
         /// </summary>
         /// <param name="arguments">Command line arguments to pass to the elevated process</param>
         /// <returns>True if restart was initiated successfully, false otherwise</returns>
-        Task<bool> RestartWithElevation(string[] arguments = null);
+        Task<bool> RestartWithElevation(string[]? arguments = null);
 
         /// <summary>
         /// Validates that the current process has the necessary privileges for the specified operation

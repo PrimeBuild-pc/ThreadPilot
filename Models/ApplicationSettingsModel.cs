@@ -46,7 +46,7 @@ namespace ThreadPilot.Models
         private bool minimizeToTray = true;
 
         [ObservableProperty]
-        private bool closeToTray = false;
+        private bool closeToTray = true; // Default true: close to tray like CPU Set Setter
 
         [ObservableProperty]
         private bool startMinimized = false;
@@ -101,7 +101,7 @@ namespace ThreadPilot.Models
 
         // Autostart Settings
         [ObservableProperty]
-        private bool autostartWithWindows = false;
+        private bool autostartWithWindows = true;
 
         // Power Plan Settings
         [ObservableProperty]
@@ -112,6 +112,13 @@ namespace ThreadPilot.Models
 
         [ObservableProperty]
         private bool restoreDefaultPowerPlanOnExit = true;
+
+        /// <summary>
+        /// When true, all applied CPU masks are cleared when exiting the application
+        /// (processes return to using all cores)
+        /// </summary>
+        [ObservableProperty]
+        private bool clearMasksOnClose = true;
 
         // Monitoring Settings
         [ObservableProperty]
@@ -125,28 +132,6 @@ namespace ThreadPilot.Models
 
         [ObservableProperty]
         private bool enableFallbackPolling = true;
-
-        // Game Boost Mode Settings
-        [ObservableProperty]
-        private bool enableGameBoostMode = false;
-
-        [ObservableProperty]
-        private string gameBoostPowerPlanId = string.Empty;
-
-        [ObservableProperty]
-        private string gameBoostPowerPlanName = "High performance";
-
-        [ObservableProperty]
-        private bool gameBoostAutoDetectGames = true;
-
-        [ObservableProperty]
-        private bool gameBoostSetHighPriority = true;
-
-        [ObservableProperty]
-        private bool gameBoostOptimizeCpuAffinity = true;
-
-        [ObservableProperty]
-        private int gameBoostDetectionDelayMs = 2000;
 
         // Advanced Settings
         [ObservableProperty]
@@ -208,21 +193,13 @@ namespace ThreadPilot.Models
             DefaultPowerPlanId = other.DefaultPowerPlanId;
             DefaultPowerPlanName = other.DefaultPowerPlanName;
             RestoreDefaultPowerPlanOnExit = other.RestoreDefaultPowerPlanOnExit;
+            ClearMasksOnClose = other.ClearMasksOnClose;
 
             // Monitoring Settings
             PollingIntervalMs = other.PollingIntervalMs;
             FallbackPollingIntervalMs = other.FallbackPollingIntervalMs;
             EnableWmiMonitoring = other.EnableWmiMonitoring;
             EnableFallbackPolling = other.EnableFallbackPolling;
-
-            // Game Boost Mode Settings
-            EnableGameBoostMode = other.EnableGameBoostMode;
-            GameBoostPowerPlanId = other.GameBoostPowerPlanId;
-            GameBoostPowerPlanName = other.GameBoostPowerPlanName;
-            GameBoostAutoDetectGames = other.GameBoostAutoDetectGames;
-            GameBoostSetHighPriority = other.GameBoostSetHighPriority;
-            GameBoostOptimizeCpuAffinity = other.GameBoostOptimizeCpuAffinity;
-            GameBoostDetectionDelayMs = other.GameBoostDetectionDelayMs;
 
             // Advanced Settings
             EnableDebugLogging = other.EnableDebugLogging;
@@ -279,17 +256,11 @@ namespace ThreadPilot.Models
                 DefaultPowerPlanId = this.DefaultPowerPlanId,
                 DefaultPowerPlanName = this.DefaultPowerPlanName,
                 RestoreDefaultPowerPlanOnExit = this.RestoreDefaultPowerPlanOnExit,
+                ClearMasksOnClose = this.ClearMasksOnClose,
                 PollingIntervalMs = this.PollingIntervalMs,
                 FallbackPollingIntervalMs = this.FallbackPollingIntervalMs,
                 EnableWmiMonitoring = this.EnableWmiMonitoring,
                 EnableFallbackPolling = this.EnableFallbackPolling,
-                EnableGameBoostMode = this.EnableGameBoostMode,
-                GameBoostPowerPlanId = this.GameBoostPowerPlanId,
-                GameBoostPowerPlanName = this.GameBoostPowerPlanName,
-                GameBoostAutoDetectGames = this.GameBoostAutoDetectGames,
-                GameBoostSetHighPriority = this.GameBoostSetHighPriority,
-                GameBoostOptimizeCpuAffinity = this.GameBoostOptimizeCpuAffinity,
-                GameBoostDetectionDelayMs = this.GameBoostDetectionDelayMs,
                 EnableDebugLogging = this.EnableDebugLogging,
                 EnablePerformanceCounters = this.EnablePerformanceCounters,
                 MaxLogFileSizeMb = this.MaxLogFileSizeMb,
