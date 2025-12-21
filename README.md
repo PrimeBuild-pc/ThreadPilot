@@ -66,25 +66,10 @@ See [LICENSE](LICENSE) for details.
 
 ## 📞 Support
 
+**Made for Windows power users☕** [![PayPal](https://img.shields.io/badge/Supporta%20su-PayPal-blue?logo=paypal)](https://paypal.me/PrimeBuildOfficial?country.x=IT&locale.x=it_IT)
+
 * **Issues**: [https://github.com/PrimeBuild-pc/ThreadPilot/issues](https://github.com/PrimeBuild-pc/ThreadPilot/issues)
 * **Discussions**: [https://github.com/PrimeBuild-pc/ThreadPilot/discussions](https://github.com/PrimeBuild-pc/ThreadPilot/discussions)
 
----
 
-**Made for Windows power users.**
 
-[![PayPal](https://img.shields.io/badge/Supporta%20su-PayPal-blue?logo=paypal)](https://paypal.me/PrimeBuildOfficial?country.x=IT&locale.x=it_IT)
-
----
-
-### ✔️ Risultato
-- README **chiaro**
-- **professionale**
-- facile da mantenere
-- perfetto per una **beta pubblica**
-- non “spaventa” nuovi utenti o contributor
-
-Se vuoi, nel prossimo messaggio posso:
-- prepararti una **versione ancora più “enterprise”**
-- oppure una **README.md + README_DEV.md**
-- oppure adattarla per **GitHub Releases / Store page**
