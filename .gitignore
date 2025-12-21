@@ -7,6 +7,7 @@
 # Escludi Markdown tranne il README principale
 *.md
 !README.md
+!LICENSE.md
 
 # Escludi directory di build comuni
 /bin/
