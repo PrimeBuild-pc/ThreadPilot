@@ -8,198 +8,83 @@
 [![Release](https://img.shields.io/badge/Release-Latest-brightgreen)](../../releases)
 [![Architecture](https://img.shields.io/badge/Architecture-x64-red?logo=windows&logoColor=white)](https://docs.microsoft.com/en-us/windows/win32/)
 
-**Professional Windows Process & Power Plan Manager**
-
-ThreadPilot is a comprehensive Windows application that provides advanced process management, intelligent power plan automation, and system optimization tools. Designed for power users, gamers, and system administrators who demand precise control over their system's performance and behavior.
-
----
-
-## ✨ Key Features
-
-<details>
-  <summary><b>💻 Advanced Process Management</b></summary>
-  <br>
-
-- **Virtualized Process Loading** - Handle 5000+ processes with smooth performance
-- **Real-time Process Monitoring** - Live updates with intelligent refresh management
-- **Advanced CPU Affinity Control** - Topology-aware core selection and assignment
-- **Intel Hybrid Architecture Support** - P-core/E-core detection and optimization
-- **AMD CCD Awareness** - Core Complex Die management for Ryzen processors
-- **Process Priority Management** - Fine-grained priority control with profiles
-- **Smart Search & Filtering** - Quick process discovery with active application focus
-</details>
-
-<details>
-  <summary><b>⚡ Intelligent Power Plan Automation</b></summary>
-  <br>
-
-- **Automatic Power Plan Switching** - Process-based power plan associations
-- **Conditional Profile System** - Rule-based automation with complex triggers
-- **Custom Power Plan Import** - Support for .pow configuration files
-- **Real-time Power Monitoring** - Live power plan status and switching
-- **Game Boost Mode** - Automatic performance optimization for detected games
-</details>
-
-<details>
-  <summary><b>🎮 ML-Based Game Detection</b></summary>
-  <br>
-
-- **95% Accuracy Game Recognition** - Machine learning-powered game identification
-- **Automatic Performance Optimization** - Smart resource allocation for gaming
-- **Performance Metrics Tracking** - Real-time FPS estimation and resource monitoring
-- **Manual Override System** - User-controlled game classification with persistence
-</details>
-
-<details>
-  <summary><b>🔔 Smart Notification System</b></summary>
-  <br>
-
-- **Intelligent Throttling** - Spam reduction with priority-based queuing
-- **Do Not Disturb Mode** - Time-based and manual notification control
-- **Category Management** - Granular notification preferences by type
-- **Deduplication** - Automatic filtering of redundant notifications
-</details>
-
-<details>
-  <summary><b>🔧 System Tweaks & Optimization</b></summary>
-  <br>
-
-- **Core Parking Control** - CPU core parking management
-- **C-States Management** - Power state optimization
-- **System Service Tweaks** - SysMain, Prefetch, and power throttling control
-- **HPET Configuration** - High Precision Event Timer optimization
-- **Scheduling Optimization** - High priority scheduling category management
-</details>
-
-<details>
-  <summary><b>🎯 Target Audience</b></summary>
-  <br>
-
-- **Power Users** - Advanced Windows users seeking granular system control
-- **Gamers** - Enthusiasts wanting optimized gaming performance
-- **System Administrators** - IT professionals managing multiple systems
-- **Content Creators** - Users requiring precise resource allocation for demanding applications
-- **Overclockers & Enthusiasts** - Hardware enthusiasts fine-tuning system performance
-</details>
-
-<img width="1253" height="703" alt="image" src="https://github.com/user-attachments/assets/a1e37a2e-0817-463d-9f1f-c4e4a8e16d72" />
+**ThreadPilot** is a Windows application for advanced **process management**, **CPU affinity control**, and **power plan automation**.  
+It is designed for power users, gamers, and professionals who want precise control over system performance.
 
 ---
 
-## 📦 **Installation**
+## ✨ Features
 
-### **Option 1: Portable Release (Recommended)**
-1. Download the latest release from [GitHub Releases](https://github.com/yourusername/ThreadPilot/releases)
-2. Extract `ThreadPilot-v1.0-Windows-x64-Portable.zip` to your preferred directory
-3. Run `ThreadPilot.exe` as Administrator
-4. No additional software installation required - completely self-contained!
-
-### **Option 2: Build from Source**
-1. **Prerequisites**: .NET 8.0 SDK or later
-2. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/ThreadPilot.git
-   cd ThreadPilot
-   ```
-3. Build the project:
-   ```bash
-   dotnet build --configuration Release
-   ```
-4. Run the application:
-   ```bash
-   dotnet run --configuration Release
-   ```
+- Advanced process management with real-time monitoring  
+- CPU affinity control with physical / logical core awareness  
+- Automatic power plan switching per process  
+- Game-focused performance optimization  
+- System tweaks and performance-related Windows settings  
+- Profile-based configuration and persistence  
 
 ---
 
-## 🛠️ **Technical Architecture**
-
-<details>
-  <summary><b>Core Technologies</b></summary>
-  <br>
-
-- **.NET 8.0** - Latest long-term support framework
-- **WPF (Windows Presentation Foundation)** - Modern Windows UI framework
-- **MVVM Architecture** - Clean separation using CommunityToolkit.Mvvm
-- **Dependency Injection** - Microsoft.Extensions.DependencyInjection container
-- **Async/Await** - Responsive UI with non-blocking operations
-</details>
-
-<details>
-  <summary><b>Advanced Components</b></summary>
-  <br>
-
-- **WMI Integration** - Windows Management Instrumentation for system access
-- **JSON Configuration** - Flexible profile and settings storage
-- **Real-time Monitoring** - Background services with intelligent throttling
-- **Memory Management** - Efficient caching and resource cleanup
-- **Error Handling** - Comprehensive logging with correlation IDs
-</details>
-
-<details>
-  <summary><b>Performance Optimizations</b></summary>
-  <br>
-
-- **Virtualized UI** - Handle large datasets without performance impact
-- **Background Processing** - Non-blocking operations with progress tracking
-- **Intelligent Caching** - LRU-based caching with automatic cleanup
-- **Resource Monitoring** - Proactive memory and handle management
-</details>
-
-## 🤝 **Contributing**
-
-We welcome contributions from the community! Here's how to get started:
-
-### **Development Setup**
-1. **Fork** the repository on GitHub
-2. **Clone** your fork locally:
-   ```bash
-   git clone https://github.com/PrimeBuild-pc/TreadPilot.git
-   ```
-3. **Install** .NET 8.0 SDK or later
-4. **Build** the project:
-   ```bash
-   dotnet build --configuration Debug
-   ```
-
-### ✒️ **Contribution Guidelines**
-1. **Create** a feature branch: `git checkout -b feature/amazing-feature`
-2. **Follow** the existing code style and architecture patterns
-3. **Add tests** for new functionality where applicable
-4. **Update documentation** for user-facing changes
-5. **Commit** with clear, descriptive messages
-6. **Push** to your branch: `git push origin feature/amazing-feature`
-7. **Open** a Pull Request with detailed description
-
-### 🗿 **Code Standards**
-- Follow C# coding conventions and MVVM patterns
-- Use dependency injection for service management
-- Implement proper error handling and logging
-- Maintain responsive UI with async/await patterns
-- Add XML documentation for public APIs
+[![Thread-Pilotbanner.png](https://i.postimg.cc/sDZLXMqr/Thread-Pilotbanner.png)](https://postimg.cc/cr0hkLd9)
 
 ---
 
-## 📄 **License**
+## 📦 Installation
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+### Portable (recommended)
+1. Download the latest release from [GitHub Releases](../../releases)
+2. Extract the archive
+3. Run `ThreadPilot.exe` **as Administrator**
 
-## 🙏 **Acknowledgments**
+### Build from source
+```bash
+git clone https://github.com/PrimeBuild-pc/ThreadPilot.git
+cd ThreadPilot
+dotnet build --configuration Release
+dotnet run --configuration Release
+````
 
-- **[CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet)** - Excellent MVVM framework
-- **[Microsoft.Extensions](https://docs.microsoft.com/en-us/dotnet/core/extensions/)** - Dependency injection and logging
-- **[Windows Community](https://docs.microsoft.com/en-us/windows/)** - Comprehensive API documentation
-- **Contributors** - Thank you to all who have contributed to this project!
-
-## 📞 **Support**
-
-- **Issues**: Report bugs and request features via [GitHub Issues](https://github.com/PrimeBuild-pc/ThreadPilot/issues)
-- **Discussions**: Join community discussions in [GitHub Discussions](https://github.com/PrimeBuild-pc/ThreadPilot/discussions)
+Requires **.NET 8.0 SDK** or newer.
 
 ---
 
-**Made with ❤️ for the Windows power user community**
+## 🛠️ Tech Stack
+
+* .NET 8.0
+* WPF
+* MVVM (CommunityToolkit.Mvvm)
+* Dependency Injection
+* Async / Await
+
+---
+
+## 📄 License
+
+Licensed under the **MIT License**.
+See [LICENSE](LICENSE) for details.
+
+---
+
+## 📞 Support
+
+* **Issues**: [https://github.com/PrimeBuild-pc/ThreadPilot/issues](https://github.com/PrimeBuild-pc/ThreadPilot/issues)
+* **Discussions**: [https://github.com/PrimeBuild-pc/ThreadPilot/discussions](https://github.com/PrimeBuild-pc/ThreadPilot/discussions)
+
+---
+
+**Made for Windows power users.**
 
 [![PayPal](https://img.shields.io/badge/Supporta%20su-PayPal-blue?logo=paypal)](https://paypal.me/PrimeBuildOfficial?country.x=IT&locale.x=it_IT)
 
-*ThreadPilot - Take control of your system's performance*
+---
+
+### ✔️ Risultato
+- README **chiaro**
+- **professionale**
+- facile da mantenere
+- perfetto per una **beta pubblica**
+- non “spaventa” nuovi utenti o contributor
+
+Se vuoi, nel prossimo messaggio posso:
+- prepararti una **versione ancora più “enterprise”**
+- oppure una **README.md + README_DEV.md**
+- oppure adattarla per **GitHub Releases / Store page**
