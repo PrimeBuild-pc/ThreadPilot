@@ -1,4 +1,4 @@
-# ThreadPilot 🚀 <sup><kbd>PUBLIC BETA</kbd></sup>
+# ThreadPilot ✈️ <sup><kbd>PUBLIC BETA</kbd></sup>
 
 [![Status](https://img.shields.io/badge/Status-Public%20Beta-orange.svg)]()
 [![Windows](https://img.shields.io/badge/Windows-10%2F11-blue?logo=windows&logoColor=white)](https://www.microsoft.com/windows)
