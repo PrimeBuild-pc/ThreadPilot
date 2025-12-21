@@ -301,6 +301,29 @@
                     </StackPanel>
                 </Border>
 
+                <!-- About Section -->
+                <TextBlock Text="About" Style="{StaticResource SectionHeaderStyle}"/>
+                <Border Background="#F8F9FA" CornerRadius="5" Padding="15" Margin="0,5,0,15">
+                    <StackPanel>
+                        <TextBlock Text="ThreadPilot" FontWeight="SemiBold" FontSize="14"/>
+                    <TextBlock Text="Version:" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                        <TextBlock Text="{Binding ApplicationVersion}" Margin="0,0,0,10"/>
+
+                    <TextBlock Text="Copyright © 2025 PrimeBuild" Margin="0,0,0,4"/>
+                    <TextBlock Text="License: MIT (see LICENSE)" Style="{StaticResource DescriptionStyle}"/>
+
+                        <Separator Margin="0,12,0,12"/>
+
+                    <Button Content="Check for updates"
+                                Command="{Binding CheckUpdatesCommand}"
+                                Padding="15,6"
+                                HorizontalAlignment="Left"/>
+                    <TextBlock Text="Checks on demand using the official GitHub Releases."
+                                   Style="{StaticResource DescriptionStyle}"
+                                   Margin="0,6,0,0"/>
+                    </StackPanel>
+                </Border>
+
             </StackPanel>
         </ScrollViewer>
 

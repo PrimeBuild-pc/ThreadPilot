@@ -1,7 +1,10 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using System.Windows;
+using System.Reflection;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -37,12 +40,15 @@ namespace ThreadPilot.ViewModels
         [ObservableProperty]
         private ObservableCollection<PowerPlanModel> availablePowerPlans = new();
 
+        public string ApplicationVersion { get; }
+
         public ICommand SaveSettingsCommand { get; }
         public ICommand ResetToDefaultsCommand { get; }
         public ICommand ExportSettingsCommand { get; }
         public ICommand ImportSettingsCommand { get; }
         public ICommand TestNotificationCommand { get; }
         public ICommand RefreshPowerPlansCommand { get; }
+        public ICommand CheckUpdatesCommand { get; }
 
         public SettingsViewModel(
             ILogger<SettingsViewModel> logger,
@@ -60,6 +66,12 @@ namespace ThreadPilot.ViewModels
             _powerPlanService = powerPlanService ?? throw new ArgumentNullException(nameof(powerPlanService));
             _processMonitorManagerService = processMonitorManagerService ?? throw new ArgumentNullException(nameof(processMonitorManagerService));
 
+            ApplicationVersion = typeof(App).Assembly
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                .InformationalVersion
+                ?? typeof(App).Assembly.GetName().Version?.ToString()
+                ?? "0.0.0";
+
             // Initialize with current settings
             settings = (ApplicationSettingsModel)_settingsService.Settings.Clone();
 
@@ -70,6 +82,7 @@ namespace ThreadPilot.ViewModels
             ImportSettingsCommand = new AsyncRelayCommand(ImportSettingsAsync);
             TestNotificationCommand = new AsyncRelayCommand(TestNotificationAsync);
             RefreshPowerPlansCommand = new AsyncRelayCommand(RefreshPowerPlansAsync);
+            CheckUpdatesCommand = new AsyncRelayCommand(CheckUpdatesAsync);
 
             // Subscribe to property changes to track unsaved changes
             Settings.PropertyChanged += OnSettingsPropertyChanged;
@@ -331,6 +344,89 @@ namespace ThreadPilot.ViewModels
             {
                 Logger.LogError(ex, "Failed to refresh power plans");
             }
+        }
+
+        private async Task CheckUpdatesAsync()
+        {
+            try
+            {
+                IsLoading = true;
+                StatusMessage = "Checking for updates...";
+
+                var currentVersion = ParseVersion(ApplicationVersion);
+                var (latest, releaseUrl) = await GitHubUpdateChecker.GetLatestVersionAsync("PrimeBuild-pc", "ThreadPilot");
+
+                if (latest is null)
+                {
+                    StatusMessage = "Unable to determine the latest version.";
+                    await _notificationService.ShowErrorNotificationAsync(
+                        "Update Check",
+                        "Unable to retrieve latest release information.");
+                    return;
+                }
+
+                if (latest > currentVersion)
+                {
+                    StatusMessage = $"New version available: {latest}";
+
+                    var result = System.Windows.MessageBox.Show(
+                        $"Update available\nInstalled version: {ApplicationVersion}\nNew version: {latest}\n\nDo you want to open the download page?",
+                        "Update available",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Information);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        var url = releaseUrl ?? "https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest";
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = url,
+                            UseShellExecute = true
+                        });
+                    }
+                }
+                else
+                {
+                    StatusMessage = $"Application is up to date. Installed version: {ApplicationVersion}";
+                    await _notificationService.ShowSuccessNotificationAsync(
+                        "Application up to date",
+                        $"Installed version: {ApplicationVersion}");
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error while checking updates: {ex.Message}";
+                Logger.LogError(ex, "Error checking for updates");
+
+                await _notificationService.ShowErrorNotificationAsync(
+                    "Update check error",
+                    "Unable to verify updates",
+                    ex);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        private static Version ParseVersion(string versionString)
+        {
+            if (string.IsNullOrWhiteSpace(versionString))
+            {
+                return new Version(0, 0, 0);
+            }
+
+            var sanitized = versionString.Trim();
+            if (sanitized.StartsWith("v", StringComparison.OrdinalIgnoreCase))
+            {
+                sanitized = sanitized[1..];
+            }
+
+            sanitized = sanitized.Split('-', '+')[0];
+
+            return Version.TryParse(sanitized, out var parsed)
+                ? parsed
+                : new Version(0, 0, 0);
         }
     }
 }

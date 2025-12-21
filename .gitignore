@@ -1,6 +1,9 @@
 # Escludi tutti gli .exe
 *.exe
 
+.claude/
+Installer/Output/
+
 # Escludi la sorgente CPUSetSetter upstream
 /CPUSetSetter-main/
 

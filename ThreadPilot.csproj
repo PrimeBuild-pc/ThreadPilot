@@ -16,6 +16,10 @@
     <TrimMode>link</TrimMode>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>CS1998;CS0067;CS0414;WFAC010;IL3000;MVVMTK0034</NoWarn>
+    <Version>0.1.0-beta</Version>
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <FileVersion>0.1.0.0</FileVersion>
+    <InformationalVersion>0.1.0-beta</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,9 +34,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="ico.ico">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <Resource Include="ico.ico" />
   </ItemGroup>
 
   <!-- Ensure XAML for ProcessPowerPlanAssociationView generates InitializeComponent -->

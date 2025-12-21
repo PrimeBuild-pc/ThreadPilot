@@ -40,8 +40,8 @@ namespace ThreadPilot
             if (!createdNew)
             {
                 System.Windows.MessageBox.Show(
-                    "ThreadPilot è già in esecuzione.",
-                    "Istanza già aperta",
+                    "ThreadPilot is already running.",
+                    "Instance already open",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
 

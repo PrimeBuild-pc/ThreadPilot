@@ -5,9 +5,9 @@
 #define MyAppPublisher "ThreadPilot"
 #define MyAppURL "https://github.com/"
 #define MyAppExeName "ThreadPilot.exe"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "0.1.0-beta"
 ; Point this to the folder containing the published binaries (e.g. dotnet publish -c Release -r win-x64)
-#define MyAppBuildDir "..\\artifacts\\build"
+#define MyAppBuildDir "..\\publish"
 
 [Setup]
 AppId={{A2A4C8B5-4A9A-4B1B-93F4-5F8B1C7E8C2A}

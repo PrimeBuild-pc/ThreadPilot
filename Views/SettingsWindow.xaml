@@ -10,7 +10,7 @@
         MinHeight="600" MinWidth="800"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        Icon="/Resources/icon.ico">
+        Icon="pack://application:,,,/ico.ico">
     
     <Window.Resources>
         <Style TargetType="Window">

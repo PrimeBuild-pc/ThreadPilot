@@ -456,12 +456,31 @@ namespace ThreadPilot.Services
             return File.Exists(bundledIcon) ? bundledIcon : null;
         }
 
+        private Icon? TryLoadEmbeddedIcon()
+        {
+            try
+            {
+                var uri = new Uri("pack://application:,,,/ico.ico", UriKind.Absolute);
+                var streamInfo = System.Windows.Application.GetResourceStream(uri);
+                if (streamInfo != null)
+                {
+                    return new Icon(streamInfo.Stream);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load embedded icon");
+            }
+            return null;
+        }
+
         private void TryLoadTrayIcon(TrayIconState? stateOverride = null)
         {
             if (_notifyIcon == null) return;
 
             try
             {
+                // Try custom or external bundled icon first
                 var iconPath = ResolveTrayIconPath();
                 if (iconPath != null)
                 {
@@ -470,7 +489,16 @@ namespace ThreadPilot.Services
                     return;
                 }
 
-                // Fallback to system icons if no custom/bundled icon is available
+                // Try embedded resource icon (for single-file publish)
+                var embeddedIcon = TryLoadEmbeddedIcon();
+                if (embeddedIcon != null)
+                {
+                    _notifyIcon.Icon = embeddedIcon;
+                    _logger.LogDebug("Tray icon set from embedded resource");
+                    return;
+                }
+
+                // Fallback to system icons if no custom/bundled/embedded icon is available
                 var state = stateOverride ?? _currentIconState;
                 _notifyIcon.Icon = state switch
                 {
