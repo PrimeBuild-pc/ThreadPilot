@@ -22,6 +22,8 @@ It is designed for power users, gamers, and professionals who want precise contr
 - System tweaks and performance-related Windows settings  
 - Profile-based configuration and persistence  
 
+<img width="1474" height="920" alt="Screenshot 2025-12-21 044753" src="https://github.com/user-attachments/assets/77fc944e-d2a1-4cc7-9915-e01b0776106c" />
+
 ## 📦 Installation
 
 ### Portable (recommended)
