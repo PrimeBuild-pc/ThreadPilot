@@ -82,7 +82,7 @@ ThreadPilot is a comprehensive Windows application that provides advanced proces
 - **Overclockers & Enthusiasts** - Hardware enthusiasts fine-tuning system performance
 </details>
 
-<img width="1253" height="703" alt="image" src="https://github.com/user-attachments/assets/a1e37a2e-0817-463d-9f1f-c4e4a8e16d72" />
+[![Thread-Pilotbanner.png](https://i.postimg.cc/sDZLXMqr/Thread-Pilotbanner.png)](https://postimg.cc/cr0hkLd9)
 
 ---
 
