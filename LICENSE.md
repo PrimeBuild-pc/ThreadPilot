@@ -1,4 +1,4 @@
-MIT License
+GNUv3 LICENSE
 
 Copyright (C) 2025 Prime Build
 
