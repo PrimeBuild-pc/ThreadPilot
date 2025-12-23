@@ -266,4 +266,5 @@ FodyWeavers.xsd
 *.sln.iml
 
 # Continue.dev (AI coding assistant)
-.continue/
+.continue/nul 
+nul

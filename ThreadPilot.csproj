@@ -37,6 +37,13 @@
     <Resource Include="ico.ico" />
   </ItemGroup>
 
+  <!-- Include bundled power plans in build output -->
+  <ItemGroup>
+    <Content Include="Powerplans\**\*.pow">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
   <!-- Ensure XAML for ProcessPowerPlanAssociationView generates InitializeComponent -->
   <ItemGroup>
     <Page Update="Views/ProcessPowerPlanAssociationView.xaml">

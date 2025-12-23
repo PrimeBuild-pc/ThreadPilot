@@ -1,3 +1,19 @@
+/*
+ * ThreadPilot - Advanced Windows Process and Power Plan Manager
+ * Copyright (C) 2025 Prime Build
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3 only.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -12,7 +28,9 @@ namespace ThreadPilot.Services
 {
     public class PowerPlanService : IPowerPlanService
     {
-        private const string PowerPlansPath = @"C:\Users\Administrator\Desktop\Project\ThreadPilot_1\Powerplans";
+        private static readonly Lazy<string> _powerPlansPath = new(GetPowerPlansPath);
+        private static string PowerPlansPath => _powerPlansPath.Value;
+
         private readonly object _lockObject = new();
         private readonly ILogger<PowerPlanService> _logger;
         private readonly IEnhancedLoggingService _enhancedLogger;
@@ -24,6 +42,56 @@ namespace ThreadPilot.Services
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _enhancedLogger = enhancedLogger ?? throw new ArgumentNullException(nameof(enhancedLogger));
+        }
+
+        /// <summary>
+        /// Gets the power plans path using smart detection:
+        /// - Portable mode: Powerplans folder next to EXE
+        /// - Installed mode: %AppData%\ThreadPilot\Powerplans
+        /// </summary>
+        private static string GetPowerPlansPath()
+        {
+            // Check portable mode first (Powerplans folder next to EXE)
+            var exeDir = AppContext.BaseDirectory;
+            var portablePath = Path.Combine(exeDir, "Powerplans");
+            if (Directory.Exists(portablePath) && Directory.GetFiles(portablePath, "*.pow").Length > 0)
+            {
+                return portablePath;
+            }
+
+            // Installed mode: use AppData
+            var appDataPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "ThreadPilot", "Powerplans");
+
+            // Ensure directory exists
+            if (!Directory.Exists(appDataPath))
+            {
+                Directory.CreateDirectory(appDataPath);
+
+                // If portable path exists but was empty, or we have bundled plans to copy
+                // Copy any .pow files from portable location to AppData
+                if (Directory.Exists(portablePath))
+                {
+                    foreach (var file in Directory.GetFiles(portablePath, "*.pow"))
+                    {
+                        var destFile = Path.Combine(appDataPath, Path.GetFileName(file));
+                        if (!File.Exists(destFile))
+                        {
+                            try
+                            {
+                                File.Copy(file, destFile);
+                            }
+                            catch
+                            {
+                                // Ignore copy errors, plans may not be available
+                            }
+                        }
+                    }
+                }
+            }
+
+            return appDataPath;
         }
 
         public async Task<ObservableCollection<PowerPlanModel>> GetPowerPlansAsync()

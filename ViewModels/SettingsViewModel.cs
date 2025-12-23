@@ -1,3 +1,19 @@
+/*
+ * ThreadPilot - Advanced Windows Process and Power Plan Manager
+ * Copyright (C) 2025 Prime Build
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3 only.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -66,11 +82,16 @@ namespace ThreadPilot.ViewModels
             _powerPlanService = powerPlanService ?? throw new ArgumentNullException(nameof(powerPlanService));
             _processMonitorManagerService = processMonitorManagerService ?? throw new ArgumentNullException(nameof(processMonitorManagerService));
 
-            ApplicationVersion = typeof(App).Assembly
+            // Get version and strip the git commit hash (everything after '+')
+            var rawVersion = typeof(App).Assembly
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
                 .InformationalVersion
                 ?? typeof(App).Assembly.GetName().Version?.ToString()
                 ?? "0.0.0";
+
+            // Remove commit hash suffix and add 'v' prefix
+            var cleanVersion = rawVersion.Split('+')[0];
+            ApplicationVersion = $"v{cleanVersion}";
 
             // Initialize with current settings
             settings = (ApplicationSettingsModel)_settingsService.Settings.Clone();
@@ -430,3 +451,4 @@ namespace ThreadPilot.ViewModels
         }
     }
 }
+

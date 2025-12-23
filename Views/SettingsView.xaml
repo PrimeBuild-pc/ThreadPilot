@@ -310,7 +310,7 @@
                         <TextBlock Text="{Binding ApplicationVersion}" Margin="0,0,0,10"/>
 
                     <TextBlock Text="Copyright © 2025 PrimeBuild" Margin="0,0,0,4"/>
-                    <TextBlock Text="License: MIT (see LICENSE)" Style="{StaticResource DescriptionStyle}"/>
+                    <TextBlock Text="License: GPLv3" Style="{StaticResource DescriptionStyle}"/>
 
                         <Separator Margin="0,12,0,12"/>
 

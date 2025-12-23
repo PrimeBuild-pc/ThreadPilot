@@ -4,7 +4,7 @@
 [![Windows](https://img.shields.io/badge/Windows-10%2F11-blue?logo=windows&logoColor=white)](https://www.microsoft.com/windows)
 [![.NET](https://img.shields.io/badge/.NET-8.0-purple?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![WPF](https://img.shields.io/badge/WPF-Windows%20Presentation%20Foundation-blue?logo=microsoft&logoColor=white)](https://docs.microsoft.com/en-us/dotnet/desktop/wpf/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/badge/Release-Latest-brightgreen)](../../releases)
 [![Architecture](https://img.shields.io/badge/Architecture-x64-red?logo=windows&logoColor=white)](https://docs.microsoft.com/en-us/windows/win32/)
 
@@ -55,7 +55,7 @@ Requires **.NET 8.0 SDK** or newer.
 
 ## 📄 License
 
-Licensed under the **MIT License**.
+This project is licensed under the **GNU General Public License v3.0**.
 See [LICENSE](LICENSE) for details.
 
 ---

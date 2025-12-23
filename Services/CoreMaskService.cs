@@ -1,3 +1,19 @@
+/*
+ * ThreadPilot - Advanced Windows Process and Power Plan Manager
+ * Copyright (C) 2025 Prime Build
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3 only.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -485,7 +501,14 @@ namespace ThreadPilot.Services
             {
                 // Original mask
                 resultMasks.Add(CreateCoreMaskFromBoolList(name, boolMask, description));
-                
+
+                // Skip "no HT" variants for E-Cores and LPE-Cores since they don't have HyperThreading
+                // Only P-Cores on Intel hybrid architectures have HT
+                if (name == "E-Cores" || name == "LPE-Cores")
+                {
+                    continue;
+                }
+
                 // No SMT variant
                 if (canCreateNoSmtVariants)
                 {
@@ -493,8 +516,8 @@ namespace ThreadPilot.Services
                     if (wasStripped)
                     {
                         resultMasks.Add(CreateCoreMaskFromBoolList(
-                            name + noSmtSuffix, 
-                            noSmtMask, 
+                            name + noSmtSuffix,
+                            noSmtMask,
                             description + " (no HyperThreading/SMT)"));
                     }
                 }
@@ -680,3 +703,4 @@ namespace ThreadPilot.Services
         }
     }
 }
+
