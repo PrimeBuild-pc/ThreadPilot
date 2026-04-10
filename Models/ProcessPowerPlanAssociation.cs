@@ -16,6 +16,7 @@
  */
 using System;
 using System.Collections.Generic;
+using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ThreadPilot.Models.Core;
 
@@ -110,7 +111,9 @@ namespace ThreadPilot.Models
             }
             else
             {
-                return string.Equals(process.Name, ExecutableName, StringComparison.OrdinalIgnoreCase);
+                var processName = NormalizeExecutableName(process.Name);
+                var associationName = NormalizeExecutableName(ExecutableName);
+                return string.Equals(processName, associationName, StringComparison.OrdinalIgnoreCase);
             }
         }
 
@@ -120,7 +123,19 @@ namespace ThreadPilot.Models
         public bool MatchesExecutable(string executableName)
         {
             if (!IsEnabled) return false;
-            return string.Equals(ExecutableName, executableName, StringComparison.OrdinalIgnoreCase);
+            var associationName = NormalizeExecutableName(ExecutableName);
+            var inputName = NormalizeExecutableName(executableName);
+            return string.Equals(associationName, inputName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizeExecutableName(string? executableName)
+        {
+            if (string.IsNullOrWhiteSpace(executableName))
+            {
+                return string.Empty;
+            }
+
+            return Path.GetFileNameWithoutExtension(executableName.Trim());
         }
 
 

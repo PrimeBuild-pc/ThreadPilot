@@ -20,6 +20,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Management;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -34,6 +35,7 @@ namespace ThreadPilot.Services
     {
         private readonly ILogger<CpuTopologyService> _logger;
         private readonly IMemoryCache _cache;
+        private readonly SemaphoreSlim _detectSemaphore = new(1, 1);
         private CpuTopologyModel? _currentTopology;
 
         private const string TOPOLOGY_CACHE_KEY = "cpu_topology";
@@ -62,8 +64,18 @@ namespace ThreadPilot.Services
                 return cachedTopology;
             }
 
+            await _detectSemaphore.WaitAsync();
+
             try
             {
+                // Re-check cache after entering the critical section
+                if (_cache.TryGetValue(TOPOLOGY_CACHE_KEY, out cachedTopology) && cachedTopology != null)
+                {
+                    _logger.LogInformation("CPU topology retrieved from cache after synchronization");
+                    _currentTopology = cachedTopology;
+                    return cachedTopology;
+                }
+
                 _logger.LogInformation("Starting CPU topology detection (cache miss)");
                 
                 var topology = new CpuTopologyModel();
@@ -84,7 +96,12 @@ namespace ThreadPilot.Services
                 topology.TopologyDetectionSuccessful = true;
 
                 // PERFORMANCE IMPROVEMENT: Cache the topology to avoid expensive WMI calls
-                _cache.Set(TOPOLOGY_CACHE_KEY, topology, CACHE_DURATION);
+                _cache.Set(
+                    TOPOLOGY_CACHE_KEY,
+                    topology,
+                    new MemoryCacheEntryOptions()
+                        .SetAbsoluteExpiration(CACHE_DURATION)
+                        .SetSize(1));
 
                 _logger.LogInformation("CPU topology detection completed successfully and cached. " +
                     "Logical cores: {LogicalCores}, Physical cores: {PhysicalCores}, " +
@@ -105,6 +122,10 @@ namespace ThreadPilot.Services
                 
                 TopologyDetected?.Invoke(this, new CpuTopologyDetectedEventArgs(fallbackTopology, false, ex.Message));
                 return fallbackTopology;
+            }
+            finally
+            {
+                _detectSemaphore.Release();
             }
         }
 
@@ -365,13 +386,43 @@ namespace ThreadPilot.Services
             {
                 CreateBasicTopology(topology, Environment.ProcessorCount);
             }
+
+            if (string.IsNullOrWhiteSpace(topology.CpuBrand))
+            {
+                topology.CpuBrand = "Unknown";
+            }
+
+            if (string.IsNullOrWhiteSpace(topology.CpuArchitecture))
+            {
+                topology.CpuArchitecture = RuntimeInformation.ProcessArchitecture.ToString();
+            }
             
             // Ensure logical core IDs are sequential
             for (int i = 0; i < topology.LogicalCores.Count; i++)
             {
                 topology.LogicalCores[i].LogicalCoreId = i;
             }
-            
+
+            // Normalize physical core IDs to avoid invalid/negative mappings
+            var normalizedPhysicalCoreIds = topology.LogicalCores
+                .Select((core, index) => new
+                {
+                    core,
+                    physical = core.PhysicalCoreId >= 0 ? core.PhysicalCoreId : index
+                })
+                .GroupBy(x => x.physical)
+                .OrderBy(g => g.Key)
+                .Select((group, normalizedId) => new { group, normalizedId })
+                .ToList();
+
+            foreach (var item in normalizedPhysicalCoreIds)
+            {
+                foreach (var entry in item.group)
+                {
+                    entry.core.PhysicalCoreId = item.normalizedId;
+                }
+            }
+
             // Update labels - simplified without CCD clutter
             foreach (var core in topology.LogicalCores)
             {
@@ -385,6 +436,12 @@ namespace ThreadPilot.Services
                 var htLabel = core.IsHyperThreaded ? " (HT)" : "";
 
                 core.Label = $"{typeLabel}Core {core.LogicalCoreId}{htLabel}";
+
+                if (string.IsNullOrWhiteSpace(core.LogicalProcessorName))
+                {
+                    var threadIndex = Math.Max(0, core.LogicalCoreId - core.PhysicalCoreId);
+                    core.LogicalProcessorName = $"Core{core.PhysicalCoreId}_T{threadIndex}";
+                }
             }
         }
 
@@ -398,7 +455,8 @@ namespace ThreadPilot.Services
 
         private long CalculateFullAffinityMask(int logicalCoreCount)
         {
-            // For 64 logical cores the mask needs all bits set; shifting by 64 would wrap to zero
+            // Affinity masks are represented as signed 64-bit values in this application.
+            // For 63+ logical cores, use all available bits to avoid undefined shifts.
             return logicalCoreCount >= 63
                 ? -1L
                 : (1L << logicalCoreCount) - 1;
@@ -428,7 +486,7 @@ namespace ThreadPilot.Services
                     Name = "No HT",
                     Description = $"All {_currentTopology.TotalPhysicalCores} physical cores (no HyperThreading)",
                     AffinityMask = _currentTopology.GetPhysicalCoresAffinityMask(),
-                    IsAvailable = true
+                    IsAvailable = _currentTopology.GetPhysicalCoresAffinityMask() != 0
                 });
             }
 
@@ -440,7 +498,7 @@ namespace ThreadPilot.Services
                     Name = "Performance Cores",
                     Description = $"Intel P-cores ({_currentTopology.PerformanceCores.Count()} cores)",
                     AffinityMask = _currentTopology.GetPerformanceCoresAffinityMask(),
-                    IsAvailable = true
+                    IsAvailable = _currentTopology.GetPerformanceCoresAffinityMask() != 0
                 });
             }
 
@@ -452,7 +510,7 @@ namespace ThreadPilot.Services
                     Name = "Efficiency Cores",
                     Description = $"Intel E-cores ({_currentTopology.EfficiencyCores.Count()} cores)",
                     AffinityMask = _currentTopology.GetEfficiencyCoresAffinityMask(),
-                    IsAvailable = true
+                    IsAvailable = _currentTopology.GetEfficiencyCoresAffinityMask() != 0
                 });
             }
 
@@ -467,7 +525,7 @@ namespace ThreadPilot.Services
                         Name = $"CCD {ccdId}",
                         Description = $"AMD CCD {ccdId} ({ccdCores.Count()} cores)",
                         AffinityMask = _currentTopology.GetCcdAffinityMask(ccdId),
-                        IsAvailable = true
+                        IsAvailable = _currentTopology.GetCcdAffinityMask(ccdId) != 0
                     });
                 }
             }
@@ -478,6 +536,13 @@ namespace ThreadPilot.Services
         public bool IsAffinityMaskValid(long affinityMask)
         {
             if (_currentTopology == null) return false;
+
+            // Long-based affinity masks cannot represent cores beyond bit 62 explicitly.
+            // Accept any non-zero mask for large-core systems and let runtime APIs enforce final validity.
+            if (_currentTopology.TotalLogicalCores >= 63)
+            {
+                return affinityMask != 0;
+            }
 
             var maxMask = CalculateFullAffinityMask(_currentTopology.TotalLogicalCores);
             return affinityMask > 0 && affinityMask <= maxMask;
@@ -490,6 +555,7 @@ namespace ThreadPilot.Services
 
         public async Task RefreshTopologyAsync()
         {
+            _cache.Remove(TOPOLOGY_CACHE_KEY);
             await DetectTopologyAsync();
         }
     }

@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using ThreadPilot.Models;
@@ -29,6 +30,16 @@ namespace ThreadPilot.Services
     /// </summary>
     public class ProcessPowerPlanAssociationService : IProcessPowerPlanAssociationService
     {
+        private static string LegacyConfigurationDirectory => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Configuration");
+        private static string LegacyConfigurationFilePath => Path.Combine(LegacyConfigurationDirectory, "ProcessPowerPlanAssociations.json");
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            PropertyNameCaseInsensitive = true,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true
+        };
         private readonly string _configurationDirectory;
         private readonly string _configurationFilePath;
         private readonly object _lockObject = new();
@@ -41,11 +52,14 @@ namespace ThreadPilot.Services
 
         public ProcessPowerPlanAssociationService()
         {
-            _configurationDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Configuration");
+            StoragePaths.EnsureAppDataDirectories();
+
+            _configurationDirectory = StoragePaths.ConfigurationDirectory;
             _configurationFilePath = Path.Combine(_configurationDirectory, "ProcessPowerPlanAssociations.json");
             _configuration = new ProcessMonitorConfiguration();
 
             EnsureConfigurationDirectoryExists();
+            MigrateLegacyConfigurationIfNeeded();
         }
 
         public async Task<bool> LoadConfigurationAsync()
@@ -61,12 +75,13 @@ namespace ThreadPilot.Services
                 }
 
                 var json = await File.ReadAllTextAsync(_configurationFilePath);
-                var loadedConfig = JsonSerializer.Deserialize<ProcessMonitorConfiguration>(json);
+                var loadedConfig = JsonSerializer.Deserialize<ProcessMonitorConfiguration>(json, JsonOptions);
                 
                 if (loadedConfig != null)
                 {
                     lock (_lockObject)
                     {
+                        loadedConfig.Associations ??= new List<ProcessPowerPlanAssociation>();
                         _configuration = loadedConfig;
                     }
                     
@@ -94,14 +109,8 @@ namespace ThreadPilot.Services
                     configToSave.LastSavedDate = DateTime.Now;
                 }
 
-                var options = new JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                };
-
-                var json = JsonSerializer.Serialize(configToSave, options);
-                await File.WriteAllTextAsync(_configurationFilePath, json);
+                var json = JsonSerializer.Serialize(configToSave, JsonOptions);
+                await AtomicFileWriter.WriteAllTextAsync(_configurationFilePath, json, Encoding.UTF8);
                 
                 OnConfigurationChanged("Saved", null, "Configuration saved to file");
                 return true;
@@ -141,7 +150,7 @@ namespace ThreadPilot.Services
                 {
                     // Check for duplicates
                     var existing = _configuration.Associations
-                        .FirstOrDefault(a => a.ExecutableName.Equals(association.ExecutableName, StringComparison.OrdinalIgnoreCase));
+                        .FirstOrDefault(a => AreAssociationsConflicting(a, association));
                     
                     if (existing != null)
                     {
@@ -291,14 +300,8 @@ namespace ThreadPilot.Services
                     configToExport = _configuration;
                 }
 
-                var options = new JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                };
-
-                var json = JsonSerializer.Serialize(configToExport, options);
-                await File.WriteAllTextAsync(filePath, json);
+                var json = JsonSerializer.Serialize(configToExport, JsonOptions);
+                await AtomicFileWriter.WriteAllTextAsync(filePath, json, Encoding.UTF8);
                 
                 OnConfigurationChanged("Exported", null, $"Configuration exported to {filePath}");
                 return true;
@@ -317,12 +320,13 @@ namespace ThreadPilot.Services
                 if (!File.Exists(filePath)) return false;
 
                 var json = await File.ReadAllTextAsync(filePath);
-                var importedConfig = JsonSerializer.Deserialize<ProcessMonitorConfiguration>(json);
+                var importedConfig = JsonSerializer.Deserialize<ProcessMonitorConfiguration>(json, JsonOptions);
                 
                 if (importedConfig != null)
                 {
                     lock (_lockObject)
                     {
+                        importedConfig.Associations ??= new List<ProcessPowerPlanAssociation>();
                         _configuration = importedConfig;
                     }
                     
@@ -348,9 +352,60 @@ namespace ThreadPilot.Services
             }
         }
 
+        private void MigrateLegacyConfigurationIfNeeded()
+        {
+            try
+            {
+                if (!File.Exists(LegacyConfigurationFilePath) || File.Exists(_configurationFilePath))
+                {
+                    return;
+                }
+
+                Directory.CreateDirectory(_configurationDirectory);
+                File.Copy(LegacyConfigurationFilePath, _configurationFilePath);
+            }
+            catch
+            {
+                // Ignore migration failures and continue with current storage path.
+            }
+        }
+
         private void OnConfigurationChanged(string changeType, ProcessPowerPlanAssociation? association = null, string? details = null)
         {
             ConfigurationChanged?.Invoke(this, new ConfigurationChangedEventArgs(changeType, association, details));
+        }
+
+        private static bool AreAssociationsConflicting(ProcessPowerPlanAssociation existing, ProcessPowerPlanAssociation candidate)
+        {
+            var existingName = NormalizeExecutableName(existing.ExecutableName);
+            var candidateName = NormalizeExecutableName(candidate.ExecutableName);
+
+            if (!string.Equals(existingName, candidateName, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (existing.MatchByPath || candidate.MatchByPath)
+            {
+                var existingPath = existing.ExecutablePath?.Trim() ?? string.Empty;
+                var candidatePath = candidate.ExecutablePath?.Trim() ?? string.Empty;
+
+                return string.Equals(existingPath, candidatePath, StringComparison.OrdinalIgnoreCase) &&
+                       existing.MatchByPath == candidate.MatchByPath;
+            }
+
+            // Name-only associations conflict by executable name
+            return true;
+        }
+
+        private static string NormalizeExecutableName(string? executableName)
+        {
+            if (string.IsNullOrWhiteSpace(executableName))
+            {
+                return string.Empty;
+            }
+
+            return Path.GetFileNameWithoutExtension(executableName.Trim());
         }
     }
 }

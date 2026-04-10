@@ -31,6 +31,8 @@ namespace ThreadPilot.ViewModels
 {
     public partial class ProcessViewModel : BaseViewModel
     {
+        public event EventHandler? OpenRulesRequested;
+
         private readonly IProcessService _processService;
         private readonly IVirtualizedProcessService _virtualizedProcessService;
         private readonly ICpuTopologyService _cpuTopologyService;
@@ -142,9 +144,6 @@ namespace ThreadPilot.ViewModels
 
         [ObservableProperty]
         private bool isVirtualizationEnabled = true;
-
-        [ObservableProperty]
-        private bool isBusy = false;
 
         public ProcessViewModel(
             ILogger<ProcessViewModel> logger,
@@ -904,12 +903,12 @@ namespace ThreadPilot.ViewModels
                     // Verify the affinity was set correctly
                     if (SelectedProcess.ProcessorAffinity == affinityMask)
                     {
-                        SetStatus($"Affinity set successfully for {SelectedProcess.Name} (0x{affinityMask:X})", false);
+                        SetStatus($"Affinity applied successfully to {SelectedProcess.Name} (0x{affinityMask:X}).", false);
                         _ = _notificationService.ShowNotificationAsync("Affinity applied", $"{SelectedProcess.Name}: 0x{affinityMask:X}", NotificationType.Success);
                     }
                     else
                     {
-                        SetStatus($"Affinity partially set for {SelectedProcess.Name} - OS adjusted to 0x{SelectedProcess.ProcessorAffinity:X}", false);
+                        SetStatus($"Affinity adjusted by system for {SelectedProcess.Name} to 0x{SelectedProcess.ProcessorAffinity:X}.", false);
                         _ = _notificationService.ShowNotificationAsync("Affinity adjusted", $"{SelectedProcess.Name}: 0x{SelectedProcess.ProcessorAffinity:X}", NotificationType.Warning);
                     }
                 });
@@ -1176,7 +1175,7 @@ namespace ThreadPilot.ViewModels
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus($"Settings applied successfully to {SelectedProcess.Name}", false);
+                    SetStatus($"Quick apply completed for {SelectedProcess.Name}.", false);
                 });
             }
             catch (Exception ex)
@@ -1285,12 +1284,12 @@ namespace ThreadPilot.ViewModels
                     // Verify the priority was set correctly
                     if (SelectedProcess.Priority == priority)
                     {
-                        SetStatus($"Priority set successfully for {SelectedProcess.Name} to {priority}", false);
+                        SetStatus($"Priority applied successfully to {SelectedProcess.Name}: {priority}.", false);
                         _ = _notificationService.ShowNotificationAsync("Priority applied", $"{SelectedProcess.Name}: {priority}", NotificationType.Success);
                     }
                     else
                     {
-                        SetStatus($"Priority set for {SelectedProcess.Name} - OS adjusted to {SelectedProcess.Priority}", false);
+                        SetStatus($"Priority adjusted by system for {SelectedProcess.Name} to {SelectedProcess.Priority}.", false);
                         _ = _notificationService.ShowNotificationAsync("Priority adjusted", $"{SelectedProcess.Name}: {SelectedProcess.Priority}", NotificationType.Warning);
                     }
                 });
@@ -1784,6 +1783,12 @@ namespace ThreadPilot.ViewModels
         /// Based on CPUSetSetter's SetMask pattern
         /// </summary>
         [RelayCommand]
+        private void OpenRulesTab()
+        {
+            OpenRulesRequested?.Invoke(this, EventArgs.Empty);
+        }
+
+        [RelayCommand]
         private async Task SaveCurrentAsAssociation()
         {
             if (SelectedProcess == null)
@@ -1795,7 +1800,7 @@ namespace ThreadPilot.ViewModels
 
             try
             {
-                SetStatus($"Saving association for {SelectedProcess.Name}...");
+                SetStatus($"Saving rule for {SelectedProcess.Name}...");
 
                 // Get current power plan
                 var currentPowerPlan = await _powerPlanService.GetActivePowerPlan();
@@ -1821,8 +1826,8 @@ namespace ThreadPilot.ViewModels
 
                 if (success)
                 {
-                    SetStatus($"Association saved for {SelectedProcess.Name}", false);
-                    await _notificationService.ShowNotificationAsync("Association Saved",
+                    SetStatus($"Rule created for {SelectedProcess.Name} and ready for auto-apply.", false);
+                    await _notificationService.ShowNotificationAsync("Rule Saved",
                         $"Settings for {SelectedProcess.Name} saved successfully", NotificationType.Success);
 
                     await LogUserActionAsync("SaveAssociation",
@@ -1832,17 +1837,48 @@ namespace ThreadPilot.ViewModels
                 }
                 else
                 {
-                    SetStatus($"Association already exists for {SelectedProcess.Name}", false);
-                    await _notificationService.ShowNotificationAsync("Association Exists",
-                        $"An association for {SelectedProcess.Name} already exists", NotificationType.Warning);
+                    var existingAssociation = await _associationService.FindAssociationByExecutableAsync(SelectedProcess.Name);
+                    if (existingAssociation != null)
+                    {
+                        existingAssociation.ExecutablePath = association.ExecutablePath;
+                        existingAssociation.PowerPlanGuid = association.PowerPlanGuid;
+                        existingAssociation.PowerPlanName = association.PowerPlanName;
+                        existingAssociation.CoreMaskId = association.CoreMaskId;
+                        existingAssociation.CoreMaskName = association.CoreMaskName;
+                        existingAssociation.ProcessPriority = association.ProcessPriority;
+                        existingAssociation.MatchByPath = association.MatchByPath;
+                        existingAssociation.Description = association.Description;
+                        existingAssociation.IsEnabled = true;
+                        existingAssociation.UpdatedAt = DateTime.UtcNow;
+
+                        var updated = await _associationService.UpdateAssociationAsync(existingAssociation);
+                        if (updated)
+                        {
+                            SetStatus($"Existing rule updated for {SelectedProcess.Name}.", false);
+                            await _notificationService.ShowNotificationAsync("Rule Updated",
+                                $"Existing rule for {SelectedProcess.Name} was updated", NotificationType.Information);
+                        }
+                        else
+                        {
+                            SetStatus($"Failed to update existing rule for {SelectedProcess.Name}", false);
+                            await _notificationService.ShowNotificationAsync("Rule Update Failed",
+                                $"Could not update existing rule for {SelectedProcess.Name}", NotificationType.Warning);
+                        }
+                    }
+                    else
+                    {
+                        SetStatus($"Rule already exists for {SelectedProcess.Name}", false);
+                        await _notificationService.ShowNotificationAsync("Rule Exists",
+                            $"A rule for {SelectedProcess.Name} already exists", NotificationType.Warning);
+                    }
                 }
             }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Error saving association for process {ProcessName}", SelectedProcess.Name);
-                SetStatus($"Error saving association: {ex.Message}", false);
+                SetStatus($"Error saving rule: {ex.Message}", false);
                 await _notificationService.ShowNotificationAsync("Error",
-                    $"Failed to save association: {ex.Message}", NotificationType.Error);
+                    $"Failed to save rule: {ex.Message}", NotificationType.Error);
             }
         }
     }

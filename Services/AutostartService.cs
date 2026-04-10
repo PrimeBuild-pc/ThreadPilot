@@ -31,6 +31,7 @@ namespace ThreadPilot.Services
         private const string REGISTRY_KEY_PATH = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
         private const string APPLICATION_NAME = "ThreadPilot";
         private const string SCHEDULED_TASK_NAME = "ThreadPilot_Startup";
+        private static readonly string SchTasksExecutablePath = Path.Combine(Environment.SystemDirectory, "schtasks.exe");
 
         private readonly ILogger<AutostartService> _logger;
         private readonly IElevationService _elevationService;
@@ -236,11 +237,11 @@ namespace ThreadPilot.Services
             try
             {
                 var taskArguments = $"/Create /TN \"{SCHEDULED_TASK_NAME}\" /TR \"\\\"{executablePath}\\\" {arguments}\" " +
-                                   "/SC ONLOGON /RL HIGHEST /F /RU \"{Environment.UserName}\"";
+                                   $"/SC ONLOGON /RL HIGHEST /F /RU \"{Environment.UserName}\"";
 
                 var processInfo = new ProcessStartInfo
                 {
-                    FileName = "schtasks.exe",
+                    FileName = SchTasksExecutablePath,
                     Arguments = taskArguments,
                     UseShellExecute = false,
                     CreateNoWindow = true,
@@ -281,7 +282,7 @@ namespace ThreadPilot.Services
 
                 var processInfo = new ProcessStartInfo
                 {
-                    FileName = "schtasks.exe",
+                    FileName = SchTasksExecutablePath,
                     Arguments = taskArguments,
                     UseShellExecute = false,
                     CreateNoWindow = true,

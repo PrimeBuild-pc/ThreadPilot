@@ -16,6 +16,7 @@
  */
 using System;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -31,20 +32,27 @@ namespace ThreadPilot.Services
         private readonly ILogger<ApplicationSettingsService> _logger;
         private readonly string _settingsFilePath;
         private ApplicationSettingsModel _settings;
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            PropertyNameCaseInsensitive = true,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true
+        };
 
         public event EventHandler<ApplicationSettingsChangedEventArgs>? SettingsChanged;
 
-        public ApplicationSettingsModel Settings => _settings;
+        public ApplicationSettingsModel Settings => (ApplicationSettingsModel)_settings.Clone();
 
         public ApplicationSettingsService(ILogger<ApplicationSettingsService> logger)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            
-            // Set settings file path in user's AppData folder
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var appFolder = Path.Combine(appDataPath, "ThreadPilot");
-            Directory.CreateDirectory(appFolder);
-            _settingsFilePath = Path.Combine(appFolder, "settings.json");
+
+            StoragePaths.EnsureAppDataDirectories();
+            _settingsFilePath = StoragePaths.SettingsFilePath;
+
+            MigrateLegacySettingsIfNeeded();
 
             _settings = new ApplicationSettingsModel();
         }
@@ -64,7 +72,7 @@ namespace ThreadPilot.Services
                 }
 
                 var json = await File.ReadAllTextAsync(_settingsFilePath);
-                var loadedSettings = JsonSerializer.Deserialize<ApplicationSettingsModel>(json);
+                var loadedSettings = JsonSerializer.Deserialize<ApplicationSettingsModel>(json, JsonOptions);
 
                 if (loadedSettings != null)
                 {
@@ -96,14 +104,8 @@ namespace ThreadPilot.Services
 
                 ValidateAndFixSettings();
 
-                var options = new JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                };
-
-                var json = JsonSerializer.Serialize(_settings, options);
-                await File.WriteAllTextAsync(_settingsFilePath, json);
+                var json = JsonSerializer.Serialize(_settings, JsonOptions);
+                await AtomicFileWriter.WriteAllTextAsync(_settingsFilePath, json, Encoding.UTF8);
 
                 _logger.LogDebug("Settings saved successfully");
             }
@@ -198,14 +200,8 @@ namespace ThreadPilot.Services
             {
                 _logger.LogInformation("Exporting settings to {FilePath}", filePath);
 
-                var options = new JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                };
-
-                var json = JsonSerializer.Serialize(_settings, options);
-                await File.WriteAllTextAsync(filePath, json);
+                var json = JsonSerializer.Serialize(_settings, JsonOptions);
+                await AtomicFileWriter.WriteAllTextAsync(filePath, json, Encoding.UTF8);
 
                 _logger.LogInformation("Settings exported successfully");
             }
@@ -226,7 +222,7 @@ namespace ThreadPilot.Services
                     throw new FileNotFoundException($"Settings file not found: {filePath}");
 
                 var json = await File.ReadAllTextAsync(filePath);
-                var importedSettings = JsonSerializer.Deserialize<ApplicationSettingsModel>(json);
+                var importedSettings = JsonSerializer.Deserialize<ApplicationSettingsModel>(json, JsonOptions);
 
                 if (importedSettings == null)
                     throw new InvalidOperationException("Failed to deserialize imported settings");
@@ -248,13 +244,34 @@ namespace ThreadPilot.Services
                 // For simplicity, we'll just indicate that settings changed
                 // In a more sophisticated implementation, we could track specific property changes
                 var changedProperties = new[] { "Settings" };
+
+                var oldSnapshot = (ApplicationSettingsModel)oldSettings.Clone();
+                var newSnapshot = (ApplicationSettingsModel)newSettings.Clone();
                 
                 SettingsChanged?.Invoke(this, new ApplicationSettingsChangedEventArgs(
-                    oldSettings, newSettings, changedProperties));
+                    oldSnapshot, newSnapshot, changedProperties));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error firing settings changed event");
+            }
+        }
+
+        private void MigrateLegacySettingsIfNeeded()
+        {
+            try
+            {
+                var legacySettingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
+                if (File.Exists(legacySettingsPath) && !File.Exists(_settingsFilePath))
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(_settingsFilePath)!);
+                    File.Copy(legacySettingsPath, _settingsFilePath);
+                    _logger.LogInformation("Migrated legacy settings file to AppData storage");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to migrate legacy settings file");
             }
         }
     }

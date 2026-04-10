@@ -28,7 +28,6 @@ using System.Windows.Media.Imaging;
 using ThreadPilot.ViewModels;
 using ThreadPilot.Services;
 using ThreadPilot.Views;
-using ThreadPilot.Tests;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ThreadPilot
@@ -37,17 +36,20 @@ namespace ThreadPilot
     {
         private readonly ProcessViewModel _processViewModel;
         private readonly PowerPlanViewModel _powerPlanViewModel;
+        private readonly PerformanceViewModel _performanceViewModel;
         private readonly ProcessPowerPlanAssociationViewModel _associationViewModel;
         private readonly ISystemTrayService _systemTrayService;
         private readonly IApplicationSettingsService _settingsService;
         private readonly INotificationService _notificationService;
         private readonly IProcessMonitorService _processMonitorService;
         private readonly IProcessMonitorManagerService _processMonitorManagerService;
+        private readonly IProcessPowerPlanAssociationService _processPowerPlanAssociationService;
         private readonly SettingsViewModel _settingsViewModel;
         private readonly MainWindowViewModel _mainWindowViewModel;
         private readonly SystemTweaksViewModel _systemTweaksViewModel;
         private readonly IKeyboardShortcutService _keyboardShortcutService;
         private readonly IServiceProvider _serviceProvider;
+        private readonly IThemeService _themeService;
         private System.Timers.Timer? _systemTrayUpdateTimer;
         private readonly IElevationService _elevationService;
         private readonly ISecurityService _securityService;
@@ -61,20 +63,26 @@ namespace ThreadPilot
 
         // Flag to skip process monitoring during startup if it causes issues
         private readonly bool _skipProcessMonitoringDuringStartup = false;
+        private bool _isPerformingShutdown = false;
+        private int _currentTabIndex = -1;
+        private bool _isHandlingTabSelection;
 
         public MainWindow(
             ProcessViewModel processViewModel,
             PowerPlanViewModel powerPlanViewModel,
+            PerformanceViewModel performanceViewModel,
             ProcessPowerPlanAssociationViewModel associationViewModel,
             ISystemTrayService systemTrayService,
             IApplicationSettingsService settingsService,
             INotificationService notificationService,
             IProcessMonitorService processMonitorService,
             IProcessMonitorManagerService processMonitorManagerService,
+            IProcessPowerPlanAssociationService processPowerPlanAssociationService,
             SettingsViewModel settingsViewModel,
             MainWindowViewModel mainWindowViewModel,
             SystemTweaksViewModel systemTweaksViewModel,
             IKeyboardShortcutService keyboardShortcutService,
+            IThemeService themeService,
             IServiceProvider serviceProvider,
             IElevationService elevationService,
             ISecurityService securityService)
@@ -93,19 +101,24 @@ namespace ThreadPilot
 
                 _processViewModel = processViewModel;
                 _powerPlanViewModel = powerPlanViewModel;
+                _performanceViewModel = performanceViewModel;
                 _associationViewModel = associationViewModel;
                 _systemTrayService = systemTrayService;
                 _settingsService = settingsService;
                 _notificationService = notificationService;
                 _processMonitorService = processMonitorService;
                 _processMonitorManagerService = processMonitorManagerService;
+                _processPowerPlanAssociationService = processPowerPlanAssociationService;
                 _settingsViewModel = settingsViewModel;
                 _mainWindowViewModel = mainWindowViewModel;
                 _systemTweaksViewModel = systemTweaksViewModel;
                 _keyboardShortcutService = keyboardShortcutService;
+                _themeService = themeService;
                 _serviceProvider = serviceProvider;
                 _elevationService = elevationService;
                 _securityService = securityService;
+
+                _processViewModel.OpenRulesRequested += OnOpenRulesRequested;
 
                 System.Diagnostics.Debug.WriteLine("Dependencies assigned");
 
@@ -116,6 +129,8 @@ namespace ThreadPilot
                 _ = Dispatcher.InvokeAsync(async () => await InitializeApplicationAsync());
                 System.Diagnostics.Debug.WriteLine("Async initialization started");
                 System.Diagnostics.Debug.WriteLine("MainWindow constructor completed successfully");
+
+                _currentTabIndex = MainTabControl.SelectedIndex;
             }
             catch (Exception ex)
             {
@@ -131,8 +146,14 @@ namespace ThreadPilot
             // Set DataContext for the main window
             DataContext = _mainWindowViewModel;
 
+            // Set DataContext for the power plans view
+            PowerPlanViewControl.DataContext = _powerPlanViewModel;
+
             // Set DataContext for the association view
             AssociationView.DataContext = _associationViewModel;
+
+            // Set DataContext for the performance view
+            PerformanceViewControl.DataContext = _performanceViewModel;
 
             // Set DataContext for the system tweaks view
             SystemTweaksView.DataContext = _systemTweaksViewModel;
@@ -188,6 +209,11 @@ namespace ThreadPilot
                 await LoadViewModelsAsync();
                 LogDebug("LoadViewModelsAsync completed successfully");
                 CompleteInitializationTask("ViewModels");
+
+                LogDebug("About to initialize MainWindowViewModel...");
+                await _mainWindowViewModel.InitializeAsync();
+                LogDebug("MainWindowViewModel initialized successfully");
+                CompleteInitializationTask("MainWindowViewModel");
 
                 await Dispatcher.InvokeAsync(() => UpdateLoadingStatus("Initializing services..."));
                 LogDebug("About to call InitializeServicesAsync...");
@@ -403,6 +429,16 @@ namespace ThreadPilot
                 await powerPlanTask; // Ensure we get any exceptions
                 LogDebug("PowerPlanViewModel loaded successfully");
 
+                LogDebug("About to initialize PerformanceViewModel...");
+                var performanceTask = _performanceViewModel.InitializeAsync();
+                var performanceResult = await Task.WhenAny(performanceTask, Task.Delay(5000));
+                if (performanceResult != performanceTask)
+                {
+                    throw new TimeoutException("PerformanceViewModel.InitializeAsync() timed out after 5 seconds");
+                }
+                await performanceTask; // Ensure we get any exceptions
+                LogDebug("PerformanceViewModel initialized successfully");
+
                 LogDebug("About to load SystemTweaksViewModel...");
                 var systemTweaksTask = _systemTweaksViewModel.LoadCommand.ExecuteAsync(null);
                 var systemTweaksResult = await Task.WhenAny(systemTweaksTask, Task.Delay(5000)); // 5 second timeout
@@ -414,7 +450,7 @@ namespace ThreadPilot
                 LogDebug("SystemTweaksViewModel loaded successfully");
 
                 // Initialize keyboard shortcuts after window is loaded
-                this.Loaded += async (s, e) => await InitializeKeyboardShortcutsAsync();
+                Loaded += OnWindowLoaded;
                 LogDebug("Keyboard shortcuts event handler attached");
 
                 // The association view model loads its data automatically in its constructor
@@ -523,6 +559,7 @@ namespace ThreadPilot
 
                 // Apply initial settings
                 var settings = _settingsService.Settings;
+                _themeService.ApplyTheme(settings.UseDarkTheme);
                 if (settings.StartMinimized)
                 {
                     WindowState = WindowState.Minimized;
@@ -542,7 +579,9 @@ namespace ThreadPilot
                 _systemTrayService.Show();
 
                 // Subscribe to tray events
+                UnsubscribeSystemTrayEvents();
                 _systemTrayService.ShowMainWindowRequested += OnShowMainWindowRequested;
+                _systemTrayService.DashboardRequested += OnDashboardRequested;
                 _systemTrayService.ExitRequested += OnExitRequested;
                 _systemTrayService.MonitoringToggleRequested += OnMonitoringToggleRequested;
                 _systemTrayService.SettingsRequested += OnSettingsRequested;
@@ -578,7 +617,9 @@ namespace ThreadPilot
                 _systemTrayService.Show();
 
                 // Subscribe to essential tray events only
+                UnsubscribeSystemTrayEvents();
                 _systemTrayService.ShowMainWindowRequested += OnShowMainWindowRequested;
+                _systemTrayService.DashboardRequested += OnDashboardRequested;
                 _systemTrayService.ExitRequested += OnExitRequested;
 
                 // Update basic settings and tooltip
@@ -606,12 +647,32 @@ namespace ThreadPilot
             await PerformGracefulShutdownAsync();
         }
 
+        private void OnDashboardRequested(object? sender, EventArgs e)
+        {
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
+            SelectMainTab(ProcessManagementTab);
+        }
+
         /// <summary>
         /// Performs graceful shutdown with cleanup of all applied optimizations
         /// Similar to CPU Set Setter's ExitAppGracefully
         /// </summary>
-        private async Task PerformGracefulShutdownAsync()
+        private async Task PerformGracefulShutdownAsync(bool validateUnsavedChanges = true)
         {
+            if (_isPerformingShutdown)
+            {
+                return;
+            }
+
+            if (validateUnsavedChanges && !await HandleUnsavedSettingsBeforeExitAsync())
+            {
+                return;
+            }
+
+            _isPerformingShutdown = true;
+
             try
             {
                 LogDebug("Starting graceful shutdown...");
@@ -658,15 +719,37 @@ namespace ThreadPilot
                 }
 
                 // 3. Restore default power plan if configured
-                if (_settingsService.Settings.RestoreDefaultPowerPlanOnExit && 
-                    !string.IsNullOrEmpty(_settingsService.Settings.DefaultPowerPlanId))
+                if (_settingsService.Settings.RestoreDefaultPowerPlanOnExit)
                 {
                     try
                     {
+                        var targetDefaultPowerPlanGuid = _settingsService.Settings.DefaultPowerPlanId;
+
+                        try
+                        {
+                            await _processPowerPlanAssociationService.LoadConfigurationAsync();
+                            var (associationDefaultPowerPlanGuid, _) = await _processPowerPlanAssociationService.GetDefaultPowerPlanAsync();
+                            if (!string.IsNullOrWhiteSpace(associationDefaultPowerPlanGuid))
+                            {
+                                targetDefaultPowerPlanGuid = associationDefaultPowerPlanGuid;
+                            }
+                        }
+                        catch (Exception associationEx)
+                        {
+                            LogDebug($"Could not read default power plan from association config: {associationEx.Message}");
+                        }
+
+                        if (string.IsNullOrWhiteSpace(targetDefaultPowerPlanGuid))
+                        {
+                            LogDebug("No default power plan configured for restore on exit");
+                        }
+                        else
+                        {
                         LogDebug("Restoring default power plan...");
                         var powerPlanService = _serviceProvider.GetRequiredService<IPowerPlanService>();
-                        await powerPlanService.SetActivePowerPlanByGuidAsync(_settingsService.Settings.DefaultPowerPlanId);
+                        await powerPlanService.SetActivePowerPlanByGuidAsync(targetDefaultPowerPlanGuid);
                         LogDebug("Default power plan restored");
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -709,6 +792,50 @@ namespace ThreadPilot
                 // Ensure application exits
                 System.Windows.Application.Current.Shutdown();
             }
+        }
+
+        private async Task<bool> HandleUnsavedSettingsBeforeExitAsync()
+        {
+            if (!_settingsViewModel.HasPendingChanges)
+            {
+                return true;
+            }
+
+            var result = System.Windows.MessageBox.Show(
+                "You have unsaved changes in Settings.\n\nChoose an action:\n- Yes: Save and exit\n- No: Discard and exit\n- Cancel: Return to app",
+                "Unsaved Settings",
+                MessageBoxButton.YesNoCancel,
+                MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Cancel)
+            {
+                return false;
+            }
+
+            if (result == MessageBoxResult.Yes)
+            {
+                var saved = await _settingsViewModel.SaveIfDirtyAsync();
+                return saved;
+            }
+
+            await _settingsViewModel.DiscardPendingChangesAsync();
+            return true;
+        }
+
+        private async Task HandleWindowCloseAsync()
+        {
+            if (!await HandleUnsavedSettingsBeforeExitAsync())
+            {
+                return;
+            }
+
+            if (_settingsService.Settings.CloseToTray)
+            {
+                WindowState = WindowState.Minimized;
+                return;
+            }
+
+            await PerformGracefulShutdownAsync(validateUnsavedChanges: false);
         }
 
         private async void OnMonitoringToggleRequested(object? sender, MonitoringToggleEventArgs e)
@@ -822,16 +949,7 @@ namespace ThreadPilot
                 WindowState = WindowState.Normal;
                 Activate();
 
-                // Switch to Tweaks tab
-                var tabControl = FindName("MainTabControl") as System.Windows.Controls.TabControl;
-                if (tabControl != null)
-                {
-                    // Find the Tweaks tab (index 3 based on MainWindow.xaml)
-                    if (tabControl.Items.Count > 3)
-                    {
-                        tabControl.SelectedIndex = 3;
-                    }
-                }
+                SelectMainTab(PerformanceTab);
             }
             catch (Exception ex)
             {
@@ -853,6 +971,7 @@ namespace ThreadPilot
                 }
 
                 // Subscribe to shortcut activation events
+                _keyboardShortcutService.ShortcutActivated -= OnShortcutActivated;
                 _keyboardShortcutService.ShortcutActivated += OnShortcutActivated;
 
                 // Load shortcuts from settings - with error handling
@@ -919,22 +1038,14 @@ namespace ThreadPilot
                     Show();
                     WindowState = WindowState.Normal;
                     Activate();
-                    var tabControl = FindName("MainTabControl") as System.Windows.Controls.TabControl;
-                    if (tabControl != null && tabControl.Items.Count > 3)
-                    {
-                        tabControl.SelectedIndex = 3; // Tweaks tab
-                    }
+                    SelectMainTab(SystemTweaksTab);
                     break;
 
                 case ShortcutActions.OpenSettings:
                     Show();
                     WindowState = WindowState.Normal;
                     Activate();
-                    var settingsTabControl = FindName("MainTabControl") as System.Windows.Controls.TabControl;
-                    if (settingsTabControl != null && settingsTabControl.Items.Count > 4)
-                    {
-                        settingsTabControl.SelectedIndex = 4; // Settings tab
-                    }
+                    SelectMainTab(SettingsTab);
                     break;
 
                 case ShortcutActions.RefreshProcessList:
@@ -959,7 +1070,7 @@ namespace ThreadPilot
                 _systemTrayService.UpdatePowerPlans(powerPlans, activePowerPlan);
 
                 // Update profiles in system tray
-                var profilesDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ThreadPilot", "Profiles");
+                var profilesDirectory = StoragePaths.ProfilesDirectory;
                 var profileNames = new List<string>();
 
                 if (Directory.Exists(profilesDirectory))
@@ -1185,6 +1296,11 @@ namespace ThreadPilot
                     {
                         _processViewModel.PauseRefresh();
                     }
+
+                    if (_performanceViewModel != null)
+                    {
+                        _ = _performanceViewModel.SuspendBackgroundMonitoringAsync();
+                    }
                 }
                 else if (WindowState == WindowState.Normal)
                 {
@@ -1192,6 +1308,11 @@ namespace ThreadPilot
                     if (_processViewModel != null)
                     {
                         _processViewModel.ResumeRefresh();
+                    }
+
+                    if (_performanceViewModel != null)
+                    {
+                        _ = _performanceViewModel.ResumeBackgroundMonitoringAsync();
                     }
                 }
             }
@@ -1203,6 +1324,7 @@ namespace ThreadPilot
             base.OnStateChanged(e);
         }
 
+        [System.Diagnostics.Conditional("DEBUG")]
         private void LogDebug(string message)
         {
             try
@@ -1217,26 +1339,131 @@ namespace ThreadPilot
             }
         }
 
+        private async void OnWindowLoaded(object? sender, RoutedEventArgs e)
+        {
+            Loaded -= OnWindowLoaded;
+            await InitializeKeyboardShortcutsAsync();
+        }
+
+        private void OnOpenRulesRequested(object? sender, EventArgs e)
+        {
+            SelectMainTab(ProcessAssociationsTab);
+        }
+
+        private static bool IsTabItem(object? item, object target)
+        {
+            return ReferenceEquals(item, target);
+        }
+
+        private void SelectMainTab(TabItem tab)
+        {
+            if (tab != null)
+            {
+                MainTabControl.SelectedItem = tab;
+            }
+        }
+
+        private async void OnMainTabSelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isHandlingTabSelection)
+            {
+                return;
+            }
+
+            if (!IsLoaded || e.Source != MainTabControl)
+            {
+                return;
+            }
+
+            var newIndex = MainTabControl.SelectedIndex;
+            if (_currentTabIndex < 0)
+            {
+                _currentTabIndex = newIndex;
+                return;
+            }
+
+            if (newIndex == _currentTabIndex)
+            {
+                return;
+            }
+
+            var previousTab = _currentTabIndex >= 0 && _currentTabIndex < MainTabControl.Items.Count
+                ? MainTabControl.Items[_currentTabIndex]
+                : null;
+            var currentTab = MainTabControl.SelectedItem;
+
+            var settingsTabChanged = IsTabItem(previousTab, SettingsTab) || IsTabItem(currentTab, SettingsTab);
+            if (!settingsTabChanged)
+            {
+                _currentTabIndex = newIndex;
+                return;
+            }
+
+            if (!_settingsViewModel.HasPendingChanges)
+            {
+                _currentTabIndex = newIndex;
+                return;
+            }
+
+            var result = System.Windows.MessageBox.Show(
+                "You have unsaved changes in Settings.\n\nChoose an action:\n- Yes: Save changes\n- No: Discard changes\n- Cancel: Stay on current tab",
+                "Unsaved Settings",
+                MessageBoxButton.YesNoCancel,
+                MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Cancel)
+            {
+                _isHandlingTabSelection = true;
+                MainTabControl.SelectedIndex = _currentTabIndex;
+                _isHandlingTabSelection = false;
+                return;
+            }
+
+            if (result == MessageBoxResult.Yes)
+            {
+                var saved = await _settingsViewModel.SaveIfDirtyAsync();
+                if (!saved)
+                {
+                    _isHandlingTabSelection = true;
+                    MainTabControl.SelectedIndex = _currentTabIndex;
+                    _isHandlingTabSelection = false;
+                    return;
+                }
+            }
+            else if (result == MessageBoxResult.No)
+            {
+                await _settingsViewModel.DiscardPendingChangesAsync();
+            }
+
+            _currentTabIndex = MainTabControl.SelectedIndex;
+        }
+
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
-            // Check settings for close behavior
-            if (_settingsService.Settings.CloseToTray)
+            if (_isPerformingShutdown)
             {
-                // Minimize to tray instead of closing
-                e.Cancel = true;
-                WindowState = WindowState.Minimized;
+                base.OnClosing(e);
+                return;
             }
-            else
-            {
-                // Actually close the application
-                System.Windows.Application.Current.Shutdown();
-            }
+
+            e.Cancel = true;
+            _ = HandleWindowCloseAsync();
         }
 
         protected override void OnClosed(EventArgs e)
         {
             try
             {
+                Loaded -= OnWindowLoaded;
+                _processViewModel.OpenRulesRequested -= OnOpenRulesRequested;
+
+                _settingsService.SettingsChanged -= OnSettingsChanged;
+                _processMonitorService.MonitoringStatusChanged -= OnMonitoringStatusChanged;
+                _processMonitorManagerService.ServiceStatusChanged -= OnProcessMonitorManagerStatusChanged;
+                _keyboardShortcutService.ShortcutActivated -= OnShortcutActivated;
+
+                UnsubscribeSystemTrayEvents();
+
                 _systemTrayUpdateTimer?.Stop();
                 _systemTrayUpdateTimer?.Dispose();
 
@@ -1249,6 +1476,18 @@ namespace ThreadPilot
             }
 
             base.OnClosed(e);
+        }
+
+        private void UnsubscribeSystemTrayEvents()
+        {
+            _systemTrayService.ShowMainWindowRequested -= OnShowMainWindowRequested;
+            _systemTrayService.DashboardRequested -= OnDashboardRequested;
+            _systemTrayService.ExitRequested -= OnExitRequested;
+            _systemTrayService.MonitoringToggleRequested -= OnMonitoringToggleRequested;
+            _systemTrayService.SettingsRequested -= OnSettingsRequested;
+            _systemTrayService.PowerPlanChangeRequested -= OnPowerPlanChangeRequested;
+            _systemTrayService.ProfileApplicationRequested -= OnProfileApplicationRequested;
+            _systemTrayService.PerformanceDashboardRequested -= OnPerformanceDashboardRequested;
         }
     }
 }

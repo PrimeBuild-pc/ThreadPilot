@@ -488,11 +488,12 @@ namespace ThreadPilot.Services
 
         public async Task UpdateConfigurationAsync(bool enableDebugLogging, int maxFileSizeMb, int retentionDays)
         {
-            _settingsService.Settings.EnableDebugLogging = enableDebugLogging;
-            _settingsService.Settings.MaxLogFileSizeMb = maxFileSizeMb;
-            _settingsService.Settings.LogRetentionDays = retentionDays;
+            var updatedSettings = _settingsService.Settings;
+            updatedSettings.EnableDebugLogging = enableDebugLogging;
+            updatedSettings.MaxLogFileSizeMb = maxFileSizeMb;
+            updatedSettings.LogRetentionDays = retentionDays;
 
-            await _settingsService.SaveSettingsAsync();
+            await _settingsService.UpdateSettingsAsync(updatedSettings);
             await LogSystemEventAsync("Configuration", $"Logging configuration updated: Debug={enableDebugLogging}, MaxSize={maxFileSizeMb}MB, Retention={retentionDays}days");
         }
 

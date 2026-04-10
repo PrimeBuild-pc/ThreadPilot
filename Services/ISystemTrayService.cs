@@ -66,6 +66,11 @@ namespace ThreadPilot.Services
         event EventHandler? PerformanceDashboardRequested;
 
         /// <summary>
+        /// Event fired when process management dashboard is requested from tray
+        /// </summary>
+        event EventHandler? DashboardRequested;
+
+        /// <summary>
         /// Initializes the system tray icon
         /// </summary>
         void Initialize();

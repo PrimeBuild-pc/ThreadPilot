@@ -20,6 +20,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -31,10 +32,11 @@ namespace ThreadPilot.Services
 {
     public class ProcessService : IProcessService
     {
+        private static string LegacyProfilesDirectory => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Profiles");
         private readonly ConcurrentDictionary<int, CpuSample> _cpuSamples = new();
         private readonly ConcurrentDictionary<int, IProcessCpuSetHandler> _cpuSetHandlers = new();
         private readonly ILogger<ProcessService>? _logger;
-        private string ProfilesDirectory => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Profiles");
+        private string ProfilesDirectory => StoragePaths.ProfilesDirectory;
         private bool _useCpuSets = true; // Enable CPU Sets by default
 
         // Tracking for cleanup on exit
@@ -44,6 +46,9 @@ namespace ThreadPilot.Services
         public ProcessService(ILogger<ProcessService>? logger = null)
         {
             _logger = logger;
+
+            StoragePaths.EnsureAppDataDirectories();
+            MigrateLegacyProfilesIfNeeded();
 
             if (!Directory.Exists(ProfilesDirectory))
             {
@@ -76,6 +81,13 @@ namespace ThreadPilot.Services
 
             public TimeSpan TotalProcessorTime { get; set; }
             public DateTime Timestamp { get; set; }
+        }
+
+        private sealed class ProcessProfileSnapshot
+        {
+            public string ProcessName { get; set; } = string.Empty;
+            public ProcessPriorityClass Priority { get; set; }
+            public long ProcessorAffinity { get; set; }
         }
 
         private double CalculateCpuUsage(Process process)
@@ -299,7 +311,8 @@ namespace ThreadPilot.Services
             };
 
             var filePath = Path.Combine(ProfilesDirectory, $"{profileName}.json");
-            await File.WriteAllTextAsync(filePath, JsonSerializer.Serialize(profile));
+            var json = JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true });
+            await AtomicFileWriter.WriteAllTextAsync(filePath, json, Encoding.UTF8);
             return true;
         }
 
@@ -310,16 +323,21 @@ namespace ThreadPilot.Services
                 return false;
 
             var content = await File.ReadAllTextAsync(filePath);
-            var profile = JsonSerializer.Deserialize<dynamic>(content);
-
-            if (profile != null)
+            var profile = JsonSerializer.Deserialize<ProcessProfileSnapshot>(content, new JsonSerializerOptions
             {
-                await SetProcessPriority(process, profile.Priority);
-                await SetProcessorAffinity(process, profile.ProcessorAffinity);
-                return true;
+                PropertyNameCaseInsensitive = true,
+                ReadCommentHandling = JsonCommentHandling.Skip,
+                AllowTrailingCommas = true
+            });
+
+            if (profile == null)
+            {
+                return false;
             }
 
-            return false;
+            await SetProcessPriority(process, profile.Priority);
+            await SetProcessorAffinity(process, profile.ProcessorAffinity);
+            return true;
         }
 
         public async Task RefreshProcessInfo(ProcessModel process)
@@ -787,6 +805,37 @@ namespace ThreadPilot.Services
         {
             int coreCount = Environment.ProcessorCount;
             return coreCount >= 64 ? -1L : (1L << coreCount) - 1;
+        }
+
+        private void MigrateLegacyProfilesIfNeeded()
+        {
+            try
+            {
+                if (!Directory.Exists(LegacyProfilesDirectory))
+                {
+                    return;
+                }
+
+                Directory.CreateDirectory(ProfilesDirectory);
+                var legacyFiles = Directory.GetFiles(LegacyProfilesDirectory, "*.json");
+                foreach (var legacyFile in legacyFiles)
+                {
+                    var destinationFile = Path.Combine(ProfilesDirectory, Path.GetFileName(legacyFile));
+                    if (!File.Exists(destinationFile))
+                    {
+                        File.Copy(legacyFile, destinationFile);
+                    }
+                }
+
+                if (legacyFiles.Length > 0)
+                {
+                    _logger?.LogInformation("Migrated {Count} legacy profile files to AppData storage", legacyFiles.Length);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Failed to migrate legacy profile files");
+            }
         }
     }
 

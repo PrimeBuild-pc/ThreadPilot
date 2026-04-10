@@ -23,6 +23,9 @@ using System.Windows;
 using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+#if DEBUG
+using ThreadPilot.Tests;
+#endif
 using ThreadPilot.Services;
 using ThreadPilot.ViewModels;
 
@@ -91,15 +94,19 @@ namespace ThreadPilot
             // Parse command line arguments
             bool startMinimized = false;
             bool isAutostart = false;
+#if DEBUG
             bool isTestMode = false;
+#endif
 
             foreach (var arg in e.Args)
             {
                 switch (arg.ToLowerInvariant())
                 {
+#if DEBUG
                     case "--test":
                         isTestMode = true;
                         break;
+#endif
                     case "--start-minimized":
                         startMinimized = true;
                         break;
@@ -114,6 +121,7 @@ namespace ThreadPilot
             }
 
             // Check for test mode
+#if DEBUG
             if (isTestMode)
             {
                 // Run in console test mode
@@ -125,6 +133,7 @@ namespace ThreadPilot
                 });
                 return;
             }
+#endif
 
             var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
 
@@ -186,8 +195,10 @@ namespace ThreadPilot
             base.OnExit(e);
         }
 
+#if DEBUG
         [System.Runtime.InteropServices.DllImport("kernel32.dll")]
         private static extern bool AllocConsole();
+#endif
 
         /// <summary>
         /// Shows a message to the user about elevation requirements

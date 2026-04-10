@@ -289,6 +289,18 @@ namespace ThreadPilot.Services
         {
             if (!_settings.EnableNotifications) return false;
 
+            if (_settings.NotificationLevel == NotificationLevelProfile.Silent)
+            {
+                return false;
+            }
+
+            if (_settings.NotificationLevel == NotificationLevelProfile.WarningsAndErrorsOnly &&
+                type != NotificationType.Warning &&
+                type != NotificationType.Error)
+            {
+                return false;
+            }
+
             return type switch
             {
                 NotificationType.PowerPlanChange => _settings.EnablePowerPlanChangeNotifications,

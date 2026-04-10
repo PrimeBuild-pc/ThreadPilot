@@ -1,71 +1,61 @@
-# ThreadPilot ✈️ <sup><kbd>PUBLIC BETA</kbd></sup>
+# ThreadPilot
 
-[![Status](https://img.shields.io/badge/Status-Public%20Beta-orange.svg)]()
-[![Windows](https://img.shields.io/badge/Windows-10%2F11-blue?logo=windows&logoColor=white)](https://www.microsoft.com/windows)
-[![.NET](https://img.shields.io/badge/.NET-8.0-purple?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
-[![WPF](https://img.shields.io/badge/WPF-Windows%20Presentation%20Foundation-blue?logo=microsoft&logoColor=white)](https://docs.microsoft.com/en-us/dotnet/desktop/wpf/)
-[![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/badge/Release-Latest-brightgreen)](../../releases)
-[![Architecture](https://img.shields.io/badge/Architecture-x64-red?logo=windows&logoColor=white)](https://docs.microsoft.com/en-us/windows/win32/)
+ThreadPilot is a Windows process and power plan manager built with WPF and .NET 8.
+It is focused on deterministic performance workflows for power users, gamers, and admins.
 
-**ThreadPilot** is a Windows application for advanced **process management**, **CPU affinity control**, and **power plan automation**.  
-It is designed for power users, gamers, and professionals who want precise control over system performance.
+## Highlights
 
-[![Thread-Pilotbanner.png](https://i.postimg.cc/sDZLXMqr/Thread-Pilotbanner.png)](https://postimg.cc/cr0hkLd9)
+- Process management with CPU affinity and priority controls.
+- Rule-based automation for process-triggered power plan behavior.
+- Global power plan management with explicit separation from per-process actions.
+- System tweaks panel for advanced Windows performance settings.
+- Performance Intelligence dashboard with hotspots, rule impact, and timeline events.
+- Light/Dark theming with runtime switching.
 
-## ✨ Features
+## Requirements
 
-- Advanced process management with real-time monitoring  
-- CPU affinity control with physical / logical core awareness  
-- Automatic power plan switching per process  
-- Game-focused performance optimization  
-- System tweaks and performance-related Windows settings  
-- Profile-based configuration and persistence  
+- Windows 10/11 (x64)
+- .NET 8 SDK for building from source
+- Administrator privileges for full functionality
 
-<img width="1474" height="920" alt="Screenshot 2025-12-21 044753" src="https://github.com/user-attachments/assets/77fc944e-d2a1-4cc7-9915-e01b0776106c" />
+## Build
 
-## 📦 Installation
-
-### Portable (recommended)
-1. Download the latest release from [GitHub Releases](../../releases)
-2. Extract the archive
-3. Run `ThreadPilot.exe` **as Administrator**
-
-### Build from source
 ```bash
-git clone https://github.com/PrimeBuild-pc/ThreadPilot.git
-cd ThreadPilot
-dotnet build --configuration Release
-dotnet run --configuration Release
-````
+dotnet build "ThreadPilot_1.sln" --configuration Release
+```
 
-Requires **.NET 8.0 SDK** or newer.
+## Run
 
----
+```bash
+dotnet run --project "ThreadPilot.csproj" --configuration Release
+```
 
-## 🛠️ Tech Stack
+Useful arguments:
 
-* .NET 8.0
-* WPF
-* MVVM (CommunityToolkit.Mvvm)
-* Dependency Injection
-* Async / Await
+- `--start-minimized`
+- `--autostart`
+- `--test` (console test mode)
 
----
+## Test Mode
 
-## 📄 License
+Console test mode runs via the app entrypoint and uses `TestRunner.cs`.
 
-This project is licensed under the **GNU General Public License v3.0**.
-See [LICENSE](LICENSE) for details.
+```bash
+dotnet run --project "ThreadPilot.csproj" --configuration Release -- --test
+```
 
----
+Notes:
 
-## 📞 Support
+- In environments where elevation is required to start the app process, test mode may need an elevated terminal.
+- `dotnet test` will only execute tests in dedicated test projects; this repository currently uses an integrated runtime test runner.
 
-**Made for Windows power users☕** [![PayPal](https://img.shields.io/badge/Supporta%20su-PayPal-blue?logo=paypal)](https://paypal.me/PrimeBuildOfficial?country.x=IT&locale.x=it_IT)
+## Architecture Notes
 
-* **Issues**: [https://github.com/PrimeBuild-pc/ThreadPilot/issues](https://github.com/PrimeBuild-pc/ThreadPilot/issues)
-* **Discussions**: [https://github.com/PrimeBuild-pc/ThreadPilot/discussions](https://github.com/PrimeBuild-pc/ThreadPilot/discussions)
+- MVVM with CommunityToolkit.Mvvm.
+- DI configuration in `Services/ServiceConfiguration.cs`.
+- Rules and automation in `Services/ProcessPowerPlanAssociationService.cs` and `ViewModels/ProcessPowerPlanAssociationViewModel.cs`.
+- Performance dashboard in `Views/PerformanceView.xaml` and `ViewModels/PerformanceViewModel.cs`.
 
+## License
 
-
+GPLv3. See `LICENSE`.

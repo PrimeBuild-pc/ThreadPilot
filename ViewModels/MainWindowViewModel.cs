@@ -168,8 +168,19 @@ namespace ThreadPilot
 
         public void UpdateProcessMonitoringStatus(bool isActive, string status)
         {
-            IsProcessMonitoringActive = isActive;
-            ProcessMonitoringStatusText = $"Process Monitoring: {status}";
+            if (System.Windows.Application.Current.Dispatcher.CheckAccess())
+            {
+                IsProcessMonitoringActive = isActive;
+                ProcessMonitoringStatusText = $"Process Monitoring: {status}";
+            }
+            else
+            {
+                System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    IsProcessMonitoringActive = isActive;
+                    ProcessMonitoringStatusText = $"Process Monitoring: {status}";
+                });
+            }
         }
 
         protected override void OnDispose()

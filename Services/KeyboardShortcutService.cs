@@ -209,7 +209,7 @@ namespace ThreadPilot.Services
             {
                 var settings = _settingsService.Settings;
                 settings.KeyboardShortcuts = _registeredShortcuts.Values.ToList();
-                await _settingsService.SaveSettingsAsync();
+                await _settingsService.UpdateSettingsAsync(settings);
                 
                 _logger.LogInformation("Saved {Count} keyboard shortcuts to settings", _registeredShortcuts.Count);
             }

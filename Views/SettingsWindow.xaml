@@ -14,7 +14,7 @@
     
     <Window.Resources>
         <Style TargetType="Window">
-            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
         </Style>
     </Window.Resources>
 

@@ -14,21 +14,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System.Windows.Controls;
-using ThreadPilot.ViewModels;
+using System;
+using System.Globalization;
+using System.Windows.Data;
 
-namespace ThreadPilot.Views
+namespace ThreadPilot.Converters
 {
-    public partial class PowerPlanView : System.Windows.Controls.UserControl
+    public class NullToBoolConverter : IValueConverter
     {
-        public PowerPlanView()
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            InitializeComponent();
+            return value != null;
         }
 
-        public PowerPlanView(PowerPlanViewModel viewModel) : this()
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            DataContext = viewModel;
+            throw new NotImplementedException();
         }
     }
 }

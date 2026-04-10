@@ -14,6 +14,7 @@
         <converters:CoreTypeToColorConverter x:Key="CoreTypeToColorConverter"/>
         <converters:BoolToColorConverter x:Key="BoolToColorConverter"/>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:NullToBoolConverter x:Key="NullToBoolConverter"/>
         <converters:AffinityMaskConverter x:Key="AffinityMaskConverter"/>
         <converters:BytesToMbConverter x:Key="BytesToMbConverter"/>
     </UserControl.Resources>
@@ -116,7 +117,7 @@
             </DataGrid>
 
             <!-- Progressive Loading Indicator -->
-            <Border Background="#80FFFFFF" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Border Background="{DynamicResource OverlayBrush}" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <ProgressBar Value="{Binding LoadingProgress}" Maximum="100" Width="200" Height="20" Margin="0,0,0,10"/>
                     <TextBlock Text="{Binding LoadingStatusText}" HorizontalAlignment="Center" FontWeight="Bold"/>
@@ -124,12 +125,12 @@
             </Border>
 
             <!-- Virtualization Status -->
-            <Border Background="#F0F8FF" BorderBrush="#4169E1" BorderThickness="1"
+            <Border Background="{DynamicResource InfoBackgroundBrush}" BorderBrush="{DynamicResource InfoBorderBrush}" BorderThickness="1"
                     Visibility="{Binding IsVirtualizationEnabled, Converter={StaticResource BoolToVisibilityConverter}}"
                     HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="10" Padding="5">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="📊" FontSize="12" Margin="0,0,3,0"/>
-                    <TextBlock FontSize="10" Foreground="#4169E1">
+                    <TextBlock FontSize="10" Foreground="{DynamicResource InfoTextBrush}">
                         <Run Text="Batch:"/>
                         <Run Text="{Binding CurrentBatchIndex, StringFormat={}{0:N0}}"/>
                         <Run Text="/"/>
@@ -164,7 +165,7 @@
                                   SelectedValue="{Binding SelectedProcess.Priority, Mode=TwoWay}"
                                   SelectedValuePath="Tag"
                                   Margin="0,0,0,5"
-                                  IsEnabled="{Binding SelectedProcess, Converter={StaticResource BoolToVisibilityConverter}}">
+                                  IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}">
                             <ComboBoxItem Content="Realtime" Tag="{x:Static Diagnostics:ProcessPriorityClass.RealTime}"/>
                             <ComboBoxItem Content="High" Tag="{x:Static Diagnostics:ProcessPriorityClass.High}"/>
                             <ComboBoxItem Content="Above Normal" Tag="{x:Static Diagnostics:ProcessPriorityClass.AboveNormal}"/>
@@ -177,20 +178,20 @@
                                 Content="Set Priority"
                                 Padding="10,5"
                                 Margin="0,0,0,5"
-                                IsEnabled="{Binding SelectedProcess, Converter={StaticResource BoolToVisibilityConverter}}"
+                                IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
                                 ToolTip="Apply the selected priority to the process"/>
 
                         <!-- Registry Priority Enforcement -->
                         <CheckBox Content="Enforce Priority by Registry"
                                   IsChecked="{Binding IsRegistryPriorityEnabled}"
-                                  IsEnabled="{Binding SelectedProcess, Converter={StaticResource BoolToVisibilityConverter}}"
+                                  IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
                                   Margin="0,0,0,5"
                                   ToolTip="Apply priority through Windows registry. Process must be restarted for changes to take effect. This setting persists across system reboots."/>
 
                         <!-- Disable Idle Server -->
                         <CheckBox Content="Disable Idle Server"
                                   IsChecked="{Binding IsIdleServerDisabled}"
-                                  IsEnabled="{Binding SelectedProcess, Converter={StaticResource BoolToVisibilityConverter}}"
+                                  IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
                                   ToolTip="Prevents the system from entering idle state while this process is running. Useful for games and performance-critical applications."/>
                     </StackPanel>
                 </GroupBox>
@@ -198,7 +199,7 @@
                 <!-- Core Mask Selection -->
                 <GroupBox Grid.Column="1" Header="Core Mask" Margin="5,0,5,0">
                     <StackPanel Margin="5">
-                        <TextBlock Text="Quick apply a predefined core mask:" FontSize="10" Margin="0,0,0,5" Foreground="Gray"/>
+                        <TextBlock Text="Quick apply a predefined core mask:" FontSize="10" Margin="0,0,0,5" Foreground="{DynamicResource TextSecondaryBrush}"/>
                         <ComboBox ItemsSource="{Binding AvailableCoreMasks}"
                                   SelectedItem="{Binding SelectedCoreMask, Mode=TwoWay}"
                                   Margin="0,0,0,5">
@@ -207,7 +208,7 @@
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="0,0,8,0"/>
                                         <TextBlock Text="{Binding SelectedCoreCount, StringFormat='({0} cores)'}"
-                                                   FontSize="10" Foreground="Gray" VerticalAlignment="Center"/>
+                                                   FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
@@ -217,23 +218,25 @@
                                 Padding="8,5"
                                 Margin="0,0,0,5"
                                 ToolTip="Open Core Masks tab to create a new custom mask"/>
-                        <TextBlock FontSize="9" Foreground="DarkGreen" TextWrapping="Wrap">
+                        <TextBlock FontSize="9" Foreground="{DynamicResource SuccessTextBrush}" TextWrapping="Wrap">
                             <Run Text="ℹ️ Selecting a mask applies it immediately to the selected process."/>
                         </TextBlock>
                     </StackPanel>
                 </GroupBox>
 
-                <!-- Power Plan Selection -->
-                <GroupBox Grid.Column="2" Header="Power Plan" Margin="5,0,5,0">
+                <!-- Global Power Plan Notice -->
+                <GroupBox Grid.Column="2" Header="Global Power Plan" Margin="5,0,5,0">
                     <StackPanel Margin="5">
-                        <ComboBox ItemsSource="{Binding PowerPlans}"
-                                  SelectedItem="{Binding SelectedPowerPlan}"
-                                  DisplayMemberPath="Name"
-                                  Margin="0,0,0,5"/>
-                        <Button Command="{Binding SetPowerPlanCommand}"
-                                Content="Set Power Plan"
+                        <TextBlock Text="Power plans are system-wide." FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBlock Text="Use the Power Plans or Rules tab to change them intentionally."
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   FontSize="11"
+                                   Margin="0,0,0,8"/>
+                        <Button Content="Open Rules"
+                                Command="{Binding OpenRulesTabCommand}"
                                 Padding="10,5"
-                                ToolTip="Apply the selected power plan to the system"/>
+                                ToolTip="Open Rules to configure process-based automation"/>
                     </StackPanel>
                 </GroupBox>
 
@@ -294,10 +297,11 @@
                 </GroupBox>
             </Grid>
 
-            <!-- Profile Management & Process Association -->
-            <GroupBox Grid.Row="1" Header="Profile Management &amp; Process Association" Margin="0,10,0,0">
+            <!-- Profile Management & Rule Save -->
+            <GroupBox Grid.Row="1" Header="Profile Management &amp; Rule Save" Margin="0,10,0,0">
                 <Grid Margin="5">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
@@ -327,7 +331,7 @@
                                 ToolTip="Load a previously saved profile"/>
                     </Grid>
 
-                    <!-- Process Association Row -->
+                    <!-- Rule Save Row -->
                     <Grid Grid.Row="1">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -337,18 +341,50 @@
                         <TextBlock Grid.Column="0"
                                    VerticalAlignment="Center"
                                    TextWrapping="Wrap"
-                                   Foreground="Gray"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                    FontSize="11">
-                            <Run Text="💾 Save current settings (CPU mask, priority, power plan) as an automatic association for this process"/>
+                            <Run Text="💾 Save current settings (CPU mask, priority) as an automatic rule for this process"/>
                         </TextBlock>
                         <Button Grid.Column="1"
                                 Command="{Binding SaveCurrentAsAssociationCommand}"
-                                Content="💾 Save as Association"
+                                Content="💾 Save as Rule"
                                 Padding="12,6"
                                 FontWeight="SemiBold"
-                                IsEnabled="{Binding SelectedProcess, Converter={StaticResource BoolToVisibilityConverter}}"
-                                ToolTip="Save current process settings as an association. These settings will be automatically applied when this process starts in the future."/>
+                                IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
+                                ToolTip="Save current process settings as a rule. These settings will be automatically applied when this process starts in the future."/>
                     </Grid>
+
+                    <Border Grid.Row="2"
+                            Margin="0,10,0,0"
+                            Padding="10,7"
+                            CornerRadius="6"
+                            BorderThickness="1"
+                            Visibility="{Binding StatusMessage, Converter={x:Static converters:StringToVisibilityConverter.Instance}}">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="{DynamicResource SuccessBackgroundBrush}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource SuccessBorderBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasError}" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource ErrorBackgroundBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource ErrorBorderBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Text="{Binding StatusMessage}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasError}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource ErrorTextBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Border>
                 </Grid>
             </GroupBox>
         </Grid>

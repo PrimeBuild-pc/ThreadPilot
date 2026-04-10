@@ -20,18 +20,18 @@
         </Grid.RowDefinitions>
 
         <!-- Standardized Header -->
-        <GroupBox Grid.Row="0" Header="🔗 Process-Power Plan Associations" Margin="0,0,0,10">
+        <GroupBox Grid.Row="0" Header="📐 Rules &amp; Automation" Margin="0,0,0,10">
             <Grid Margin="5">
-                <TextBlock Text="Configure automatic power plan switching based on running processes"
-                          FontSize="12" Foreground="Gray" VerticalAlignment="Center"/>
+                <TextBlock Text="Define per-process rules. Power plans are global; masks and priorities apply to matching processes."
+                           FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
             </Grid>
         </GroupBox>
 
         <!-- Main Content -->
-        <TabControl Grid.Row="1" Background="White" BorderThickness="0">
+        <TabControl Grid.Row="1" Background="{DynamicResource SurfaceBrush}" BorderThickness="0">
 
-            <!-- Associations Tab -->
-            <TabItem Header="🔗 Process Associations">
+            <!-- Rules Tab -->
+            <TabItem Header="📐 Rules">
                 <Grid Margin="10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="2*"/>
@@ -39,8 +39,8 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Associations List -->
-                    <GroupBox Grid.Column="0" Header="📋 Current Associations">
+                    <!-- Rules List -->
+                    <GroupBox Grid.Column="0" Header="📋 Current Rules">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*"/>
@@ -71,9 +71,9 @@
                                     <DataGridTextColumn Header="Priority"
                                                        Binding="{Binding ProcessPriority}"
                                                        Width="80"/>
-                                    <DataGridTextColumn Header="Assoc. Priority"
-                                                       Binding="{Binding Priority}"
-                                                       Width="60"/>
+                                     <DataGridTextColumn Header="Rule Priority"
+                                                        Binding="{Binding Priority}"
+                                                        Width="60"/>
                                     <DataGridCheckBoxColumn Header="Match by Path"
                                                            Binding="{Binding MatchByPath}"
                                                            Width="100"/>
@@ -97,8 +97,8 @@
                         </Grid>
                     </GroupBox>
 
-                    <!-- Add New Association -->
-                    <GroupBox Grid.Column="2" Header="Add New Association">
+                    <!-- Rule Editor -->
+                    <GroupBox Grid.Column="2" Header="Rule Editor">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <StackPanel>
                             <!-- Executable Selection Section -->
@@ -112,17 +112,17 @@
                                    ToolTip="Click to select an executable file (.exe) from your computer"/>
 
                             <!-- Selected Executable Display -->
-                            <Border BorderBrush="#CCCCCC" BorderThickness="1"
-                                   Background="#F8F8F8" Padding="8" Margin="0,0,0,10"
-                                   Visibility="{Binding HasSelectedExecutable, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <StackPanel>
-                                    <TextBlock Text="Selected Executable:" FontSize="10" Foreground="#666666" Margin="0,0,0,2"/>
-                                    <TextBlock Text="{Binding SelectedExecutableDisplayName}"
-                                              FontWeight="Bold" Margin="0,0,0,2"/>
-                                    <TextBlock Text="{Binding SelectedExecutableFullPath}"
-                                              FontSize="10" Foreground="#666666" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Border>
+                             <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                    Background="{DynamicResource SurfaceAltBrush}" Padding="8" Margin="0,0,0,10"
+                                    Visibility="{Binding HasSelectedExecutable, Converter={StaticResource BoolToVisibilityConverter}}">
+                                 <StackPanel>
+                                     <TextBlock Text="Selected Executable:" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                                     <TextBlock Text="{Binding SelectedExecutableDisplayName}"
+                                               FontWeight="Bold" Margin="0,0,0,2"/>
+                                     <TextBlock Text="{Binding SelectedExecutableFullPath}"
+                                               FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                                 </StackPanel>
+                             </Border>
 
                             <!-- Clear Selection Button -->
                             <Button Content="✖ Clear Selection"
@@ -137,7 +137,12 @@
                                      Margin="0,0,0,10"
                                      ToolTip="Match processes by full path instead of just executable name"/>
 
-                            <TextBlock Text="Power Plan:" Margin="0,0,0,5"/>
+                             <TextBlock Text="Power Plan (Global):" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                             <TextBlock Text="Changing this rule changes the system power plan when matched."
+                                        Foreground="{DynamicResource WarningTextBrush}"
+                                        FontSize="10"
+                                        TextWrapping="Wrap"
+                                        Margin="0,0,0,5"/>
                             <ComboBox ItemsSource="{Binding AvailablePowerPlans}"
                                      SelectedItem="{Binding SelectedPowerPlan}"
                                      DisplayMemberPath="Name"
@@ -165,14 +170,19 @@
                             <TextBox Text="{Binding Description}"
                                     Padding="5" Margin="0,0,0,15"/>
 
-                            <Button Content="Add Association"
-                                   Command="{Binding AddAssociationCommand}"
-                                   Padding="10,8"/>
+                            <Button Content="Add Rule"
+                                    Command="{Binding AddAssociationCommand}"
+                                    Padding="10,8"/>
+
+                            <Button Content="Update Selected Rule"
+                                    Command="{Binding UpdateAssociationCommand}"
+                                    Padding="10,8"
+                                    Margin="0,8,0,0"/>
 
                             <Separator Margin="0,15,0,15"/>
 
-                            <TextBlock Text="Or Select from Running Processes:"
-                                      FontWeight="Bold" Margin="0,0,0,10"/>
+                            <TextBlock Text="Use Running Process:"
+                                       FontWeight="Bold" Margin="0,0,0,10"/>
 
                             <ComboBox ItemsSource="{Binding RunningProcesses}"
                                      SelectedItem="{Binding SelectedProcess}"
@@ -181,17 +191,17 @@
                                      ToolTip="Select a currently running process to use its executable"/>
 
                             <Button Content="📋 Use Selected Process"
-                                   Command="{Binding UseSelectedProcessForAssociationCommand}"
-                                   Padding="10,5"
-                                   ToolTip="Use the executable from the selected running process"/>
+                                    Command="{Binding UseSelectedProcessForAssociationCommand}"
+                                    Padding="10,5"
+                                    ToolTip="Use the executable from the selected running process"/>
                             </StackPanel>
                         </ScrollViewer>
                     </GroupBox>
                 </Grid>
             </TabItem>
 
-            <!-- Settings Tab -->
-            <TabItem Header="⚙️ Configuration">
+            <!-- Monitoring Configuration Tab -->
+            <TabItem Header="⚙️ Monitoring Configuration">
                 <ScrollViewer Margin="10">
                     <StackPanel>
                         <!-- Service Control -->
@@ -218,10 +228,10 @@
                         </GroupBox>
 
                         <!-- Default Power Plan -->
-                        <GroupBox Header="Default Power Plan" Margin="0,0,0,15">
-                            <StackPanel>
-                                <TextBlock Text="Power plan to use when no associated processes are running:"
-                                          Foreground="#666666" Margin="0,0,0,10"/>
+                         <GroupBox Header="Default Power Plan (Global fallback)" Margin="0,0,0,15">
+                             <StackPanel>
+                                 <TextBlock Text="Power plan to use when no associated processes are running:"
+                                            Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,10"/>
 
                                 <ComboBox ItemsSource="{Binding AvailablePowerPlans}"
                                          SelectedItem="{Binding DefaultPowerPlan}"
@@ -272,5 +282,38 @@
                 </ScrollViewer>
             </TabItem>
         </TabControl>
+
+        <Border Grid.Row="1"
+                VerticalAlignment="Bottom"
+                Margin="10"
+                Padding="10,7"
+                CornerRadius="6"
+                BorderThickness="1"
+                Visibility="{Binding StatusMessage, Converter={x:Static converters:StringToVisibilityConverter.Instance}}">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Background" Value="{DynamicResource SuccessBackgroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource SuccessBorderBrush}"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasError}" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource ErrorBackgroundBrush}"/>
+                            <Setter Property="BorderBrush" Value="{DynamicResource ErrorBorderBrush}"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <TextBlock Text="{Binding StatusMessage}">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasError}" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource ErrorTextBrush}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </Border>
     </Grid>
 </UserControl>

@@ -6,6 +6,9 @@
              xmlns:converters="clr-namespace:ThreadPilot.Converters">
     <Application.Resources>
         <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/FluentLight.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
             <helpers:BytesToMbConverter x:Key="BytesToMbConverter"/>
             <helpers:AffinityMaskConverter x:Key="AffinityMaskConverter"/>
             <helpers:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter"/>
@@ -14,6 +17,7 @@
             <converters:BoolToStringConverter x:Key="BoolToStringConverter"/>
             <converters:BytesToStringConverter x:Key="BytesToStringConverter"/>
             <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+            <converters:NullToBoolConverter x:Key="NullToBoolConverter"/>
             <local:BoolToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
             <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
         </ResourceDictionary>

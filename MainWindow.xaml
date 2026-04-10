@@ -13,6 +13,23 @@
         WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
+        <Style TargetType="GroupBox">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        </Style>
+
+        <Style TargetType="StatusBar">
+            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+
         <!-- Loading Spinner Animation -->
         <Storyboard x:Key="SpinnerAnimation" RepeatBehavior="Forever">
             <DoubleAnimation Storyboard.TargetName="SpinnerRotation"
@@ -35,7 +52,7 @@
         </Storyboard>
     </Window.Resources>
 
-    <Grid>
+    <Grid Background="{DynamicResource AppBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -44,7 +61,7 @@
         </Grid.RowDefinitions>
 
         <!-- Elevation Status Bar -->
-        <Border Grid.Row="0" Background="#FFF3CD" BorderBrush="#FFEAA2" BorderThickness="1"
+        <Border Grid.Row="0" Background="{DynamicResource WarningBackgroundBrush}" BorderBrush="{DynamicResource WarningBorderBrush}" BorderThickness="1"
                 Visibility="{Binding ShowElevationPrompt, Converter={StaticResource BoolToVisibilityConverter}}"
                 Margin="5,5,5,0">
             <Grid Margin="10,5">
@@ -66,23 +83,32 @@
 
         <!-- Main Application Content -->
         <Grid x:Name="MainContent" Grid.Row="2">
-            <TabControl Margin="10">
-                <TabItem Header="🔧 Process Management">
+            <TabControl x:Name="MainTabControl" Margin="10" SelectionChanged="OnMainTabSelectionChanged">
+                <TabItem x:Name="ProcessManagementTab" Header="🔧 Process Management">
                     <views:ProcessView/>
                 </TabItem>
-                <TabItem Header="🎯 Core Masks">
+                <TabItem x:Name="CoreMasksTab" Header="🎯 Core Masks">
                     <views:MasksView/>
                 </TabItem>
-                <TabItem Header="⚡ Power Plans">
-                    <views:PowerPlanView/>
+                <TabItem x:Name="PowerPlansTab" Header="⚡ Power Plans">
+                    <views:PowerPlanView x:Name="PowerPlanViewControl"/>
                 </TabItem>
-                <TabItem Header="🔗 Process Associations">
+                <TabItem x:Name="ProcessAssociationsTab" Header="📐 Rules">
                     <views:ProcessPowerPlanAssociationView x:Name="AssociationView"/>
                 </TabItem>
-                <TabItem Header="🔧 Tweaks">
+                <TabItem x:Name="PerformanceTab" Header="📊 Performance">
+                    <views:PerformanceView x:Name="PerformanceViewControl"/>
+                </TabItem>
+                <TabItem x:Name="SystemTweaksTab" Header="🔧 Tweaks">
                     <views:SystemTweaksView x:Name="SystemTweaksView"/>
                 </TabItem>
-                <TabItem Header="⚙️ Settings">
+                <TabItem x:Name="SettingsTab">
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets, Segoe UI Symbol, Segoe UI" Margin="0,0,6,0"/>
+                            <TextBlock Text="Settings"/>
+                        </StackPanel>
+                    </TabItem.Header>
                     <views:SettingsView x:Name="SettingsView"/>
                 </TabItem>
             </TabControl>
@@ -109,11 +135,11 @@
         <!-- Startup Loading Overlay -->
         <Grid x:Name="LoadingOverlay"
               Grid.RowSpan="4"
-              Background="#80000000"
+              Background="{DynamicResource OverlayBrush}"
               Visibility="Visible"
               Panel.ZIndex="1000">
-            <Border Background="White"
-                    BorderBrush="LightGray"
+            <Border Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1"
                     CornerRadius="8"
                     Padding="30"
@@ -133,13 +159,13 @@
                     <!-- Loading Spinner -->
                     <Grid Width="32" Height="32" Margin="0,0,0,20" HorizontalAlignment="Center">
                         <Ellipse Width="32" Height="32"
-                                 Stroke="LightGray"
+                                 Stroke="{DynamicResource SpinnerTrackBrush}"
                                  StrokeThickness="3"
                                  Opacity="0.3"/>
                         <Ellipse x:Name="SpinnerEllipse"
                                  Width="32"
                                  Height="32"
-                                 Stroke="#0078D4"
+                                 Stroke="{DynamicResource AccentBrush}"
                                  StrokeThickness="3"
                                  StrokeDashArray="20,10"
                                  RenderTransformOrigin="0.5,0.5">
@@ -161,7 +187,7 @@
                     <TextBlock x:Name="LoadingStatus"
                                Text="Initializing services..."
                                FontSize="12"
-                               Foreground="Gray"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>

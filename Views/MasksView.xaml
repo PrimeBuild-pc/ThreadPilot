@@ -32,10 +32,10 @@
                 </StackPanel>
 
                 <!-- ListBox delle maschere -->
-                <Border BorderBrush="#CCCCCC" BorderThickness="1" CornerRadius="4">
+                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4">
                     <ListBox ItemsSource="{Binding CoreMasks}"
                              SelectedItem="{Binding SelectedCoreMask, Mode=TwoWay}"
-                             Background="White"
+                             Background="{DynamicResource SurfaceBrush}"
                              BorderThickness="0">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
@@ -47,11 +47,11 @@
 
                                     <StackPanel Grid.Column="0">
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13"/>
-                                        <TextBlock Text="{Binding Description}"
-                                                   FontSize="11" Foreground="#666666"
+                                         <TextBlock Text="{Binding Description}"
+                                                   FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
                                                    TextTrimming="CharacterEllipsis"
                                                    Margin="0,2,0,0"/>
-                                        <TextBlock FontSize="10" Foreground="#999999" Margin="0,2,0,0">
+                                        <TextBlock FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,2,0,0">
                                             <Run Text="{Binding SelectedCoreCount, Mode=OneWay}"/>
                                             <Run Text="/"/>
                                             <Run Text="{Binding BoolMask.Count, Mode=OneWay}"/>
@@ -117,7 +117,7 @@
                         <StackPanel>
                             <!-- Core Checkboxes - Direct binding to BoolMask like CPUSetSetter -->
                             <TextBlock Text="Click checkboxes to toggle cores. Changes are saved automatically."
-                                       FontSize="11" Foreground="Gray" Margin="0,0,0,10"/>
+                                       FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,10"/>
                             <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="300">
                                 <ItemsControl x:Name="CoreItemsControl" ItemsSource="{Binding CoreBits}">
                                     <ItemsControl.ItemsPanel>
@@ -127,14 +127,14 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border BorderBrush="#CCCCCC" BorderThickness="1"
+                                            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                                     Margin="2" Padding="4" CornerRadius="3">
                                                 <Border.Style>
                                                     <Style TargetType="Border">
-                                                        <Setter Property="Background" Value="White"/>
+                                                        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                <Setter Property="Background" Value="#E3F2FD"/>
+                                                                <Setter Property="Background" Value="{DynamicResource InfoBackgroundBrush}"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
@@ -178,9 +178,9 @@
         </Grid>
 
         <!-- Status Bar -->
-        <Border Grid.Row="1" Background="#F5F5F5" Padding="10,5" Margin="0,10,0,0" CornerRadius="3">
+        <Border Grid.Row="1" Background="{DynamicResource SurfaceAltBrush}" Padding="10,5" Margin="0,10,0,0" CornerRadius="3">
             <TextBlock Text="{Binding StatusMessage}"
-                       FontSize="12" Foreground="#666666"
+                       FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"
                        TextTrimming="CharacterEllipsis"/>
         </Border>
     </Grid>

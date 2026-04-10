@@ -16,10 +16,10 @@
     <TrimMode>link</TrimMode>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>CS1998;CS0067;CS0414;WFAC010;IL3000;MVVMTK0034</NoWarn>
-    <Version>0.1.0-beta</Version>
-    <AssemblyVersion>0.1.0.0</AssemblyVersion>
-    <FileVersion>0.1.0.0</FileVersion>
-    <InformationalVersion>0.1.0-beta</InformationalVersion>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -61,12 +61,12 @@
     <Compile Remove="ViewModels\LogViewerViewModel.cs" />
     <Compile Remove="Views\LogViewerView.xaml.cs" />
     <Page Remove="Views\LogViewerView.xaml" />
-    <!-- Remove Game Boost feature and tests from build -->
+    <!-- Remove optional Game Boost feature from build -->
     <Compile Remove="Services\GameBoostService.cs" />
     <Compile Remove="Services\IGameBoostService.cs" />
     <Compile Remove="Services\GameDetectionService.cs" />
     <Compile Remove="Services\IGameDetectionService.cs" />
-    <Compile Remove="Tests\TestRunner.cs" />
+    <!-- Remove Game Boost-specific integration test from build -->
     <Compile Remove="Tests\GameBoostIntegrationTest.cs" />
   </ItemGroup>
 

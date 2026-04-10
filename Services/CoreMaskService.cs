@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -33,6 +34,13 @@ namespace ThreadPilot.Services
     /// </summary>
     public class CoreMaskService : ICoreMaskService
     {
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            WriteIndented = true,
+            PropertyNameCaseInsensitive = true,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true
+        };
         private readonly ILogger<CoreMaskService> _logger;
         private readonly ICpuTopologyService _cpuTopologyService;
         private readonly IServiceProvider _serviceProvider;
@@ -59,12 +67,8 @@ namespace ThreadPilot.Services
             _cpuTopologyService = cpuTopologyService ?? throw new ArgumentNullException(nameof(cpuTopologyService));
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 
-            var appDataPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "ThreadPilot");
-
-            Directory.CreateDirectory(appDataPath);
-            _masksFilePath = Path.Combine(appDataPath, "core_masks.json");
+            StoragePaths.EnsureAppDataDirectories();
+            _masksFilePath = StoragePaths.CoreMasksFilePath;
         }
 
         public async Task InitializeAsync()
@@ -183,12 +187,9 @@ namespace ThreadPilot.Services
                     updatedAt = m.UpdatedAt
                 }).ToList();
 
-                var json = JsonSerializer.Serialize(data, new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
+                var json = JsonSerializer.Serialize(data, JsonOptions);
 
-                await File.WriteAllTextAsync(_masksFilePath, json);
+                await AtomicFileWriter.WriteAllTextAsync(_masksFilePath, json, Encoding.UTF8);
                 _logger.LogDebug("Saved {Count} masks to {Path}", AvailableMasks.Count, _masksFilePath);
             }
             catch (Exception ex)
@@ -209,7 +210,7 @@ namespace ThreadPilot.Services
                 }
 
                 var json = await File.ReadAllTextAsync(_masksFilePath);
-                var data = JsonSerializer.Deserialize<List<JsonElement>>(json);
+                var data = JsonSerializer.Deserialize<List<JsonElement>>(json, JsonOptions);
 
                 if (data == null)
                 {

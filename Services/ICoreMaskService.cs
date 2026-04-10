@@ -105,6 +105,16 @@ namespace ThreadPilot.Services
         /// Gets the "All Cores" baseline mask (cannot be deleted)
         /// </summary>
         CoreMask? GetAllCoresMask();
+
+        /// <summary>
+        /// Registers that a mask has been applied to a running process
+        /// </summary>
+        void RegisterMaskApplication(int processId, string maskId);
+
+        /// <summary>
+        /// Unregisters mask tracking when a process exits or a mask is removed
+        /// </summary>
+        void UnregisterMaskApplication(int processId);
     }
 }
 

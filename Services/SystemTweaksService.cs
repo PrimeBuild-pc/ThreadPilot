@@ -19,6 +19,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Management;
 using System.ServiceProcess;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
@@ -30,6 +31,15 @@ namespace ThreadPilot.Services
     /// </summary>
     public class SystemTweaksService : ISystemTweaksService
     {
+        private static readonly string BcdEditExecutablePath = Path.Combine(Environment.SystemDirectory, "bcdedit.exe");
+        private static readonly string PowerCfgExecutablePath = Path.Combine(Environment.SystemDirectory, "powercfg.exe");
+        private static readonly Regex HexValueRegex = new("0x([0-9a-fA-F]+)", RegexOptions.Compiled);
+        private const string ProcessorSubgroupAlias = "SUB_PROCESSOR";
+        private const string CoreParkingSettingAlias = "CPMINCORES";
+        private const string CStatesSettingAlias = "IDLEDISABLE";
+        private const string CoreParkingVisibilityKeyPath = @"SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583";
+        private const string PriorityControlKeyPath = @"SYSTEM\CurrentControlSet\Control\PriorityControl";
+        private const string PrioritySeparationValueName = "Win32PrioritySeparation";
         private readonly ILogger<SystemTweaksService> _logger;
         private readonly IElevationService _elevationService;
 
@@ -47,20 +57,22 @@ namespace ThreadPilot.Services
         {
             try
             {
-                using var key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583");
-                if (key == null)
+                await EnsurePowerSettingVisibleAsync(ProcessorSubgroupAlias, CoreParkingSettingAlias);
+
+                var acValue = await GetPowerCfgAcSettingValueAsync(ProcessorSubgroupAlias, CoreParkingSettingAlias);
+                if (!acValue.HasValue)
                 {
-                    return new TweakStatus { IsAvailable = false, ErrorMessage = "Core Parking registry key not found" };
+                    return new TweakStatus { IsAvailable = false, ErrorMessage = "Could not query Core Parking value via powercfg" };
                 }
 
-                var attributes = key.GetValue("Attributes");
-                var isEnabled = attributes?.ToString() != "1"; // 1 = hidden (disabled), 2 = visible (enabled)
+                // ON = disable parking (keep all cores unparked, typically 100)
+                var isEnabled = acValue.Value >= 100;
 
                 return new TweakStatus 
                 { 
                     IsEnabled = isEnabled, 
                     IsAvailable = true,
-                    Description = "Controls CPU core parking for power management"
+                    Description = "ON disables core parking (all cores unparked); OFF allows parking"
                 };
             }
             catch (Exception ex)
@@ -80,15 +92,32 @@ namespace ThreadPilot.Services
                     return false;
                 }
 
-                using var key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583", true);
-                if (key == null)
+                await EnsurePowerSettingVisibleAsync(ProcessorSubgroupAlias, CoreParkingSettingAlias);
+
+                var acValue = enabled ? 100 : 10;
+                var setValueResult = await RunProcessAsync(PowerCfgExecutablePath,
+                    $"-setacvalueindex SCHEME_CURRENT {ProcessorSubgroupAlias} {CoreParkingSettingAlias} {acValue}");
+                if (setValueResult.ExitCode != 0)
                 {
-                    _logger.LogError("Core Parking registry key not found");
+                    _logger.LogError("Failed setting Core Parking AC value. ExitCode={ExitCode}, Error={Error}",
+                        setValueResult.ExitCode, setValueResult.StandardError);
                     return false;
                 }
 
-                // Set attributes: 1 = hidden (disabled), 2 = visible (enabled)
-                key.SetValue("Attributes", enabled ? 2 : 1, RegistryValueKind.DWord);
+                var activateResult = await RunProcessAsync(PowerCfgExecutablePath, "/setactive SCHEME_CURRENT");
+                if (activateResult.ExitCode != 0)
+                {
+                    _logger.LogError("Failed activating current power scheme after Core Parking change. ExitCode={ExitCode}, Error={Error}",
+                        activateResult.ExitCode, activateResult.StandardError);
+                    return false;
+                }
+
+                // Keep setting visible in Windows advanced power UI if the key exists.
+                using var visibilityKey = Registry.LocalMachine.OpenSubKey(CoreParkingVisibilityKeyPath, true);
+                if (visibilityKey != null)
+                {
+                    visibilityKey.SetValue("Attributes", 2, RegistryValueKind.DWord);
+                }
 
                 var status = await GetCoreParkingStatusAsync();
                 TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("CoreParking", status));
@@ -107,21 +136,22 @@ namespace ThreadPilot.Services
         {
             try
             {
-                // Check C-States via registry
-                using var key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Processor");
-                if (key == null)
+                await EnsurePowerSettingVisibleAsync(ProcessorSubgroupAlias, CStatesSettingAlias);
+
+                var acValue = await GetPowerCfgAcSettingValueAsync(ProcessorSubgroupAlias, CStatesSettingAlias);
+                if (!acValue.HasValue)
                 {
-                    return new TweakStatus { IsAvailable = false, ErrorMessage = "Processor registry key not found" };
+                    return new TweakStatus { IsAvailable = false, ErrorMessage = "Could not query C-States value via powercfg" };
                 }
 
-                var cStateDisable = key.GetValue("CStateDisable");
-                var isEnabled = cStateDisable?.ToString() != "1"; // 1 = disabled, 0 or null = enabled
+                // ON = enable C-States (IDLEDISABLE=0), OFF = disable C-States (IDLEDISABLE=1)
+                var isEnabled = acValue.Value == 0;
 
                 return new TweakStatus 
                 { 
                     IsEnabled = isEnabled, 
                     IsAvailable = true,
-                    Description = "Controls CPU C-States for power management"
+                    Description = "ON enables C-States; OFF disables C-States for lower latency"
                 };
             }
             catch (Exception ex)
@@ -141,15 +171,25 @@ namespace ThreadPilot.Services
                     return false;
                 }
 
-                using var key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Processor", true);
-                if (key == null)
+                await EnsurePowerSettingVisibleAsync(ProcessorSubgroupAlias, CStatesSettingAlias);
+
+                var value = enabled ? 0 : 1;
+                var setValueResult = await RunProcessAsync(PowerCfgExecutablePath,
+                    $"-setacvalueindex SCHEME_CURRENT {ProcessorSubgroupAlias} {CStatesSettingAlias} {value}");
+                if (setValueResult.ExitCode != 0)
                 {
-                    _logger.LogError("Processor registry key not found");
+                    _logger.LogError("Failed setting C-States AC value. ExitCode={ExitCode}, Error={Error}",
+                        setValueResult.ExitCode, setValueResult.StandardError);
                     return false;
                 }
 
-                // Set CStateDisable: 1 = disabled, 0 = enabled
-                key.SetValue("CStateDisable", enabled ? 0 : 1, RegistryValueKind.DWord);
+                var activateResult = await RunProcessAsync(PowerCfgExecutablePath, "/setactive SCHEME_CURRENT");
+                if (activateResult.ExitCode != 0)
+                {
+                    _logger.LogError("Failed activating current power scheme after C-States change. ExitCode={ExitCode}, Error={Error}",
+                        activateResult.ExitCode, activateResult.StandardError);
+                    return false;
+                }
 
                 var status = await GetCStatesStatusAsync();
                 TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("CStates", status));
@@ -169,7 +209,8 @@ namespace ThreadPilot.Services
             try
             {
                 using var serviceController = new ServiceController("SysMain");
-                var isEnabled = serviceController.Status == System.ServiceProcess.ServiceControllerStatus.Running;
+                serviceController.Refresh();
+                var isEnabled = serviceController.StartType != ServiceStartMode.Disabled;
                 var isAvailable = true;
 
                 return new TweakStatus 
@@ -197,16 +238,23 @@ namespace ThreadPilot.Services
                 }
 
                 using var serviceController = new ServiceController("SysMain");
+                if (!SetServiceStartMode("SysMain", enabled ? ServiceStartMode.Automatic : ServiceStartMode.Disabled))
+                {
+                    _logger.LogError("Failed to set SysMain startup mode");
+                    return false;
+                }
+
+                serviceController.Refresh();
                 
-                if (enabled && serviceController.Status != System.ServiceProcess.ServiceControllerStatus.Running)
+                if (enabled && serviceController.Status == ServiceControllerStatus.Stopped)
                 {
                     serviceController.Start();
-                    serviceController.WaitForStatus(System.ServiceProcess.ServiceControllerStatus.Running, TimeSpan.FromSeconds(30));
+                    serviceController.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(30));
                 }
-                else if (!enabled && serviceController.Status == System.ServiceProcess.ServiceControllerStatus.Running)
+                else if (!enabled && (serviceController.Status == ServiceControllerStatus.Running || serviceController.Status == ServiceControllerStatus.Paused))
                 {
                     serviceController.Stop();
-                    serviceController.WaitForStatus(System.ServiceProcess.ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(30));
+                    serviceController.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(30));
                 }
 
                 var status = await GetSysMainStatusAsync();
@@ -292,14 +340,15 @@ namespace ThreadPilot.Services
                     return new TweakStatus { IsAvailable = false, ErrorMessage = "Power Throttling not available on this system" };
                 }
 
-                var powerThrottlingOff = key.GetValue("PowerThrottlingOff");
-                var isEnabled = powerThrottlingOff?.ToString() != "1"; // 1 = disabled, 0 or null = enabled
+                var powerThrottlingOff = ReadRegistryIntValue(key, "PowerThrottlingOff");
+                // ON = disable throttling (PowerThrottlingOff=1)
+                var isEnabled = powerThrottlingOff.GetValueOrDefault(0) == 1;
 
                 return new TweakStatus
                 {
                     IsEnabled = isEnabled,
                     IsAvailable = true,
-                    Description = "Windows Power Throttling for energy efficiency"
+                    Description = "ON disables Windows Power Throttling for sustained performance"
                 };
             }
             catch (Exception ex)
@@ -326,8 +375,8 @@ namespace ThreadPilot.Services
                     return false;
                 }
 
-                // Set PowerThrottlingOff: 1 = disabled, 0 = enabled
-                key.SetValue("PowerThrottlingOff", enabled ? 0 : 1, RegistryValueKind.DWord);
+                // Set PowerThrottlingOff: 1 = throttling disabled, 0 = throttling enabled
+                key.SetValue("PowerThrottlingOff", enabled ? 1 : 0, RegistryValueKind.DWord);
 
                 var status = await GetPowerThrottlingStatusAsync();
                 TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("PowerThrottling", status));
@@ -349,7 +398,7 @@ namespace ThreadPilot.Services
                 // Check HPET status via bcdedit
                 var processInfo = new ProcessStartInfo
                 {
-                    FileName = "bcdedit",
+                    FileName = BcdEditExecutablePath,
                     Arguments = "/enum",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
@@ -365,7 +414,15 @@ namespace ThreadPilot.Services
                 var output = await process.StandardOutput.ReadToEndAsync();
                 await process.WaitForExitAsync();
 
-                var isEnabled = !output.Contains("useplatformclock") || output.Contains("useplatformclock        Yes");
+                var platformClockLine = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .FirstOrDefault(l => l.TrimStart().StartsWith("useplatformclock", StringComparison.OrdinalIgnoreCase));
+
+                // ON = disable HPET (useplatformclock removed/absent)
+                var isEnabled = true;
+                if (!string.IsNullOrWhiteSpace(platformClockLine))
+                {
+                    isEnabled = !platformClockLine.TrimEnd().EndsWith("Yes", StringComparison.OrdinalIgnoreCase);
+                }
 
                 return new TweakStatus
                 {
@@ -391,10 +448,11 @@ namespace ThreadPilot.Services
                     return false;
                 }
 
-                var arguments = enabled ? "/set useplatformclock true" : "/set useplatformclock false";
+                // ON = disable HPET (/deletevalue), OFF = force HPET (/set true)
+                var arguments = enabled ? "/deletevalue useplatformclock" : "/set useplatformclock true";
                 var processInfo = new ProcessStartInfo
                 {
-                    FileName = "bcdedit",
+                    FileName = BcdEditExecutablePath,
                     Arguments = arguments,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
@@ -431,20 +489,20 @@ namespace ThreadPilot.Services
         {
             try
             {
-                using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games");
+                using var key = Registry.LocalMachine.OpenSubKey(PriorityControlKeyPath);
                 if (key == null)
                 {
-                    return new TweakStatus { IsAvailable = false, ErrorMessage = "Games scheduling registry key not found" };
+                    return new TweakStatus { IsAvailable = false, ErrorMessage = "PriorityControl registry key not found" };
                 }
 
-                var priority = key.GetValue("Priority");
-                var isEnabled = priority?.ToString() == "6"; // 6 = High priority
+                var rawValue = ReadRegistryIntValue(key, PrioritySeparationValueName);
+                var isEnabled = rawValue.GetValueOrDefault(2) == 38;
 
                 return new TweakStatus
                 {
                     IsEnabled = isEnabled,
                     IsAvailable = true,
-                    Description = "High scheduling priority for gaming applications"
+                    Description = "ON applies high foreground boost (Win32PrioritySeparation=38)"
                 };
             }
             catch (Exception ex)
@@ -464,15 +522,15 @@ namespace ThreadPilot.Services
                     return false;
                 }
 
-                using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games", true);
+                using var key = Registry.LocalMachine.OpenSubKey(PriorityControlKeyPath, true);
                 if (key == null)
                 {
-                    _logger.LogError("Games scheduling registry key not found");
+                    _logger.LogError("PriorityControl registry key not found");
                     return false;
                 }
 
-                // Set Priority: 6 = High, 2 = Normal
-                key.SetValue("Priority", enabled ? 6 : 2, RegistryValueKind.DWord);
+                // ON = 38 (Short, Variable, High), OFF = 2 (default/minimal boost)
+                key.SetValue(PrioritySeparationValueName, enabled ? 38 : 2, RegistryValueKind.DWord);
 
                 var status = await GetHighSchedulingCategoryStatusAsync();
                 TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("HighSchedulingCategory", status));
@@ -486,6 +544,129 @@ namespace ThreadPilot.Services
                 return false;
             }
         }
+
+        private bool SetServiceStartMode(string serviceName, ServiceStartMode mode)
+        {
+            var startModeValue = mode switch
+            {
+                ServiceStartMode.Automatic => "auto",
+                ServiceStartMode.Manual => "demand",
+                ServiceStartMode.Disabled => "disabled",
+                _ => "demand"
+            };
+
+            var processInfo = new ProcessStartInfo
+            {
+                FileName = Path.Combine(Environment.SystemDirectory, "sc.exe"),
+                Arguments = $"config \"{serviceName}\" start= {startModeValue}",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            using var process = Process.Start(processInfo);
+            if (process == null)
+            {
+                _logger.LogError("Could not start sc.exe to update service start mode for {ServiceName}", serviceName);
+                return false;
+            }
+
+            process.WaitForExit();
+            if (process.ExitCode != 0)
+            {
+                var error = process.StandardError.ReadToEnd();
+                _logger.LogWarning("Failed to update service start mode for {ServiceName}. ExitCode={ExitCode}, Error={Error}",
+                    serviceName, process.ExitCode, error);
+                return false;
+            }
+
+            return true;
+        }
+
+        private async Task EnsurePowerSettingVisibleAsync(string subgroupAlias, string settingAlias)
+        {
+            var attributesResult = await RunProcessAsync(PowerCfgExecutablePath,
+                $"-attributes {subgroupAlias} {settingAlias} -ATTRIB_HIDE");
+
+            if (attributesResult.ExitCode != 0)
+            {
+                _logger.LogDebug("Could not unhide power setting {Subgroup}/{Setting}. ExitCode={ExitCode}, Error={Error}",
+                    subgroupAlias, settingAlias, attributesResult.ExitCode, attributesResult.StandardError);
+            }
+        }
+
+        private async Task<int?> GetPowerCfgAcSettingValueAsync(string subgroupAlias, string settingAlias)
+        {
+            var queryResult = await RunProcessAsync(PowerCfgExecutablePath,
+                $"-query SCHEME_CURRENT {subgroupAlias} {settingAlias}");
+
+            if (queryResult.ExitCode != 0)
+            {
+                _logger.LogWarning("powercfg query failed for {Subgroup}/{Setting}. ExitCode={ExitCode}, Error={Error}",
+                    subgroupAlias, settingAlias, queryResult.ExitCode, queryResult.StandardError);
+                return null;
+            }
+
+            var line = queryResult.StandardOutput
+                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .FirstOrDefault(l => l.Contains("Current AC Power Setting Index", StringComparison.OrdinalIgnoreCase));
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                return null;
+            }
+
+            var match = HexValueRegex.Match(line);
+            if (!match.Success)
+            {
+                return null;
+            }
+
+            return int.TryParse(match.Groups[1].Value, System.Globalization.NumberStyles.HexNumber,
+                System.Globalization.CultureInfo.InvariantCulture, out var parsed)
+                ? parsed
+                : null;
+        }
+
+        private static async Task<ProcessResult> RunProcessAsync(string fileName, string arguments)
+        {
+            var processInfo = new ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            using var process = Process.Start(processInfo);
+            if (process == null)
+            {
+                return new ProcessResult(-1, string.Empty, "Could not start process");
+            }
+
+            var outputTask = process.StandardOutput.ReadToEndAsync();
+            var errorTask = process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+
+            return new ProcessResult(process.ExitCode, await outputTask, await errorTask);
+        }
+
+        private static int? ReadRegistryIntValue(RegistryKey key, string valueName)
+        {
+            var raw = key.GetValue(valueName);
+            return raw switch
+            {
+                int intValue => intValue,
+                uint uintValue => unchecked((int)uintValue),
+                long longValue when longValue >= int.MinValue && longValue <= int.MaxValue => (int)longValue,
+                string stringValue when int.TryParse(stringValue, out var parsed) => parsed,
+                _ => null
+            };
+        }
+
+        private readonly record struct ProcessResult(int ExitCode, string StandardOutput, string StandardError);
 
         public async Task<TweakStatus> GetMenuShowDelayStatusAsync()
         {

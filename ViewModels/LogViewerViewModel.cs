@@ -282,12 +282,6 @@ namespace ThreadPilot.ViewModels
             try
             {
                 await _loggingService.UpdateConfigurationAsync(EnableDebugLogging, MaxLogFileSizeMb, LogRetentionDays);
-                
-                _settingsService.Settings.EnableDebugLogging = EnableDebugLogging;
-                _settingsService.Settings.MaxLogFileSizeMb = MaxLogFileSizeMb;
-                _settingsService.Settings.LogRetentionDays = LogRetentionDays;
-                
-                await _settingsService.SaveSettingsAsync();
 
                 StatusMessage = "Logging settings saved successfully";
                 await _loggingService.LogUserActionAsync("LoggingSettingsChanged", 

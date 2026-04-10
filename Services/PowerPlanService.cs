@@ -29,6 +29,7 @@ namespace ThreadPilot.Services
     public class PowerPlanService : IPowerPlanService
     {
         private static readonly Lazy<string> _powerPlansPath = new(GetPowerPlansPath);
+        private static readonly string _powerCfgExecutablePath = Path.Combine(Environment.SystemDirectory, "powercfg.exe");
         private static string PowerPlansPath => _powerPlansPath.Value;
 
         private readonly object _lockObject = new();
@@ -51,6 +52,8 @@ namespace ThreadPilot.Services
         /// </summary>
         private static string GetPowerPlansPath()
         {
+            StoragePaths.EnsureAppDataDirectories();
+
             // Check portable mode first (Powerplans folder next to EXE)
             var exeDir = AppContext.BaseDirectory;
             var portablePath = Path.Combine(exeDir, "Powerplans");
@@ -60,9 +63,7 @@ namespace ThreadPilot.Services
             }
 
             // Installed mode: use AppData
-            var appDataPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "ThreadPilot", "Powerplans");
+            var appDataPath = StoragePaths.PowerPlansDirectory;
 
             // Ensure directory exists
             if (!Directory.Exists(appDataPath))
@@ -105,7 +106,7 @@ namespace ThreadPilot.Services
                 {
                     StartInfo = new ProcessStartInfo
                     {
-                        FileName = "powercfg",
+                        FileName = _powerCfgExecutablePath,
                         Arguments = "/list",
                         UseShellExecute = false,
                         RedirectStandardOutput = true,
@@ -199,12 +200,11 @@ namespace ThreadPilot.Services
                     {
                         StartInfo = new ProcessStartInfo
                         {
-                            FileName = "powercfg",
+                            FileName = _powerCfgExecutablePath,
                             Arguments = $"/setactive {powerPlanGuid}",
                             UseShellExecute = false,
                             RedirectStandardOutput = true,
-                            CreateNoWindow = true,
-                            Verb = "runas" // Run with elevated privileges
+                            CreateNoWindow = true
                         }
                     };
 
@@ -270,7 +270,7 @@ namespace ThreadPilot.Services
                     {
                         StartInfo = new ProcessStartInfo
                         {
-                            FileName = "powercfg",
+                            FileName = _powerCfgExecutablePath,
                             Arguments = "/getactivescheme",
                             UseShellExecute = false,
                             RedirectStandardOutput = true,
@@ -314,12 +314,11 @@ namespace ThreadPilot.Services
                     {
                         StartInfo = new ProcessStartInfo
                         {
-                            FileName = "powercfg",
+                            FileName = _powerCfgExecutablePath,
                             Arguments = $"/import \"{filePath}\"",
                             UseShellExecute = false,
                             RedirectStandardOutput = true,
-                            CreateNoWindow = true,
-                            Verb = "runas" // Run with elevated privileges
+                            CreateNoWindow = true
                         }
                     };
 

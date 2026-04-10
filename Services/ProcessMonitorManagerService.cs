@@ -45,11 +45,13 @@ namespace ThreadPilot.Services
         private readonly ConcurrentDictionary<int, ProcessModel> _runningAssociatedProcesses = new();
         private readonly System.Threading.Timer _delayTimer;
         private readonly SemaphoreSlim _powerPlanChangeSemaphore = new(1, 1);
+        private readonly SemaphoreSlim _stateMutationSemaphore = new(1, 1);
         
         private bool _isRunning;
         private string _status = "Stopped";
         private bool _disposed;
         private ProcessMonitorConfiguration? _configuration;
+        private int _pendingPowerPlanReevaluation;
 
         public event EventHandler<ProcessPowerPlanChangeEventArgs>? ProcessPowerPlanChanged;
         public event EventHandler<ServiceStatusEventArgs>? ServiceStatusChanged;
@@ -92,11 +94,15 @@ namespace ThreadPilot.Services
         public async Task StartAsync()
         {
             if (_disposed) throw new ObjectDisposedException(nameof(ProcessMonitorManagerService));
-            
-            if (_isRunning) return;
 
+            await _stateMutationSemaphore.WaitAsync();
             try
             {
+                if (_isRunning)
+                {
+                    return;
+                }
+
                 _logger.LogInformation("Starting Process Monitor Manager Service");
                 await _enhancedLogger.LogSystemEventAsync(LogEventTypes.System.ServiceStarted,
                     "Process Monitor Manager Service starting");
@@ -115,14 +121,14 @@ namespace ThreadPilot.Services
                 await _processMonitorService.StartMonitoringAsync();
                 _logger.LogInformation("Process monitoring started");
 
+                Interlocked.Exchange(ref _pendingPowerPlanReevaluation, 0);
+
                 await _enhancedLogger.LogProcessMonitoringEventAsync(LogEventTypes.ProcessMonitoring.MonitoringStarted,
                     "ProcessMonitorService", 0, "WMI-based process monitoring started");
 
-                // Evaluate current processes
-                await EvaluateCurrentProcessesAsync();
-
                 _isRunning = true;
                 SetStatus(true, "Running");
+
                 _logger.LogInformation("Process Monitor Manager Service started successfully");
 
                 await _enhancedLogger.LogSystemEventAsync(LogEventTypes.System.ServiceStarted,
@@ -137,20 +143,40 @@ namespace ThreadPilot.Services
                 SetStatus(false, "Failed to start", $"Error: {ex.Message}", ex);
                 throw;
             }
+            finally
+            {
+                _stateMutationSemaphore.Release();
+            }
+
+            // Evaluate current processes after startup lock is released
+            await EvaluateCurrentProcessesAsync();
         }
 
         public async Task StopAsync()
         {
-            if (!_isRunning) return;
-
+            await _stateMutationSemaphore.WaitAsync();
             try
             {
+                if (!_isRunning)
+                {
+                    return;
+                }
+
                 SetStatus(false, "Stopping...");
+
+                // Mark as stopped early to prevent new event handling while shutting down
+                _isRunning = false;
+                Interlocked.Exchange(ref _pendingPowerPlanReevaluation, 0);
 
                 // Stop process monitoring
                 await _processMonitorService.StopMonitoringAsync();
 
                 // Clear running processes
+                foreach (var processId in _runningAssociatedProcesses.Keys)
+                {
+                    _coreMaskService.UnregisterMaskApplication(processId);
+                    _processService.UntrackProcess(processId);
+                }
                 _runningAssociatedProcesses.Clear();
 
                 // Restore default power plan if configured
@@ -159,13 +185,16 @@ namespace ThreadPilot.Services
                     await ForceDefaultPowerPlanAsync();
                 }
 
-                _isRunning = false;
                 SetStatus(false, "Stopped");
             }
             catch (Exception ex)
             {
                 SetStatus(false, "Error stopping", $"Error: {ex.Message}", ex);
                 throw;
+            }
+            finally
+            {
+                _stateMutationSemaphore.Release();
             }
         }
 
@@ -177,6 +206,17 @@ namespace ThreadPilot.Services
             {
                 var currentProcesses = await _processMonitorService.GetRunningProcessesAsync();
                 var associatedProcesses = new List<ProcessModel>();
+                var currentProcessIds = new HashSet<int>(currentProcesses.Select(p => p.ProcessId));
+
+                // Remove stale tracked processes that are no longer running
+                foreach (var trackedPid in _runningAssociatedProcesses.Keys)
+                {
+                    if (!currentProcessIds.Contains(trackedPid) && _runningAssociatedProcesses.TryRemove(trackedPid, out _))
+                    {
+                        _coreMaskService.UnregisterMaskApplication(trackedPid);
+                        _processService.UntrackProcess(trackedPid);
+                    }
+                }
 
                 // Find all currently running processes that have associations
                 foreach (var process in currentProcesses)
@@ -185,7 +225,7 @@ namespace ThreadPilot.Services
                     if (association != null)
                     {
                         associatedProcesses.Add(process);
-                        _runningAssociatedProcesses.TryAdd(process.ProcessId, process);
+                        _runningAssociatedProcesses[process.ProcessId] = process;
                     }
                 }
 
@@ -247,6 +287,7 @@ namespace ThreadPilot.Services
         {
             await _associationService.LoadConfigurationAsync();
             _configuration = _associationService.Configuration;
+            _processMonitorService.UpdateSettings();
             
             if (_isRunning)
             {
@@ -258,6 +299,11 @@ namespace ThreadPilot.Services
         {
             if (!_isRunning || _configuration == null) return;
 
+            if (string.IsNullOrWhiteSpace(e.Process.Name) || e.Process.ProcessId <= 0)
+            {
+                return;
+            }
+
             try
             {
                 await _enhancedLogger.LogProcessMonitoringEventAsync(LogEventTypes.ProcessMonitoring.Started,
@@ -266,7 +312,7 @@ namespace ThreadPilot.Services
                 var association = _configuration.FindMatchingAssociation(e.Process);
                 if (association != null)
                 {
-                    _runningAssociatedProcesses.TryAdd(e.Process.ProcessId, e.Process);
+                    _runningAssociatedProcesses[e.Process.ProcessId] = e.Process;
 
                     await _enhancedLogger.LogProcessMonitoringEventAsync(LogEventTypes.ProcessMonitoring.AssociationTriggered,
                         e.Process.Name, e.Process.ProcessId,
@@ -278,6 +324,7 @@ namespace ThreadPilot.Services
                     // Schedule power plan change with delay if configured
                     if (_configuration.PowerPlanChangeDelayMs > 0)
                     {
+                        Interlocked.Exchange(ref _pendingPowerPlanReevaluation, 1);
                         _delayTimer.Change(_configuration.PowerPlanChangeDelayMs, Timeout.Infinite);
 
                         await _enhancedLogger.LogSystemEventAsync(LogEventTypes.System.ConfigurationLoaded,
@@ -307,8 +354,11 @@ namespace ThreadPilot.Services
 
             try
             {
-                if (_runningAssociatedProcesses.TryRemove(e.Process.ProcessId, out var removedProcess))
+                if (_runningAssociatedProcesses.TryRemove(e.Process.ProcessId, out _))
                 {
+                    _coreMaskService.UnregisterMaskApplication(e.Process.ProcessId);
+                    _processService.UntrackProcess(e.Process.ProcessId);
+
                     // Check if there are any other associated processes still running
                     var remainingProcesses = _runningAssociatedProcesses.Values.ToList();
                     await DeterminePowerPlanAsync(remainingProcesses);
@@ -334,11 +384,19 @@ namespace ThreadPilot.Services
             {
                 Task.Run(async () => await EvaluateCurrentProcessesAsync());
             }
+
+            // Keep process monitor settings synchronized with configuration edits
+            _processMonitorService.UpdateSettings();
         }
 
         private async void DelayedPowerPlanChangeCallback(object? state)
         {
             if (!_isRunning) return;
+
+            if (Interlocked.Exchange(ref _pendingPowerPlanReevaluation, 0) == 0)
+            {
+                return;
+            }
             
             var runningProcesses = _runningAssociatedProcesses.Values.ToList();
             await DeterminePowerPlanAsync(runningProcesses);
@@ -472,6 +530,8 @@ namespace ThreadPilot.Services
                             if (affinity > 0)
                             {
                                 await _processService.SetProcessorAffinity(process, affinity);
+                                _processService.TrackAppliedMask(process.ProcessId, coreMask.Id);
+                                _coreMaskService.RegisterMaskApplication(process.ProcessId, coreMask.Id);
 
                                 _logger.LogInformation(
                                     "Applied CPU mask '{MaskName}' (affinity: 0x{Affinity:X}) to process {ProcessName} (PID: {ProcessId})",
@@ -485,6 +545,15 @@ namespace ThreadPilot.Services
                         }
                         catch (Exception ex)
                         {
+                            var blockedReason = BuildAffinityOrPriorityBlockedMessage(ex, process.Name, "affinity");
+                            if (!string.IsNullOrEmpty(blockedReason))
+                            {
+                                await _notificationService.ShowNotificationAsync(
+                                    "Affinity blocked",
+                                    blockedReason,
+                                    NotificationType.Warning);
+                            }
+
                             _logger.LogWarning(ex,
                                 "Failed to apply CPU mask '{MaskName}' to process {ProcessName} (PID: {ProcessId})",
                                 coreMask.Name, process.Name, process.ProcessId);
@@ -513,6 +582,28 @@ namespace ThreadPilot.Services
                     {
                         try
                         {
+                            var currentPriority = process.Priority;
+
+                            if (!Enum.IsDefined(typeof(ProcessPriorityClass), currentPriority))
+                            {
+                                try
+                                {
+                                    await _processService.RefreshProcessInfo(process);
+                                    currentPriority = process.Priority;
+                                }
+                                catch (Exception refreshEx)
+                                {
+                                    _logger.LogDebug(refreshEx,
+                                        "Could not refresh process priority before tracking for {ProcessName} (PID: {ProcessId})",
+                                        process.Name, process.ProcessId);
+                                }
+                            }
+
+                            if (Enum.IsDefined(typeof(ProcessPriorityClass), currentPriority))
+                            {
+                                _processService.TrackPriorityChange(process.ProcessId, currentPriority);
+                            }
+
                             await _processService.SetProcessPriority(process, priority);
 
                             _logger.LogInformation(
@@ -526,6 +617,15 @@ namespace ThreadPilot.Services
                         }
                         catch (Exception ex)
                         {
+                            var blockedReason = BuildAffinityOrPriorityBlockedMessage(ex, process.Name, "priority");
+                            if (!string.IsNullOrEmpty(blockedReason))
+                            {
+                                await _notificationService.ShowNotificationAsync(
+                                    "Priority blocked",
+                                    blockedReason,
+                                    NotificationType.Warning);
+                            }
+
                             _logger.LogWarning(ex,
                                 "Failed to apply priority '{Priority}' to process {ProcessName} (PID: {ProcessId})",
                                 priority, process.Name, process.ProcessId);
@@ -563,6 +663,24 @@ namespace ThreadPilot.Services
             }
         }
 
+        private static string BuildAffinityOrPriorityBlockedMessage(Exception ex, string processName, string operation)
+        {
+            var message = ex.Message ?? string.Empty;
+            var lowered = message.ToLowerInvariant();
+
+            if (lowered.Contains("access denied") ||
+                lowered.Contains("anti-cheat") ||
+                lowered.Contains("anti cheat") ||
+                lowered.Contains("protected") ||
+                lowered.Contains("insufficient privileges") ||
+                ex is UnauthorizedAccessException)
+            {
+                return $"{operation} change blocked by Anti-Cheat/System for '{processName}'.";
+            }
+
+            return string.Empty;
+        }
+
         public void Dispose()
         {
             if (_disposed) return;
@@ -571,6 +689,7 @@ namespace ThreadPilot.Services
 
             _delayTimer?.Dispose();
             _powerPlanChangeSemaphore?.Dispose();
+            _stateMutationSemaphore?.Dispose();
             _processMonitorService?.Dispose();
 
             _disposed = true;

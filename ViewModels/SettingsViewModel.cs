@@ -15,8 +15,10 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows;
@@ -38,8 +40,12 @@ namespace ThreadPilot.ViewModels
         private readonly INotificationService _notificationService;
         private readonly IAutostartService _autostartService;
         private readonly IPowerPlanService _powerPlanService;
+        private readonly IProcessPowerPlanAssociationService _associationService;
         private readonly IProcessMonitorManagerService _processMonitorManagerService;
+        private readonly IThemeService _themeService;
         private bool _isSyncingFromService = false;
+        private string _cachedDefaultPowerPlanGuid = string.Empty;
+        private string _cachedDefaultPowerPlanName = string.Empty;
 
         [ObservableProperty]
         private ApplicationSettingsModel settings;
@@ -50,8 +56,9 @@ namespace ThreadPilot.ViewModels
         [ObservableProperty]
         private bool isLoading = false;
 
-        [ObservableProperty]
-        private string statusMessage = string.Empty;
+        public bool CanSaveSettings => HasUnsavedChanges && !IsLoading;
+
+        public bool HasPendingChanges => HasUnsavedChanges;
 
         [ObservableProperty]
         private ObservableCollection<PowerPlanModel> availablePowerPlans = new();
@@ -72,7 +79,9 @@ namespace ThreadPilot.ViewModels
             INotificationService notificationService,
             IAutostartService autostartService,
             IPowerPlanService powerPlanService,
+            IProcessPowerPlanAssociationService associationService,
             IProcessMonitorManagerService processMonitorManagerService,
+            IThemeService themeService,
             IEnhancedLoggingService? enhancedLoggingService = null)
             : base(logger, enhancedLoggingService)
         {
@@ -80,7 +89,9 @@ namespace ThreadPilot.ViewModels
             _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
             _autostartService = autostartService ?? throw new ArgumentNullException(nameof(autostartService));
             _powerPlanService = powerPlanService ?? throw new ArgumentNullException(nameof(powerPlanService));
+            _associationService = associationService ?? throw new ArgumentNullException(nameof(associationService));
             _processMonitorManagerService = processMonitorManagerService ?? throw new ArgumentNullException(nameof(processMonitorManagerService));
+            _themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
 
             // Get version and strip the git commit hash (everything after '+')
             var rawVersion = typeof(App).Assembly
@@ -131,42 +142,86 @@ namespace ThreadPilot.ViewModels
             StatusMessage = "Settings have been modified";
         }
 
+        partial void OnHasUnsavedChangesChanged(bool value)
+        {
+            OnPropertyChanged(nameof(CanSaveSettings));
+        }
+
+        partial void OnIsLoadingChanged(bool value)
+        {
+            OnPropertyChanged(nameof(CanSaveSettings));
+        }
+
         private async Task SaveSettingsAsync()
         {
+            string previousDefaultPowerPlanGuid = string.Empty;
+            string previousDefaultPowerPlanName = string.Empty;
+
             try
             {
                 IsLoading = true;
                 StatusMessage = "Saving settings...";
+                var warnings = new List<string>();
+
+                previousDefaultPowerPlanGuid = Settings.DefaultPowerPlanId;
+                previousDefaultPowerPlanName = Settings.DefaultPowerPlanName;
 
                 // Handle autostart setting
-                if (Settings.AutostartWithWindows != _settingsService.Settings.AutostartWithWindows)
+                var currentAutostartState = await _autostartService.CheckAutostartStatusAsync();
+                if (Settings.AutostartWithWindows != currentAutostartState)
                 {
+                    bool autostartUpdated;
                     if (Settings.AutostartWithWindows)
                     {
-                        await _autostartService.EnableAutostartAsync(Settings.StartMinimized);
+                        autostartUpdated = await _autostartService.EnableAutostartAsync(Settings.StartMinimized);
                     }
                     else
                     {
-                        await _autostartService.DisableAutostartAsync();
+                        autostartUpdated = await _autostartService.DisableAutostartAsync();
+                    }
+
+                    if (!autostartUpdated)
+                    {
+                        warnings.Add("Failed to update Windows autostart. Keeping previous autostart state.");
+                        Settings.AutostartWithWindows = currentAutostartState;
+                    }
+                    else
+                    {
+                        Settings.AutostartWithWindows = await _autostartService.CheckAutostartStatusAsync();
                     }
                 }
 
                 await _settingsService.UpdateSettingsAsync(Settings);
 
+                _themeService.ApplyTheme(Settings.UseDarkTheme);
+
                 // Update monitoring services with new settings
                 _processMonitorManagerService.UpdateSettings();
 
                 HasUnsavedChanges = false;
-                StatusMessage = "Settings saved successfully";
-
-                await _notificationService.ShowSuccessNotificationAsync(
-                    "Settings Saved", 
-                    "Application settings have been saved successfully");
+                if (warnings.Count > 0)
+                {
+                    StatusMessage = $"Settings saved with warnings: {string.Join(" ", warnings)}";
+                    await _notificationService.ShowNotificationAsync(
+                        "Settings Saved with Warnings",
+                        string.Join(" ", warnings),
+                        NotificationType.Warning);
+                }
+                else
+                {
+                    StatusMessage = "Settings saved and applied successfully.";
+                    await _notificationService.ShowSuccessNotificationAsync(
+                        "Settings Saved",
+                        "Application settings have been saved successfully");
+                }
 
                 Logger.LogInformation("Settings saved successfully");
             }
             catch (Exception ex)
             {
+                Settings.DefaultPowerPlanId = previousDefaultPowerPlanGuid;
+                Settings.DefaultPowerPlanName = previousDefaultPowerPlanName;
+
                 StatusMessage = $"Error saving settings: {ex.Message}";
                 Logger.LogError(ex, "Error saving settings");
 
@@ -299,9 +354,23 @@ namespace ThreadPilot.ViewModels
                 StatusMessage = "Loading settings...";
 
                 await _settingsService.LoadSettingsAsync();
+                await _associationService.LoadConfigurationAsync();
+
+                var settingsSnapshot = _settingsService.Settings;
+                var (defaultPowerPlanGuid, defaultPowerPlanName) = await _associationService.GetDefaultPowerPlanAsync();
+                _cachedDefaultPowerPlanGuid = defaultPowerPlanGuid;
+                _cachedDefaultPowerPlanName = defaultPowerPlanName;
+                if (!string.IsNullOrWhiteSpace(defaultPowerPlanGuid))
+                {
+                    settingsSnapshot.DefaultPowerPlanId = defaultPowerPlanGuid;
+                    settingsSnapshot.DefaultPowerPlanName = defaultPowerPlanName;
+                }
+
                 _isSyncingFromService = true;
-                Settings.CopyFrom(_settingsService.Settings);
+                Settings.CopyFrom(settingsSnapshot);
                 _isSyncingFromService = false;
+
+                _themeService.ApplyTheme(Settings.UseDarkTheme);
 
                 HasUnsavedChanges = false;
                 StatusMessage = "Settings loaded";
@@ -337,6 +406,11 @@ namespace ThreadPilot.ViewModels
                 try
                 {
                     Settings.CopyFrom(e.NewSettings);
+                    if (!string.IsNullOrWhiteSpace(_cachedDefaultPowerPlanGuid))
+                    {
+                        Settings.DefaultPowerPlanId = _cachedDefaultPowerPlanGuid;
+                        Settings.DefaultPowerPlanName = _cachedDefaultPowerPlanName;
+                    }
                     HasUnsavedChanges = false;
                     StatusMessage = "Settings synchronized";
                 }
@@ -448,6 +522,27 @@ namespace ThreadPilot.ViewModels
             return Version.TryParse(sanitized, out var parsed)
                 ? parsed
                 : new Version(0, 0, 0);
+        }
+
+        public async Task<bool> SaveIfDirtyAsync()
+        {
+            if (!HasUnsavedChanges)
+            {
+                return true;
+            }
+
+            await SaveSettingsAsync();
+            return !HasUnsavedChanges;
+        }
+
+        public async Task DiscardPendingChangesAsync()
+        {
+            if (!HasUnsavedChanges)
+            {
+                return;
+            }
+
+            await RefreshSettingsAsync();
         }
     }
 }

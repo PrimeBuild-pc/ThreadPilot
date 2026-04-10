@@ -1,0 +1,80 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#FF0F141A"/>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#FF1A222C"/>
+    <SolidColorBrush x:Key="SurfaceAltBrush" Color="#FF23303C"/>
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFE7EDF3"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#FFAFBDC9"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="#FF45A0FF"/>
+    <SolidColorBrush x:Key="BorderBrush" Color="#FF344555"/>
+    <SolidColorBrush x:Key="OverlayBrush" Color="#99060A10"/>
+    <SolidColorBrush x:Key="SpinnerTrackBrush" Color="#FF4B5E71"/>
+    <SolidColorBrush x:Key="InfoBackgroundBrush" Color="#FF1A2B3A"/>
+    <SolidColorBrush x:Key="InfoBorderBrush" Color="#FF2D4A64"/>
+    <SolidColorBrush x:Key="InfoTextBrush" Color="#FF9DD3FF"/>
+    <SolidColorBrush x:Key="SuccessBackgroundBrush" Color="#FF172A20"/>
+    <SolidColorBrush x:Key="SuccessBorderBrush" Color="#FF29523C"/>
+    <SolidColorBrush x:Key="SuccessTextBrush" Color="#FF89DFAF"/>
+    <SolidColorBrush x:Key="WarningBackgroundBrush" Color="#FF342A14"/>
+    <SolidColorBrush x:Key="WarningBorderBrush" Color="#FF685126"/>
+    <SolidColorBrush x:Key="WarningTextBrush" Color="#FFF2C56D"/>
+    <SolidColorBrush x:Key="ErrorBackgroundBrush" Color="#FF351D1D"/>
+    <SolidColorBrush x:Key="ErrorBorderBrush" Color="#FF653333"/>
+    <SolidColorBrush x:Key="ErrorTextBrush" Color="#FFFFA4A4"/>
+
+    <Style TargetType="Window">
+        <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="FontFamily" Value="Segoe UI, Segoe UI Variable Text, Arial"/>
+    </Style>
+
+    <Style TargetType="UserControl">
+        <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="FontFamily" Value="Segoe UI, Segoe UI Variable Text, Arial"/>
+    </Style>
+
+    <Style TargetType="GroupBox">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+    </Style>
+
+    <Style TargetType="TabControl">
+        <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+    </Style>
+
+    <Style TargetType="TabItem">
+        <Setter Property="Background" Value="{StaticResource SurfaceAltBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+    </Style>
+
+    <Style TargetType="DataGrid">
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+        <Setter Property="RowBackground" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="AlternatingRowBackground" Value="{StaticResource SurfaceAltBrush}"/>
+        <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource BorderBrush}"/>
+        <Setter Property="VerticalGridLinesBrush" Value="{StaticResource BorderBrush}"/>
+    </Style>
+
+    <Style TargetType="Button">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+        <Setter Property="Padding" Value="10,6"/>
+    </Style>
+
+    <Style TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="Segoe UI, Segoe UI Variable Text, Arial"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+    </Style>
+
+    <Style TargetType="TextElement">
+        <Setter Property="FontFamily" Value="Segoe UI, Segoe UI Variable Text, Arial"/>
+    </Style>
+</ResourceDictionary>

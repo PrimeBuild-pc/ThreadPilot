@@ -47,7 +47,7 @@
                                 <TextBlock Text="{Binding Name}" 
                                          FontWeight="{Binding IsActive, Converter={StaticResource BoolToFontWeightConverter}}"/>
                                 <TextBlock Text="{Binding Guid}" 
-                                         Foreground="Gray" 
+                                         Foreground="{DynamicResource TextSecondaryBrush}" 
                                          FontSize="11"/>
                             </StackPanel>
                         </DataTemplate>
@@ -78,7 +78,7 @@
                             <StackPanel Margin="5">
                                 <TextBlock Text="{Binding Name}"/>
                                 <TextBlock Text="{Binding FilePath}" 
-                                         Foreground="Gray" 
+                                         Foreground="{DynamicResource TextSecondaryBrush}" 
                                          FontSize="11"/>
                             </StackPanel>
                         </DataTemplate>

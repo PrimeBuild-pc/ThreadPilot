@@ -1,50 +1,8 @@
-# Escludi tutti gli .exe
-*.exe
-
-.claude/
-Installer/Output/
-
-# Escludi la sorgente CPUSetSetter upstream
-/CPUSetSetter-main/
-
-# Escludi Markdown tranne il README principale
-*.md
-!README.md
-!LICENSE.md
-
-# Escludi directory di build comuni
-/bin/
-/obj/
-/publish/
-/publish_*/
-
-# .NET Core / .NET 5+ specifici
-*.deps.json
-*.runtimeconfig.json
-*.dll.config
-project.lock.json
-project.fragment.lock.json
-artifacts/
-
-# Visual Studio specifici
-.vs/
-*.user
-*.suo
-*.userosscache
-*.sln.docstates
-*.vcxproj.filters
-*.vcxproj.user
-
-# Rider / JetBrains
-.idea/
-*.sln.iml
-
-# Resharper
-_ReSharper*/
-*.[Rr]e[Ss]harper
-*.DotSettings.user
-
-# Build results
+# Build outputs
+bin/
+obj/
+publish/
+publish_*/
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
@@ -55,28 +13,26 @@ x86/
 [Aa][Rr][Mm]/
 [Aa][Rr][Mm]64/
 bld/
-[Bb]in/
-[Oo]bj/
-[Ll]og/
-[Ll]ogs/
+artifacts/
 
-# MSTest test Results
+# Test and coverage
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
-
-# NUnit
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
-
-# Coverage reports
 coverage*.json
 coverage*.xml
 coverage*.info
 *.coverage
 *.coveragexml
 
-# NuGet
+# .NET / NuGet
+*.deps.json
+*.runtimeconfig.json
+*.dll.config
+project.lock.json
+project.fragment.lock.json
 *.nupkg
 *.snupkg
 .nuget/
@@ -84,187 +40,94 @@ packages/
 !packages/build/
 !packages/repositories.config
 
-# Package manager files
-paket-files/
-.paket/paket.exe
-.fake/
-
-# Windows specifici
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-$RECYCLE.BIN/
-*.cab
-*.msi
-*.msix
-*.msm
-*.msp
-*.lnk
-
-# Temporary files
-*.tmp
-*.temp
-*~
-*.swp
-*.swo
-
-# Log files
-*.log
-logs/
-Logs/
-
-# Configuration files con dati sensibili
-appsettings.local.json
-appsettings.*.local.json
-secrets.json
-*.secrets.json
-
-# ThreadPilot specifici
-# Dati utente e configurazioni locali
-/Configuration/UserSettings.json
-/Configuration/ProcessProfiles.json
-/Data/
-/AppData/
-%AppData%/ThreadPilot/
-
-# File di backup automatici
-*.bak
-*.backup
-*_backup.*
-*_old.*
-
-# Crash dumps e diagnostici
-*.dmp
-*.mdmp
-crashdumps/
-
-# Performance profiling
-*.psess
-*.vsp
-*.vspx
-*.sap
-
-# Installer files
-*.msi
-*.cab
-*.msm
-*.msp
-*.exe.config
-
-# ClickOnce directory
-publish/
-
-# Publish Web Output
-*.[Pp]ublish.xml
-*.azurePubxml
-*.pubxml
-*.publishproj
-
-# Microsoft Azure Web App publish settings
-PublishScripts/
-
-# Node.js (se usato per build tools)
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Python (se usato per script di build)
-__pycache__/
-*.py[cod]
-*$py.class
-
-# macOS (per sviluppatori cross-platform)
-.DS_Store
-.AppleDouble
-.LSOverride
-
-# Linux
-*~
-.fuse_hidden*
-.directory
-.Trash-*
-
-# Backup files da editor
-*.orig
-*.rej
-
-# JetBrains Rider
+# IDEs
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.vcxproj.filters
+*.vcxproj.user
 .idea/
 *.sln.iml
-
-# CodeRush personal settings
-.cr/personal
-
-# Python Tools for Visual Studio (PTVS)
-__pycache__/
-*.pyc
-
-# Cake - Uncomment if you are using it
-# tools/**
-# !tools/packages.config
-
-# Tabs Studio
-*.tss
-
-# Telerik's JustMock configuration file
-*.jmconfig
-
-# BizTalk build output
-*.btp.cs
-*.btm.cs
-*.odx.cs
-*.xsd.cs
-
-# OpenCover UI analysis results
-OpenCover/
-
-# Azure Stream Analytics local run output
-ASALocalRun/
-
-# MSBuild Binary and Structured Log
-*.binlog
-
-# NVidia Nsight GPU debugger configuration file
-*.nvuser
-
-# MFractors (Xamarin productivity tool) working folder
-.mfractor/
-
-# Local History for Visual Studio
-.localhistory/
-
-# BeatPulse healthcheck temp database
-healthchecksdb
-
-# Backup folder for Package Reference Convert tool in Visual Studio 2017
-MigrationBackup/
-
-# Ionide (cross platform F# VS Code tools) working folder
-.ionide/
-
-# Fody - auto-generated XML schema
-FodyWeavers.xsd
-
-# VS Code
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
 .vscode/
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
 *.code-workspace
-
-# Local History for Visual Studio Code
 .history/
+.localhistory/
 
-# Windows Installer files from build outputs
+# OS / temp / logs
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.tmp
+*.temp
+*~
+*.swp
+*.swo
+*.log
+logs/
+Logs/
+.DS_Store
+.fuse_hidden*
+.directory
+.Trash-*
+
+# Installer / packaging artifacts
+Installer/Output/
+*.cab
 *.msi
+*.msix
 *.msm
 *.msp
+*.lnk
+*.exe.config
+*.[Pp]ublish.xml
+*.azurePubxml
+*.pubxml
+*.publishproj
+PublishScripts/
 
-# JetBrains Rider
-*.sln.iml
+# Local app data / secrets
+appsettings.local.json
+appsettings.*.local.json
+secrets.json
+*.secrets.json
+/Configuration/UserSettings.json
+/Configuration/ProcessProfiles.json
+/Data/
+/AppData/
+%AppData%/ThreadPilot/
 
-# Continue.dev (AI coding assistant)
-.continue/nul 
+# Project-specific extras
+.claude/
+.continue/
+/CPUSetSetter-main/
+*.bak
+*.backup
+*_backup.*
+*_old.*
+*.orig
+*.rej
+*.dmp
+*.mdmp
+crashdumps/
+*.binlog
 nul
+
+ADVANCED_CPU_FEATURES.md
+API_REFERENCE.md
+ARCHITECTURE_GUIDE.md
+CLAUDE.md
+DEVELOPER_GUIDE.md
+GAME_BOOST_VALIDATION.md
+PROJECT_STRUCTURE.md
+TRADEMARK.md
+UI_STYLE_GUIDE.md

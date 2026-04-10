@@ -53,6 +53,7 @@ namespace ThreadPilot.Services
         public event EventHandler<PowerPlanChangeRequestedEventArgs>? PowerPlanChangeRequested;
         public event EventHandler<ProfileApplicationRequestedEventArgs>? ProfileApplicationRequested;
         public event EventHandler? PerformanceDashboardRequested;
+        public event EventHandler? DashboardRequested;
 
         public SystemTrayService(ILogger<SystemTrayService> logger)
         {
@@ -106,6 +107,26 @@ namespace ThreadPilot.Services
         {
             _contextMenu = new ContextMenuStrip();
 
+            var openDashboardMenuItem = new ToolStripMenuItem("Open Dashboard")
+            {
+                Font = new Font(_contextMenu.Font, FontStyle.Bold)
+            };
+            openDashboardMenuItem.Click += OnDashboardClick;
+            _contextMenu.Items.Add(openDashboardMenuItem);
+
+            _performanceMenuItem = new ToolStripMenuItem("Open Performance")
+            {
+                Font = new Font(_contextMenu.Font, FontStyle.Bold)
+            };
+            _performanceMenuItem.Click += OnPerformanceDashboardClick;
+            _contextMenu.Items.Add(_performanceMenuItem);
+
+            _monitoringToggleMenuItem = new ToolStripMenuItem("Pause Monitoring");
+            _monitoringToggleMenuItem.Click += OnMonitoringToggleClick;
+            _contextMenu.Items.Add(_monitoringToggleMenuItem);
+
+            _contextMenu.Items.Add(new ToolStripSeparator());
+
             // System status (disabled, for display only)
             _systemStatusMenuItem = new ToolStripMenuItem("System Status")
             {
@@ -122,18 +143,14 @@ namespace ThreadPilot.Services
             };
             _contextMenu.Items.Add(_selectedProcessMenuItem);
 
-            // Separator
-            _contextMenu.Items.Add(new ToolStripSeparator());
-
             // Quick apply command
-            _quickApplyMenuItem = new ToolStripMenuItem("⚡ Quick Apply Affinity & Power Plan")
+            _quickApplyMenuItem = new ToolStripMenuItem("Quick Apply to Selected Process")
             {
                 Enabled = false
             };
             _quickApplyMenuItem.Click += OnQuickApplyClick;
             _contextMenu.Items.Add(_quickApplyMenuItem);
 
-            // Separator
             _contextMenu.Items.Add(new ToolStripSeparator());
 
             // Power Plans submenu
@@ -144,37 +161,18 @@ namespace ThreadPilot.Services
             _profilesMenuItem = new ToolStripMenuItem("📋 Profiles");
             _contextMenu.Items.Add(_profilesMenuItem);
 
-            // Performance Dashboard
-            _performanceMenuItem = new ToolStripMenuItem("📊 Performance Dashboard");
-            _performanceMenuItem.Click += OnPerformanceDashboardClick;
-            _contextMenu.Items.Add(_performanceMenuItem);
-
-            // Separator
-            _contextMenu.Items.Add(new ToolStripSeparator());
-
-            // Monitoring toggle
-            _monitoringToggleMenuItem = new ToolStripMenuItem("🔍 Disable Process Monitoring");
-            _monitoringToggleMenuItem.Click += OnMonitoringToggleClick;
-            _contextMenu.Items.Add(_monitoringToggleMenuItem);
-
-            // Separator
             _contextMenu.Items.Add(new ToolStripSeparator());
 
             // Settings
-            _settingsMenuItem = new ToolStripMenuItem("⚙️ Settings...");
+            _settingsMenuItem = new ToolStripMenuItem("Settings");
             _settingsMenuItem.Click += OnSettingsClick;
             _contextMenu.Items.Add(_settingsMenuItem);
-
-            // Show main window
-            var showMenuItem = new ToolStripMenuItem("🪟 Show ThreadPilot");
-            showMenuItem.Click += OnShowMainWindowClick;
-            _contextMenu.Items.Add(showMenuItem);
 
             // Separator
             _contextMenu.Items.Add(new ToolStripSeparator());
 
             // Exit
-            var exitMenuItem = new ToolStripMenuItem("❌ Exit");
+            var exitMenuItem = new ToolStripMenuItem("Exit");
             exitMenuItem.Click += OnExitClick;
             _contextMenu.Items.Add(exitMenuItem);
         }
@@ -227,7 +225,7 @@ namespace ThreadPilot.Services
             {
                 _selectedProcessMenuItem.Text = "No process selected";
                 _quickApplyMenuItem.Enabled = false;
-                _quickApplyMenuItem.Text = "Quick Apply Affinity & Power Plan";
+                _quickApplyMenuItem.Text = "Quick Apply to Selected Process";
             }
         }
 
@@ -241,9 +239,9 @@ namespace ThreadPilot.Services
             QuickApplyRequested?.Invoke(this, EventArgs.Empty);
         }
 
-        private void OnShowMainWindowClick(object? sender, EventArgs e)
+        private void OnDashboardClick(object? sender, EventArgs e)
         {
-            ShowMainWindowRequested?.Invoke(this, EventArgs.Empty);
+            DashboardRequested?.Invoke(this, EventArgs.Empty);
         }
 
         private void OnExitClick(object? sender, EventArgs e)
@@ -291,7 +289,7 @@ namespace ThreadPilot.Services
 
             if (_monitoringToggleMenuItem != null)
             {
-                _monitoringToggleMenuItem.Text = isMonitoring ? "Disable Process Monitoring" : "Enable Process Monitoring";
+                _monitoringToggleMenuItem.Text = isMonitoring ? "Pause Monitoring" : "Resume Monitoring";
                 _monitoringToggleMenuItem.Enabled = isWmiAvailable;
             }
 

@@ -196,11 +196,7 @@ namespace ThreadPilot.Services
             var pending = new List<SmartNotification>();
             
             // Add queued notifications
-            while (_notificationQueue.TryDequeue(out var notification))
-            {
-                pending.Add(notification);
-                _notificationQueue.Enqueue(notification); // Put it back
-            }
+            pending.AddRange(_notificationQueue.ToArray());
 
             // Add scheduled notifications
             pending.AddRange(_scheduledNotifications.Values);

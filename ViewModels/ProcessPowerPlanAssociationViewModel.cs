@@ -159,6 +159,16 @@ namespace ThreadPilot.ViewModels
             UpdateServiceStatus();
         }
 
+        partial void OnSelectedAssociationChanged(ProcessPowerPlanAssociation? value)
+        {
+            if (value == null)
+            {
+                return;
+            }
+
+            PopulateEditorFromAssociation(value);
+        }
+
         [RelayCommand]
         public async Task LoadDataAsync()
         {
@@ -242,18 +252,19 @@ namespace ThreadPilot.ViewModels
                     MatchByPath = false;
                     Priority = 0;
                     Description = string.Empty;
+                    SelectedAssociation = null;
 
                     await LoadDataAsync();
-                    SetStatus("Association added successfully");
+                    SetStatus("Rule created and applied successfully.", false);
                 }
                 else
                 {
-                    SetStatus("Failed to add association - it may already exist", false);
+                    SetStatus("Failed to add rule - it may already exist", false);
                 }
             }
             catch (Exception ex)
             {
-                SetStatus($"Error adding association: {ex.Message}", false);
+                SetStatus($"Error adding rule: {ex.Message}", false);
             }
         }
 
@@ -264,26 +275,34 @@ namespace ThreadPilot.ViewModels
             {
                 if (SelectedAssociation == null)
                 {
-                    SetStatus("Please select an association to update", false);
+                    SetStatus("Please select a rule to update", false);
                     return;
                 }
 
-                SetStatus("Updating association...");
+                if (string.IsNullOrWhiteSpace(NewExecutableName) || SelectedPowerPlan == null)
+                {
+                    SetStatus("Executable and power plan are required", false);
+                    return;
+                }
+
+                SetStatus("Updating rule...");
+
+                ApplyEditorToAssociation(SelectedAssociation);
 
                 var success = await _associationService.UpdateAssociationAsync(SelectedAssociation);
                 if (success)
                 {
                     await LoadDataAsync();
-                    SetStatus("Association updated successfully");
+                    SetStatus("Rule updated and applied successfully.", false);
                 }
                 else
                 {
-                    SetStatus("Failed to update association", false);
+                    SetStatus("Failed to update rule", false);
                 }
             }
             catch (Exception ex)
             {
-                SetStatus($"Error updating association: {ex.Message}", false);
+                SetStatus($"Error updating rule: {ex.Message}", false);
             }
         }
 
@@ -294,26 +313,27 @@ namespace ThreadPilot.ViewModels
             {
                 if (SelectedAssociation == null)
                 {
-                    SetStatus("Please select an association to remove", false);
+                    SetStatus("Please select a rule to remove", false);
                     return;
                 }
 
-                SetStatus("Removing association...");
+                SetStatus("Removing rule...");
 
                 var success = await _associationService.RemoveAssociationAsync(SelectedAssociation.Id);
                 if (success)
                 {
+                    SelectedAssociation = null;
                     await LoadDataAsync();
-                    SetStatus("Association removed successfully");
+                    SetStatus("Rule removed successfully");
                 }
                 else
                 {
-                    SetStatus("Failed to remove association", false);
+                    SetStatus("Failed to remove rule", false);
                 }
             }
             catch (Exception ex)
             {
-                SetStatus($"Error removing association: {ex.Message}", false);
+                SetStatus($"Error removing rule: {ex.Message}", false);
             }
         }
 
@@ -392,7 +412,7 @@ namespace ThreadPilot.ViewModels
                 var success = await _associationService.SaveConfigurationAsync();
                 if (success)
                 {
-                    SetStatus("Configuration saved successfully");
+                    SetStatus("Configuration saved and active.", false);
                 }
                 else
                 {
@@ -520,6 +540,43 @@ namespace ThreadPilot.ViewModels
                 SelectedExecutableFullPath = fullPath;
                 HasSelectedExecutable = true;
             }
+        }
+
+        private void PopulateEditorFromAssociation(ProcessPowerPlanAssociation association)
+        {
+            NewExecutableName = association.ExecutableName ?? string.Empty;
+            NewExecutablePath = association.ExecutablePath ?? string.Empty;
+            MatchByPath = association.MatchByPath;
+            Priority = association.Priority;
+            Description = association.Description ?? string.Empty;
+            SelectedProcessPriority = association.ProcessPriority;
+
+            SelectedPowerPlan = AvailablePowerPlans.FirstOrDefault(p =>
+                string.Equals(p.Guid, association.PowerPlanGuid, StringComparison.OrdinalIgnoreCase));
+
+            SelectedCoreMask = AvailableCoreMasks.FirstOrDefault(m =>
+                string.Equals(m.Id, association.CoreMaskId, StringComparison.Ordinal));
+
+            UpdateSelectedExecutableDisplay(
+                NewExecutablePath,
+                string.IsNullOrWhiteSpace(NewExecutableName)
+                    ? Path.GetFileName(NewExecutablePath)
+                    : NewExecutableName);
+        }
+
+        private void ApplyEditorToAssociation(ProcessPowerPlanAssociation association)
+        {
+            association.ExecutableName = NewExecutableName.Trim();
+            association.ExecutablePath = NewExecutablePath.Trim();
+            association.MatchByPath = MatchByPath;
+            association.Priority = Priority;
+            association.Description = Description.Trim();
+            association.ProcessPriority = SelectedProcessPriority;
+            association.PowerPlanGuid = SelectedPowerPlan?.Guid ?? string.Empty;
+            association.PowerPlanName = SelectedPowerPlan?.Name ?? string.Empty;
+            association.CoreMaskId = SelectedCoreMask?.Id;
+            association.CoreMaskName = SelectedCoreMask?.Name;
+            association.UpdatedAt = DateTime.UtcNow;
         }
 
         private void OnProcessPowerPlanChanged(object? sender, ProcessPowerPlanChangeEventArgs e)
