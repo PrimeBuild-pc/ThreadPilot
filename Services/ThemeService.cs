@@ -18,6 +18,8 @@ using System;
 using System.Windows;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
+using Wpf.Ui.Appearance;
+using Wpf.Ui.Controls;
 
 namespace ThreadPilot.Services
 {
@@ -64,6 +66,11 @@ namespace ThreadPilot.Services
                 var nextDictionary = new ResourceDictionary { Source = targetUri };
                 appResources.MergedDictionaries.Insert(0, nextDictionary);
                 _activeThemeDictionary = nextDictionary;
+
+                // Keep Wpf.Ui controls aligned with app theme (NavigationView, TitleBar, etc.).
+                var applicationTheme = useDarkTheme ? ApplicationTheme.Dark : ApplicationTheme.Light;
+                ApplicationThemeManager.Apply(applicationTheme, WindowBackdropType.Mica, updateAccent: true);
+
                 IsDarkTheme = useDarkTheme;
             }
             catch (Exception ex)

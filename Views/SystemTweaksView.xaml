@@ -13,8 +13,8 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
                         <Border x:Name="Border"
-                                Background="{DynamicResource SurfaceAltBrush}"
-                                BorderBrush="{DynamicResource BorderBrush}"
+                                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                                 BorderThickness="1"
                                 CornerRadius="10"
                                 Height="20"
@@ -23,10 +23,15 @@
                                 <Ellipse x:Name="Thumb"
                                          Width="16"
                                          Height="16"
-                                         Fill="{DynamicResource SurfaceBrush}"
+                                         Fill="{DynamicResource TextPrimaryBrush}"
+                                         Stroke="{DynamicResource BorderBrush}"
+                                         StrokeThickness="1"
                                          HorizontalAlignment="Left"
                                          Margin="2,0,0,0"
                                          RenderTransformOrigin="0.5,0.5">
+                                    <Ellipse.Effect>
+                                        <DropShadowEffect BlurRadius="4" ShadowDepth="0" Opacity="0.25"/>
+                                    </Ellipse.Effect>
                                     <Ellipse.RenderTransform>
                                         <TranslateTransform x:Name="ThumbTransform" X="0"/>
                                     </Ellipse.RenderTransform>
@@ -35,8 +40,9 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                <Setter TargetName="Thumb" Property="Fill" Value="{DynamicResource SurfaceBrush}"/>
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource SoftSelectionBackgroundBrush}"/>
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource SoftSelectionBorderBrush}"/>
+                                <Setter TargetName="Thumb" Property="Fill" Value="{DynamicResource TextPrimaryBrush}"/>
                                 <Trigger.EnterActions>
                                     <BeginStoryboard>
                                         <Storyboard>
@@ -59,13 +65,13 @@
                                 </Trigger.ExitActions>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource ControlFillColorDisabledBrush}"/>
                                 <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                                 <Setter TargetName="Thumb" Property="Fill" Value="{DynamicResource TextSecondaryBrush}"/>
                                 <Setter TargetName="Border" Property="Opacity" Value="0.6"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource SoftSelectionBorderBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -80,16 +86,16 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Header and Controls -->
-        <GroupBox Grid.Row="0" Header="🔧 System Tweaks &amp; Optimizations" Margin="0,0,0,10">
-            <Grid Margin="5">
+         <!-- Header and Controls -->
+         <GroupBox Grid.Row="0" Header="🔧 System Tweaks &amp; Optimizations" Margin="0,10,0,10">
+             <Grid Margin="5">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Description and Refresh Button -->
-                <Grid Grid.Row="0" Margin="0,0,0,10">
+                 <!-- Description and Refresh Button -->
+                 <Grid Grid.Row="0" Margin="0,10,0,10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>

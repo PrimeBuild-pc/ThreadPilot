@@ -5,102 +5,112 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:ThreadPilot.Views"
              xmlns:helpers="clr-namespace:ThreadPilot.Helpers"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              mc:Ignorable="d" 
              d:DesignHeight="650" d:DesignWidth="1200">
     
-    <Grid Margin="10">
+    <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="Power Plans" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,4"/>
+            <TextBlock Text="Manage system power plans and import custom profiles" FontSize="14" Opacity="0.7"/>
+        </StackPanel>
 
-        <!-- System Power Plans -->
-        <GroupBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
-                 Header="⚡ Available Power Plans"
-                 Margin="0,0,5,0">
-            <Grid Margin="5">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="3*"/>
+            </Grid.ColumnDefinitions>
 
-                <Button Grid.Row="0"
-                        Command="{Binding LoadPowerPlansCommand}"
-                        Content="🔄 Refresh Plans"
-                        HorizontalAlignment="Right"
-                        Padding="10,5"
-                        Margin="0,0,0,10"
-                        ToolTip="Refresh the list of available power plans"/>
+            <!-- System Power Plans -->
+            <GroupBox Grid.Column="0"
+                    Header="Available Power Plans"
+                    Margin="0,0,5,0">
+                <Grid Margin="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-                <ListView Grid.Row="1" 
-                         ItemsSource="{Binding PowerPlans}"
-                         SelectedItem="{Binding SelectedPowerPlan}">
-                    <ListView.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Margin="5">
-                                <TextBlock Text="{Binding Name}" 
-                                         FontWeight="{Binding IsActive, Converter={StaticResource BoolToFontWeightConverter}}"/>
-                                <TextBlock Text="{Binding Guid}" 
-                                         Foreground="{DynamicResource TextSecondaryBrush}" 
-                                         FontSize="11"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
-            </Grid>
-        </GroupBox>
+                    <Button Grid.Row="0"
+                            Command="{Binding LoadPowerPlansCommand}"
+                            Content="Refresh Plans"
+                            HorizontalAlignment="Right"
+                            Padding="10,5"
+                            Margin="0,0,0,12"
+                            ToolTip="Refresh the list of available power plans"/>
 
-        <!-- Custom Power Plans -->
-        <GroupBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" 
-                 Header="Custom Power Plans" 
-                 Margin="5,0,0,0">
-            <Grid Margin="5">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+                    <ui:ListView Grid.Row="1"
+                                 ItemsSource="{Binding PowerPlans}"
+                                 SelectedItem="{Binding SelectedPowerPlan}"
+                                 Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                        <ui:ListView.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="5">
+                                    <TextBlock Text="{Binding Name}"
+                                            FontWeight="{Binding IsActive, Converter={StaticResource BoolToFontWeightConverter}}"/>
+                                    <TextBlock Text="{Binding Guid}"
+                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                            FontSize="11"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ui:ListView.ItemTemplate>
+                    </ui:ListView>
+                </Grid>
+            </GroupBox>
 
-                <TextBlock Grid.Row="0" 
-                          Text="Available custom power plans:"
-                          Margin="0,0,0,10"/>
+            <!-- Custom Power Plans -->
+            <GroupBox Grid.Column="1"
+                    Header="Custom Power Plans"
+                    Margin="5,0,0,0">
+                <Grid Margin="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-                <ListView Grid.Row="1" 
-                         ItemsSource="{Binding CustomPowerPlans}"
-                         SelectedItem="{Binding SelectedCustomPlan}">
-                    <ListView.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Margin="5">
-                                <TextBlock Text="{Binding Name}"/>
-                                <TextBlock Text="{Binding FilePath}" 
-                                         Foreground="{DynamicResource TextSecondaryBrush}" 
-                                         FontSize="11"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
-            </Grid>
-        </GroupBox>
+                    <TextBlock Grid.Row="0"
+                            Text="Available custom power plans:"
+                            Margin="0,0,0,10"
+                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+
+                    <ui:ListView Grid.Row="1"
+                                 ItemsSource="{Binding CustomPowerPlans}"
+                                 SelectedItem="{Binding SelectedCustomPlan}"
+                                 Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                        <ui:ListView.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="5">
+                                    <TextBlock Text="{Binding Name}"/>
+                                    <TextBlock Text="{Binding FilePath}"
+                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                            FontSize="11"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ui:ListView.ItemTemplate>
+                    </ui:ListView>
+                </Grid>
+            </GroupBox>
+        </Grid>
 
         <!-- Action Buttons -->
-        <StackPanel Grid.Row="2" Grid.Column="0" 
+        <StackPanel Grid.Row="2"
                     Orientation="Horizontal" 
-                    Margin="0,10,5,0">
+                    Margin="0,12,0,0">
             <Button Command="{Binding SetActivePlanCommand}"
                     Content="Set Active"
                     Padding="20,5"
                     Margin="0,0,10,0"
                     ToolTip="Activate the selected power plan"/>
-        </StackPanel>
-
-        <StackPanel Grid.Row="2" Grid.Column="1" 
-                    Orientation="Horizontal" 
-                    Margin="5,10,0,0">
             <Button Command="{Binding ImportCustomPlanCommand}"
                     Content="Import Custom Plan"
                     Padding="20,5"

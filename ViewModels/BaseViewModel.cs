@@ -17,6 +17,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using ThreadPilot.Services;
 
@@ -30,12 +31,18 @@ namespace ThreadPilot.ViewModels
         protected readonly ILogger Logger;
         protected readonly IEnhancedLoggingService? EnhancedLoggingService;
         private bool _disposed;
+        private CancellationTokenSource? _statusLifetimeCts;
+        private const int StatusVisibleDurationMs = 1500;
+        private const int StatusFadeDurationMs = 500;
 
         [ObservableProperty]
         private bool isBusy;
 
         [ObservableProperty]
         private string statusMessage = string.Empty;
+
+        [ObservableProperty]
+        private double statusOpacity = 1.0;
 
         [ObservableProperty]
         private bool hasError;
@@ -54,9 +61,16 @@ namespace ThreadPilot.ViewModels
         /// </summary>
         protected void SetStatus(string message, bool isBusyState = true)
         {
+            CancelStatusLifetime();
+            StatusOpacity = 1.0;
             StatusMessage = message;
             IsBusy = isBusyState;
             ClearError();
+
+            if (!string.IsNullOrWhiteSpace(message) && !isBusyState)
+            {
+                _ = StartStatusLifetimeAsync(message);
+            }
         }
 
         /// <summary>
@@ -64,7 +78,9 @@ namespace ThreadPilot.ViewModels
         /// </summary>
         protected void ClearStatus()
         {
+            CancelStatusLifetime();
             StatusMessage = string.Empty;
+            StatusOpacity = 1.0;
             IsBusy = false;
         }
 
@@ -217,7 +233,56 @@ namespace ThreadPilot.ViewModels
         /// </summary>
         protected virtual void OnDispose()
         {
+            CancelStatusLifetime();
             // Base implementation does nothing
+        }
+
+        private async Task StartStatusLifetimeAsync(string expectedMessage)
+        {
+            var cts = new CancellationTokenSource();
+            _statusLifetimeCts = cts;
+
+            try
+            {
+                await Task.Delay(StatusVisibleDurationMs, cts.Token);
+
+                const int fadeSteps = 5;
+                var stepDelay = StatusFadeDurationMs / fadeSteps;
+
+                for (var i = 1; i <= fadeSteps; i++)
+                {
+                    await Task.Delay(stepDelay, cts.Token);
+                    if (StatusMessage != expectedMessage)
+                    {
+                        return;
+                    }
+
+                    StatusOpacity = 1.0 - (double)i / fadeSteps;
+                }
+
+                if (StatusMessage == expectedMessage)
+                {
+                    StatusMessage = string.Empty;
+                    StatusOpacity = 1.0;
+                    IsBusy = false;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when status message is replaced.
+            }
+        }
+
+        private void CancelStatusLifetime()
+        {
+            if (_statusLifetimeCts == null)
+            {
+                return;
+            }
+
+            _statusLifetimeCts.Cancel();
+            _statusLifetimeCts.Dispose();
+            _statusLifetimeCts = null;
         }
 
         public void Dispose()

@@ -121,6 +121,11 @@ namespace ThreadPilot.Services
         void UpdateSettings(ApplicationSettingsModel settings);
 
         /// <summary>
+        /// Applies theme to the tray context menu.
+        /// </summary>
+        void ApplyTheme(bool useDarkTheme);
+
+        /// <summary>
         /// Updates the available power plans in the context menu
         /// </summary>
         void UpdatePowerPlans(IEnumerable<PowerPlanModel> powerPlans, PowerPlanModel? activePlan);

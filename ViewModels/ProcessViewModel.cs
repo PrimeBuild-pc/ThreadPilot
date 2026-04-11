@@ -423,8 +423,8 @@ namespace ThreadPilot.ViewModels
 
                 if (e.DetectionSuccessful)
                 {
-                    TopologyStatus = $"Detected: {e.Topology.TotalLogicalCores} logical cores, " +
-                                   $"{e.Topology.TotalPhysicalCores} physical cores";
+                    TopologyStatus = $"Detected: {e.Topology.TotalLogicalCores} logical CPUs, " +
+                                   $"{e.Topology.TotalPhysicalCores} physical CPUs";
                     AreAdvancedFeaturesAvailable = e.Topology.HasIntelHybrid || e.Topology.HasAmdCcd || e.Topology.HasHyperThreading;
                 }
                 else

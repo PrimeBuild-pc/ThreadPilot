@@ -7,6 +7,8 @@
              xmlns:helpers="clr-namespace:ThreadPilot.Helpers"
              xmlns:converters="clr-namespace:ThreadPilot.Converters"
              xmlns:Diagnostics="clr-namespace:System.Diagnostics;assembly=System.Diagnostics.Process"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              mc:Ignorable="d"
              d:DesignHeight="650" d:DesignWidth="1200">
 
@@ -17,49 +19,55 @@
         <converters:NullToBoolConverter x:Key="NullToBoolConverter"/>
         <converters:AffinityMaskConverter x:Key="AffinityMaskConverter"/>
         <converters:BytesToMbConverter x:Key="BytesToMbConverter"/>
+        <sys:Double x:Key="ProcessFontLarge">24</sys:Double>
+        <sys:Double x:Key="ProcessFontMedium">14</sys:Double>
+        <sys:Double x:Key="ProcessFontMediumSmall">12</sys:Double>
+        <sys:Double x:Key="ProcessFontSmall">11</sys:Double>
     </UserControl.Resources>
     
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Search and Refresh Controls -->
-        <GroupBox Grid.Row="0" Header="🔍 Process Search &amp; Control" Margin="0,0,0,10">
-            <Grid Margin="5">
+        <!-- Standardized Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="Process Management" FontSize="{StaticResource ProcessFontLarge}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+            <TextBlock Text="Search, filter, and control active process configurations" FontSize="{StaticResource ProcessFontMedium}" Opacity="0.7"/>
+        </StackPanel>
+
+        <!-- Search and Refresh Controls Filter Grid -->
+        <Border Grid.Row="1" Background="{DynamicResource ControlFillColorDefaultBrush}" Padding="16" BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Margin="0,0,0,12">
+            <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="12"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <!-- Search and Basic Controls -->
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,5">
-                    <TextBox Width="200"
-                             Margin="0,0,10,0"
-                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                             ToolTip="Search processes by name"
-                             VerticalAlignment="Center"/>
-                    <CheckBox Content="Active Applications Only"
-                              IsChecked="{Binding ShowActiveApplicationsOnly}"
-                              Margin="0,0,10,0"
-                              VerticalAlignment="Center"
-                              ToolTip="Show only applications with visible windows (like Process Lasso's Active Processes)"/>
-                    <Button Command="{Binding LoadProcessesCommand}"
-                            Content="🔄 Refresh"
-                            Padding="10,5"
-                            ToolTip="Refresh the process list"/>
-                    <Button Command="{Binding LoadMoreProcessesCommand}"
-                            Content="📄 Load More"
-                            Padding="10,5"
-                            Margin="5,0,0,0"
-                            Visibility="{Binding HasMoreBatches, Converter={StaticResource BoolToVisibilityConverter}}"
-                            ToolTip="Load more processes (virtualized loading)"/>
-                </StackPanel>
+                 <Grid Grid.Row="0">
+                     <Grid.ColumnDefinitions>
+                         <ColumnDefinition Width="*"/>
+                         <ColumnDefinition Width="16"/>
+                         <ColumnDefinition Width="Auto"/>
+                         <ColumnDefinition Width="16"/>
+                         <ColumnDefinition Width="Auto"/>
+                         <ColumnDefinition Width="8"/>
+                         <ColumnDefinition Width="Auto"/>
+                     </Grid.ColumnDefinitions>
+
+                     <TextBox Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" ToolTip="Search processes by name" HorizontalAlignment="Stretch" />
+                     <CheckBox Grid.Column="2" Content="Active Apps Only" IsChecked="{Binding ShowActiveApplicationsOnly}" VerticalAlignment="Center" ToolTip="Show only applications with visible windows"/>
+                     <Button Grid.Column="4" Command="{Binding LoadProcessesCommand}" Content="Refresh" ToolTip="Refresh the process list"/>
+                     <Button Grid.Column="6" Command="{Binding LoadMoreProcessesCommand}" Content="Load More" Visibility="{Binding HasMoreBatches, Converter={StaticResource BoolToVisibilityConverter}}" ToolTip="Load more processes"/>
+                 </Grid>
 
                 <!-- Smart Filtering Controls -->
-                <StackPanel Grid.Row="1" Orientation="Horizontal">
+                <WrapPanel Grid.Row="2" Orientation="Horizontal">
                     <CheckBox Content="Hide System Processes"
                               IsChecked="{Binding HideSystemProcesses}"
                               Margin="0,0,15,0"
@@ -81,12 +89,12 @@
                         <ComboBoxItem Content="Process Name" Tag="Name"/>
                         <ComboBoxItem Content="Process ID" Tag="ProcessId"/>
                     </ComboBox>
-                </StackPanel>
+                </WrapPanel>
             </Grid>
-        </GroupBox>
+        </Border>
 
         <!-- Process List with Loading Overlay -->
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="2">
             <DataGrid ItemsSource="{Binding FilteredProcesses}"
                       SelectedItem="{Binding SelectedProcess}"
                       AutoGenerateColumns="False"
@@ -129,8 +137,8 @@
                     Visibility="{Binding IsVirtualizationEnabled, Converter={StaticResource BoolToVisibilityConverter}}"
                     HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="10" Padding="5">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="📊" FontSize="12" Margin="0,0,3,0"/>
-                    <TextBlock FontSize="10" Foreground="{DynamicResource InfoTextBrush}">
+                    <TextBlock Text="📊" FontSize="{StaticResource ProcessFontMediumSmall}" Margin="0,0,3,0"/>
+                    <TextBlock FontSize="{StaticResource ProcessFontSmall}" Foreground="{DynamicResource InfoTextBrush}">
                         <Run Text="Batch:"/>
                         <Run Text="{Binding CurrentBatchIndex, StringFormat={}{0:N0}}"/>
                         <Run Text="/"/>
@@ -144,7 +152,7 @@
         </Grid>
 
         <!-- Process Controls -->
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="3">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -154,8 +162,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="2*"/>
                 </Grid.ColumnDefinitions>
 
                 <!-- Priority Controls -->
@@ -196,52 +203,56 @@
                     </StackPanel>
                 </GroupBox>
 
-                <!-- Core Mask Selection -->
-                <GroupBox Grid.Column="1" Header="Core Mask" Margin="5,0,5,0">
-                    <StackPanel Margin="5">
-                        <TextBlock Text="Quick apply a predefined core mask:" FontSize="10" Margin="0,0,0,5" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                        <ComboBox ItemsSource="{Binding AvailableCoreMasks}"
+                <!-- CPU Mask Selection -->
+                <GroupBox Grid.Column="1" Header="CPU Mask" Margin="5,0,5,0">
+                    <Grid Margin="5" MinHeight="148">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0"
+                                   Text="Quick apply a predefined CPU mask:"
+                                   FontSize="{StaticResource ProcessFontSmall}"
+                                   Margin="0,0,0,5"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+
+                        <ComboBox Grid.Row="1"
+                                  ItemsSource="{Binding AvailableCoreMasks}"
                                   SelectedItem="{Binding SelectedCoreMask, Mode=TwoWay}"
-                                  Margin="0,0,0,5">
+                                  Margin="0,0,0,8">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="0,0,8,0"/>
-                                        <TextBlock Text="{Binding SelectedCoreCount, StringFormat='({0} cores)'}"
-                                                   FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding SelectedCoreCount, StringFormat='({0} CPUs)'}"
+                                                   FontSize="{StaticResource ProcessFontSmall}"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
-                        <Button Content="➕ Create Custom Mask"
-                                Command="{Binding CreateCustomMaskCommand}"
-                                Padding="8,5"
-                                Margin="0,0,0,5"
-                                ToolTip="Open Core Masks tab to create a new custom mask"/>
-                        <TextBlock FontSize="9" Foreground="{DynamicResource SuccessTextBrush}" TextWrapping="Wrap">
-                            <Run Text="ℹ️ Selecting a mask applies it immediately to the selected process."/>
-                        </TextBlock>
-                    </StackPanel>
-                </GroupBox>
 
-                <!-- Global Power Plan Notice -->
-                <GroupBox Grid.Column="2" Header="Global Power Plan" Margin="5,0,5,0">
-                    <StackPanel Margin="5">
-                        <TextBlock Text="Power plans are system-wide." FontWeight="SemiBold" Margin="0,0,0,4"/>
-                        <TextBlock Text="Use the Power Plans or Rules tab to change them intentionally."
-                                   TextWrapping="Wrap"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   FontSize="11"
-                                   Margin="0,0,0,8"/>
-                        <Button Content="Open Rules"
-                                Command="{Binding OpenRulesTabCommand}"
-                                Padding="10,5"
-                                ToolTip="Open Rules to configure process-based automation"/>
-                    </StackPanel>
+                        <Button Grid.Row="2"
+                                Command="{Binding CreateCustomMaskCommand}"
+                                Padding="8,6"
+                                Margin="0,0,0,0"
+                                ToolTip="Open CPU Masks tab to create a new custom mask">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Add12" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Create Custom Mask"
+                                           FontSize="{StaticResource ProcessFontMediumSmall}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
                 </GroupBox>
 
                 <!-- Advanced CPU Affinity Controls -->
-                <GroupBox Grid.Column="3" Header="Advanced CPU Affinity" Margin="5,0,0,0">
+                <GroupBox Grid.Column="2" Header="Advanced CPU Affinity" Margin="5,0,0,0">
                     <Grid Margin="5">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -251,10 +262,10 @@
                         <!-- Topology Status and HyperThreading Status -->
                         <StackPanel Grid.Row="0" Orientation="Vertical" Margin="0,0,0,5">
                             <TextBlock Text="{Binding TopologyStatus}"
-                                       FontSize="10"
+                                       FontSize="{StaticResource ProcessFontSmall}"
                                        Foreground="{Binding IsTopologyDetectionSuccessful, Converter={StaticResource BoolToColorConverter}}"/>
                             <TextBlock Text="{Binding HyperThreadingStatusText}"
-                                       FontSize="10"
+                                       FontSize="{StaticResource ProcessFontSmall}"
                                        Margin="0,2,0,0"
                                        Foreground="{Binding IsHyperThreadingActive, Converter={StaticResource BoolToColorConverter}}"
                                        ToolTip="Shows whether Hyper-Threading (Intel) or SMT (AMD) is present and active on this system"/>
@@ -280,14 +291,9 @@
                                                   Focusable="False"
                                                   IsEnabled="{Binding IsEnabled}"
                                                   Margin="2"
-                                                  FontSize="9"
-                                                  ToolTip="Read-only - modify cores in Core Mask tab">
-                                            <CheckBox.Foreground>
-                                                <MultiBinding Converter="{StaticResource CoreTypeToColorConverter}">
-                                                    <Binding Path="CoreType"/>
-                                                    <Binding Path="IsHyperThreaded"/>
-                                                </MultiBinding>
-                                            </CheckBox.Foreground>
+                                                  FontSize="{StaticResource ProcessFontSmall}"
+                                                  Foreground="{DynamicResource TextPrimaryBrush}"
+                                                  ToolTip="Read-only - modify CPUs in CPU Mask tab">
                                         </CheckBox>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -342,7 +348,7 @@
                                    VerticalAlignment="Center"
                                    TextWrapping="Wrap"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                   FontSize="11">
+                                   FontSize="{StaticResource ProcessFontMediumSmall}">
                             <Run Text="💾 Save current settings (CPU mask, priority) as an automatic rule for this process"/>
                         </TextBlock>
                         <Button Grid.Column="1"
@@ -359,6 +365,7 @@
                             Padding="10,7"
                             CornerRadius="6"
                             BorderThickness="1"
+                            Opacity="{Binding StatusOpacity}"
                             Visibility="{Binding StatusMessage, Converter={x:Static converters:StringToVisibilityConverter.Instance}}">
                         <Border.Style>
                             <Style TargetType="Border">

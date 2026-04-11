@@ -6,18 +6,18 @@
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="900">
 
-    <Grid Margin="10">
+    <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <Grid Grid.Row="0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="250" MinWidth="200"/>
-                <ColumnDefinition Width="10"/>
-                <ColumnDefinition Width="*" MinWidth="400"/>
-            </Grid.ColumnDefinitions>
+             <Grid.ColumnDefinitions>
+                 <ColumnDefinition Width="2*" MinWidth="200"/>
+                 <ColumnDefinition Width="Auto"/>
+                 <ColumnDefinition Width="3*" MinWidth="300"/>
+             </Grid.ColumnDefinitions>
 
             <!-- LISTA MASCHERE SINISTRA -->
             <DockPanel Grid.Column="0">
@@ -25,17 +25,17 @@
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
                     <Button Content="➕ New" Command="{Binding CreateMaskCommand}"
                             Padding="10,5" FontSize="13" Margin="0,0,5,0"
-                            ToolTip="Create a new core mask"/>
+                            ToolTip="Create a new CPU mask"/>
                     <Button Content="🗑️ Delete" Command="{Binding DeleteMaskCommand}"
                             Padding="10,5" FontSize="13"
                             ToolTip="Delete selected mask"/>
                 </StackPanel>
 
                 <!-- ListBox delle maschere -->
-                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4">
+                <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
                     <ListBox ItemsSource="{Binding CoreMasks}"
                              SelectedItem="{Binding SelectedCoreMask, Mode=TwoWay}"
-                             Background="{DynamicResource SurfaceBrush}"
+                             Background="{DynamicResource ControlFillColorDefaultBrush}"
                              BorderThickness="0">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
@@ -48,14 +48,14 @@
                                     <StackPanel Grid.Column="0">
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13"/>
                                          <TextBlock Text="{Binding Description}"
-                                                   FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                    TextTrimming="CharacterEllipsis"
                                                    Margin="0,2,0,0"/>
-                                        <TextBlock FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,2,0,0">
+                                        <TextBlock FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0">
                                             <Run Text="{Binding SelectedCoreCount, Mode=OneWay}"/>
                                             <Run Text="/"/>
                                             <Run Text="{Binding BoolMask.Count, Mode=OneWay}"/>
-                                            <Run Text="cores"/>
+                                            <Run Text="CPUs"/>
                                         </TextBlock>
                                     </StackPanel>
 
@@ -82,7 +82,7 @@
             </DockPanel>
 
             <!-- DIVIDER -->
-            <GridSplitter Grid.Column="1" Width="10" HorizontalAlignment="Stretch" Background="Transparent"/>
+            <GridSplitter Grid.Column="1" Width="8" HorizontalAlignment="Stretch" Background="Transparent"/>
 
             <!-- EDITOR MASK DESTRA -->
             <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
@@ -98,8 +98,8 @@
                         </Style>
                     </StackPanel.Style>
 
-                    <!-- Nome e Descrizione -->
-                    <GroupBox Header="Mask Information" Padding="10" Margin="0,0,0,15">
+                      <!-- Nome e Descrizione -->
+                      <GroupBox Header="Mask Information" Padding="10" Margin="0,10,0,10">
                         <StackPanel>
                             <TextBlock Text="Name:" FontWeight="SemiBold" Margin="0,0,0,5"/>
                             <TextBox Text="{Binding SelectedCoreMask.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -107,34 +107,36 @@
 
                             <TextBlock Text="Description:" FontWeight="SemiBold" Margin="0,0,0,5"/>
                             <TextBox Text="{Binding SelectedCoreMask.Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                     Padding="8,6" Height="60" TextWrapping="Wrap" AcceptsReturn="True"
+                                     Padding="8,6" MinHeight="72" TextWrapping="Wrap" AcceptsReturn="True"
                                      VerticalScrollBarVisibility="Auto"/>
                         </StackPanel>
                     </GroupBox>
 
-                    <!-- Core Selection Grid -->
-                    <GroupBox Header="Select CPU Cores" Padding="10" Margin="0,0,0,15">
+                    <!-- CPU Selection Grid -->
+                    <GroupBox Header="Select CPUs" Padding="10" Margin="0,10,0,10">
                         <StackPanel>
-                            <!-- Core Checkboxes - Direct binding to BoolMask like CPUSetSetter -->
-                            <TextBlock Text="Click checkboxes to toggle cores. Changes are saved automatically."
-                                       FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,10"/>
-                            <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="300">
+                            <!-- CPU checkboxes - direct binding to BoolMask like CPUSetSetter -->
+                            <TextBlock Text="Click checkboxes to toggle CPUs. Changes are saved automatically."
+                                       FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,10"/>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
                                 <ItemsControl x:Name="CoreItemsControl" ItemsSource="{Binding CoreBits}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
-                                            <WrapPanel Orientation="Horizontal" MaxWidth="600"/>
+                                            <WrapPanel Orientation="Horizontal"/>
                                         </ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                            <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"
                                                     Margin="2" Padding="4" CornerRadius="3">
                                                 <Border.Style>
                                                     <Style TargetType="Border">
-                                                        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                                                        <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}"/>
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                <Setter Property="Background" Value="{DynamicResource InfoBackgroundBrush}"/>
+                                                                <Setter Property="Background" Value="{DynamicResource SoftSelectionBackgroundBrush}"/>
+                                                                <Setter Property="BorderBrush" Value="{DynamicResource SoftSelectionBorderBrush}"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
@@ -143,7 +145,7 @@
                                                           FontSize="10" MinWidth="60">
                                                     <CheckBox.Content>
                                                         <TextBlock>
-                                                            <Run Text="Core "/>
+                                                            <Run Text="CPU "/>
                                                             <Run Text="{Binding Index, Mode=OneWay}"/>
                                                         </TextBlock>
                                                     </CheckBox.Content>
@@ -178,9 +180,10 @@
         </Grid>
 
         <!-- Status Bar -->
-        <Border Grid.Row="1" Background="{DynamicResource SurfaceAltBrush}" Padding="10,5" Margin="0,10,0,0" CornerRadius="3">
+        <Border Grid.Row="1" Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}" Padding="10,5" Margin="0,10,0,0" CornerRadius="6">
             <TextBlock Text="{Binding StatusMessage}"
-                       FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"
+                       FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Opacity="{Binding StatusOpacity}"
                        TextTrimming="CharacterEllipsis"/>
         </Border>
     </Grid>

@@ -43,285 +43,296 @@
 
         <!-- Settings Content -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <StackPanel>
+            <WrapPanel HorizontalAlignment="Center">
                 
-                <!-- Notifications Section -->
-                <TextBlock Text="Notifications" Style="{StaticResource SectionHeaderStyle}"/>
-                <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="5" Padding="15" Margin="0,5,0,15">
-                    <StackPanel>
-                        <CheckBox Content="Enable notifications" 
-                                  IsChecked="{Binding Settings.EnableNotifications}"
-                                  Margin="0,0,0,10"/>
+                 <!-- Notifications Section -->
+                 <StackPanel Width="360" Margin="10">
+                     <TextBlock Text="Notifications" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
+                     <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="5" Padding="15" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+                        <StackPanel>
+                            <CheckBox Content="Enable notifications" 
+                                      IsChecked="{Binding Settings.EnableNotifications}"
+                                      Margin="0,0,0,10"/>
 
-                        <StackPanel Margin="20,0,0,10"
-                                    IsEnabled="{Binding Settings.EnableNotifications}">
-                            <TextBlock Text="Notification Level" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                            <ComboBox SelectedValue="{Binding Settings.NotificationLevel}"
-                                      SelectedValuePath="Tag"
-                                      Width="240">
-                                <ComboBoxItem Content="All" Tag="{x:Static models:NotificationLevelProfile.All}"/>
-                                <ComboBoxItem Content="Warnings/Errors only" Tag="{x:Static models:NotificationLevelProfile.WarningsAndErrorsOnly}"/>
-                                <ComboBoxItem Content="Silent" Tag="{x:Static models:NotificationLevelProfile.Silent}"/>
-                            </ComboBox>
-                        </StackPanel>
-                        
-                        <CheckBox Content="Enable balloon notifications (system tray)" 
-                                  IsChecked="{Binding Settings.EnableBalloonNotifications}"
-                                  IsEnabled="{Binding Settings.EnableNotifications}"
-                                  Margin="20,0,0,5"/>
-                        
-                        <CheckBox Content="Enable toast notifications (Windows 10+)" 
-                                  IsChecked="{Binding Settings.EnableToastNotifications}"
-                                  IsEnabled="{Binding Settings.EnableNotifications}"
-                                  Margin="20,0,0,10"/>
-                        
-                        <Separator Margin="0,10"/>
-                        
-                        <TextBlock Text="Notification Types" FontWeight="SemiBold" Margin="0,5"/>
-                        
-                        <CheckBox Content="Power plan changes" 
-                                  IsChecked="{Binding Settings.EnablePowerPlanChangeNotifications}"
-                                  IsEnabled="{Binding Settings.EnableNotifications}"
-                                  Margin="20,5,0,5"/>
-                        
-                        <CheckBox Content="Process monitoring events" 
-                                  IsChecked="{Binding Settings.EnableProcessMonitoringNotifications}"
-                                  IsEnabled="{Binding Settings.EnableNotifications}"
-                                  Margin="20,0,0,5"/>
-                        
-                        <CheckBox Content="Error notifications" 
-                                  IsChecked="{Binding Settings.EnableErrorNotifications}"
-                                  IsEnabled="{Binding Settings.EnableNotifications}"
-                                  Margin="20,0,0,5"/>
-                        
-                        <CheckBox Content="Success notifications" 
-                                  IsChecked="{Binding Settings.EnableSuccessNotifications}"
-                                  IsEnabled="{Binding Settings.EnableNotifications}"
-                                  Margin="20,0,0,10"/>
-                        
-                        <Separator Margin="0,10"/>
-                        
-                        <Grid Margin="0,5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="20,0,0,10"
+                                        IsEnabled="{Binding Settings.EnableNotifications}">
+                                <TextBlock Text="Notification Level" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <ComboBox SelectedValue="{Binding Settings.NotificationLevel}"
+                                          SelectedValuePath="Tag">
+                                    <ComboBoxItem Content="All" Tag="{x:Static models:NotificationLevelProfile.All}"/>
+                                    <ComboBoxItem Content="Warnings/Errors only" Tag="{x:Static models:NotificationLevelProfile.WarningsAndErrorsOnly}"/>
+                                    <ComboBoxItem Content="Silent" Tag="{x:Static models:NotificationLevelProfile.Silent}"/>
+                                </ComboBox>
+                            </StackPanel>
                             
-                            <TextBlock Text="Notification duration (ms):" VerticalAlignment="Center"/>
-                            <Slider Grid.Column="1" 
-                                    Value="{Binding Settings.NotificationDisplayDurationMs}"
-                                    Minimum="1000" Maximum="30000" 
-                                    TickFrequency="1000"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="10,0"/>
-                            <TextBlock Grid.Column="2" 
-                                       Text="{Binding Settings.NotificationDisplayDurationMs}"
-                                       VerticalAlignment="Center" MinWidth="50"/>
-                        </Grid>
-                        
-                        <Button Content="Test Notification" 
-                                Command="{Binding TestNotificationCommand}"
-                                HorizontalAlignment="Left" 
-                                Margin="0,10,0,0" 
-                                Padding="15,5"/>
-                    </StackPanel>
-                </Border>
+                            <CheckBox Content="Enable balloon notifications (system tray)" 
+                                      IsChecked="{Binding Settings.EnableBalloonNotifications}"
+                                      IsEnabled="{Binding Settings.EnableNotifications}"
+                                      Margin="20,0,0,5"/>
+                            
+                            <CheckBox Content="Enable toast notifications (Windows 10+)" 
+                                      IsChecked="{Binding Settings.EnableToastNotifications}"
+                                      IsEnabled="{Binding Settings.EnableNotifications}"
+                                      Margin="20,0,0,10"/>
+                            
+                            <Separator Margin="0,10"/>
+                            
+                            <TextBlock Text="Notification Types" FontWeight="SemiBold" Margin="0,5"/>
+                            
+                            <CheckBox Content="Power plan changes" 
+                                      IsChecked="{Binding Settings.EnablePowerPlanChangeNotifications}"
+                                      IsEnabled="{Binding Settings.EnableNotifications}"
+                                      Margin="20,5,0,5"/>
+                            
+                            <CheckBox Content="Process monitoring events" 
+                                      IsChecked="{Binding Settings.EnableProcessMonitoringNotifications}"
+                                      IsEnabled="{Binding Settings.EnableNotifications}"
+                                      Margin="20,0,0,5"/>
+                            
+                            <CheckBox Content="Error notifications" 
+                                      IsChecked="{Binding Settings.EnableErrorNotifications}"
+                                      IsEnabled="{Binding Settings.EnableNotifications}"
+                                      Margin="20,0,0,5"/>
+                            
+                            <CheckBox Content="Success notifications" 
+                                      IsChecked="{Binding Settings.EnableSuccessNotifications}"
+                                      IsEnabled="{Binding Settings.EnableNotifications}"
+                                      Margin="20,0,0,10"/>
+                            
+                            <Separator Margin="0,10"/>
+                            
+                            <Grid Margin="0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <TextBlock Text="Duration (ms):" VerticalAlignment="Center"/>
+                                <Slider Grid.Column="1" 
+                                        Value="{Binding Settings.NotificationDisplayDurationMs}"
+                                        Minimum="1000" Maximum="30000" 
+                                        TickFrequency="1000"
+                                        IsSnapToTickEnabled="True"
+                                        Margin="10,0"/>
+                                <TextBlock Grid.Column="2" 
+                                           Text="{Binding Settings.NotificationDisplayDurationMs}"
+                                           VerticalAlignment="Center" MinWidth="40"/>
+                            </Grid>
+                            
+                            <Button Content="Test Notification" 
+                                    Command="{Binding TestNotificationCommand}"
+                                    HorizontalAlignment="Left" 
+                                    Margin="0,10,0,0" 
+                                    Padding="15,5"/>
+                        </StackPanel>
+                    </Border>
+                 </StackPanel>
 
                 <!-- System Tray Section -->
-                <TextBlock Text="System Tray" Style="{StaticResource SectionHeaderStyle}"/>
-                <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="5" Padding="15" Margin="0,5,0,15">
-                    <StackPanel>
-                        <CheckBox Content="Show tray icon" 
-                                  IsChecked="{Binding Settings.ShowTrayIcon}"
-                                  Margin="0,0,0,10"/>
-                        
-                        <CheckBox Content="Minimize to tray" 
-                                  IsChecked="{Binding Settings.MinimizeToTray}"
-                                  IsEnabled="{Binding Settings.ShowTrayIcon}"
-                                  Margin="20,0,0,5"/>
-                        
-                        <CheckBox Content="Close to tray (instead of exit)" 
-                                  IsChecked="{Binding Settings.CloseToTray}"
-                                  IsEnabled="{Binding Settings.ShowTrayIcon}"
-                                  Margin="20,0,0,5"/>
-                        
-                        <CheckBox Content="Start minimized" 
-                                  IsChecked="{Binding Settings.StartMinimized}"
-                                  Margin="20,0,0,10"/>
-                        
-                        <Separator Margin="0,10"/>
-                        
-                        <CheckBox Content="Enable quick apply from tray" 
-                                  IsChecked="{Binding Settings.EnableQuickApplyFromTray}"
-                                  IsEnabled="{Binding Settings.ShowTrayIcon}"
-                                  Margin="0,5"/>
-                        
-                        <CheckBox Content="Enable monitoring controls from tray" 
-                                  IsChecked="{Binding Settings.EnableMonitoringControlFromTray}"
-                                  IsEnabled="{Binding Settings.ShowTrayIcon}"
-                                  Margin="0,0,0,5"/>
-                        
-                        <CheckBox Content="Show detailed tooltips" 
-                                  IsChecked="{Binding Settings.ShowDetailedTooltips}"
-                                  IsEnabled="{Binding Settings.ShowTrayIcon}"
-                                  Margin="0,0,0,10"/>
-                    </StackPanel>
-                </Border>
+                <StackPanel Width="360" Margin="10">
+                    <TextBlock Text="System Tray" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
+                    <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="5" Padding="15" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+                        <StackPanel>
+                            <CheckBox Content="Show tray icon" 
+                                      IsChecked="{Binding Settings.ShowTrayIcon}"
+                                      Margin="0,0,0,10"/>
+                            
+                            <CheckBox Content="Minimize to tray" 
+                                      IsChecked="{Binding Settings.MinimizeToTray}"
+                                      IsEnabled="{Binding Settings.ShowTrayIcon}"
+                                      Margin="20,0,0,5"/>
+                            
+                            <CheckBox Content="Close to tray (instead of exit)" 
+                                      IsChecked="{Binding Settings.CloseToTray}"
+                                      IsEnabled="{Binding Settings.ShowTrayIcon}"
+                                      Margin="20,0,0,5"/>
+                            
+                            <CheckBox Content="Start minimized" 
+                                      IsChecked="{Binding Settings.StartMinimized}"
+                                      Margin="20,0,0,10"/>
+                            
+                            <Separator Margin="0,10"/>
+                            
+                            <CheckBox Content="Enable quick apply from tray" 
+                                      IsChecked="{Binding Settings.EnableQuickApplyFromTray}"
+                                      IsEnabled="{Binding Settings.ShowTrayIcon}"
+                                      Margin="0,5"/>
+                            
+                            <CheckBox Content="Enable monitoring controls from tray" 
+                                      IsChecked="{Binding Settings.EnableMonitoringControlFromTray}"
+                                      IsEnabled="{Binding Settings.ShowTrayIcon}"
+                                      Margin="0,0,0,5"/>
+                            
+                            <CheckBox Content="Show detailed tooltips" 
+                                      IsChecked="{Binding Settings.ShowDetailedTooltips}"
+                                      IsEnabled="{Binding Settings.ShowTrayIcon}"
+                                      Margin="0,0,0,10"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
 
-                <!-- Autostart Section -->
-                <TextBlock Text="Autostart" Style="{StaticResource SectionHeaderStyle}"/>
-                <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="5" Padding="15" Margin="0,5,0,15">
-                    <StackPanel>
-                        <CheckBox Content="Start with Windows"
-                                  IsChecked="{Binding Settings.AutostartWithWindows}"
-                                  Margin="0,0,0,10"/>
-                        <TextBlock Text="Automatically start ThreadPilot when Windows starts"
-                                   Style="{StaticResource DescriptionStyle}"
-                                   Margin="20,0,0,10"/>
-                    </StackPanel>
-                </Border>
+                <!-- Basic Preferences Section -->
+                <StackPanel Width="360" Margin="10">
+                    <TextBlock Text="Basic Preferences" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
+                    <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="5" Padding="15" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+                        <StackPanel>
+                            <TextBlock Text="Autostart" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                            <CheckBox Content="Start with Windows"
+                                      IsChecked="{Binding Settings.AutostartWithWindows}"
+                                      Margin="0,0,0,5"/>
+                            <TextBlock Text="Automatically start ThreadPilot when Windows starts"
+                                       Style="{StaticResource DescriptionStyle}"
+                                       Margin="20,0,0,15"/>
+                                       
+                            <Separator Margin="0,0,0,15"/>
+                            
+                            <TextBlock Text="Appearance" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                            <CheckBox Content="Use dark theme"
+                                      IsChecked="{Binding Settings.UseDarkTheme}"
+                                      Margin="0,0,0,5"/>
+                            <TextBlock Text="Applies a global Dark/Light theme across all tabs"
+                                       Style="{StaticResource DescriptionStyle}"
+                                       Margin="20,0,0,5"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
 
-                <!-- Appearance Section -->
-                <TextBlock Text="Appearance" Style="{StaticResource SectionHeaderStyle}"/>
-                <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="5" Padding="15" Margin="0,5,0,15">
-                    <StackPanel>
-                        <CheckBox Content="Use dark theme"
-                                  IsChecked="{Binding Settings.UseDarkTheme}"
-                                  Margin="0,0,0,10"/>
-                        <TextBlock Text="Applies a global Dark/Light theme across all tabs"
-                                   Style="{StaticResource DescriptionStyle}"
-                                   Margin="20,0,0,10"/>
-                    </StackPanel>
-                </Border>
+                <!-- Monitoring Section -->
+                <StackPanel Width="360" Margin="10">
+                    <TextBlock Text="Monitoring Settings" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
+                    <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="5" Padding="15" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+                        <StackPanel>
+                            <CheckBox Content="Enable WMI monitoring"
+                                      IsChecked="{Binding Settings.EnableWmiMonitoring}"
+                                      Margin="0,0,0,5"/>
+                            <TextBlock Text="Use Windows Management Instrumentation for real-time process monitoring"
+                                       Style="{StaticResource DescriptionStyle}"
+                                       Margin="20,0,0,15"/>
 
-                <!-- Monitoring Settings Section -->
-                <TextBlock Text="Monitoring Settings" Style="{StaticResource SectionHeaderStyle}"/>
-                <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="5" Padding="15" Margin="0,5,0,15">
-                    <StackPanel>
-                        <CheckBox Content="Enable WMI monitoring"
-                                  IsChecked="{Binding Settings.EnableWmiMonitoring}"
-                                  Margin="0,0,0,10"/>
-                        <TextBlock Text="Use Windows Management Instrumentation for real-time process monitoring"
-                                   Style="{StaticResource DescriptionStyle}"
-                                   Margin="20,0,0,10"/>
+                            <CheckBox Content="Enable fallback polling"
+                                      IsChecked="{Binding Settings.EnableFallbackPolling}"
+                                      Margin="0,0,0,5"/>
+                            <TextBlock Text="Use polling as backup when WMI monitoring fails"
+                                       Style="{StaticResource DescriptionStyle}"
+                                       Margin="20,0,0,15"/>
 
-                        <CheckBox Content="Enable fallback polling"
-                                  IsChecked="{Binding Settings.EnableFallbackPolling}"
-                                  Margin="0,0,0,10"/>
-                        <TextBlock Text="Use polling as backup when WMI monitoring fails"
-                                   Style="{StaticResource DescriptionStyle}"
-                                   Margin="20,0,0,10"/>
+                            <Separator Margin="0,0,0,15"/>
 
-                        <Grid Margin="0,5,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
 
-                            <TextBlock Text="Polling interval (ms):" VerticalAlignment="Center"/>
-                            <Slider Grid.Column="1"
-                                    Value="{Binding Settings.PollingIntervalMs}"
-                                    Minimum="1000" Maximum="30000"
-                                    TickFrequency="1000"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="10,0"/>
-                            <TextBlock Grid.Column="2"
-                                       Text="{Binding Settings.PollingIntervalMs}"
-                                       VerticalAlignment="Center" MinWidth="50"/>
-                        </Grid>
+                                <TextBlock Text="Polling interval (ms):" VerticalAlignment="Center"/>
+                                <Slider Grid.Column="1"
+                                        Value="{Binding Settings.PollingIntervalMs}"
+                                        Minimum="1000" Maximum="30000"
+                                        TickFrequency="1000"
+                                        IsSnapToTickEnabled="True"
+                                        Margin="10,0"/>
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding Settings.PollingIntervalMs}"
+                                           VerticalAlignment="Center" MinWidth="40"/>
+                            </Grid>
 
-                        <Grid Margin="0,5,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
+                            <Grid Margin="0,5,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
 
-                            <TextBlock Text="Fallback polling interval (ms):" VerticalAlignment="Center"/>
-                            <Slider Grid.Column="1"
-                                    Value="{Binding Settings.FallbackPollingIntervalMs}"
-                                    Minimum="5000" Maximum="60000"
-                                    TickFrequency="5000"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="10,0"/>
-                            <TextBlock Grid.Column="2"
-                                       Text="{Binding Settings.FallbackPollingIntervalMs}"
-                                       VerticalAlignment="Center" MinWidth="50"/>
-                        </Grid>
-                    </StackPanel>
-                </Border>
+                                <TextBlock Text="Fallback polling (ms):" VerticalAlignment="Center"/>
+                                <Slider Grid.Column="1"
+                                        Value="{Binding Settings.FallbackPollingIntervalMs}"
+                                        Minimum="5000" Maximum="60000"
+                                        TickFrequency="5000"
+                                        IsSnapToTickEnabled="True"
+                                        Margin="10,0"/>
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding Settings.FallbackPollingIntervalMs}"
+                                           VerticalAlignment="Center" MinWidth="40"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
 
                 <!-- Advanced Section -->
-                <TextBlock Text="Advanced" Style="{StaticResource SectionHeaderStyle}"/>
-                <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="5" Padding="15" Margin="0,5,0,15">
-                    <StackPanel>
-                        <CheckBox Content="Enable notification history"
-                                  IsChecked="{Binding Settings.EnableNotificationHistory}"
-                                  Margin="0,0,0,10"/>
+                <StackPanel Width="360" Margin="10">
+                    <TextBlock Text="Advanced" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
+                    <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="5" Padding="15" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+                        <StackPanel>
+                            <CheckBox Content="Enable notification history"
+                                      IsChecked="{Binding Settings.EnableNotificationHistory}"
+                                      Margin="0,0,0,10"/>
 
-                        <Grid Margin="0,5" IsEnabled="{Binding Settings.EnableNotificationHistory}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
+                            <Grid Margin="0,5" IsEnabled="{Binding Settings.EnableNotificationHistory}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
 
-                            <TextBlock Text="Max history items:" VerticalAlignment="Center"/>
-                            <Slider Grid.Column="1"
-                                    Value="{Binding Settings.MaxNotificationHistoryItems}"
-                                    Minimum="10" Maximum="1000"
-                                    TickFrequency="10"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="10,0"/>
-                            <TextBlock Grid.Column="2"
-                                       Text="{Binding Settings.MaxNotificationHistoryItems}"
-                                       VerticalAlignment="Center" MinWidth="50"/>
-                        </Grid>
+                                <TextBlock Text="Max history items:" VerticalAlignment="Center"/>
+                                <Slider Grid.Column="1"
+                                        Value="{Binding Settings.MaxNotificationHistoryItems}"
+                                        Minimum="10" Maximum="1000"
+                                        TickFrequency="10"
+                                        IsSnapToTickEnabled="True"
+                                        Margin="10,0"/>
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding Settings.MaxNotificationHistoryItems}"
+                                           VerticalAlignment="Center" MinWidth="40"/>
+                            </Grid>
 
-                        <CheckBox Content="Auto-hide notifications"
-                                  IsChecked="{Binding Settings.AutoHideNotifications}"
-                                  Margin="0,10,0,5"/>
+                            <CheckBox Content="Auto-hide notifications"
+                                      IsChecked="{Binding Settings.AutoHideNotifications}"
+                                      Margin="0,10,0,5"/>
 
-                        <CheckBox Content="Enable notification sound"
-                                  IsChecked="{Binding Settings.EnableNotificationSound}"
-                                  Margin="0,0,0,5"/>
+                            <CheckBox Content="Enable notification sound"
+                                      IsChecked="{Binding Settings.EnableNotificationSound}"
+                                      Margin="0,0,0,5"/>
 
-                        <CheckBox Content="Enable debug logging"
-                                  IsChecked="{Binding Settings.EnableDebugLogging}"
-                                  Margin="0,0,0,5"/>
+                            <CheckBox Content="Enable debug logging"
+                                      IsChecked="{Binding Settings.EnableDebugLogging}"
+                                      Margin="0,0,0,5"/>
 
-                        <CheckBox Content="Enable performance counters"
-                                  IsChecked="{Binding Settings.EnablePerformanceCounters}"
-                                  Margin="0,0,0,10"/>
-                    </StackPanel>
-                </Border>
+                            <CheckBox Content="Enable performance counters"
+                                      IsChecked="{Binding Settings.EnablePerformanceCounters}"
+                                      Margin="0,0,0,10"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
 
                 <!-- About Section -->
-                <TextBlock Text="About" Style="{StaticResource SectionHeaderStyle}"/>
-                <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="5" Padding="15" Margin="0,5,0,15">
-                    <StackPanel>
-                        <TextBlock Text="ThreadPilot" FontWeight="SemiBold" FontSize="14"/>
-                    <TextBlock Text="Version:" FontWeight="SemiBold" Margin="0,8,0,0"/>
-                        <TextBlock Text="{Binding ApplicationVersion}" Margin="0,0,0,10"/>
+                <StackPanel Width="360" Margin="10">
+                    <TextBlock Text="About" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
+                    <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="5" Padding="15" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+                        <StackPanel>
+                            <TextBlock Text="ThreadPilot" FontWeight="SemiBold" FontSize="14"/>
+                            <TextBlock Text="Version:" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                            <TextBlock Text="{Binding ApplicationVersion}" Margin="0,0,0,10"/>
 
-                    <TextBlock Text="Copyright © 2025 PrimeBuild" Margin="0,0,0,4"/>
-                    <TextBlock Text="License: GPLv3" Style="{StaticResource DescriptionStyle}"/>
+                            <TextBlock Text="Copyright © 2026 PrimeBuild" Margin="0,0,0,4"/>
+                            <TextBlock Text="License: GPLv3" Style="{StaticResource DescriptionStyle}"/>
 
-                        <Separator Margin="0,12,0,12"/>
+                            <Separator Margin="0,12,0,12"/>
 
-                    <Button Content="Check for updates"
-                                Command="{Binding CheckUpdatesCommand}"
-                                Padding="15,6"
-                                HorizontalAlignment="Left"/>
-                    <TextBlock Text="Checks on demand using the official GitHub Releases."
-                                   Style="{StaticResource DescriptionStyle}"
-                                   Margin="0,6,0,0"/>
-                    </StackPanel>
-                </Border>
+                            <Button Content="Check for updates"
+                                    Command="{Binding CheckUpdatesCommand}"
+                                    Padding="15,6"
+                                    HorizontalAlignment="Left"/>
+                            <TextBlock Text="Checks on demand using the official GitHub Releases."
+                                       Style="{StaticResource DescriptionStyle}"
+                                       Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
 
-            </StackPanel>
+            </WrapPanel>
         </ScrollViewer>
 
         <!-- Footer with buttons and status -->
@@ -337,6 +348,7 @@
                     Padding="10,7"
                     CornerRadius="6"
                     BorderThickness="1"
+                    Opacity="{Binding StatusOpacity}"
                     Visibility="{Binding StatusMessage, Converter={x:Static converters:StringToVisibilityConverter.Instance}}">
                 <Border.Style>
                     <Style TargetType="Border">

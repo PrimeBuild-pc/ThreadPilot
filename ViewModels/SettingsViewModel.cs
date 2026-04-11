@@ -43,6 +43,7 @@ namespace ThreadPilot.ViewModels
         private readonly IProcessPowerPlanAssociationService _associationService;
         private readonly IProcessMonitorManagerService _processMonitorManagerService;
         private readonly IThemeService _themeService;
+        private readonly ISystemTrayService _systemTrayService;
         private bool _isSyncingFromService = false;
         private string _cachedDefaultPowerPlanGuid = string.Empty;
         private string _cachedDefaultPowerPlanName = string.Empty;
@@ -82,6 +83,7 @@ namespace ThreadPilot.ViewModels
             IProcessPowerPlanAssociationService associationService,
             IProcessMonitorManagerService processMonitorManagerService,
             IThemeService themeService,
+            ISystemTrayService systemTrayService,
             IEnhancedLoggingService? enhancedLoggingService = null)
             : base(logger, enhancedLoggingService)
         {
@@ -92,6 +94,7 @@ namespace ThreadPilot.ViewModels
             _associationService = associationService ?? throw new ArgumentNullException(nameof(associationService));
             _processMonitorManagerService = processMonitorManagerService ?? throw new ArgumentNullException(nameof(processMonitorManagerService));
             _themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
+            _systemTrayService = systemTrayService ?? throw new ArgumentNullException(nameof(systemTrayService));
 
             // Get version and strip the git commit hash (everything after '+')
             var rawVersion = typeof(App).Assembly
@@ -141,6 +144,10 @@ namespace ThreadPilot.ViewModels
             if (string.Equals(e.PropertyName, nameof(ApplicationSettingsModel.UseDarkTheme), StringComparison.Ordinal))
             {
                 Settings.HasUserThemePreference = true;
+
+                var useDarkTheme = Settings.UseDarkTheme;
+                _themeService.ApplyTheme(useDarkTheme);
+                _systemTrayService.ApplyTheme(useDarkTheme);
             }
 
             HasUnsavedChanges = true;
@@ -206,6 +213,7 @@ namespace ThreadPilot.ViewModels
                 Settings.UseDarkTheme = useDarkTheme;
                 _isSyncingFromService = false;
                 _themeService.ApplyTheme(useDarkTheme);
+                _systemTrayService.ApplyTheme(useDarkTheme);
 
                 // Update monitoring services with new settings
                 _processMonitorManagerService.UpdateSettings();
@@ -390,6 +398,7 @@ namespace ThreadPilot.ViewModels
                 Settings.UseDarkTheme = useDarkTheme;
                 _isSyncingFromService = false;
                 _themeService.ApplyTheme(useDarkTheme);
+                _systemTrayService.ApplyTheme(useDarkTheme);
 
                 HasUnsavedChanges = false;
                 StatusMessage = "Settings loaded";

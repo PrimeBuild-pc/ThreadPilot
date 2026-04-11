@@ -40,9 +40,57 @@ namespace ThreadPilot.Services
 
         private const string TOPOLOGY_CACHE_KEY = "cpu_topology";
         private static readonly TimeSpan CACHE_DURATION = TimeSpan.FromHours(1);
+        private const int ERROR_INSUFFICIENT_BUFFER = 122;
 
         public event EventHandler<CpuTopologyDetectedEventArgs>? TopologyDetected;
         public CpuTopologyModel? CurrentTopology => _currentTopology;
+
+        private enum LOGICAL_PROCESSOR_RELATIONSHIP
+        {
+            RelationProcessorCore = 0,
+            RelationNumaNode = 1,
+            RelationCache = 2,
+            RelationProcessorPackage = 3,
+            RelationGroup = 4,
+            RelationProcessorDie = 5,
+            RelationNumaNodeEx = 6,
+            RelationProcessorModule = 7,
+            RelationAll = 0xFFFF
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct GROUP_AFFINITY
+        {
+            public UIntPtr Mask;
+            public ushort Group;
+            public ushort Reserved0;
+            public ushort Reserved1;
+            public ushort Reserved2;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private unsafe struct PROCESSOR_RELATIONSHIP
+        {
+            public byte Flags;
+            public byte EfficiencyClass;
+            public fixed byte Reserved[20];
+            public ushort GroupCount;
+            public GROUP_AFFINITY GroupMask;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private unsafe struct SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX
+        {
+            public LOGICAL_PROCESSOR_RELATIONSHIP Relationship;
+            public int Size;
+            public PROCESSOR_RELATIONSHIP Processor;
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetLogicalProcessorInformationEx(
+            LOGICAL_PROCESSOR_RELATIONSHIP relationshipType,
+            IntPtr buffer,
+            ref int returnedLength);
 
         public CpuTopologyService(ILogger<CpuTopologyService> logger, IMemoryCache? cache = null)
         {
@@ -104,7 +152,7 @@ namespace ThreadPilot.Services
                         .SetSize(1));
 
                 _logger.LogInformation("CPU topology detection completed successfully and cached. " +
-                    "Logical cores: {LogicalCores}, Physical cores: {PhysicalCores}, " +
+                    "Logical CPUs: {LogicalCores}, Physical CPUs: {PhysicalCores}, " +
                     "Sockets: {Sockets}, HT: {HasHT}, Hybrid: {HasHybrid}, CCD: {HasCcd}",
                     topology.TotalLogicalCores, topology.TotalPhysicalCores, topology.TotalSockets,
                     topology.HasHyperThreading, topology.HasIntelHybrid, topology.HasAmdCcd);
@@ -153,10 +201,16 @@ namespace ThreadPilot.Services
         {
             try
             {
-                // Method 1: Use Environment.ProcessorCount as baseline
+                // Method 1: Use official Windows topology API for physical/logical CPU mapping.
+                if (TryDetectCoresViaWindowsApi(topology))
+                {
+                    return;
+                }
+
+                // Method 2: Use Environment.ProcessorCount as baseline
                 int logicalCoreCount = Environment.ProcessorCount;
                 
-                // Method 2: Try WMI for more detailed information
+                // Method 3: Try WMI for more detailed information
                 await DetectCoresViaWmiAsync(topology);
                 
                 // If WMI failed, create basic topology
@@ -169,6 +223,188 @@ namespace ThreadPilot.Services
             {
                 _logger.LogWarning(ex, "Failed to detect logical cores, using fallback");
                 CreateBasicTopology(topology, Environment.ProcessorCount);
+            }
+        }
+
+        private bool TryDetectCoresViaWindowsApi(CpuTopologyModel topology)
+        {
+            try
+            {
+                int requiredLength = 0;
+                if (GetLogicalProcessorInformationEx(LOGICAL_PROCESSOR_RELATIONSHIP.RelationProcessorCore, IntPtr.Zero, ref requiredLength))
+                {
+                    // Expected first call should fail with insufficient buffer.
+                    return false;
+                }
+
+                int firstError = Marshal.GetLastWin32Error();
+                if (firstError != ERROR_INSUFFICIENT_BUFFER || requiredLength <= 0)
+                {
+                    _logger.LogWarning("GetLogicalProcessorInformationEx probe failed with Win32 error {Error}", firstError);
+                    return false;
+                }
+
+                IntPtr buffer = Marshal.AllocHGlobal(requiredLength);
+                try
+                {
+                    if (!GetLogicalProcessorInformationEx(LOGICAL_PROCESSOR_RELATIONSHIP.RelationProcessorCore, buffer, ref requiredLength))
+                    {
+                        _logger.LogWarning("GetLogicalProcessorInformationEx read failed with Win32 error {Error}", Marshal.GetLastWin32Error());
+                        return false;
+                    }
+
+                    var discovered = new List<(int PhysicalCpuId, int LogicalCpuId, byte EfficiencyClass)>();
+                    int offset = 0;
+                    int physicalCpuId = 0;
+
+                    while (offset < requiredLength)
+                    {
+                        IntPtr itemPtr = IntPtr.Add(buffer, offset);
+                        var info = Marshal.PtrToStructure<SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX>(itemPtr);
+
+                        if (info.Size <= 0)
+                        {
+                            break;
+                        }
+
+                        if (info.Relationship == LOGICAL_PROCESSOR_RELATIONSHIP.RelationProcessorCore)
+                        {
+                            var processor = info.Processor;
+                            int groupCount = processor.GroupCount;
+                            int groupMaskOffset = Marshal.OffsetOf<PROCESSOR_RELATIONSHIP>(nameof(PROCESSOR_RELATIONSHIP.GroupMask)).ToInt32();
+                            IntPtr groupMaskPtr = IntPtr.Add(itemPtr, 8 + groupMaskOffset);
+
+                            var logicalCpuIdsForCore = new List<int>();
+
+                            for (int g = 0; g < groupCount; g++)
+                            {
+                                int stride = Marshal.SizeOf<GROUP_AFFINITY>();
+                                var groupAffinity = Marshal.PtrToStructure<GROUP_AFFINITY>(IntPtr.Add(groupMaskPtr, g * stride));
+
+                                // This app currently represents affinity with a single 64-bit mask.
+                                if (groupAffinity.Group != 0)
+                                {
+                                    _logger.LogWarning("Detected processor group {Group}; falling back to WMI/core-count topology path", groupAffinity.Group);
+                                    return false;
+                                }
+
+                                ulong mask = groupAffinity.Mask.ToUInt64();
+                                logicalCpuIdsForCore.AddRange(GetSetBitIndices(mask));
+                            }
+
+                            foreach (int logicalCpuId in logicalCpuIdsForCore.Distinct().OrderBy(id => id))
+                            {
+                                discovered.Add((physicalCpuId, logicalCpuId, processor.EfficiencyClass));
+                            }
+
+                            physicalCpuId++;
+                        }
+
+                        offset += info.Size;
+                    }
+
+                    if (discovered.Count == 0)
+                    {
+                        return false;
+                    }
+
+                    topology.LogicalCores.Clear();
+                    foreach (var entry in discovered.OrderBy(d => d.LogicalCpuId))
+                    {
+                        topology.LogicalCores.Add(new CpuCoreModel
+                        {
+                            LogicalCoreId = entry.LogicalCpuId,
+                            PhysicalCoreId = entry.PhysicalCpuId,
+                            SocketId = 0,
+                            CoreType = CpuCoreType.Standard,
+                            Label = $"CPU {entry.LogicalCpuId}",
+                            LogicalProcessorName = $"CPU{entry.PhysicalCpuId}_T0",
+                            IsEnabled = true
+                        });
+                    }
+
+                    ApplyHyperThreadingFromPhysicalMapping(topology);
+                    ApplyCoreTypeFromEfficiencyClass(topology, discovered);
+
+                    _logger.LogInformation("Detected CPU topology via GetLogicalProcessorInformationEx: {LogicalCpuCount} logical CPUs, {PhysicalCpuCount} physical CPUs",
+                        topology.TotalLogicalCores,
+                        topology.TotalPhysicalCores);
+
+                    return true;
+                }
+                finally
+                {
+                    Marshal.FreeHGlobal(buffer);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "GetLogicalProcessorInformationEx topology detection failed");
+                return false;
+            }
+        }
+
+        private static IEnumerable<int> GetSetBitIndices(ulong mask)
+        {
+            for (int bit = 0; bit < 64; bit++)
+            {
+                if ((mask & (1UL << bit)) != 0)
+                {
+                    yield return bit;
+                }
+            }
+        }
+
+        private void ApplyHyperThreadingFromPhysicalMapping(CpuTopologyModel topology)
+        {
+            foreach (var coreGroup in topology.LogicalCores.GroupBy(c => c.PhysicalCoreId))
+            {
+                var siblings = coreGroup.OrderBy(c => c.LogicalCoreId).ToList();
+                if (siblings.Count <= 1)
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < siblings.Count; i++)
+                {
+                    var isLogicalSibling = i > 0;
+                    siblings[i].IsHyperThreaded = isLogicalSibling;
+                    siblings[i].HyperThreadSibling = siblings.Count >= 2
+                        ? (isLogicalSibling ? siblings[0].LogicalCoreId : siblings[1].LogicalCoreId)
+                        : null;
+
+                    siblings[i].LogicalProcessorName = $"CPU{siblings[i].PhysicalCoreId}_T{i}";
+                }
+            }
+        }
+
+        private void ApplyCoreTypeFromEfficiencyClass(
+            CpuTopologyModel topology,
+            List<(int PhysicalCpuId, int LogicalCpuId, byte EfficiencyClass)> discovered)
+        {
+            var byPhysical = discovered
+                .GroupBy(d => d.PhysicalCpuId)
+                .Select(g => new { PhysicalCpuId = g.Key, EfficiencyClass = g.Min(x => x.EfficiencyClass) })
+                .ToList();
+
+            var classes = byPhysical
+                .Select(x => x.EfficiencyClass)
+                .Distinct()
+                .OrderBy(v => v)
+                .ToList();
+
+            if (classes.Count <= 1)
+            {
+                return;
+            }
+
+            byte performanceClass = classes.Min();
+            foreach (var logicalCpu in topology.LogicalCores)
+            {
+                byte classValue = byPhysical.First(x => x.PhysicalCpuId == logicalCpu.PhysicalCoreId).EfficiencyClass;
+                logicalCpu.CoreType = classValue == performanceClass
+                    ? CpuCoreType.PerformanceCore
+                    : CpuCoreType.EfficiencyCore;
             }
         }
 
@@ -191,7 +427,7 @@ namespace ThreadPilot.Services
                         physicalCoreCount += numberOfCores;
                         logicalCoreCount += numberOfLogicalProcessors;
 
-                        _logger.LogInformation("Detected CPU: {Cores} physical cores, {LogicalProcessors} logical processors",
+                        _logger.LogInformation("Detected CPU: {Cores} physical CPUs, {LogicalProcessors} logical processors",
                             numberOfCores, numberOfLogicalProcessors);
                     }
                 }
@@ -219,8 +455,8 @@ namespace ThreadPilot.Services
                         LogicalCoreId = logicalId,
                         PhysicalCoreId = physicalId,
                         SocketId = 0, // Will be refined later
-                        Label = $"Core {logicalId}",
-                        LogicalProcessorName = $"Core{physicalId}_T{threadIndexOnCore}", // T0 = physical, T1+ = SMT
+                        Label = $"CPU {logicalId}",
+                        LogicalProcessorName = $"CPU{physicalId}_T{threadIndexOnCore}", // T0 = physical, T1+ = SMT
                         IsEnabled = true,
                         IsHyperThreaded = isHyperThreaded,
                         HyperThreadSibling = htSibling
@@ -229,7 +465,7 @@ namespace ThreadPilot.Services
                     topology.LogicalCores.Add(core);
                 }
 
-                _logger.LogInformation("Created topology: {LogicalCores} logical cores, {PhysicalCores} physical cores, HT: {HasHT}",
+                _logger.LogInformation("Created topology: {LogicalCores} logical CPUs, {PhysicalCores} physical CPUs, HT: {HasHT}",
                     logicalCoreCount, physicalCoreCount, hasHyperThreading);
             }
             catch (Exception ex)
@@ -250,8 +486,8 @@ namespace ThreadPilot.Services
                     PhysicalCoreId = i, // Assume no HT for basic topology
                     SocketId = 0,
                     CoreType = CpuCoreType.Standard,
-                    Label = $"Core {i}",
-                    LogicalProcessorName = $"Core{i}_T0", // All physical cores in basic fallback (no HT detected)
+                    Label = $"CPU {i}",
+                    LogicalProcessorName = $"CPU{i}_T0", // All physical CPUs in basic fallback (no HT detected)
                     IsEnabled = true
                 };
 
@@ -279,6 +515,12 @@ namespace ThreadPilot.Services
                 // For now, we'll use heuristics based on CPU brand and core count patterns
                 if (topology.CpuBrand.Contains("Intel", StringComparison.OrdinalIgnoreCase))
                 {
+                    // Preserve already-detected core type data from official API if present.
+                    if (topology.LogicalCores.Any(c => c.CoreType == CpuCoreType.PerformanceCore || c.CoreType == CpuCoreType.EfficiencyCore))
+                    {
+                        return;
+                    }
+
                     // Check for 12th gen or later Intel processors (Alder Lake+)
                     if (topology.CpuBrand.Contains("12th") || topology.CpuBrand.Contains("13th") || 
                         topology.CpuBrand.Contains("14th") || topology.CpuBrand.Contains("15th"))
@@ -354,18 +596,46 @@ namespace ThreadPilot.Services
         {
             try
             {
-                // Simple HT detection: if we have more logical than physical cores
+                // Normalize HT metadata by physical CPU mapping first.
+                var groupedByPhysical = topology.LogicalCores
+                    .GroupBy(c => c.PhysicalCoreId)
+                    .Select(g => g.OrderBy(c => c.LogicalCoreId).ToList())
+                    .ToList();
+
+                if (groupedByPhysical.Any(g => g.Count > 1))
+                {
+                    foreach (var siblings in groupedByPhysical)
+                    {
+                        for (int i = 0; i < siblings.Count; i++)
+                        {
+                            var isLogicalSibling = i > 0;
+                            siblings[i].IsHyperThreaded = isLogicalSibling;
+                            siblings[i].HyperThreadSibling = siblings.Count >= 2
+                                ? (isLogicalSibling ? siblings[0].LogicalCoreId : siblings[1].LogicalCoreId)
+                                : null;
+
+                            if (string.IsNullOrWhiteSpace(siblings[i].LogicalProcessorName))
+                            {
+                                siblings[i].LogicalProcessorName = $"CPU{siblings[i].PhysicalCoreId}_T{i}";
+                            }
+                        }
+                    }
+
+                    return;
+                }
+
+                // Fallback HT detection: if we only have flat sequential data.
                 var logicalCount = topology.LogicalCores.Count;
                 var physicalCount = topology.TotalPhysicalCores;
                 
                 if (logicalCount > physicalCount)
                 {
-                    // Mark cores as HT siblings
+                    // Mark pairs as primary/logical siblings conservatively.
                     for (int i = 0; i < topology.LogicalCores.Count; i += 2)
                     {
                         if (i + 1 < topology.LogicalCores.Count)
                         {
-                            topology.LogicalCores[i].IsHyperThreaded = true;
+                            topology.LogicalCores[i].IsHyperThreaded = false;
                             topology.LogicalCores[i].HyperThreadSibling = i + 1;
                             topology.LogicalCores[i + 1].IsHyperThreaded = true;
                             topology.LogicalCores[i + 1].HyperThreadSibling = i;
@@ -423,26 +693,53 @@ namespace ThreadPilot.Services
                 }
             }
 
-            // Update labels - simplified without CCD clutter
+            // Update labels with explicit logical-to-physical CPU mapping.
             foreach (var core in topology.LogicalCores)
             {
                 var typeLabel = core.CoreType switch
                 {
-                    CpuCoreType.PerformanceCore => "P",
-                    CpuCoreType.EfficiencyCore => "E",
+                    CpuCoreType.PerformanceCore => "P-",
+                    CpuCoreType.EfficiencyCore => "E-",
                     _ => ""
                 };
 
-                var htLabel = core.IsHyperThreaded ? " (HT)" : "";
+                var threadIndex = GetThreadIndexOnPhysicalCpu(core, topology);
+                var roleLabel = threadIndex == 0
+                    ? $"PH{core.PhysicalCoreId}"
+                    : $"L{threadIndex}/PH{core.PhysicalCoreId}";
 
-                core.Label = $"{typeLabel}Core {core.LogicalCoreId}{htLabel}";
+                core.Label = $"{typeLabel}CPU {core.LogicalCoreId} ({roleLabel})";
 
                 if (string.IsNullOrWhiteSpace(core.LogicalProcessorName))
                 {
-                    var threadIndex = Math.Max(0, core.LogicalCoreId - core.PhysicalCoreId);
-                    core.LogicalProcessorName = $"Core{core.PhysicalCoreId}_T{threadIndex}";
+                    threadIndex = Math.Max(0, core.LogicalCoreId - core.PhysicalCoreId);
+                    core.LogicalProcessorName = $"CPU{core.PhysicalCoreId}_T{threadIndex}";
                 }
             }
+        }
+
+        private static int GetThreadIndexOnPhysicalCpu(CpuCoreModel core, CpuTopologyModel topology)
+        {
+            if (!string.IsNullOrWhiteSpace(core.LogicalProcessorName))
+            {
+                var marker = core.LogicalProcessorName.LastIndexOf("_T", StringComparison.Ordinal);
+                if (marker >= 0)
+                {
+                    var suffix = core.LogicalProcessorName[(marker + 2)..];
+                    if (int.TryParse(suffix, out int parsedIndex))
+                    {
+                        return Math.Max(0, parsedIndex);
+                    }
+                }
+            }
+
+            var orderedSiblings = topology.LogicalCores
+                .Where(c => c.PhysicalCoreId == core.PhysicalCoreId)
+                .OrderBy(c => c.LogicalCoreId)
+                .ToList();
+
+            var index = orderedSiblings.FindIndex(c => c.LogicalCoreId == core.LogicalCoreId);
+            return index >= 0 ? index : 0;
         }
 
         private CpuTopologyModel CreateFallbackTopology()
@@ -469,46 +766,46 @@ namespace ThreadPilot.Services
 
             var presets = new List<CpuAffinityPreset>();
 
-            // All cores preset
+            // All CPUs preset
             presets.Add(new CpuAffinityPreset
             {
-                Name = "All Cores",
-                Description = $"All {_currentTopology.TotalLogicalCores} logical cores",
+                Name = "All CPUs",
+                Description = $"All {_currentTopology.TotalLogicalCores} logical CPUs",
                 AffinityMask = CalculateFullAffinityMask(_currentTopology.TotalLogicalCores),
                 IsAvailable = true
             });
 
-            // Physical cores only (if HT is available)
+            // Physical CPUs only (if HT is available)
             if (_currentTopology.HasHyperThreading)
             {
                 presets.Add(new CpuAffinityPreset
                 {
                     Name = "No HT",
-                    Description = $"All {_currentTopology.TotalPhysicalCores} physical cores (no HyperThreading)",
+                    Description = $"All {_currentTopology.TotalPhysicalCores} physical CPUs (no Hyper-Threading)",
                     AffinityMask = _currentTopology.GetPhysicalCoresAffinityMask(),
                     IsAvailable = _currentTopology.GetPhysicalCoresAffinityMask() != 0
                 });
             }
 
-            // Performance cores (Intel Hybrid)
+            // Performance CPUs (Intel Hybrid)
             if (_currentTopology.HasIntelHybrid && _currentTopology.PerformanceCores.Any())
             {
                 presets.Add(new CpuAffinityPreset
                 {
-                    Name = "Performance Cores",
-                    Description = $"Intel P-cores ({_currentTopology.PerformanceCores.Count()} cores)",
+                    Name = "Performance CPUs",
+                    Description = $"Intel P-CPUs ({_currentTopology.PerformanceCores.Count()} logical CPUs)",
                     AffinityMask = _currentTopology.GetPerformanceCoresAffinityMask(),
                     IsAvailable = _currentTopology.GetPerformanceCoresAffinityMask() != 0
                 });
             }
 
-            // Efficiency cores (Intel Hybrid)
+            // Efficiency CPUs (Intel Hybrid)
             if (_currentTopology.HasIntelHybrid && _currentTopology.EfficiencyCores.Any())
             {
                 presets.Add(new CpuAffinityPreset
                 {
-                    Name = "Efficiency Cores",
-                    Description = $"Intel E-cores ({_currentTopology.EfficiencyCores.Count()} cores)",
+                    Name = "Efficiency CPUs",
+                    Description = $"Intel E-CPUs ({_currentTopology.EfficiencyCores.Count()} logical CPUs)",
                     AffinityMask = _currentTopology.GetEfficiencyCoresAffinityMask(),
                     IsAvailable = _currentTopology.GetEfficiencyCoresAffinityMask() != 0
                 });
@@ -523,7 +820,7 @@ namespace ThreadPilot.Services
                     presets.Add(new CpuAffinityPreset
                     {
                         Name = $"CCD {ccdId}",
-                        Description = $"AMD CCD {ccdId} ({ccdCores.Count()} cores)",
+                        Description = $"AMD CCD {ccdId} ({ccdCores.Count()} logical CPUs)",
                         AffinityMask = _currentTopology.GetCcdAffinityMask(ccdId),
                         IsAvailable = _currentTopology.GetCcdAffinityMask(ccdId) != 0
                     });

@@ -30,24 +30,40 @@ namespace ThreadPilot.Converters
     {
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
         {
-            if (values.Length < 2) return System.Windows.Media.Brushes.Black;
+            if (values.Length < 2) return ResolveBrush("TextFillColorPrimaryBrush", System.Windows.Media.Brushes.Black);
 
             var coreType = values[0] as CpuCoreType? ?? CpuCoreType.Unknown;
             var isHyperThreaded = values[1] as bool? ?? false;
 
             return coreType switch
             {
-                CpuCoreType.PerformanceCore => isHyperThreaded ? System.Windows.Media.Brushes.DarkBlue : System.Windows.Media.Brushes.Blue,
-                CpuCoreType.EfficiencyCore => isHyperThreaded ? System.Windows.Media.Brushes.DarkGreen : System.Windows.Media.Brushes.Green,
+                CpuCoreType.PerformanceCore => isHyperThreaded
+                    ? ResolveBrush("SystemAccentColorSecondaryBrush", System.Windows.Media.Brushes.DodgerBlue)
+                    : ResolveBrush("SystemAccentColorPrimaryBrush", System.Windows.Media.Brushes.Blue),
+                CpuCoreType.EfficiencyCore => isHyperThreaded
+                    ? ResolveBrush("TextFillColorSecondaryBrush", System.Windows.Media.Brushes.DarkGray)
+                    : ResolveBrush("TextFillColorPrimaryBrush", System.Windows.Media.Brushes.Black),
                 CpuCoreType.Zen or CpuCoreType.ZenPlus or CpuCoreType.Zen2 or CpuCoreType.Zen3 or CpuCoreType.Zen4 =>
-                    isHyperThreaded ? System.Windows.Media.Brushes.DarkRed : System.Windows.Media.Brushes.Red,
-                _ => isHyperThreaded ? System.Windows.Media.Brushes.DarkGray : System.Windows.Media.Brushes.Black
+                    isHyperThreaded
+                        ? ResolveBrush("SystemAccentColorSecondaryBrush", System.Windows.Media.Brushes.DarkOrange)
+                        : ResolveBrush("SystemAccentColorPrimaryBrush", System.Windows.Media.Brushes.Orange),
+                _ => ResolveBrush("TextFillColorSecondaryBrush", System.Windows.Media.Brushes.Gray)
             };
         }
 
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
+        }
+
+        private static System.Windows.Media.Brush ResolveBrush(string key, System.Windows.Media.Brush fallback)
+        {
+            if (System.Windows.Application.Current?.TryFindResource(key) is System.Windows.Media.Brush brush)
+            {
+                return brush;
+            }
+
+            return fallback;
         }
     }
 
@@ -60,14 +76,26 @@ namespace ThreadPilot.Converters
         {
             if (value is bool success)
             {
-                return success ? System.Windows.Media.Brushes.Green : System.Windows.Media.Brushes.Red;
+                return success
+                    ? ResolveBrush("TextFillColorPrimaryBrush", System.Windows.Media.Brushes.Black)
+                    : ResolveBrush("TextFillColorSecondaryBrush", System.Windows.Media.Brushes.Gray);
             }
-            return System.Windows.Media.Brushes.Black;
+            return ResolveBrush("TextFillColorSecondaryBrush", System.Windows.Media.Brushes.Gray);
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
+        }
+
+        private static System.Windows.Media.Brush ResolveBrush(string key, System.Windows.Media.Brush fallback)
+        {
+            if (System.Windows.Application.Current?.TryFindResource(key) is System.Windows.Media.Brush brush)
+            {
+                return brush;
+            }
+
+            return fallback;
         }
     }
 

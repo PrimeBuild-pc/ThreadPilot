@@ -20,6 +20,7 @@ using System.IO;
 using System.Windows.Forms;
 using Microsoft.Extensions.Logging;
 using ThreadPilot.Models;
+using MediaSolidColorBrush = System.Windows.Media.SolidColorBrush;
 
 namespace ThreadPilot.Services
 {
@@ -43,6 +44,8 @@ namespace ThreadPilot.Services
         private bool _isMonitoring = true;
         private bool _isWmiAvailable = true;
         private TrayIconState _currentIconState = TrayIconState.Normal;
+        private bool _isDarkTheme = true;
+        private Font? _menuFont;
         private bool _disposed = false;
 
         public event EventHandler? QuickApplyRequested;
@@ -106,17 +109,19 @@ namespace ThreadPilot.Services
         private void CreateContextMenu()
         {
             _contextMenu = new ContextMenuStrip();
+            _menuFont = CreatePreferredMenuFont(_contextMenu.Font.Size);
+            _contextMenu.Font = _menuFont;
 
             var openDashboardMenuItem = new ToolStripMenuItem("Open Dashboard")
             {
-                Font = new Font(_contextMenu.Font, FontStyle.Bold)
+                Font = new Font(_menuFont, FontStyle.Regular)
             };
             openDashboardMenuItem.Click += OnDashboardClick;
             _contextMenu.Items.Add(openDashboardMenuItem);
 
             _performanceMenuItem = new ToolStripMenuItem("Open Performance")
             {
-                Font = new Font(_contextMenu.Font, FontStyle.Bold)
+                Font = new Font(_menuFont, FontStyle.Regular)
             };
             _performanceMenuItem.Click += OnPerformanceDashboardClick;
             _contextMenu.Items.Add(_performanceMenuItem);
@@ -131,7 +136,7 @@ namespace ThreadPilot.Services
             _systemStatusMenuItem = new ToolStripMenuItem("System Status")
             {
                 Enabled = false,
-                Font = new Font(_contextMenu.Font, FontStyle.Bold)
+                Font = new Font(_menuFont, FontStyle.Regular)
             };
             _contextMenu.Items.Add(_systemStatusMenuItem);
 
@@ -139,7 +144,7 @@ namespace ThreadPilot.Services
             _selectedProcessMenuItem = new ToolStripMenuItem("No process selected")
             {
                 Enabled = false,
-                Font = new Font(_contextMenu.Font, FontStyle.Italic)
+                Font = new Font(_menuFont, FontStyle.Regular)
             };
             _contextMenu.Items.Add(_selectedProcessMenuItem);
 
@@ -175,6 +180,8 @@ namespace ThreadPilot.Services
             var exitMenuItem = new ToolStripMenuItem("Exit");
             exitMenuItem.Click += OnExitClick;
             _contextMenu.Items.Add(exitMenuItem);
+
+            ApplyContextMenuTheme();
         }
 
         public void Show()
@@ -347,7 +354,15 @@ namespace ThreadPilot.Services
                 TryLoadTrayIcon(_currentIconState);
             }
 
+            ApplyContextMenuTheme();
+
             _logger.LogDebug("Tray service settings updated");
+        }
+
+        public void ApplyTheme(bool useDarkTheme)
+        {
+            _isDarkTheme = useDarkTheme;
+            ApplyContextMenuTheme();
         }
 
         public void UpdatePowerPlans(IEnumerable<PowerPlanModel> powerPlans, PowerPlanModel? activePlan)
@@ -368,6 +383,8 @@ namespace ThreadPilot.Services
                     menuItem.Click += OnPowerPlanClick;
                     _powerPlansMenuItem.DropDownItems.Add(menuItem);
                 }
+
+                ApplyContextMenuTheme();
 
                 _logger.LogDebug("Updated power plans in context menu");
             }
@@ -405,6 +422,8 @@ namespace ThreadPilot.Services
                         _profilesMenuItem.DropDownItems.Add(menuItem);
                     }
                 }
+
+                ApplyContextMenuTheme();
 
                 _logger.LogDebug("Updated profiles in context menu");
             }
@@ -449,6 +468,9 @@ namespace ThreadPilot.Services
                     _contextMenu.Dispose();
                     _contextMenu = null;
                 }
+
+                _menuFont?.Dispose();
+                _menuFont = null;
 
                 _disposed = true;
                 _logger.LogInformation("System tray service disposed");
@@ -528,6 +550,138 @@ namespace ThreadPilot.Services
             {
                 _logger.LogWarning(ex, "Failed to load tray icon");
             }
+        }
+
+        private void ApplyContextMenuTheme()
+        {
+            if (_contextMenu == null)
+            {
+                return;
+            }
+
+            Color backgroundColor;
+            Color foregroundColor;
+            Color selectionColor;
+            Color borderColor;
+            Color disabledColor;
+
+            if (_isDarkTheme)
+            {
+                // Force stable dark palette for WinForms tray menu even if XAML resources are unavailable.
+                backgroundColor = Color.FromArgb(28, 28, 30);
+                foregroundColor = Color.FromArgb(232, 232, 232);
+                selectionColor = Color.FromArgb(60, 60, 64);
+                borderColor = Color.FromArgb(74, 74, 79);
+                disabledColor = Color.FromArgb(132, 132, 136);
+            }
+            else
+            {
+                backgroundColor = ResolveColorFromResource("SurfaceAltBrush", SystemColors.Menu);
+                foregroundColor = ResolveColorFromResource("TextPrimaryBrush", SystemColors.MenuText);
+                selectionColor = ResolveColorFromResource("SoftSelectionBackgroundBrush", SystemColors.Highlight);
+                borderColor = ResolveColorFromResource("BorderBrush", SystemColors.ControlDark);
+                disabledColor = ResolveColorFromResource("TextDisabledBrush", SystemColors.GrayText);
+            }
+
+            _contextMenu.RenderMode = ToolStripRenderMode.Professional;
+            _contextMenu.Renderer = new ToolStripProfessionalRenderer(new TrayMenuColorTable(backgroundColor, selectionColor, borderColor));
+            _contextMenu.BackColor = backgroundColor;
+            _contextMenu.ForeColor = foregroundColor;
+
+            ApplyMenuItemTheme(_contextMenu.Items, backgroundColor, foregroundColor, disabledColor);
+        }
+
+        private static void ApplyMenuItemTheme(ToolStripItemCollection items, Color backColor, Color foreColor, Color disabledColor)
+        {
+            foreach (ToolStripItem item in items)
+            {
+                if (item is ToolStripSeparator)
+                {
+                    continue;
+                }
+
+                item.BackColor = backColor;
+                item.ForeColor = item.Enabled ? foreColor : disabledColor;
+
+                if (item is ToolStripMenuItem menuItem)
+                {
+                    menuItem.DropDown.BackColor = backColor;
+                    menuItem.DropDown.ForeColor = foreColor;
+
+                    if (menuItem.DropDownItems.Count > 0)
+                    {
+                        ApplyMenuItemTheme(menuItem.DropDownItems, backColor, foreColor, disabledColor);
+                    }
+                }
+            }
+        }
+
+        private sealed class TrayMenuColorTable : ProfessionalColorTable
+        {
+            private readonly Color _backgroundColor;
+            private readonly Color _selectionColor;
+            private readonly Color _borderColor;
+
+            public TrayMenuColorTable(Color backgroundColor, Color selectionColor, Color borderColor)
+            {
+                _backgroundColor = backgroundColor;
+                _selectionColor = selectionColor;
+                _borderColor = borderColor;
+            }
+
+            public override Color MenuBorder => _borderColor;
+            public override Color ToolStripDropDownBackground => _backgroundColor;
+            public override Color ImageMarginGradientBegin => ToolStripDropDownBackground;
+            public override Color ImageMarginGradientMiddle => ToolStripDropDownBackground;
+            public override Color ImageMarginGradientEnd => ToolStripDropDownBackground;
+            public override Color MenuItemSelected => _selectionColor;
+            public override Color MenuItemSelectedGradientBegin => MenuItemSelected;
+            public override Color MenuItemSelectedGradientEnd => MenuItemSelected;
+            public override Color MenuItemBorder => _borderColor;
+        }
+
+        private static Font CreatePreferredMenuFont(float baseSize)
+        {
+            var size = Math.Max(8.5f, baseSize);
+
+            try
+            {
+                return new Font("Segoe UI Variable", size, FontStyle.Regular, GraphicsUnit.Point);
+            }
+            catch
+            {
+                return new Font("Segoe UI", size, FontStyle.Regular, GraphicsUnit.Point);
+            }
+        }
+
+        private static Color ResolveColorFromResource(string resourceKey, Color fallback)
+        {
+            var app = System.Windows.Application.Current;
+            if (app == null)
+            {
+                return fallback;
+            }
+
+            MediaSolidColorBrush? brush = null;
+
+            if (app.Dispatcher.CheckAccess())
+            {
+                brush = app.TryFindResource(resourceKey) as MediaSolidColorBrush;
+            }
+            else
+            {
+                app.Dispatcher.Invoke(() =>
+                {
+                    brush = app.TryFindResource(resourceKey) as MediaSolidColorBrush;
+                });
+            }
+
+            if (brush != null)
+            {
+                return Color.FromArgb(brush.Color.A, brush.Color.R, brush.Color.G, brush.Color.B);
+            }
+
+            return fallback;
         }
     }
 }

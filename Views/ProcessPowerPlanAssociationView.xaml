@@ -29,6 +29,40 @@
 
         <!-- Main Content -->
         <TabControl Grid.Row="1" Background="{DynamicResource SurfaceBrush}" BorderThickness="0">
+            <TabControl.Resources>
+                <Style TargetType="TabItem">
+                    <Setter Property="Padding" Value="14,7"/>
+                    <Setter Property="Margin" Value="0,0,8,0"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="TabItem">
+                                <Border x:Name="TabBorder"
+                                        Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="{TemplateBinding Padding}"
+                                        Margin="{TemplateBinding Margin}">
+                                    <ContentPresenter ContentSource="Header"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource SoftSelectionBackgroundBrush}"/>
+                                        <Setter TargetName="TabBorder" Property="BorderBrush" Value="{DynamicResource SoftSelectionBorderBrush}"/>
+                                        <Setter TargetName="TabBorder" Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="10" ShadowDepth="1" Opacity="0.2"/>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </TabControl.Resources>
 
             <!-- Rules Tab -->
             <TabItem Header="📐 Rules">
@@ -65,7 +99,7 @@
                                     <DataGridTextColumn Header="Power Plan"
                                                        Binding="{Binding PowerPlanName}"
                                                        Width="120"/>
-                                    <DataGridTextColumn Header="Core Mask"
+                                    <DataGridTextColumn Header="CPU Mask"
                                                        Binding="{Binding CoreMaskName}"
                                                        Width="100"/>
                                     <DataGridTextColumn Header="Priority"
@@ -148,12 +182,12 @@
                                      DisplayMemberPath="Name"
                                      Padding="5" Margin="0,0,0,10"/>
 
-                            <TextBlock Text="Core Mask:" Margin="0,0,0,5"/>
+                            <TextBlock Text="CPU Mask:" Margin="0,0,0,5"/>
                             <ComboBox ItemsSource="{Binding AvailableCoreMasks}"
                                      SelectedItem="{Binding SelectedCoreMask}"
                                      DisplayMemberPath="Name"
                                      Padding="5" Margin="0,0,0,10"
-                                     ToolTip="Optional: Select a CPU core mask to apply when this process starts"/>
+                                     ToolTip="Optional: Select a CPU mask to apply when this process starts"/>
 
                             <TextBlock Text="Process Priority:" Margin="0,0,0,5"/>
                             <ComboBox ItemsSource="{Binding AvailablePriorities}"
@@ -201,7 +235,7 @@
             </TabItem>
 
             <!-- Monitoring Configuration Tab -->
-            <TabItem Header="Monitoring Configuration">
+            <TabItem Header="🛰️ Monitoring Configuration">
                 <ScrollViewer Margin="10">
                     <StackPanel>
                         <!-- Service Control -->
@@ -289,6 +323,7 @@
                 Padding="10,7"
                 CornerRadius="6"
                 BorderThickness="1"
+            Opacity="{Binding StatusOpacity}"
                 Visibility="{Binding StatusMessage, Converter={x:Static converters:StringToVisibilityConverter.Instance}}">
             <Border.Style>
                 <Style TargetType="Border">

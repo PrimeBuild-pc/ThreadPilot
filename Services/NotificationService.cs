@@ -30,6 +30,8 @@ namespace ThreadPilot.Services
     /// </summary>
     public class NotificationService : INotificationService, IDisposable
     {
+        private const int NotificationDisplayDurationMs = 2000;
+
         private readonly ILogger<NotificationService> _logger;
         private readonly IApplicationSettingsService _settingsService;
         private readonly ISystemTrayService _systemTrayService;
@@ -81,7 +83,7 @@ namespace ThreadPilot.Services
         {
             var notification = new NotificationModel(title, message, type)
             {
-                DurationMs = _settings.NotificationDisplayDurationMs,
+                DurationMs = NotificationDisplayDurationMs,
                 Category = "General",
                 SourceService = "NotificationService"
             };
@@ -103,6 +105,7 @@ namespace ThreadPilot.Services
                 }
 
                 // Add to history
+                notification.DurationMs = NotificationDisplayDurationMs;
                 AddToHistory(notification);
 
                 // Show balloon tip if enabled
@@ -132,7 +135,7 @@ namespace ThreadPilot.Services
         {
             var notification = new NotificationModel(title, message, type)
             {
-                DurationMs = timeoutMs,
+                DurationMs = NotificationDisplayDurationMs,
                 Category = "BalloonTip",
                 SourceService = "NotificationService"
             };
