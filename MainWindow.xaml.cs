@@ -18,6 +18,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using System.Windows;
@@ -34,6 +36,9 @@ namespace ThreadPilot
 {
     public partial class MainWindow : Window
     {
+        private const int DwmUseImmersiveDarkMode = 20;
+        private const int DwmUseImmersiveDarkModeLegacy = 19;
+
         private readonly ProcessViewModel _processViewModel;
         private readonly PowerPlanViewModel _powerPlanViewModel;
         private readonly PerformanceViewModel _performanceViewModel;
@@ -66,6 +71,10 @@ namespace ThreadPilot
         private bool _isPerformingShutdown = false;
         private int _currentTabIndex = -1;
         private bool _isHandlingTabSelection;
+        private readonly SemaphoreSlim _tabSwitchGuard = new(1, 1);
+
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int dwAttribute, ref int pvAttribute, int cbAttribute);
 
         public MainWindow(
             ProcessViewModel processViewModel,
@@ -559,7 +568,13 @@ namespace ThreadPilot
 
                 // Apply initial settings
                 var settings = _settingsService.Settings;
-                _themeService.ApplyTheme(settings.UseDarkTheme);
+                var useDarkTheme = settings.HasUserThemePreference
+                    ? settings.UseDarkTheme
+                    : _themeService.GetSystemUsesDarkTheme();
+
+                _themeService.ApplyTheme(useDarkTheme);
+                ApplyWindowCaptionTheme(useDarkTheme);
+
                 if (settings.StartMinimized)
                 {
                     WindowState = WindowState.Minimized;
@@ -637,9 +652,7 @@ namespace ThreadPilot
 
         private void OnShowMainWindowRequested(object? sender, EventArgs e)
         {
-            Show();
-            WindowState = WindowState.Normal;
-            Activate();
+            ShowWindowFromTray();
         }
 
         private async void OnExitRequested(object? sender, EventArgs e)
@@ -649,10 +662,7 @@ namespace ThreadPilot
 
         private void OnDashboardRequested(object? sender, EventArgs e)
         {
-            Show();
-            WindowState = WindowState.Normal;
-            Activate();
-            SelectMainTab(ProcessManagementTab);
+            ShowWindowFromTray(ProcessManagementTab);
         }
 
         /// <summary>
@@ -945,15 +955,11 @@ namespace ThreadPilot
         {
             try
             {
-                Show();
-                WindowState = WindowState.Normal;
-                Activate();
-
-                SelectMainTab(PerformanceTab);
+                ShowWindowFromTray(PerformanceTab);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to open system tweaks: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Failed to open performance dashboard: {ex.Message}");
             }
         }
 
@@ -1014,13 +1020,12 @@ namespace ThreadPilot
                 case ShortcutActions.ShowMainWindow:
                     if (IsVisible && WindowState != WindowState.Minimized)
                     {
+                        ShowInTaskbar = false;
                         Hide();
                     }
                     else
                     {
-                        Show();
-                        WindowState = WindowState.Normal;
-                        Activate();
+                        ShowWindowFromTray();
                     }
                     break;
 
@@ -1035,17 +1040,11 @@ namespace ThreadPilot
                     break;
 
                 case ShortcutActions.OpenTweaks:
-                    Show();
-                    WindowState = WindowState.Normal;
-                    Activate();
-                    SelectMainTab(SystemTweaksTab);
+                    ShowWindowFromTray(SystemTweaksTab);
                     break;
 
                 case ShortcutActions.OpenSettings:
-                    Show();
-                    WindowState = WindowState.Normal;
-                    Activate();
-                    SelectMainTab(SettingsTab);
+                    ShowWindowFromTray(SettingsTab);
                     break;
 
                 case ShortcutActions.RefreshProcessList:
@@ -1250,6 +1249,12 @@ namespace ThreadPilot
         {
             // Update tray service with new settings
             _systemTrayService.UpdateSettings(e.NewSettings);
+
+            var useDarkTheme = e.NewSettings.HasUserThemePreference
+                ? e.NewSettings.UseDarkTheme
+                : _themeService.GetSystemUsesDarkTheme();
+
+            ApplyWindowCaptionTheme(useDarkTheme);
         }
 
         private void OnMonitoringStatusChanged(object? sender, MonitoringStatusEventArgs e)
@@ -1288,6 +1293,7 @@ namespace ThreadPilot
             {
                 if (WindowState == WindowState.Minimized && _settingsService.Settings.MinimizeToTray)
                 {
+                    ShowInTaskbar = false;
                     Hide();
                     _systemTrayService.Show();
 
@@ -1304,6 +1310,8 @@ namespace ThreadPilot
                 }
                 else if (WindowState == WindowState.Normal)
                 {
+                    ShowInTaskbar = true;
+
                     // Resume process refresh when restored
                     if (_processViewModel != null)
                     {
@@ -1322,6 +1330,12 @@ namespace ThreadPilot
             }
 
             base.OnStateChanged(e);
+        }
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            ApplyWindowCaptionTheme(_themeService.IsDarkTheme);
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
@@ -1355,6 +1369,52 @@ namespace ThreadPilot
             return ReferenceEquals(item, target);
         }
 
+        private void ShowWindowFromTray(TabItem? tabToSelect = null)
+        {
+            ShowInTaskbar = true;
+            Visibility = Visibility.Visible;
+
+            if (!IsVisible)
+            {
+                Show();
+            }
+
+            if (WindowState == WindowState.Minimized)
+            {
+                WindowState = WindowState.Normal;
+            }
+
+            Activate();
+
+            if (tabToSelect != null)
+            {
+                SelectMainTab(tabToSelect);
+            }
+        }
+
+        private void ApplyWindowCaptionTheme(bool useDarkTheme)
+        {
+            try
+            {
+                var windowHandle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                if (windowHandle == IntPtr.Zero)
+                {
+                    return;
+                }
+
+                var darkMode = useDarkTheme ? 1 : 0;
+                var result = DwmSetWindowAttribute(windowHandle, DwmUseImmersiveDarkMode, ref darkMode, Marshal.SizeOf<int>());
+                if (result != 0)
+                {
+                    _ = DwmSetWindowAttribute(windowHandle, DwmUseImmersiveDarkModeLegacy, ref darkMode, Marshal.SizeOf<int>());
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to apply window caption theme: {ex.Message}");
+            }
+        }
+
         private void SelectMainTab(TabItem tab)
         {
             if (tab != null)
@@ -1370,72 +1430,81 @@ namespace ThreadPilot
                 return;
             }
 
-            if (!IsLoaded || e.Source != MainTabControl)
+            await _tabSwitchGuard.WaitAsync();
+
+            try
             {
-                return;
-            }
+                if (!IsLoaded || e.Source != MainTabControl)
+                {
+                    return;
+                }
 
-            var newIndex = MainTabControl.SelectedIndex;
-            if (_currentTabIndex < 0)
-            {
-                _currentTabIndex = newIndex;
-                return;
-            }
+                var newIndex = MainTabControl.SelectedIndex;
+                if (_currentTabIndex < 0)
+                {
+                    _currentTabIndex = newIndex;
+                    return;
+                }
 
-            if (newIndex == _currentTabIndex)
-            {
-                return;
-            }
+                if (newIndex == _currentTabIndex)
+                {
+                    return;
+                }
 
-            var previousTab = _currentTabIndex >= 0 && _currentTabIndex < MainTabControl.Items.Count
-                ? MainTabControl.Items[_currentTabIndex]
-                : null;
-            var currentTab = MainTabControl.SelectedItem;
+                var previousTab = _currentTabIndex >= 0 && _currentTabIndex < MainTabControl.Items.Count
+                    ? MainTabControl.Items[_currentTabIndex]
+                    : null;
+                var currentTab = MainTabControl.SelectedItem;
 
-            var settingsTabChanged = IsTabItem(previousTab, SettingsTab) || IsTabItem(currentTab, SettingsTab);
-            if (!settingsTabChanged)
-            {
-                _currentTabIndex = newIndex;
-                return;
-            }
+                var settingsTabChanged = IsTabItem(previousTab, SettingsTab) || IsTabItem(currentTab, SettingsTab);
+                if (!settingsTabChanged)
+                {
+                    _currentTabIndex = newIndex;
+                    return;
+                }
 
-            if (!_settingsViewModel.HasPendingChanges)
-            {
-                _currentTabIndex = newIndex;
-                return;
-            }
+                if (!_settingsViewModel.HasPendingChanges)
+                {
+                    _currentTabIndex = newIndex;
+                    return;
+                }
 
-            var result = System.Windows.MessageBox.Show(
-                "You have unsaved changes in Settings.\n\nChoose an action:\n- Yes: Save changes\n- No: Discard changes\n- Cancel: Stay on current tab",
-                "Unsaved Settings",
-                MessageBoxButton.YesNoCancel,
-                MessageBoxImage.Warning);
+                var result = System.Windows.MessageBox.Show(
+                    "You have unsaved changes in Settings.\n\nChoose an action:\n- Yes: Save changes\n- No: Discard changes\n- Cancel: Stay on current tab",
+                    "Unsaved Settings",
+                    MessageBoxButton.YesNoCancel,
+                    MessageBoxImage.Warning);
 
-            if (result == MessageBoxResult.Cancel)
-            {
-                _isHandlingTabSelection = true;
-                MainTabControl.SelectedIndex = _currentTabIndex;
-                _isHandlingTabSelection = false;
-                return;
-            }
-
-            if (result == MessageBoxResult.Yes)
-            {
-                var saved = await _settingsViewModel.SaveIfDirtyAsync();
-                if (!saved)
+                if (result == MessageBoxResult.Cancel)
                 {
                     _isHandlingTabSelection = true;
                     MainTabControl.SelectedIndex = _currentTabIndex;
                     _isHandlingTabSelection = false;
                     return;
                 }
-            }
-            else if (result == MessageBoxResult.No)
-            {
-                await _settingsViewModel.DiscardPendingChangesAsync();
-            }
 
-            _currentTabIndex = MainTabControl.SelectedIndex;
+                if (result == MessageBoxResult.Yes)
+                {
+                    var saved = await _settingsViewModel.SaveIfDirtyAsync();
+                    if (!saved)
+                    {
+                        _isHandlingTabSelection = true;
+                        MainTabControl.SelectedIndex = _currentTabIndex;
+                        _isHandlingTabSelection = false;
+                        return;
+                    }
+                }
+                else if (result == MessageBoxResult.No)
+                {
+                    await _settingsViewModel.DiscardPendingChangesAsync();
+                }
+
+                _currentTabIndex = MainTabControl.SelectedIndex;
+            }
+            finally
+            {
+                _tabSwitchGuard.Release();
+            }
         }
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
@@ -1469,6 +1538,8 @@ namespace ThreadPilot
 
                 _initializationTimeoutTimer?.Stop();
                 _initializationTimeoutTimer?.Dispose();
+
+                _tabSwitchGuard.Dispose();
             }
             catch (Exception ex)
             {

@@ -201,7 +201,7 @@
             </TabItem>
 
             <!-- Monitoring Configuration Tab -->
-            <TabItem Header="⚙️ Monitoring Configuration">
+            <TabItem Header="Monitoring Configuration">
                 <ScrollViewer Margin="10">
                     <StackPanel>
                         <!-- Service Control -->

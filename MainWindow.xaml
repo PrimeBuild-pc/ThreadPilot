@@ -13,18 +13,6 @@
         WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
-        <Style TargetType="GroupBox">
-            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-        </Style>
-
-        <Style TargetType="TabControl">
-            <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-        </Style>
-
         <Style TargetType="StatusBar">
             <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
@@ -102,13 +90,7 @@
                 <TabItem x:Name="SystemTweaksTab" Header="🔧 Tweaks">
                     <views:SystemTweaksView x:Name="SystemTweaksView"/>
                 </TabItem>
-                <TabItem x:Name="SettingsTab">
-                    <TabItem.Header>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets, Segoe UI Symbol, Segoe UI" Margin="0,0,6,0"/>
-                            <TextBlock Text="Settings"/>
-                        </StackPanel>
-                    </TabItem.Header>
+                <TabItem x:Name="SettingsTab" Header="Settings">
                     <views:SettingsView x:Name="SettingsView"/>
                 </TabItem>
             </TabControl>

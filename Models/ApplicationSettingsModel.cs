@@ -142,6 +142,9 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private bool useDarkTheme = false;
 
+        [ObservableProperty]
+        private bool hasUserThemePreference = false;
+
         // Monitoring Settings
         [ObservableProperty]
         private int pollingIntervalMs = 5000;
@@ -218,6 +221,7 @@ namespace ThreadPilot.Models
             RestoreDefaultPowerPlanOnExit = other.RestoreDefaultPowerPlanOnExit;
             ClearMasksOnClose = other.ClearMasksOnClose;
             UseDarkTheme = other.UseDarkTheme;
+            HasUserThemePreference = other.HasUserThemePreference;
 
             // Monitoring Settings
             PollingIntervalMs = other.PollingIntervalMs;

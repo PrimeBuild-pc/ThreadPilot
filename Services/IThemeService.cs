@@ -23,5 +23,7 @@ namespace ThreadPilot.Services
         bool IsDarkTheme { get; }
 
         void ApplyTheme(bool useDarkTheme);
+
+        bool GetSystemUsesDarkTheme();
     }
 }

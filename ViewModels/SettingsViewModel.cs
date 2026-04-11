@@ -138,6 +138,11 @@ namespace ThreadPilot.ViewModels
                 return;
             }
 
+            if (string.Equals(e.PropertyName, nameof(ApplicationSettingsModel.UseDarkTheme), StringComparison.Ordinal))
+            {
+                Settings.HasUserThemePreference = true;
+            }
+
             HasUnsavedChanges = true;
             StatusMessage = "Settings have been modified";
         }
@@ -193,7 +198,14 @@ namespace ThreadPilot.ViewModels
 
                 await _settingsService.UpdateSettingsAsync(Settings);
 
-                _themeService.ApplyTheme(Settings.UseDarkTheme);
+                var useDarkTheme = Settings.HasUserThemePreference
+                    ? Settings.UseDarkTheme
+                    : _themeService.GetSystemUsesDarkTheme();
+
+                _isSyncingFromService = true;
+                Settings.UseDarkTheme = useDarkTheme;
+                _isSyncingFromService = false;
+                _themeService.ApplyTheme(useDarkTheme);
 
                 // Update monitoring services with new settings
                 _processMonitorManagerService.UpdateSettings();
@@ -370,7 +382,14 @@ namespace ThreadPilot.ViewModels
                 Settings.CopyFrom(settingsSnapshot);
                 _isSyncingFromService = false;
 
-                _themeService.ApplyTheme(Settings.UseDarkTheme);
+                var useDarkTheme = Settings.HasUserThemePreference
+                    ? Settings.UseDarkTheme
+                    : _themeService.GetSystemUsesDarkTheme();
+
+                _isSyncingFromService = true;
+                Settings.UseDarkTheme = useDarkTheme;
+                _isSyncingFromService = false;
+                _themeService.ApplyTheme(useDarkTheme);
 
                 HasUnsavedChanges = false;
                 StatusMessage = "Settings loaded";

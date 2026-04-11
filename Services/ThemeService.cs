@@ -17,6 +17,7 @@
 using System;
 using System.Windows;
 using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 
 namespace ThreadPilot.Services
 {
@@ -69,6 +70,33 @@ namespace ThreadPilot.Services
             {
                 _logger.LogError(ex, "Failed to apply theme {ThemeUri}", targetUri);
             }
+        }
+
+        public bool GetSystemUsesDarkTheme()
+        {
+            try
+            {
+                const string personalizeKey = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
+
+                using var key = Registry.CurrentUser.OpenSubKey(personalizeKey, writable: false);
+                var value = key?.GetValue("AppsUseLightTheme");
+
+                if (value is int intValue)
+                {
+                    return intValue == 0;
+                }
+
+                if (value is long longValue)
+                {
+                    return longValue == 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to read system theme preference, falling back to light theme");
+            }
+
+            return false;
         }
     }
 }

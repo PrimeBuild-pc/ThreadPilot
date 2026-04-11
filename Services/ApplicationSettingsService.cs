@@ -72,10 +72,32 @@ namespace ThreadPilot.Services
                 }
 
                 var json = await File.ReadAllTextAsync(_settingsFilePath);
+                var legacyThemePreferenceDetected = false;
+
+                try
+                {
+                    using var document = JsonDocument.Parse(json);
+                    if (document.RootElement.ValueKind == JsonValueKind.Object)
+                    {
+                        var hasThemePreferenceFlag = document.RootElement.TryGetProperty("hasUserThemePreference", out _);
+                        var hasUseDarkThemeFlag = document.RootElement.TryGetProperty("useDarkTheme", out _);
+                        legacyThemePreferenceDetected = !hasThemePreferenceFlag && hasUseDarkThemeFlag;
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogWarning(ex, "Unable to parse settings JSON metadata, continuing with standard deserialization");
+                }
+
                 var loadedSettings = JsonSerializer.Deserialize<ApplicationSettingsModel>(json, JsonOptions);
 
                 if (loadedSettings != null)
                 {
+                    if (legacyThemePreferenceDetected)
+                    {
+                        loadedSettings.HasUserThemePreference = true;
+                    }
+
                     var oldSettings = (ApplicationSettingsModel)_settings.Clone();
                     _settings.CopyFrom(loadedSettings);
                     ValidateAndFixSettings();

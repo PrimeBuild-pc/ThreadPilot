@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -154,6 +155,8 @@ namespace ThreadPilot.ViewModels
 
         private readonly Dictionary<string, DateTime> _lastRuleApplyByExecutable = new(StringComparer.OrdinalIgnoreCase);
         private bool _monitoringWasActiveBeforeSuspend;
+        private readonly SemaphoreSlim _topProcessRefreshGate = new(1, 1);
+        private bool _pendingTopProcessRefresh;
 
         public PerformanceViewModel(
             IPerformanceMonitoringService performanceService,
@@ -528,63 +531,86 @@ namespace ThreadPilot.ViewModels
 
         private async Task LoadTopProcessesAsync()
         {
+            if (_topProcessRefreshGate.CurrentCount == 0)
+            {
+                _pendingTopProcessRefresh = true;
+                return;
+            }
+
+            await _topProcessRefreshGate.WaitAsync();
+
             try
             {
-                var topCpu = await _performanceService.GetTopCpuProcessesAsync(25);
-                var topMemory = await _performanceService.GetTopMemoryProcessesAsync(25);
-
-                var merged = topCpu
-                    .Concat(topMemory)
-                    .GroupBy(p => p.ProcessId)
-                    .Select(g => g.OrderByDescending(x => x.CpuUsage).First())
-                    .ToList();
-
-                var associations = await _associationService.GetAssociationsAsync();
-                var associationSet = associations
-                    .Select(a => NormalizeExecutableName(a.ExecutableName))
-                    .Where(name => !string.IsNullOrWhiteSpace(name))
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-                IEnumerable<ProcessPerformanceInfo> filtered = merged;
-
-                if (!string.IsNullOrWhiteSpace(ProcessSearchText))
+                do
                 {
-                    filtered = filtered.Where(p => p.ProcessName.Contains(ProcessSearchText, StringComparison.OrdinalIgnoreCase));
-                }
+                    _pendingTopProcessRefresh = false;
 
-                if (ShowOnlyRuleBackedHotspots)
-                {
-                    filtered = filtered.Where(p => associationSet.Contains(NormalizeExecutableName(p.ProcessName)));
-                }
+                    var topCpu = await _performanceService.GetTopCpuProcessesAsync(25);
+                    var topMemory = await _performanceService.GetTopMemoryProcessesAsync(25);
 
-                if (ShowOnlyActionableHotspots)
-                {
-                    filtered = filtered.Where(p => p.CpuUsage >= 1.0 || p.MemoryUsage >= (200L * 1024 * 1024));
-                }
+                    var merged = topCpu
+                        .Concat(topMemory)
+                        .GroupBy(p => p.ProcessId)
+                        .Select(g => g.OrderByDescending(x => x.CpuUsage).First())
+                        .ToList();
 
-                filtered = SortMode switch
-                {
-                    "Memory" => filtered.OrderByDescending(p => p.MemoryUsage),
-                    "Name" => filtered.OrderBy(p => p.ProcessName),
-                    _ => filtered.OrderByDescending(p => p.CpuUsage)
-                };
+                    var associations = await _associationService.GetAssociationsAsync();
+                    var associationSet = associations
+                        .Select(a => NormalizeExecutableName(a.ExecutableName))
+                        .Where(name => !string.IsNullOrWhiteSpace(name))
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-                TopCpuProcesses = new ObservableCollection<ProcessPerformanceInfo>(filtered.Take(50));
+                    IEnumerable<ProcessPerformanceInfo> filtered = merged;
 
-                if (SelectedHotspotProcess != null)
-                {
-                    var refreshedSelection = TopCpuProcesses.FirstOrDefault(p => p.ProcessId == SelectedHotspotProcess.ProcessId);
-                    if (refreshedSelection != null)
+                    if (!string.IsNullOrWhiteSpace(ProcessSearchText))
                     {
-                        SelectedHotspotProcess = refreshedSelection;
+                        filtered = filtered.Where(p => p.ProcessName.Contains(ProcessSearchText, StringComparison.OrdinalIgnoreCase));
                     }
-                }
 
-                await RefreshSelectedProcessRuleImpactAsync();
+                    if (ShowOnlyRuleBackedHotspots)
+                    {
+                        filtered = filtered.Where(p => associationSet.Contains(NormalizeExecutableName(p.ProcessName)));
+                    }
+
+                    if (ShowOnlyActionableHotspots)
+                    {
+                        filtered = filtered.Where(p => p.CpuUsage >= 1.0 || p.MemoryUsage >= (200L * 1024 * 1024));
+                    }
+
+                    filtered = SortMode switch
+                    {
+                        "Memory" => filtered.OrderByDescending(p => p.MemoryUsage),
+                        "Name" => filtered.OrderBy(p => p.ProcessName),
+                        _ => filtered.OrderByDescending(p => p.CpuUsage)
+                    };
+
+                    var snapshot = filtered.Take(50).ToList();
+
+                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        TopCpuProcesses = new ObservableCollection<ProcessPerformanceInfo>(snapshot);
+
+                        if (SelectedHotspotProcess != null)
+                        {
+                            var refreshedSelection = TopCpuProcesses.FirstOrDefault(p => p.ProcessId == SelectedHotspotProcess.ProcessId);
+                            if (refreshedSelection != null)
+                            {
+                                SelectedHotspotProcess = refreshedSelection;
+                            }
+                        }
+                    });
+
+                    await RefreshSelectedProcessRuleImpactAsync();
+                }
+                while (_pendingTopProcessRefresh);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading hotspot process lists");
+            }
+            finally
+            {
+                _topProcessRefreshGate.Release();
             }
         }
 
@@ -632,18 +658,31 @@ namespace ThreadPilot.ViewModels
             MemoryUsageText = $"{FormatBytes(TotalMemoryUsage)} / {FormatBytes(TotalMemory)}";
             ProcessCountText = ActiveProcessCount.ToString();
 
-            CoreUsages = new ObservableCollection<CpuCoreUsage>(metrics.CpuCoreUsages);
-
-            if (IsMonitoring)
+            void apply()
             {
-                HistoricalData.Add(metrics);
-                while (HistoricalData.Count > 360)
+                CoreUsages = new ObservableCollection<CpuCoreUsage>(metrics.CpuCoreUsages);
+
+                if (IsMonitoring)
                 {
-                    HistoricalData.RemoveAt(0);
+                    HistoricalData.Add(metrics);
+                    while (HistoricalData.Count > 360)
+                    {
+                        HistoricalData.RemoveAt(0);
+                    }
                 }
+
+                UpdateTimelineSummary();
             }
 
-            UpdateTimelineSummary();
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher != null && !dispatcher.CheckAccess())
+            {
+                dispatcher.Invoke(apply);
+            }
+            else
+            {
+                apply();
+            }
         }
 
         private void OnProcessPowerPlanChanged(object? sender, ProcessPowerPlanChangeEventArgs e)
@@ -687,13 +726,26 @@ namespace ThreadPilot.ViewModels
                 Timestamp = DateTime.Now
             };
 
-            TimelineEvents.Insert(0, evt);
-            while (TimelineEvents.Count > 200)
+            void apply()
             {
-                TimelineEvents.RemoveAt(TimelineEvents.Count - 1);
+                TimelineEvents.Insert(0, evt);
+                while (TimelineEvents.Count > 200)
+                {
+                    TimelineEvents.RemoveAt(TimelineEvents.Count - 1);
+                }
+
+                UpdateTimelineSummary();
             }
 
-            UpdateTimelineSummary();
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher != null && !dispatcher.CheckAccess())
+            {
+                dispatcher.Invoke(apply);
+            }
+            else
+            {
+                apply();
+            }
         }
 
         private void UpdateTimelineSummary()
@@ -767,6 +819,8 @@ namespace ThreadPilot.ViewModels
             _processMonitorManagerService.ProcessPowerPlanChanged -= OnProcessPowerPlanChanged;
             _powerPlanService.PowerPlanChanged -= OnPowerPlanChanged;
             _systemTweaksService.TweakStatusChanged -= OnTweakStatusChanged;
+
+            _topProcessRefreshGate.Dispose();
 
             if (IsMonitoring)
             {

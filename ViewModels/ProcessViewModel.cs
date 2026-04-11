@@ -44,6 +44,8 @@ namespace ThreadPilot.ViewModels
         private readonly IGameModeService _gameModeService;
         private System.Timers.Timer? _refreshTimer;
         private System.Timers.Timer? _searchDebounceTimer;
+        private bool _isApplyingFilter;
+        private bool _filterRefreshPending;
         private bool _suppressCoreSelectionEvents;
         private bool _hasPendingAffinityEdits;
 
@@ -1528,80 +1530,61 @@ namespace ThreadPilot.ViewModels
 
         private void FilterProcesses()
         {
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher != null && !dispatcher.CheckAccess())
+            {
+                dispatcher.Invoke(FilterProcesses);
+                return;
+            }
+
+            if (_isApplyingFilter)
+            {
+                _filterRefreshPending = true;
+                return;
+            }
+
+            _isApplyingFilter = true;
             var filtered = Processes.AsEnumerable();
 
-            // Apply search filter
-            if (!string.IsNullOrWhiteSpace(SearchText))
+            try
             {
-                filtered = filtered.Where(p => p.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
-            }
-
-            // Apply system process filter
-            if (HideSystemProcesses)
-            {
-                filtered = filtered.Where(p => !IsSystemProcess(p));
-            }
-
-            // Apply idle process filter
-            if (HideIdleProcesses)
-            {
-                filtered = filtered.Where(p => p.CpuUsage > 0.1);
-            }
-
-            // Apply sorting
-            filtered = SortMode switch
-            {
-                "CpuUsage" => filtered.OrderByDescending(p => p.CpuUsage),
-                "MemoryUsage" => filtered.OrderByDescending(p => p.MemoryUsage),
-                "Name" => filtered.OrderBy(p => p.Name),
-                "ProcessId" => filtered.OrderBy(p => p.ProcessId),
-                _ => filtered.OrderByDescending(p => p.CpuUsage)
-            };
-
-            // PERFORMANCE OPTIMIZATION: Update existing collection instead of creating new one
-            var filteredList = filtered.ToList();
-
-            // Remove items that are no longer in the filtered list
-            for (int i = FilteredProcesses.Count - 1; i >= 0; i--)
-            {
-                if (!filteredList.Contains(FilteredProcesses[i]))
+                do
                 {
-                    FilteredProcesses.RemoveAt(i);
-                }
-            }
+                    _filterRefreshPending = false;
 
-            // Add new items that aren't already in the collection
-            foreach (var item in filteredList)
-            {
-                if (!FilteredProcesses.Contains(item))
-                {
-                    FilteredProcesses.Add(item);
-                }
-            }
+                    filtered = Processes.AsEnumerable();
 
-            // Reorder existing items if necessary (only if sort order changed)
-            if (FilteredProcesses.Count > 1)
-            {
-                var currentOrder = FilteredProcesses.ToList();
-                bool needsReordering = false;
-
-                for (int i = 0; i < Math.Min(currentOrder.Count, filteredList.Count); i++)
-                {
-                    if (currentOrder[i] != filteredList[i])
+                    if (!string.IsNullOrWhiteSpace(SearchText))
                     {
-                        needsReordering = true;
-                        break;
+                        filtered = filtered.Where(p => p.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
                     }
-                }
 
-                if (needsReordering)
-                {
-                    FilteredProcesses.Clear();
-                    foreach (var item in filteredList)
+                    if (HideSystemProcesses)
                     {
-                        FilteredProcesses.Add(item);
+                        filtered = filtered.Where(p => !IsSystemProcess(p));
                     }
+
+                    if (HideIdleProcesses)
+                    {
+                        filtered = filtered.Where(p => p.CpuUsage > 0.1);
+                    }
+
+                    filtered = SortMode switch
+                    {
+                        "CpuUsage" => filtered.OrderByDescending(p => p.CpuUsage),
+                        "MemoryUsage" => filtered.OrderByDescending(p => p.MemoryUsage),
+                        "Name" => filtered.OrderBy(p => p.Name),
+                        "ProcessId" => filtered.OrderBy(p => p.ProcessId),
+                        _ => filtered.OrderByDescending(p => p.CpuUsage)
+                    };
+
+                    FilteredProcesses = new ObservableCollection<ProcessModel>(filtered);
                 }
+                while (_filterRefreshPending);
+            }
+            finally
+            {
+                _isApplyingFilter = false;
             }
         }
 

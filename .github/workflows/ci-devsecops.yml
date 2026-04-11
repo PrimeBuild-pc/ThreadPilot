@@ -1,0 +1,36 @@
+name: CI DevSecOps
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+
+jobs:
+  build-and-scan:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore "ThreadPilot.csproj"
+
+      - name: Build Debug
+        run: dotnet build "ThreadPilot.csproj" --configuration Debug --no-restore
+
+      - name: Build Release
+        run: dotnet build "ThreadPilot.csproj" --configuration Release --no-restore
+
+      - name: Dependency Audit
+        run: dotnet list "ThreadPilot.csproj" package --vulnerable --include-transitive
+
+      - name: Secret Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

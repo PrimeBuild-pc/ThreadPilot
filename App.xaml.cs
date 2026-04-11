@@ -34,6 +34,8 @@ namespace ThreadPilot
     public partial class App : System.Windows.Application
     {
         private Mutex? _singleInstanceMutex;
+        private int _uiExceptionDialogOpen;
+        private DateTime _lastUiExceptionDialogUtc = DateTime.MinValue;
         public IServiceProvider ServiceProvider { get; private set; }
 
         public App()
@@ -135,6 +137,24 @@ namespace ThreadPilot
             }
 #endif
 
+            try
+            {
+                var settingsService = ServiceProvider.GetRequiredService<IApplicationSettingsService>();
+                var themeService = ServiceProvider.GetRequiredService<IThemeService>();
+
+                Task.Run(async () => await settingsService.LoadSettingsAsync()).GetAwaiter().GetResult();
+                var settings = settingsService.Settings;
+                var useDarkTheme = settings.HasUserThemePreference
+                    ? settings.UseDarkTheme
+                    : themeService.GetSystemUsesDarkTheme();
+
+                themeService.ApplyTheme(useDarkTheme);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to preload theme settings during startup");
+            }
+
             var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
 
             // Handle startup behavior with comprehensive error handling
@@ -148,15 +168,27 @@ namespace ThreadPilot
                     throw new InvalidOperationException("MainWindow could not be created");
                 }
 
-                // Show the window with explicit visibility settings
-                mainWindow.Visibility = Visibility.Visible;
-                mainWindow.WindowState = (startMinimized || isAutostart)
-                    ? WindowState.Minimized
-                    : WindowState.Normal;
-                mainWindow.Show();
-                if (mainWindow.WindowState != WindowState.Minimized)
+                if (isAutostart)
                 {
-                    mainWindow.Activate();
+                    mainWindow.ShowInTaskbar = false;
+                    mainWindow.Visibility = Visibility.Hidden;
+                    mainWindow.WindowState = WindowState.Minimized;
+                    mainWindow.Show();
+                    mainWindow.Hide();
+                }
+                else
+                {
+                    // Show the window with explicit visibility settings
+                    mainWindow.ShowInTaskbar = true;
+                    mainWindow.Visibility = Visibility.Visible;
+                    mainWindow.WindowState = startMinimized
+                        ? WindowState.Minimized
+                        : WindowState.Normal;
+                    mainWindow.Show();
+                    if (mainWindow.WindowState != WindowState.Minimized)
+                    {
+                        mainWindow.Activate();
+                    }
                 }
 
                 logger.LogInformation("Main window displayed successfully");
@@ -247,6 +279,21 @@ namespace ThreadPilot
 
             logger?.LogError(e.Exception, "Unhandled dispatcher exception occurred");
 
+            if (Interlocked.CompareExchange(ref _uiExceptionDialogOpen, 1, 0) != 0)
+            {
+                e.Handled = true;
+                return;
+            }
+
+            if (DateTime.UtcNow - _lastUiExceptionDialogUtc < TimeSpan.FromSeconds(2))
+            {
+                e.Handled = true;
+                Interlocked.Exchange(ref _uiExceptionDialogOpen, 0);
+                return;
+            }
+
+            _lastUiExceptionDialogUtc = DateTime.UtcNow;
+
             var errorMessage = $"An error occurred in the user interface:\n\n{e.Exception.Message}\n\nDo you want to continue?";
             var result = System.Windows.MessageBox.Show(errorMessage, "UI Error",
                 MessageBoxButton.YesNo, MessageBoxImage.Error);
@@ -259,6 +306,8 @@ namespace ThreadPilot
             {
                 e.Handled = false; // Let the application crash
             }
+
+            Interlocked.Exchange(ref _uiExceptionDialogOpen, 0);
         }
     }
 }
