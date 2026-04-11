@@ -23,7 +23,7 @@ Built with WPF and .NET 8, it is focused on deterministic performance workflows 
 - **Dynamic Theming:** Light/Dark theming with seamless runtime switching.
 - **Profile-based Configuration:** Persistent settings, customizable notification levels, and low-overhead minimized tray mode.
 
-<img width="1474" height="920" alt="Screenshot 2025-12-21 044753" src="https://github.com/user-attachments/assets/77fc944e-d2a1-4cc7-9915-e01b0776106c" />
+<img width="2470" height="1696" alt="Gemini_Generated_Image_xzgtdpxzgtdpxzgt" src="https://github.com/user-attachments/assets/e535e496-8b7d-4d38-883b-e0c7f68a610f" />
 
 ## ⚙️ Requirements
 
