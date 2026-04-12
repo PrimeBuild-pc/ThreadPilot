@@ -28,36 +28,28 @@ The project targets users who need Process Lasso style capabilities in a modern 
 - .NET 8 SDK for source builds.
 - Administrator privileges for advanced process and power operations.
 
-## Installation
-
-### Prebuilt Release
-1. Download the latest package from Releases.
-2. Extract the archive.
-3. Start ThreadPilot as Administrator for full functionality.
-
-## Download and Installation
+## Download
 
 Latest artifacts are published on each tagged release in [GitHub Releases](https://github.com/PrimeBuild-pc/ThreadPilot/releases).
 
-| Artifact | File pattern | Recommended use |
+| Package | File name | Recommended use |
 |---|---|---|
-| Single-file portable | `ThreadPilot_<version>_singlefile_win-x64.zip` | Fast portable deployment with one main executable |
-| ReadyToRun package | `ThreadPilot_<version>_readytorun_win-x64.zip` | Folder-based deployment with faster startup |
-| MSIX package | `ThreadPilot_<version>_win-x64.msix` | Managed Windows installation and clean uninstall |
-| Checksum manifest | `SHA256SUMS.txt` | Verify release integrity before installation |
+| Portable | `ThreadPilot_v1.1.0_Portable.zip` | Single-file executable package for fast portable deployment |
+| Installer | `ThreadPilot_v1.1.0_Installer.zip` | MSIX-first package with fallback manual uninstall assets |
 
 Verification example:
 
 ```powershell
-Get-FileHash .\ThreadPilot_1.1.0_singlefile_win-x64.zip -Algorithm SHA256
+Get-FileHash .\ThreadPilot_v1.1.0_Portable.zip -Algorithm SHA256
 ```
 
 Install flow summary:
 
-1. Download the artifact matching your deployment model.
-2. Verify the SHA-256 hash against `SHA256SUMS.txt`.
-3. For ZIP artifacts, extract and run `ThreadPilot.exe`.
-4. For MSIX/AppX artifacts, install with `Add-AppxPackage` or by double-clicking.
+1. Download the package matching your deployment model.
+2. Extract the ZIP and open the `ThreadPilot` folder.
+3. Portable package: launch `ThreadPilot.exe`.
+4. Installer package: install `ThreadPilot_1.1.0_win-x64.msix` with `Add-AppxPackage` or by double-clicking.
+5. Use `uninstall.bat` for cleanup when needed.
 
 ### Build from Source
 
@@ -105,11 +97,12 @@ Build release artifacts via script:
 
 - docs/README.md
 - docs/RELEASE_SIGNING.md
-- ARCHITECTURE_GUIDE.md
-- API_REFERENCE.md
-- DEVELOPER_GUIDE.md
-- PROJECT_STRUCTURE.md
-- UI_STYLE_GUIDE.md
+- docs/reference/ARCHITECTURE_GUIDE.md
+- docs/reference/API_REFERENCE.md
+- docs/reference/DEVELOPER_GUIDE.md
+- docs/reference/PROJECT_STRUCTURE.md
+- docs/reference/UI_STYLE_GUIDE.md
+- docs/release/PACKAGING.md
 
 ## Contributing
 
