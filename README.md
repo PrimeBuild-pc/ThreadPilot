@@ -1,4 +1,4 @@
-# ThreadPilot v1.1.0
+# ThreadPilot ✈️ v1.1.0
 
 [![Windows CI](https://img.shields.io/badge/CI-Windows-success)](.github/workflows/ci-devsecops.yml)
 [![Windows](https://img.shields.io/badge/Windows-11%20official%20%7C%2010%20best--effort-blue?logo=windows)](https://www.microsoft.com/windows)
@@ -9,7 +9,9 @@ ThreadPilot is a free and open-source Windows process and power plan manager foc
 
 The project targets users who need Process Lasso style capabilities in a modern WPF desktop application with enterprise-grade reliability, security hardening, and automation support.
 
-## Key Features
+[![Thread-Pilotbanner.png](https://i.postimg.cc/sDZLXMqr/Thread-Pilotbanner.png)](https://postimg.cc/cr0hkLd9)
+
+## ✨ Key Features
 
 - Process management with live refresh, filtering, and high-volume process handling.
 - CPU affinity and priority controls with topology-aware logic.
@@ -20,15 +22,15 @@ The project targets users who need Process Lasso style capabilities in a modern 
 
 ## Screenshots
 
-<img width="1474" height="920" alt="Screenshot 2025-12-21 044753" src="https://github.com/user-attachments/assets/77fc944e-d2a1-4cc7-9915-e01b0776106c" />
+<img width="2470" height="1696" alt="Gemini_Generated_Image_xzgtdpxzgtdpxzgt" src="https://github.com/user-attachments/assets/e535e496-8b7d-4d38-883b-e0c7f68a610f" />
 
-## Requirements
+## ⚙️ Requirements
 
 - Windows 11 (official support), Windows 10 22H2+ (best effort).
 - .NET 8 SDK for source builds.
 - Administrator privileges for advanced process and power operations.
 
-## Download
+## 📦 Download
 
 Latest artifacts are published on each tagged release in [GitHub Releases](https://github.com/PrimeBuild-pc/ThreadPilot/releases).
 
@@ -108,20 +110,20 @@ Build release artifacts via script:
 
 See CONTRIBUTING.md and CODE_OF_CONDUCT.md before opening pull requests.
 
-## Roadmap
+## 🛠️ Roadmap
 
 - Expand dedicated unit and integration coverage for core services.
 - Continue async reliability refactoring for long-running monitoring paths.
 - Improve accessibility and localization readiness in all major views.
 - Formalize release signing and distribution hardening.
 
-## License
+## 📄 License
 
 Licensed under GNU Affero General Public License v3.0. See LICENSE.
 
-## Support
+## 📞 Support
 
-**Made for Windows power users☕** [](https://paypal.me/PrimeBuildOfficial?country.x=IT&locale.x=it_IT)
+**Made with love for Windows power users☕** [](https://paypal.me/PrimeBuildOfficial?country.x=IT&locale.x=it_IT)
 
   * **Issues**: [https://github.com/PrimeBuild-pc/ThreadPilot/issues](https://github.com/PrimeBuild-pc/ThreadPilot/issues)
   * **Discussions**: [https://github.com/PrimeBuild-pc/ThreadPilot/discussions](https://github.com/PrimeBuild-pc/ThreadPilot/discussions)
