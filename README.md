@@ -123,7 +123,7 @@ Licensed under GNU Affero General Public License v3.0. See LICENSE.
 
 ## 📞 Support
 
-**Made with love for Windows power users☕** [](https://paypal.me/PrimeBuildOfficial?country.x=IT&locale.x=it_IT)
+**Made with love for Windows power users☕** [PayPal.me](https://paypal.me/PrimeBuildOfficial?country.x=IT&locale.x=it_IT)
 
   * **Issues**: [https://github.com/PrimeBuild-pc/ThreadPilot/issues](https://github.com/PrimeBuild-pc/ThreadPilot/issues)
   * **Discussions**: [https://github.com/PrimeBuild-pc/ThreadPilot/discussions](https://github.com/PrimeBuild-pc/ThreadPilot/discussions)
