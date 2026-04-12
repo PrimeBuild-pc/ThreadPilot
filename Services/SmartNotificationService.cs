@@ -3,15 +3,15 @@
  * Copyright (C) 2025 Prime Build
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, version 3 only.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * GNU Affero General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 using Microsoft.Extensions.Logging;
@@ -334,7 +334,15 @@ namespace ThreadPilot.Services
             return await SendNotificationAsync(testNotification);
         }
 
-        private async void ProcessQueueCallback(object? state)
+        private void ProcessQueueCallback(object? state)
+        {
+            TaskSafety.FireAndForget(ProcessQueueCallbackAsync(), ex =>
+            {
+                _logger.LogWarning(ex, "Error during notification queue processing");
+            });
+        }
+
+        private async Task ProcessQueueCallbackAsync()
         {
             if (_disposed) return;
 
@@ -536,19 +544,29 @@ namespace ThreadPilot.Services
             return preferences;
         }
 
-        private async Task LoadPreferencesAsync()
+        private Task LoadPreferencesAsync()
         {
             // Simplified - would load from actual storage
             _logger.LogDebug("Loaded notification preferences");
+            return Task.CompletedTask;
         }
 
-        private async Task SavePreferencesAsync()
+        private Task SavePreferencesAsync()
         {
             // Simplified - would save to actual storage
             _logger.LogDebug("Saved notification preferences");
+            return Task.CompletedTask;
         }
 
-        private async void CleanupCallback(object? state)
+        private void CleanupCallback(object? state)
+        {
+            TaskSafety.FireAndForget(CleanupCallbackAsync(), ex =>
+            {
+                _logger.LogWarning(ex, "Error during notification cleanup");
+            });
+        }
+
+        private async Task CleanupCallbackAsync()
         {
             try
             {

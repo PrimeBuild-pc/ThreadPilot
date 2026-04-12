@@ -14,37 +14,32 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System.Windows.Controls;
-using ThreadPilot.Services;
-using ThreadPilot.ViewModels;
+using System;
+using System.Threading.Tasks;
 
-namespace ThreadPilot.Views
+namespace ThreadPilot.Services
 {
-    /// <summary>
-    /// Interaction logic for SystemTweaksView.xaml
-    /// </summary>
-    public partial class SystemTweaksView : System.Windows.Controls.UserControl
+    internal static class TaskSafety
     {
-        public SystemTweaksView()
+        public static void FireAndForget(Task task, Action<Exception> onError)
         {
-            InitializeComponent();
+            _ = ObserveAsync(task, onError);
         }
 
-        private void UserControl_Loaded(object sender, System.Windows.RoutedEventArgs e)
+        private static async Task ObserveAsync(Task task, Action<Exception> onError)
         {
-            TaskSafety.FireAndForget(UserControl_LoadedAsync(), _ =>
+            try
             {
-                // Ignore non-fatal loading errors to keep the view responsive.
-            });
-        }
-
-        private async Task UserControl_LoadedAsync()
-        {
-            if (DataContext is SystemTweaksViewModel viewModel)
+                await task.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
             {
-                await viewModel.LoadCommand.ExecuteAsync(null);
+                // Cancellation is expected in shutdown paths.
+            }
+            catch (Exception ex)
+            {
+                onError(ex);
             }
         }
     }
 }
-

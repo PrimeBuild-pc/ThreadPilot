@@ -3,18 +3,19 @@
  * Copyright (C) 2025 Prime Build
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, version 3 only.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * GNU Affero General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
@@ -32,6 +33,7 @@ namespace ThreadPilot.Services
         private const string APPLICATION_NAME = "ThreadPilot";
         private const string SCHEDULED_TASK_NAME = "ThreadPilot_Startup";
         private static readonly string SchTasksExecutablePath = Path.Combine(Environment.SystemDirectory, "schtasks.exe");
+        private static readonly TimeSpan ScheduledTaskTimeout = TimeSpan.FromSeconds(20);
 
         private readonly ILogger<AutostartService> _logger;
         private readonly IElevationService _elevationService;
@@ -48,8 +50,11 @@ namespace ThreadPilot.Services
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _elevationService = elevationService ?? throw new ArgumentNullException(nameof(elevationService));
 
-            // Initialize current status
-            _ = Task.Run(CheckAutostartStatusAsync);
+            // Initialize current status without surfacing startup exceptions.
+            TaskSafety.FireAndForget(CheckAutostartStatusAsync(), ex =>
+            {
+                _logger.LogDebug(ex, "Autostart status initialization failed");
+            });
         }
 
         public async Task<bool> EnableAutostartAsync(bool startMinimized = true)
@@ -140,7 +145,7 @@ namespace ThreadPilot.Services
             }
         }
 
-        public async Task<bool> CheckAutostartStatusAsync()
+        public Task<bool> CheckAutostartStatusAsync()
         {
             try
             {
@@ -149,7 +154,7 @@ namespace ThreadPilot.Services
                 {
                     _isAutostartEnabled = false;
                     _autostartPath = null;
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 var value = key.GetValue(APPLICATION_NAME) as string;
@@ -159,14 +164,14 @@ namespace ThreadPilot.Services
                 _logger.LogDebug("Autostart status checked: {IsEnabled}, Path: {Path}", 
                     _isAutostartEnabled, _autostartPath);
 
-                return _isAutostartEnabled;
+                return Task.FromResult(_isAutostartEnabled);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to check autostart status");
                 _isAutostartEnabled = false;
                 _autostartPath = null;
-                return false;
+                return Task.FromResult(false);
             }
         }
 
@@ -236,33 +241,32 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var taskArguments = $"/Create /TN \"{SCHEDULED_TASK_NAME}\" /TR \"\\\"{executablePath}\\\" {arguments}\" " +
-                                   $"/SC ONLOGON /RL HIGHEST /F /RU \"{Environment.UserName}\"";
-
-                var processInfo = new ProcessStartInfo
+                if (!IsValidExecutablePath(executablePath))
                 {
-                    FileName = SchTasksExecutablePath,
-                    Arguments = taskArguments,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true
-                };
+                    _logger.LogWarning("Skipping elevated startup task creation due to invalid executable path: {Path}", executablePath);
+                    return;
+                }
 
-                using var process = Process.Start(processInfo);
-                if (process != null)
+                var taskRunCommand = BuildAutostartCommand(executablePath, arguments);
+                var result = await RunSchTasksAsync(new List<string>
                 {
-                    await process.WaitForExitAsync();
-                    if (process.ExitCode == 0)
-                    {
-                        _logger.LogInformation("Created elevated startup task successfully");
-                    }
-                    else
-                    {
-                        var error = await process.StandardError.ReadToEndAsync();
-                        _logger.LogWarning("Failed to create elevated startup task. Exit code: {ExitCode}, Error: {Error}",
-                            process.ExitCode, error);
-                    }
+                    "/Create",
+                    "/TN", SCHEDULED_TASK_NAME,
+                    "/TR", taskRunCommand,
+                    "/SC", "ONLOGON",
+                    "/RL", "HIGHEST",
+                    "/F",
+                    "/RU", Environment.UserName
+                });
+
+                if (result.ExitCode == 0)
+                {
+                    _logger.LogInformation("Created elevated startup task successfully");
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to create elevated startup task. Exit code: {ExitCode}, Error: {Error}",
+                        result.ExitCode, result.StandardError);
                 }
             }
             catch (Exception ex)
@@ -278,37 +282,111 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var taskArguments = $"/Delete /TN \"{SCHEDULED_TASK_NAME}\" /F";
-
-                var processInfo = new ProcessStartInfo
+                var result = await RunSchTasksAsync(new List<string>
                 {
-                    FileName = SchTasksExecutablePath,
-                    Arguments = taskArguments,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true
-                };
+                    "/Delete",
+                    "/TN", SCHEDULED_TASK_NAME,
+                    "/F"
+                });
 
-                using var process = Process.Start(processInfo);
-                if (process != null)
+                if (result.ExitCode == 0)
                 {
-                    await process.WaitForExitAsync();
-                    if (process.ExitCode == 0)
-                    {
-                        _logger.LogInformation("Removed elevated startup task successfully");
-                    }
-                    else
-                    {
-                        // Task might not exist, which is fine
-                        _logger.LogDebug("Scheduled task removal completed with exit code: {ExitCode}", process.ExitCode);
-                    }
+                    _logger.LogInformation("Removed elevated startup task successfully");
+                }
+                else
+                {
+                    // Task might not exist, which is fine.
+                    _logger.LogDebug("Scheduled task removal completed with exit code: {ExitCode}", result.ExitCode);
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to remove elevated startup task");
             }
+        }
+
+        private static bool IsValidExecutablePath(string executablePath)
+        {
+            if (string.IsNullOrWhiteSpace(executablePath) || !Path.IsPathRooted(executablePath))
+            {
+                return false;
+            }
+
+            return File.Exists(executablePath) &&
+                   string.Equals(Path.GetExtension(executablePath), ".exe", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string BuildAutostartCommand(string executablePath, string arguments)
+        {
+            var trimmedArguments = arguments?.Trim();
+            return string.IsNullOrWhiteSpace(trimmedArguments)
+                ? $"\"{executablePath}\""
+                : $"\"{executablePath}\" {trimmedArguments}";
+        }
+
+        private static async Task<ProcessResult> RunSchTasksAsync(IReadOnlyList<string> arguments)
+        {
+            if (!File.Exists(SchTasksExecutablePath))
+            {
+                return new ProcessResult(-1, string.Empty, "schtasks.exe not found in system directory");
+            }
+
+            var processInfo = new ProcessStartInfo
+            {
+                FileName = SchTasksExecutablePath,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+
+            foreach (var argument in arguments)
+            {
+                processInfo.ArgumentList.Add(argument);
+            }
+
+            using var process = Process.Start(processInfo);
+            if (process == null)
+            {
+                return new ProcessResult(-1, string.Empty, "Could not start schtasks.exe");
+            }
+
+            var outputTask = process.StandardOutput.ReadToEndAsync();
+            var errorTask = process.StandardError.ReadToEndAsync();
+            var exitTask = process.WaitForExitAsync();
+            var completedTask = await Task.WhenAny(exitTask, Task.Delay(ScheduledTaskTimeout));
+            if (completedTask != exitTask)
+            {
+                try
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+                catch
+                {
+                    // Best-effort kill for timeout.
+                }
+
+                return new ProcessResult(-1, await outputTask, $"schtasks timeout after {ScheduledTaskTimeout.TotalSeconds} seconds");
+            }
+
+            await exitTask;
+            return new ProcessResult(process.ExitCode, await outputTask, await errorTask);
+        }
+
+        private readonly struct ProcessResult
+        {
+            public ProcessResult(int exitCode, string standardOutput, string standardError)
+            {
+                ExitCode = exitCode;
+                StandardOutput = standardOutput;
+                StandardError = standardError;
+            }
+
+            public int ExitCode { get; }
+
+            public string StandardOutput { get; }
+
+            public string StandardError { get; }
         }
     }
 }

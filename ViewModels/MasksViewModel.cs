@@ -3,15 +3,15 @@
  * Copyright (C) 2025 Prime Build
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, version 3 only.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * GNU Affero General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 using System;
@@ -329,7 +329,15 @@ namespace ThreadPilot.ViewModels
             }
         }
 
-        private async void OnBoolMaskCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        private void OnBoolMaskCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            TaskSafety.FireAndForget(OnBoolMaskCollectionChangedAsync(), ex =>
+            {
+                _logger.LogWarning(ex, "Failed to handle mask collection change");
+            });
+        }
+
+        private async Task OnBoolMaskCollectionChangedAsync()
         {
             // Auto-save when BoolMask changes (like CPUSetSetter's auto-save pattern)
             await SaveCurrentMaskAsync();
@@ -341,7 +349,15 @@ namespace ThreadPilot.ViewModels
             }
         }
 
-        private async void OnMaskPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        private void OnMaskPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            TaskSafety.FireAndForget(OnMaskPropertyChangedAsync(e), ex =>
+            {
+                _logger.LogWarning(ex, "Failed to handle mask property change");
+            });
+        }
+
+        private async Task OnMaskPropertyChangedAsync(System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(CoreMask.Name) ||
                 e.PropertyName == nameof(CoreMask.Description) ||

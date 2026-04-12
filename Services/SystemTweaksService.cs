@@ -3,18 +3,19 @@
  * Copyright (C) 2025 Prime Build
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, version 3 only.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * GNU Affero General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Management;
@@ -33,7 +34,16 @@ namespace ThreadPilot.Services
     {
         private static readonly string BcdEditExecutablePath = Path.Combine(Environment.SystemDirectory, "bcdedit.exe");
         private static readonly string PowerCfgExecutablePath = Path.Combine(Environment.SystemDirectory, "powercfg.exe");
+        private static readonly string ScExecutablePath = Path.Combine(Environment.SystemDirectory, "sc.exe");
+        private static readonly HashSet<string> AllowedExecutablePaths = new(StringComparer.OrdinalIgnoreCase)
+        {
+            Path.GetFullPath(BcdEditExecutablePath),
+            Path.GetFullPath(PowerCfgExecutablePath),
+            Path.GetFullPath(ScExecutablePath)
+        };
         private static readonly Regex HexValueRegex = new("0x([0-9a-fA-F]+)", RegexOptions.Compiled);
+        private static readonly Regex ServiceNameRegex = new("^[A-Za-z0-9_.-]+$", RegexOptions.Compiled);
+        private static readonly TimeSpan ExternalCommandTimeout = TimeSpan.FromSeconds(20);
         private const string ProcessorSubgroupAlias = "SUB_PROCESSOR";
         private const string CoreParkingSettingAlias = "CPMINCORES";
         private const string CStatesSettingAlias = "IDLEDISABLE";
@@ -204,7 +214,7 @@ namespace ThreadPilot.Services
             }
         }
 
-        public async Task<TweakStatus> GetSysMainStatusAsync()
+        public Task<TweakStatus> GetSysMainStatusAsync()
         {
             try
             {
@@ -213,17 +223,17 @@ namespace ThreadPilot.Services
                 var isEnabled = serviceController.StartType != ServiceStartMode.Disabled;
                 var isAvailable = true;
 
-                return new TweakStatus 
+                return Task.FromResult(new TweakStatus 
                 { 
                     IsEnabled = isEnabled, 
                     IsAvailable = isAvailable,
                     Description = "Windows Superfetch/SysMain service for memory management"
-                };
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting SysMain status");
-                return new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message };
+                return Task.FromResult(new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message });
             }
         }
 
@@ -238,7 +248,7 @@ namespace ThreadPilot.Services
                 }
 
                 using var serviceController = new ServiceController("SysMain");
-                if (!SetServiceStartMode("SysMain", enabled ? ServiceStartMode.Automatic : ServiceStartMode.Disabled))
+                if (!await SetServiceStartModeAsync("SysMain", enabled ? ServiceStartMode.Automatic : ServiceStartMode.Disabled))
                 {
                     _logger.LogError("Failed to set SysMain startup mode");
                     return false;
@@ -270,30 +280,30 @@ namespace ThreadPilot.Services
             }
         }
 
-        public async Task<TweakStatus> GetPrefetchStatusAsync()
+        public Task<TweakStatus> GetPrefetchStatusAsync()
         {
             try
             {
                 using var key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters");
                 if (key == null)
                 {
-                    return new TweakStatus { IsAvailable = false, ErrorMessage = "Prefetch registry key not found" };
+                    return Task.FromResult(new TweakStatus { IsAvailable = false, ErrorMessage = "Prefetch registry key not found" });
                 }
 
                 var enablePrefetcher = key.GetValue("EnablePrefetcher");
                 var isEnabled = enablePrefetcher?.ToString() != "0"; // 0 = disabled, 1-3 = enabled
 
-                return new TweakStatus 
+                return Task.FromResult(new TweakStatus 
                 { 
                     IsEnabled = isEnabled, 
                     IsAvailable = true,
                     Description = "Windows Prefetch feature for faster application loading"
-                };
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting Prefetch status");
-                return new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message };
+                return Task.FromResult(new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message });
             }
         }
 
@@ -330,31 +340,31 @@ namespace ThreadPilot.Services
             }
         }
 
-        public async Task<TweakStatus> GetPowerThrottlingStatusAsync()
+        public Task<TweakStatus> GetPowerThrottlingStatusAsync()
         {
             try
             {
                 using var key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Power\PowerThrottling");
                 if (key == null)
                 {
-                    return new TweakStatus { IsAvailable = false, ErrorMessage = "Power Throttling not available on this system" };
+                    return Task.FromResult(new TweakStatus { IsAvailable = false, ErrorMessage = "Power Throttling not available on this system" });
                 }
 
                 var powerThrottlingOff = ReadRegistryIntValue(key, "PowerThrottlingOff");
                 // ON = disable throttling (PowerThrottlingOff=1)
                 var isEnabled = powerThrottlingOff.GetValueOrDefault(0) == 1;
 
-                return new TweakStatus
+                return Task.FromResult(new TweakStatus
                 {
                     IsEnabled = isEnabled,
                     IsAvailable = true,
                     Description = "ON disables Windows Power Throttling for sustained performance"
-                };
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting Power Throttling status");
-                return new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message };
+                return Task.FromResult(new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message });
             }
         }
 
@@ -395,24 +405,19 @@ namespace ThreadPilot.Services
         {
             try
             {
-                // Check HPET status via bcdedit
-                var processInfo = new ProcessStartInfo
+                var result = await RunProcessAsync(BcdEditExecutablePath, "/enum");
+                if (result.ExitCode != 0)
                 {
-                    FileName = BcdEditExecutablePath,
-                    Arguments = "/enum",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    CreateNoWindow = true
-                };
-
-                using var process = Process.Start(processInfo);
-                if (process == null)
-                {
-                    return new TweakStatus { IsAvailable = false, ErrorMessage = "Could not start bcdedit process" };
+                    return new TweakStatus
+                    {
+                        IsAvailable = false,
+                        ErrorMessage = string.IsNullOrWhiteSpace(result.StandardError)
+                            ? "Could not query bcdedit status"
+                            : result.StandardError
+                    };
                 }
 
-                var output = await process.StandardOutput.ReadToEndAsync();
-                await process.WaitForExitAsync();
+                var output = result.StandardOutput;
 
                 var platformClockLine = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
                     .FirstOrDefault(l => l.TrimStart().StartsWith("useplatformclock", StringComparison.OrdinalIgnoreCase));
@@ -450,30 +455,19 @@ namespace ThreadPilot.Services
 
                 // ON = disable HPET (/deletevalue), OFF = force HPET (/set true)
                 var arguments = enabled ? "/deletevalue useplatformclock" : "/set useplatformclock true";
-                var processInfo = new ProcessStartInfo
-                {
-                    FileName = BcdEditExecutablePath,
-                    Arguments = arguments,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    CreateNoWindow = true
-                };
-
-                using var process = Process.Start(processInfo);
-                if (process == null)
-                {
-                    _logger.LogError("Could not start bcdedit process");
-                    return false;
-                }
-
-                await process.WaitForExitAsync();
-                var success = process.ExitCode == 0;
+                var commandResult = await RunProcessAsync(BcdEditExecutablePath, arguments);
+                var success = commandResult.ExitCode == 0;
 
                 if (success)
                 {
                     var status = await GetHpetStatusAsync();
                     TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("Hpet", status));
                     _logger.LogInformation("HPET {Status}", enabled ? "enabled" : "disabled");
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to set HPET. ExitCode={ExitCode}, Error={Error}",
+                        commandResult.ExitCode, commandResult.StandardError);
                 }
 
                 return success;
@@ -485,30 +479,30 @@ namespace ThreadPilot.Services
             }
         }
 
-        public async Task<TweakStatus> GetHighSchedulingCategoryStatusAsync()
+        public Task<TweakStatus> GetHighSchedulingCategoryStatusAsync()
         {
             try
             {
                 using var key = Registry.LocalMachine.OpenSubKey(PriorityControlKeyPath);
                 if (key == null)
                 {
-                    return new TweakStatus { IsAvailable = false, ErrorMessage = "PriorityControl registry key not found" };
+                    return Task.FromResult(new TweakStatus { IsAvailable = false, ErrorMessage = "PriorityControl registry key not found" });
                 }
 
                 var rawValue = ReadRegistryIntValue(key, PrioritySeparationValueName);
                 var isEnabled = rawValue.GetValueOrDefault(2) == 38;
 
-                return new TweakStatus
+                return Task.FromResult(new TweakStatus
                 {
                     IsEnabled = isEnabled,
                     IsAvailable = true,
                     Description = "ON applies high foreground boost (Win32PrioritySeparation=38)"
-                };
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting High Scheduling Category status");
-                return new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message };
+                return Task.FromResult(new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message });
             }
         }
 
@@ -545,8 +539,14 @@ namespace ThreadPilot.Services
             }
         }
 
-        private bool SetServiceStartMode(string serviceName, ServiceStartMode mode)
+        private async Task<bool> SetServiceStartModeAsync(string serviceName, ServiceStartMode mode)
         {
+            if (!ServiceNameRegex.IsMatch(serviceName))
+            {
+                _logger.LogWarning("Rejected invalid service name format: {ServiceName}", serviceName);
+                return false;
+            }
+
             var startModeValue = mode switch
             {
                 ServiceStartMode.Automatic => "auto",
@@ -555,29 +555,11 @@ namespace ThreadPilot.Services
                 _ => "demand"
             };
 
-            var processInfo = new ProcessStartInfo
+            var result = await RunProcessAsync(ScExecutablePath, $"config \"{serviceName}\" start= {startModeValue}");
+            if (result.ExitCode != 0)
             {
-                FileName = Path.Combine(Environment.SystemDirectory, "sc.exe"),
-                Arguments = $"config \"{serviceName}\" start= {startModeValue}",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-
-            using var process = Process.Start(processInfo);
-            if (process == null)
-            {
-                _logger.LogError("Could not start sc.exe to update service start mode for {ServiceName}", serviceName);
-                return false;
-            }
-
-            process.WaitForExit();
-            if (process.ExitCode != 0)
-            {
-                var error = process.StandardError.ReadToEnd();
                 _logger.LogWarning("Failed to update service start mode for {ServiceName}. ExitCode={ExitCode}, Error={Error}",
-                    serviceName, process.ExitCode, error);
+                    serviceName, result.ExitCode, result.StandardError);
                 return false;
             }
 
@@ -630,9 +612,14 @@ namespace ThreadPilot.Services
 
         private static async Task<ProcessResult> RunProcessAsync(string fileName, string arguments)
         {
+            if (!IsAllowedExecutable(fileName))
+            {
+                return new ProcessResult(-1, string.Empty, $"Executable not allowed: {fileName}");
+            }
+
             var processInfo = new ProcessStartInfo
             {
-                FileName = fileName,
+                FileName = Path.GetFullPath(fileName),
                 Arguments = arguments,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -648,9 +635,36 @@ namespace ThreadPilot.Services
 
             var outputTask = process.StandardOutput.ReadToEndAsync();
             var errorTask = process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
+            var exitTask = process.WaitForExitAsync();
+            var completedTask = await Task.WhenAny(exitTask, Task.Delay(ExternalCommandTimeout));
+            if (completedTask != exitTask)
+            {
+                try
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+                catch
+                {
+                    // Best-effort kill for stuck child processes.
+                }
+
+                return new ProcessResult(-1, await outputTask, $"Process timed out after {ExternalCommandTimeout.TotalSeconds} seconds");
+            }
+
+            await exitTask;
 
             return new ProcessResult(process.ExitCode, await outputTask, await errorTask);
+        }
+
+        private static bool IsAllowedExecutable(string fileName)
+        {
+            if (string.IsNullOrWhiteSpace(fileName) || !Path.IsPathRooted(fileName))
+            {
+                return false;
+            }
+
+            var fullPath = Path.GetFullPath(fileName);
+            return AllowedExecutablePaths.Contains(fullPath) && File.Exists(fullPath);
         }
 
         private static int? ReadRegistryIntValue(RegistryKey key, string valueName)
@@ -666,32 +680,46 @@ namespace ThreadPilot.Services
             };
         }
 
-        private readonly record struct ProcessResult(int ExitCode, string StandardOutput, string StandardError);
+        private readonly struct ProcessResult
+        {
+            public ProcessResult(int exitCode, string standardOutput, string standardError)
+            {
+                ExitCode = exitCode;
+                StandardOutput = standardOutput;
+                StandardError = standardError;
+            }
 
-        public async Task<TweakStatus> GetMenuShowDelayStatusAsync()
+            public int ExitCode { get; }
+
+            public string StandardOutput { get; }
+
+            public string StandardError { get; }
+        }
+
+        public Task<TweakStatus> GetMenuShowDelayStatusAsync()
         {
             try
             {
                 using var key = Registry.CurrentUser.OpenSubKey(@"Control Panel\Desktop");
                 if (key == null)
                 {
-                    return new TweakStatus { IsAvailable = false, ErrorMessage = "Desktop registry key not found" };
+                    return Task.FromResult(new TweakStatus { IsAvailable = false, ErrorMessage = "Desktop registry key not found" });
                 }
 
                 var menuShowDelay = key.GetValue("MenuShowDelay");
                 var isEnabled = menuShowDelay?.ToString() != "0"; // 0 = no delay, >0 = delay enabled
 
-                return new TweakStatus
+                return Task.FromResult(new TweakStatus
                 {
                     IsEnabled = isEnabled,
                     IsAvailable = true,
                     Description = "Delay before showing context menus"
-                };
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting Menu Show Delay status");
-                return new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message };
+                return Task.FromResult(new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message });
             }
         }
 

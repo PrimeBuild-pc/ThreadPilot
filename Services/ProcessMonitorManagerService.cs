@@ -3,15 +3,15 @@
  * Copyright (C) 2025 Prime Build
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, version 3 only.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * GNU Affero General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 using System;
@@ -295,7 +295,15 @@ namespace ThreadPilot.Services
             }
         }
 
-        private async void OnProcessStarted(object? sender, ProcessEventArgs e)
+        private void OnProcessStarted(object? sender, ProcessEventArgs e)
+        {
+            TaskSafety.FireAndForget(OnProcessStartedAsync(e), ex =>
+            {
+                SetStatus(_isRunning, "Error handling process start", $"Error: {ex.Message}", ex);
+            });
+        }
+
+        private async Task OnProcessStartedAsync(ProcessEventArgs e)
         {
             if (!_isRunning || _configuration == null) return;
 
@@ -348,7 +356,15 @@ namespace ThreadPilot.Services
             }
         }
 
-        private async void OnProcessStopped(object? sender, ProcessEventArgs e)
+        private void OnProcessStopped(object? sender, ProcessEventArgs e)
+        {
+            TaskSafety.FireAndForget(OnProcessStoppedAsync(e), ex =>
+            {
+                SetStatus(_isRunning, "Error handling process stop", $"Error: {ex.Message}", ex);
+            });
+        }
+
+        private async Task OnProcessStoppedAsync(ProcessEventArgs e)
         {
             if (!_isRunning || _configuration == null) return;
 
@@ -382,14 +398,25 @@ namespace ThreadPilot.Services
             
             if (_isRunning)
             {
-                Task.Run(async () => await EvaluateCurrentProcessesAsync());
+                TaskSafety.FireAndForget(EvaluateCurrentProcessesAsync(), ex =>
+                {
+                    SetStatus(_isRunning, "Error evaluating processes", $"Error: {ex.Message}", ex);
+                });
             }
 
             // Keep process monitor settings synchronized with configuration edits
             _processMonitorService.UpdateSettings();
         }
 
-        private async void DelayedPowerPlanChangeCallback(object? state)
+        private void DelayedPowerPlanChangeCallback(object? state)
+        {
+            TaskSafety.FireAndForget(DelayedPowerPlanChangeCallbackAsync(), ex =>
+            {
+                SetStatus(_isRunning, "Error in delayed power plan callback", $"Error: {ex.Message}", ex);
+            });
+        }
+
+        private async Task DelayedPowerPlanChangeCallbackAsync()
         {
             if (!_isRunning) return;
 
@@ -485,19 +512,13 @@ namespace ThreadPilot.Services
             // Show error notification if there's an error
             if (error != null)
             {
-                Task.Run(async () =>
+                TaskSafety.FireAndForget(_notificationService.ShowErrorNotificationAsync(
+                        "Process Monitor Error",
+                        details ?? status,
+                        error),
+                    ex =>
                 {
-                    try
-                    {
-                        await _notificationService.ShowErrorNotificationAsync(
-                            "Process Monitor Error",
-                            details ?? status,
-                            error);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to show error notification");
-                    }
+                    _logger.LogError(ex, "Failed to show error notification");
                 });
             }
         }

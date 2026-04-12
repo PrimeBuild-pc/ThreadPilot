@@ -3,15 +3,15 @@
  * Copyright (C) 2025 Prime Build
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, version 3 only.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * GNU Affero General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 using System;
@@ -193,18 +193,18 @@ namespace ThreadPilot.ViewModels
             _virtualizedProcessService.BackgroundBatchLoaded += OnBackgroundBatchLoaded;
         }
 
-        private async void OnBatchLoadProgress(object? sender, BatchLoadProgressEventArgs e)
+        private void OnBatchLoadProgress(object? sender, BatchLoadProgressEventArgs e)
         {
-            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 LoadingProgress = e.ProgressPercentage;
                 LoadingStatusText = e.StatusMessage;
             });
         }
 
-        private async void OnBackgroundBatchLoaded(object? sender, ProcessBatchResult e)
+        private void OnBackgroundBatchLoaded(object? sender, ProcessBatchResult e)
         {
-            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 // Background batch loaded - could update UI if needed
                 Logger.LogDebug("Background batch {BatchIndex} loaded with {ProcessCount} processes",
@@ -302,82 +302,9 @@ namespace ThreadPilot.ViewModels
             {
                 _hasPendingAffinityEdits = false;
                 // Immediately fetch and display real-time process information
-                _ = Task.Run(async () =>
+                TaskSafety.FireAndForget(HandleSelectedProcessChangedAsync(value), ex =>
                 {
-                    try
-                    {
-                        // First check if the process is still running
-                        bool isStillRunning = await _processService.IsProcessStillRunning(value);
-                        if (!isStillRunning)
-                        {
-                            System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                            {
-                                SetStatus($"Process {value.Name} (PID: {value.ProcessId}) has terminated", false);
-                                SelectedProcess = null;
-                                ClearProcessSelection();
-                            });
-                            return;
-                        }
-
-                        // Refresh process info to get current state from OS
-                        await _processService.RefreshProcessInfo(value);
-
-                        // Update UI on main thread with fresh data
-                        System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            // Update CPU affinity display
-                            // If a Core Mask is selected, show that instead of the process's current affinity
-                            // This ensures visual coherence between selected mask and Advanced CPU Affinity
-                            if (SelectedCoreMask != null)
-                            {
-                                UpdateCoreSelectionsFromMask(SelectedCoreMask);
-                                // Auto-apply the selected mask to the newly selected process
-                                _ = ApplyCoreMaskToProcessAsync(SelectedCoreMask);
-                            }
-                            else
-                            {
-                                // No mask selected - show process's current affinity
-                                UpdateCoreSelections(value.ProcessorAffinity);
-
-                                // Force ProcessorAffinity notification for DataGrid column
-                                // Ensures Affinity column displays the correct current value immediately
-                                value.ForceNotifyProcessorAffinityChanged();
-                            }
-
-                            // Update priority display - trigger property change to refresh ComboBox
-                            OnPropertyChanged(nameof(SelectedProcess));
-
-                            // Update feature states from the selected process
-                            IsIdleServerDisabled = value.IsIdleServerDisabled;
-                            IsRegistryPriorityEnabled = value.IsRegistryPriorityEnabled;
-
-                            // BUG FIX: Update status without setting busy state for process selection
-                            SetStatus($"Selected process: {value.Name} (PID: {value.ProcessId}) - " +
-                                    $"Priority: {value.Priority}, Affinity: 0x{value.ProcessorAffinity:X}", false);
-                        });
-
-                        // Load current power plan association if available
-                        await LoadProcessPowerPlanAssociation(value);
-                    }
-                    catch (InvalidOperationException ex) when (ex.Message.Contains("terminated") || ex.Message.Contains("exited") || ex.Message.Contains("no longer exists"))
-                    {
-                        // Process has terminated
-                        Logger.LogInformation("Process {ProcessName} (PID: {ProcessId}) has terminated", value.Name, value.ProcessId);
-                        System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            SetStatus($"Process {value.Name} (PID: {value.ProcessId}) has terminated", false);
-                            SelectedProcess = null;
-                            ClearProcessSelection();
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.LogWarning(ex, "Failed to refresh process info for {ProcessName}", value.Name);
-                        System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            SetStatus($"Warning: Could not access process {value.Name} - it may have terminated or require elevated privileges", false);
-                        });
-                    }
+                    Logger.LogWarning(ex, "Failed while handling selected process change for {ProcessName}", value.Name);
                 });
             }
             else if (value == null)
@@ -390,7 +317,93 @@ namespace ThreadPilot.ViewModels
             _systemTrayService.UpdateContextMenu(value?.Name, value != null);
         }
 
-        private async void OnTrayQuickApplyRequested(object? sender, EventArgs e)
+        private async Task HandleSelectedProcessChangedAsync(ProcessModel value)
+        {
+            try
+            {
+                // First check if the process is still running
+                bool isStillRunning = await _processService.IsProcessStillRunning(value);
+                if (!isStillRunning)
+                {
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        SetStatus($"Process {value.Name} (PID: {value.ProcessId}) has terminated", false);
+                        SelectedProcess = null;
+                        ClearProcessSelection();
+                    });
+                    return;
+                }
+
+                // Refresh process info to get current state from OS
+                await _processService.RefreshProcessInfo(value);
+
+                // Update UI on main thread with fresh data
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    // Update CPU affinity display
+                    // If a Core Mask is selected, show that instead of the process's current affinity
+                    // This ensures visual coherence between selected mask and Advanced CPU Affinity
+                    if (SelectedCoreMask != null)
+                    {
+                        UpdateCoreSelectionsFromMask(SelectedCoreMask);
+                        // Auto-apply the selected mask to the newly selected process
+                        _ = ApplyCoreMaskToProcessAsync(SelectedCoreMask);
+                    }
+                    else
+                    {
+                        // No mask selected - show process's current affinity
+                        UpdateCoreSelections(value.ProcessorAffinity);
+
+                        // Force ProcessorAffinity notification for DataGrid column
+                        // Ensures Affinity column displays the correct current value immediately
+                        value.ForceNotifyProcessorAffinityChanged();
+                    }
+
+                    // Update priority display - trigger property change to refresh ComboBox
+                    OnPropertyChanged(nameof(SelectedProcess));
+
+                    // Update feature states from the selected process
+                    IsIdleServerDisabled = value.IsIdleServerDisabled;
+                    IsRegistryPriorityEnabled = value.IsRegistryPriorityEnabled;
+
+                    // BUG FIX: Update status without setting busy state for process selection
+                    SetStatus($"Selected process: {value.Name} (PID: {value.ProcessId}) - " +
+                            $"Priority: {value.Priority}, Affinity: 0x{value.ProcessorAffinity:X}", false);
+                });
+
+                // Load current power plan association if available
+                await LoadProcessPowerPlanAssociation(value);
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("terminated") || ex.Message.Contains("exited") || ex.Message.Contains("no longer exists"))
+            {
+                // Process has terminated
+                Logger.LogInformation("Process {ProcessName} (PID: {ProcessId}) has terminated", value.Name, value.ProcessId);
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    SetStatus($"Process {value.Name} (PID: {value.ProcessId}) has terminated", false);
+                    SelectedProcess = null;
+                    ClearProcessSelection();
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to refresh process info for {ProcessName}", value.Name);
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    SetStatus($"Warning: Could not access process {value.Name} - it may have terminated or require elevated privileges", false);
+                });
+            }
+        }
+
+        private void OnTrayQuickApplyRequested(object? sender, EventArgs e)
+        {
+            TaskSafety.FireAndForget(OnTrayQuickApplyRequestedAsync(), ex =>
+            {
+                Logger.LogWarning(ex, "Quick apply request failed");
+            });
+        }
+
+        private async Task OnTrayQuickApplyRequestedAsync()
         {
             try
             {

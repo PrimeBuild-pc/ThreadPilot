@@ -1,7 +1,7 @@
 # Trademark Policy
 
 The name "ThreadPilot", the logo, and all branding elements associated with this project
-are NOT licensed under the GNU General Public License v3.0.
+are NOT licensed under the GNU Affero General Public License v3.0.
 
 ## Usage Restrictions
 

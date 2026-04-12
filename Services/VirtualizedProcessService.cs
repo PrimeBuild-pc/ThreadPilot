@@ -3,15 +3,15 @@
  * Copyright (C) 2025 Prime Build
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, version 3 only.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * GNU Affero General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 using Microsoft.Extensions.Caching.Memory;
@@ -262,7 +262,15 @@ namespace ThreadPilot.Services
             return (int)Math.Ceiling((double)totalCount / Configuration.BatchSize);
         }
 
-        private async void BackgroundPreloadCallback(object? state)
+        private void BackgroundPreloadCallback(object? state)
+        {
+            TaskSafety.FireAndForget(BackgroundPreloadCallbackAsync(), ex =>
+            {
+                _logger.LogWarning(ex, "Background process refresh failed");
+            });
+        }
+
+        private async Task BackgroundPreloadCallbackAsync()
         {
             try
             {

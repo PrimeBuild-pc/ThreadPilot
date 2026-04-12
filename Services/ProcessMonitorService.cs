@@ -3,15 +3,15 @@
  * Copyright (C) 2025 Prime Build
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, version 3 only.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * GNU Affero General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 using System;
@@ -336,7 +336,15 @@ namespace ThreadPilot.Services
             Interlocked.Exchange(ref _isFallbackPollingInProgress, 0);
         }
 
-        private async void OnProcessStarted(object sender, EventArrivedEventArgs e)
+        private void OnProcessStarted(object sender, EventArrivedEventArgs e)
+        {
+            TaskSafety.FireAndForget(HandleProcessStartedAsync(e), ex =>
+            {
+                OnMonitoringStatusChanged($"Error handling process start event: {ex.Message}", ex);
+            });
+        }
+
+        private async Task HandleProcessStartedAsync(EventArrivedEventArgs e)
         {
             if (!_isMonitoring || _disposed)
             {
@@ -401,13 +409,22 @@ namespace ThreadPilot.Services
                 return;
             }
 
-            _ = RunFallbackPollingAsync();
+            var cancellationToken = _cancellationTokenSource?.Token ?? CancellationToken.None;
+            TaskSafety.FireAndForget(RunFallbackPollingAsync(cancellationToken), ex =>
+            {
+                OnMonitoringStatusChanged($"Error in fallback polling: {ex.Message}", ex);
+            });
         }
 
-        private async Task RunFallbackPollingAsync()
+        private async Task RunFallbackPollingAsync(CancellationToken cancellationToken)
         {
             try
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
                 var currentProcesses = await GetRunningProcessesAsync();
                 var currentProcessDict = currentProcesses.ToDictionary(p => p.ProcessId, p => p);
 
@@ -530,7 +547,10 @@ namespace ThreadPilot.Services
             }
             else if (_enableWmiMonitoring && !previousWmiEnabled && !_isWmiAvailable)
             {
-                _ = Task.Run(async () => await TryStartWmiMonitoringAsync());
+                TaskSafety.FireAndForget(TryStartWmiMonitoringAsync(), ex =>
+                {
+                    OnMonitoringStatusChanged($"Error recovering WMI monitoring: {ex.Message}", ex);
+                });
             }
 
             if (!_enableFallbackPolling && _isFallbackPollingActive)
@@ -566,7 +586,15 @@ namespace ThreadPilot.Services
         {
             if (_disposed) return;
 
-            StopMonitoringAsync().Wait(5000); // Wait up to 5 seconds for clean shutdown
+            try
+            {
+                StopMonitoringAsync().GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                OnMonitoringStatusChanged($"Error during process monitor disposal: {ex.Message}", ex);
+            }
+
             _wmiStartSemaphore.Dispose();
 
             _disposed = true;

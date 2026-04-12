@@ -3,7 +3,7 @@
 [![Windows CI](https://img.shields.io/badge/CI-Windows-success)](.github/workflows/ci-devsecops.yml)
 [![Windows](https://img.shields.io/badge/Windows-11%20official%20%7C%2010%20best--effort-blue?logo=windows)](https://www.microsoft.com/windows)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
-[![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE)
 
 ThreadPilot is a free and open-source Windows process and power plan manager focused on deterministic performance workflows.
 
@@ -100,7 +100,7 @@ See CONTRIBUTING.md and CODE_OF_CONDUCT.md before opening pull requests.
 
 ## License
 
-Licensed under GNU General Public License v3.0. See LICENSE.
+Licensed under GNU Affero General Public License v3.0. See LICENSE.
 
 ## Support
 

@@ -3,15 +3,15 @@
  * Copyright (C) 2025 Prime Build
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, version 3 only.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * GNU Affero General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 using System;
@@ -689,7 +689,15 @@ namespace ThreadPilot
             ShowWindowFromTray();
         }
 
-        private async void OnExitRequested(object? sender, EventArgs e)
+        private void OnExitRequested(object? sender, EventArgs e)
+        {
+            TaskSafety.FireAndForget(OnExitRequestedAsync(), ex =>
+            {
+                LogDebug($"OnExitRequested failed: {ex.Message}");
+            });
+        }
+
+        private async Task OnExitRequestedAsync()
         {
             await PerformGracefulShutdownAsync();
         }
@@ -882,7 +890,15 @@ namespace ThreadPilot
             await PerformGracefulShutdownAsync(validateUnsavedChanges: false);
         }
 
-        private async void OnMonitoringToggleRequested(object? sender, MonitoringToggleEventArgs e)
+        private void OnMonitoringToggleRequested(object? sender, MonitoringToggleEventArgs e)
+        {
+            TaskSafety.FireAndForget(OnMonitoringToggleRequestedAsync(e), ex =>
+            {
+                LogDebug($"OnMonitoringToggleRequested failed: {ex.Message}");
+            });
+        }
+
+        private async Task OnMonitoringToggleRequestedAsync(MonitoringToggleEventArgs e)
         {
             try
             {
@@ -923,7 +939,15 @@ namespace ThreadPilot
             }
         }
 
-        private async void OnPowerPlanChangeRequested(object? sender, PowerPlanChangeRequestedEventArgs e)
+        private void OnPowerPlanChangeRequested(object? sender, PowerPlanChangeRequestedEventArgs e)
+        {
+            TaskSafety.FireAndForget(OnPowerPlanChangeRequestedAsync(e), ex =>
+            {
+                LogDebug($"OnPowerPlanChangeRequested failed: {ex.Message}");
+            });
+        }
+
+        private async Task OnPowerPlanChangeRequestedAsync(PowerPlanChangeRequestedEventArgs e)
         {
             try
             {
@@ -948,7 +972,15 @@ namespace ThreadPilot
             }
         }
 
-        private async void OnProfileApplicationRequested(object? sender, ProfileApplicationRequestedEventArgs e)
+        private void OnProfileApplicationRequested(object? sender, ProfileApplicationRequestedEventArgs e)
+        {
+            TaskSafety.FireAndForget(OnProfileApplicationRequestedAsync(e), ex =>
+            {
+                LogDebug($"OnProfileApplicationRequested failed: {ex.Message}");
+            });
+        }
+
+        private async Task OnProfileApplicationRequestedAsync(ProfileApplicationRequestedEventArgs e)
         {
             try
             {
@@ -1387,7 +1419,15 @@ namespace ThreadPilot
             }
         }
 
-        private async void OnWindowLoaded(object? sender, RoutedEventArgs e)
+        private void OnWindowLoaded(object? sender, RoutedEventArgs e)
+        {
+            TaskSafety.FireAndForget(OnWindowLoadedAsync(), ex =>
+            {
+                LogDebug($"OnWindowLoaded failed: {ex.Message}");
+            });
+        }
+
+        private async Task OnWindowLoadedAsync()
         {
             Loaded -= OnWindowLoaded;
             await InitializeKeyboardShortcutsAsync();
@@ -1482,7 +1522,15 @@ namespace ThreadPilot
             NavSettings.IsActive = tag == "Settings";
         }
 
-        private async void NavMenuItem_Click(object sender, RoutedEventArgs e)
+        private void NavMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            TaskSafety.FireAndForget(NavMenuItem_ClickAsync(sender, e), ex =>
+            {
+                LogDebug($"NavMenuItem_Click failed: {ex.Message}");
+            });
+        }
+
+        private async Task NavMenuItem_ClickAsync(object sender, RoutedEventArgs e)
         {
             if (_isHandlingTabSelection)
             {

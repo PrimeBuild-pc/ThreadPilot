@@ -3,15 +3,15 @@
  * Copyright (C) 2025 Prime Build
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, version 3 only.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * GNU Affero General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 using Microsoft.Extensions.Logging;
@@ -408,7 +408,15 @@ namespace ThreadPilot.Services
             }
         }
 
-        private async void MonitoringCallback(object? state)
+        private void MonitoringCallback(object? state)
+        {
+            TaskSafety.FireAndForget(MonitoringCallbackAsync(), ex =>
+            {
+                _logger.LogWarning(ex, "Error during profile monitoring cycle");
+            });
+        }
+
+        private async Task MonitoringCallbackAsync()
         {
             if (!_isMonitoring) return;
 
@@ -484,16 +492,16 @@ namespace ThreadPilot.Services
             await AddProfileAsync(gameProfile);
         }
 
-        private async Task<double> GetCpuUsageAsync()
+        private Task<double> GetCpuUsageAsync()
         {
             // Simplified CPU usage calculation
-            return Environment.ProcessorCount * 10.0; // Placeholder
+            return Task.FromResult(Environment.ProcessorCount * 10.0); // Placeholder
         }
 
-        private async Task<double> GetMemoryUsageAsync()
+        private Task<double> GetMemoryUsageAsync()
         {
             var totalMemory = GC.GetTotalMemory(false);
-            return totalMemory / (1024.0 * 1024.0); // MB
+            return Task.FromResult(totalMemory / (1024.0 * 1024.0)); // MB
         }
 
         private async Task<int> GetProcessCountAsync()
