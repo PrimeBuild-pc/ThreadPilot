@@ -20,7 +20,7 @@ The project targets users who need Process Lasso style capabilities in a modern 
 
 ## Screenshots
 
-<img width="1474" height="920" alt="ThreadPilot main view" src="https://github.com/user-attachments/assets/77fc944e-d2a1-4cc7-9915-e01b0776106c" />
+<img width="1474" height="920" alt="Screenshot 2025-12-21 044753" src="https://github.com/user-attachments/assets/77fc944e-d2a1-4cc7-9915-e01b0776106c" />
 
 ## Requirements
 
@@ -104,5 +104,7 @@ Licensed under GNU General Public License v3.0. See LICENSE.
 
 ## Support
 
-- Issues: https://github.com/PrimeBuild-pc/ThreadPilot/issues
-- Discussions: https://github.com/PrimeBuild-pc/ThreadPilot/discussions
+**Made for Windows power users☕** [](https://paypal.me/PrimeBuildOfficial?country.x=IT&locale.x=it_IT)
+
+  * **Issues**: [https://github.com/PrimeBuild-pc/ThreadPilot/issues](https://github.com/PrimeBuild-pc/ThreadPilot/issues)
+  * **Discussions**: [https://github.com/PrimeBuild-pc/ThreadPilot/discussions](https://github.com/PrimeBuild-pc/ThreadPilot/discussions)
