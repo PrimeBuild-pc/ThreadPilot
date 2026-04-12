@@ -4,9 +4,14 @@ on:
   push:
     branches: ["main", "master"]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
 
 jobs:
-  build-and-scan:
+  build-test-scan:
     runs-on: windows-latest
 
     steps:
@@ -19,42 +24,63 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: Restore
-        run: dotnet restore "ThreadPilot.csproj"
+        run: dotnet restore "ThreadPilot_1.sln"
+
+      - name: Verify formatting
+        continue-on-error: true
+        run: dotnet format "ThreadPilot_1.sln" --verify-no-changes --verbosity diagnostic --report dotnet-format-report.json
 
       - name: Build Debug
-        run: dotnet build "ThreadPilot.csproj" --configuration Debug --no-restore
+        run: dotnet build "ThreadPilot_1.sln" --configuration Debug --no-restore
 
       - name: Build Release
-        run: dotnet build "ThreadPilot.csproj" --configuration Release --no-restore
+        run: dotnet build "ThreadPilot_1.sln" --configuration Release --no-restore
 
-      - name: Dependency Audit
-        run: dotnet list "ThreadPilot.csproj" package --vulnerable --include-transitive
+      - name: Run tests
+        run: dotnet test "ThreadPilot_1.sln" --configuration Release --no-build --verbosity normal
 
-      - name: Secret Scan (Gitleaks)
+      - name: Dependency vulnerability audit
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
+          $audit = dotnet list "ThreadPilot.csproj" package --vulnerable --include-transitive
+          $audit | Out-String | Write-Host
 
+          if ($LASTEXITCODE -ne 0) {
+            throw "dotnet list package --vulnerable failed."
+          }
+
+          if ($audit -match "has the following vulnerable packages") {
+            throw "Vulnerable packages detected."
+          }
+
+      - name: Secret scan (Gitleaks)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
           $version = "8.24.3"
           $baseUrl = "https://github.com/gitleaks/gitleaks/releases/download/v$version"
           $zipAsset = "gitleaks_${version}_windows_x64.zip"
           $tarAsset = "gitleaks_${version}_windows_x64.tar.gz"
-
-          Write-Host "Installing Gitleaks v$version"
 
           try {
             Invoke-WebRequest -Uri "$baseUrl/$zipAsset" -OutFile "gitleaks.zip"
             Expand-Archive -Path "gitleaks.zip" -DestinationPath ".\\gitleaks-bin" -Force
           }
           catch {
-            Write-Host "ZIP download failed, trying tar.gz fallback"
             Invoke-WebRequest -Uri "$baseUrl/$tarAsset" -OutFile "gitleaks.tar.gz"
             New-Item -ItemType Directory -Force -Path ".\\gitleaks-bin" | Out-Null
             tar -xzf "gitleaks.tar.gz" -C ".\\gitleaks-bin"
           }
 
           $gitleaksExe = Resolve-Path ".\\gitleaks-bin\\gitleaks.exe"
-          & $gitleaksExe version
+          & $gitleaksExe detect --source "." --redact --verbose --report-format json --report-path gitleaks-report.json
 
-          # Scan working tree for hardcoded secrets.
-          & $gitleaksExe detect --source "." --redact --verbose
+      - name: Upload security artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            gitleaks-report.json
+            dotnet-format-report.json

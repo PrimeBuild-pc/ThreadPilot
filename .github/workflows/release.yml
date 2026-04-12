@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore "ThreadPilot_1.sln"
+
+      - name: Build
+        run: dotnet build "ThreadPilot_1.sln" --configuration Release --no-restore
+
+      - name: Publish self-contained app
+        run: dotnet publish "ThreadPilot.csproj" --configuration Release --runtime win-x64 --self-contained true -o artifacts/release/win-x64
+
+      - name: Create release package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $version = "${{ github.ref_name }}"
+          $zipName = "ThreadPilot_$version`_win-x64.zip"
+          Compress-Archive -Path "artifacts/release/win-x64/*" -DestinationPath "artifacts/release/$zipName" -Force
+
+      - name: Generate checksums
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $hashFile = "artifacts/release/SHA256SUMS.txt"
+          Get-ChildItem "artifacts/release" -File | ForEach-Object {
+            $hash = Get-FileHash $_.FullName -Algorithm SHA256
+            "$($hash.Hash)  $($_.Name)" | Out-File -FilePath $hashFile -Append -Encoding utf8
+          }
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/release/*.zip
+            artifacts/release/SHA256SUMS.txt
+          generate_release_notes: true

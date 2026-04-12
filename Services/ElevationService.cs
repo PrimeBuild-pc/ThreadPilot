@@ -18,6 +18,8 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Security.Principal;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Extensions.Logging;
@@ -31,6 +33,7 @@ namespace ThreadPilot.Services
     {
         private readonly ILogger<ElevationService> _logger;
         private readonly ISecurityService _securityService;
+        private readonly SemaphoreSlim _elevationRequestSemaphore = new(1, 1);
 
         public ElevationService(ILogger<ElevationService> logger, ISecurityService securityService)
         {
@@ -85,6 +88,7 @@ namespace ThreadPilot.Services
 
         public async Task<bool> RestartWithElevation(string[]? arguments = null)
         {
+            await _elevationRequestSemaphore.WaitAsync();
             try
             {
                 var currentProcess = Process.GetCurrentProcess();
@@ -99,7 +103,7 @@ namespace ThreadPilot.Services
                 // Combine current arguments with any additional arguments
                 var currentArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
                 var allArgs = arguments != null ? currentArgs.Concat(arguments).ToArray() : currentArgs;
-                var argumentString = string.Join(" ", allArgs.Select(arg => $"\"{arg}\""));
+                var argumentString = string.Join(" ", allArgs.Select(EscapeCommandLineArgument));
 
                 var startInfo = new ProcessStartInfo
                 {
@@ -145,6 +149,10 @@ namespace ThreadPilot.Services
                 
                 return false;
             }
+            finally
+            {
+                _elevationRequestSemaphore.Release();
+            }
         }
 
         public bool ValidateElevationForOperation(string operation)
@@ -165,6 +173,32 @@ namespace ThreadPilot.Services
             return IsRunningAsAdministrator() 
                 ? "Running with Administrator privileges" 
                 : "Running with limited privileges";
+        }
+
+        private static string EscapeCommandLineArgument(string argument)
+        {
+            if (string.IsNullOrEmpty(argument))
+            {
+                return "\"\"";
+            }
+
+            var escaped = new StringBuilder();
+            escaped.Append('"');
+
+            foreach (var c in argument)
+            {
+                if (c == '"')
+                {
+                    escaped.Append("\\\"");
+                }
+                else
+                {
+                    escaped.Append(c);
+                }
+            }
+
+            escaped.Append('"');
+            return escaped.ToString();
         }
     }
 }

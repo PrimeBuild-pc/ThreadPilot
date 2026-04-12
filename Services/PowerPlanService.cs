@@ -15,6 +15,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -30,6 +31,8 @@ namespace ThreadPilot.Services
     {
         private static readonly Lazy<string> _powerPlansPath = new(GetPowerPlansPath);
         private static readonly string _powerCfgExecutablePath = Path.Combine(Environment.SystemDirectory, "powercfg.exe");
+        private static readonly Regex _powerSchemeRegex = new(@"Power Scheme GUID: (.*?)  \((.*?)\)", RegexOptions.Multiline | RegexOptions.Compiled);
+        private static readonly Regex _pathTraversalRegex = new(@"(^|[\\/])\.\.([\\/]|$)", RegexOptions.Compiled);
         private static string PowerPlansPath => _powerPlansPath.Value;
 
         private readonly object _lockObject = new();
@@ -97,70 +100,54 @@ namespace ThreadPilot.Services
 
         public async Task<ObservableCollection<PowerPlanModel>> GetPowerPlansAsync()
         {
-            return await Task.Run(async () =>
-            {
-                var powerPlans = new ObservableCollection<PowerPlanModel>();
-                var activePlan = await GetActivePowerPlan();
+            var powerPlans = new ObservableCollection<PowerPlanModel>();
+            var activePlan = await GetActivePowerPlan();
 
-                var process = new Process
+            using var process = CreatePowerCfgProcess("/list");
+            process.Start();
+            string output = await process.StandardOutput.ReadToEndAsync();
+            await process.WaitForExitAsync();
+
+            var matches = _powerSchemeRegex.Matches(output);
+
+            foreach (Match match in matches)
+            {
+                var guid = match.Groups[1].Value.Trim();
+                var name = match.Groups[2].Value.Trim();
+
+                var plan = new PowerPlanModel
                 {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = _powerCfgExecutablePath,
-                        Arguments = "/list",
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        CreateNoWindow = true
-                    }
+                    Guid = guid,
+                    Name = name,
+                    IsActive = guid == activePlan?.Guid,
+                    IsCustomPlan = false
                 };
 
-                process.Start();
-                string output = await process.StandardOutput.ReadToEndAsync();
-                await process.WaitForExitAsync();
+                powerPlans.Add(plan);
+            }
 
-                var regex = new Regex(@"Power Scheme GUID: (.*?)  \((.*?)\)", RegexOptions.Multiline);
-                var matches = regex.Matches(output);
-
-                foreach (Match match in matches)
-                {
-                    var guid = match.Groups[1].Value.Trim();
-                    var name = match.Groups[2].Value.Trim();
-
-                    var plan = new PowerPlanModel
-                    {
-                        Guid = guid,
-                        Name = name,
-                        IsActive = guid == activePlan?.Guid,
-                        IsCustomPlan = false
-                    };
-
-                    powerPlans.Add(plan);
-                }
-
-                return powerPlans;
-            });
+            return powerPlans;
         }
 
         public async Task<ObservableCollection<PowerPlanModel>> GetCustomPowerPlansAsync()
         {
-            return await Task.Run(() =>
+            var customPlans = new ObservableCollection<PowerPlanModel>();
+            if (!Directory.Exists(PowerPlansPath))
             {
-                var customPlans = new ObservableCollection<PowerPlanModel>();
-                if (!Directory.Exists(PowerPlansPath))
-                    return customPlans;
-
-                foreach (var file in Directory.GetFiles(PowerPlansPath, "*.pow"))
-                {
-                    customPlans.Add(new PowerPlanModel
-                    {
-                        Name = Path.GetFileNameWithoutExtension(file),
-                        FilePath = file,
-                        IsCustomPlan = true
-                    });
-                }
-
                 return customPlans;
-            });
+            }
+
+            foreach (var file in Directory.GetFiles(PowerPlansPath, "*.pow"))
+            {
+                customPlans.Add(new PowerPlanModel
+                {
+                    Name = Path.GetFileNameWithoutExtension(file),
+                    FilePath = file,
+                    IsCustomPlan = true
+                });
+            }
+
+            return await Task.FromResult(customPlans);
         }
 
         public async Task<bool> SetActivePowerPlan(PowerPlanModel powerPlan)
@@ -170,168 +157,159 @@ namespace ThreadPilot.Services
 
         public async Task<bool> SetActivePowerPlanByGuidAsync(string powerPlanGuid, bool preventDuplicateChanges = true)
         {
-            return await Task.Run(async () =>
+            if (!Guid.TryParse(powerPlanGuid, out _))
             {
-                try
+                _logger.LogWarning("Rejected invalid power plan GUID: {PowerPlanGuid}", powerPlanGuid);
+                return false;
+            }
+
+            try
+            {
+                // Check if change is needed when duplicate prevention is enabled
+                if (preventDuplicateChanges)
                 {
-                    // Check if change is needed when duplicate prevention is enabled
-                    if (preventDuplicateChanges)
+                    var isChangeNeeded = await IsPowerPlanChangeNeededAsync(powerPlanGuid);
+                    if (!isChangeNeeded)
                     {
-                        var isChangeNeeded = await IsPowerPlanChangeNeededAsync(powerPlanGuid);
-                        if (!isChangeNeeded)
-                        {
-                            _logger.LogDebug("Power plan change skipped - already active: {PowerPlanGuid}", powerPlanGuid);
-                            return true; // No change needed, consider it successful
-                        }
+                        _logger.LogDebug("Power plan change skipped - already active: {PowerPlanGuid}", powerPlanGuid);
+                        return true; // No change needed, consider it successful
+                    }
+                }
+
+                var previousPowerPlan = await GetActivePowerPlan();
+                var targetPowerPlan = await GetPowerPlanByGuidAsync(powerPlanGuid);
+
+                _logger.LogInformation("Attempting to change power plan from '{FromPlan}' to '{ToPlan}'",
+                    previousPowerPlan?.Name ?? "Unknown", targetPowerPlan?.Name ?? "Unknown");
+
+                await _enhancedLogger.LogPowerPlanChangeAsync(
+                    previousPowerPlan?.Name ?? "Unknown",
+                    targetPowerPlan?.Name ?? "Unknown",
+                    "Manual power plan change requested");
+
+                using var process = CreatePowerCfgProcess($"/setactive {powerPlanGuid}");
+                process.Start();
+                var stdError = await process.StandardError.ReadToEndAsync();
+                await process.WaitForExitAsync();
+
+                var success = process.ExitCode == 0;
+
+                if (success)
+                {
+                    lock (_lockObject)
+                    {
+                        _lastActivePowerPlanGuid = powerPlanGuid;
                     }
 
-                    var previousPowerPlan = await GetActivePowerPlan();
-                    var targetPowerPlan = await GetPowerPlanByGuidAsync(powerPlanGuid);
+                    var newPowerPlan = await GetPowerPlanByGuidAsync(powerPlanGuid);
 
-                    _logger.LogInformation("Attempting to change power plan from '{FromPlan}' to '{ToPlan}'",
-                        previousPowerPlan?.Name ?? "Unknown", targetPowerPlan?.Name ?? "Unknown");
+                    _logger.LogInformation("Power plan successfully changed to '{PowerPlan}'", newPowerPlan?.Name ?? "Unknown");
 
                     await _enhancedLogger.LogPowerPlanChangeAsync(
                         previousPowerPlan?.Name ?? "Unknown",
-                        targetPowerPlan?.Name ?? "Unknown",
-                        "Manual power plan change requested");
+                        newPowerPlan?.Name ?? "Unknown",
+                        "Manual power plan change completed");
 
-                    var process = new Process
-                    {
-                        StartInfo = new ProcessStartInfo
-                        {
-                            FileName = _powerCfgExecutablePath,
-                            Arguments = $"/setactive {powerPlanGuid}",
-                            UseShellExecute = false,
-                            RedirectStandardOutput = true,
-                            CreateNoWindow = true
-                        }
-                    };
-
-                    process.Start();
-                    process.WaitForExit();
-
-                    var success = process.ExitCode == 0;
-
-                    if (success)
-                    {
-                        lock (_lockObject)
-                        {
-                            _lastActivePowerPlanGuid = powerPlanGuid;
-                        }
-
-                        var newPowerPlan = await GetPowerPlanByGuidAsync(powerPlanGuid);
-
-                        _logger.LogInformation("Power plan successfully changed to '{PowerPlan}'", newPowerPlan?.Name ?? "Unknown");
-
-                        await _enhancedLogger.LogPowerPlanChangeAsync(
-                            previousPowerPlan?.Name ?? "Unknown",
-                            newPowerPlan?.Name ?? "Unknown",
-                            "Manual power plan change completed");
-
-                        PowerPlanChanged?.Invoke(this, new PowerPlanChangedEventArgs(
-                            previousPowerPlan, newPowerPlan, "Manual power plan change"));
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Failed to change power plan to '{PowerPlanGuid}' - powercfg exit code: {ExitCode}",
-                            powerPlanGuid, process.ExitCode);
-
-                        await _enhancedLogger.LogSystemEventAsync(LogEventTypes.PowerPlan.ChangeFailed,
-                            $"Failed to change power plan to '{targetPowerPlan?.Name ?? powerPlanGuid}' - Exit code: {process.ExitCode}",
-                            Microsoft.Extensions.Logging.LogLevel.Warning);
-                    }
-
-                    return success;
+                    PowerPlanChanged?.Invoke(this, new PowerPlanChangedEventArgs(
+                        previousPowerPlan, newPowerPlan, "Manual power plan change"));
                 }
-                catch (Exception ex)
+                else
                 {
-                    _logger.LogError(ex, "Exception occurred while changing power plan to '{PowerPlanGuid}'", powerPlanGuid);
+                    _logger.LogWarning(
+                        "Failed to change power plan to '{PowerPlanGuid}' - powercfg exit code: {ExitCode}, stderr: {StdErr}",
+                        powerPlanGuid,
+                        process.ExitCode,
+                        stdError);
 
-                    await _enhancedLogger.LogErrorAsync(ex, "PowerPlanService.SetActivePowerPlanByGuidAsync",
-                        new Dictionary<string, object>
-                        {
-                            ["PowerPlanGuid"] = powerPlanGuid,
-                            ["PreventDuplicateChanges"] = preventDuplicateChanges
-                        });
-
-                    return false;
+                    await _enhancedLogger.LogSystemEventAsync(LogEventTypes.PowerPlan.ChangeFailed,
+                        $"Failed to change power plan to '{targetPowerPlan?.Name ?? powerPlanGuid}' - Exit code: {process.ExitCode}",
+                        Microsoft.Extensions.Logging.LogLevel.Warning);
                 }
-            });
+
+                return success;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception occurred while changing power plan to '{PowerPlanGuid}'", powerPlanGuid);
+
+                await _enhancedLogger.LogErrorAsync(ex, "PowerPlanService.SetActivePowerPlanByGuidAsync",
+                    new Dictionary<string, object>
+                    {
+                        ["PowerPlanGuid"] = powerPlanGuid,
+                        ["PreventDuplicateChanges"] = preventDuplicateChanges
+                    });
+
+                return false;
+            }
         }
 
         public async Task<PowerPlanModel?> GetActivePowerPlan()
         {
-            return await Task.Run(() =>
+            try
             {
-                try
+                using var process = CreatePowerCfgProcess("/getactivescheme");
+                process.Start();
+                string output = await process.StandardOutput.ReadToEndAsync();
+                await process.WaitForExitAsync();
+
+                var match = _powerSchemeRegex.Match(output);
+
+                if (match.Success)
                 {
-                    var process = new Process
+                    return new PowerPlanModel
                     {
-                        StartInfo = new ProcessStartInfo
-                        {
-                            FileName = _powerCfgExecutablePath,
-                            Arguments = "/getactivescheme",
-                            UseShellExecute = false,
-                            RedirectStandardOutput = true,
-                            CreateNoWindow = true
-                        }
+                        Guid = match.Groups[1].Value.Trim(),
+                        Name = match.Groups[2].Value.Trim(),
+                        IsActive = true
                     };
-
-                    process.Start();
-                    string output = process.StandardOutput.ReadToEnd();
-                    process.WaitForExit();
-
-                    var regex = new Regex(@"Power Scheme GUID: (.*?)  \((.*?)\)", RegexOptions.Multiline);
-                    var match = regex.Match(output);
-
-                    if (match.Success)
-                    {
-                        return new PowerPlanModel
-                        {
-                            Guid = match.Groups[1].Value.Trim(),
-                            Name = match.Groups[2].Value.Trim(),
-                            IsActive = true
-                        };
-                    }
-
-                    return null;
                 }
-                catch (Exception)
-                {
-                    return null;
-                }
-            });
+
+                _logger.LogWarning("Could not parse active power plan from powercfg output.");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to read active power plan.");
+                return null;
+            }
         }
 
         public async Task<bool> ImportCustomPowerPlan(string filePath)
         {
-            return await Task.Run(() =>
+            if (!TryNormalizePowerPlanPath(filePath, out var normalizedPath, out var validationError))
             {
-                try
-                {
-                    var process = new Process
-                    {
-                        StartInfo = new ProcessStartInfo
-                        {
-                            FileName = _powerCfgExecutablePath,
-                            Arguments = $"/import \"{filePath}\"",
-                            UseShellExecute = false,
-                            RedirectStandardOutput = true,
-                            CreateNoWindow = true
-                        }
-                    };
+                _logger.LogWarning("Rejected power plan import path '{FilePath}': {ValidationError}", filePath, validationError);
+                return false;
+            }
 
-                    process.Start();
-                    process.WaitForExit();
+            try
+            {
+                using var process = CreatePowerCfgProcess($"/import {QuoteArgument(normalizedPath)}");
+                process.Start();
+                var stdError = await process.StandardError.ReadToEndAsync();
+                await process.WaitForExitAsync();
 
-                    return process.ExitCode == 0;
-                }
-                catch (Exception)
+                if (process.ExitCode != 0)
                 {
+                    _logger.LogWarning(
+                        "Power plan import failed for '{Path}' with exit code {ExitCode}. stderr: {StdErr}",
+                        normalizedPath,
+                        process.ExitCode,
+                        stdError);
+
                     return false;
                 }
-            });
+
+                _logger.LogInformation("Imported custom power plan from '{Path}'", normalizedPath);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception occurred while importing custom power plan from '{Path}'", normalizedPath);
+                await _enhancedLogger.LogErrorAsync(ex, "PowerPlanService.ImportCustomPowerPlan",
+                    new Dictionary<string, object> { ["Path"] = normalizedPath });
+                return false;
+            }
         }
 
         public async Task<string?> GetActivePowerPlanGuidAsync()
@@ -342,12 +320,22 @@ namespace ThreadPilot.Services
 
         public async Task<bool> PowerPlanExistsAsync(string powerPlanGuid)
         {
+            if (!Guid.TryParse(powerPlanGuid, out _))
+            {
+                return false;
+            }
+
             var powerPlans = await GetPowerPlansAsync();
             return powerPlans.Any(p => string.Equals(p.Guid, powerPlanGuid, StringComparison.OrdinalIgnoreCase));
         }
 
         public async Task<PowerPlanModel?> GetPowerPlanByGuidAsync(string powerPlanGuid)
         {
+            if (!Guid.TryParse(powerPlanGuid, out _))
+            {
+                return null;
+            }
+
             var powerPlans = await GetPowerPlansAsync();
             return powerPlans.FirstOrDefault(p => string.Equals(p.Guid, powerPlanGuid, StringComparison.OrdinalIgnoreCase));
         }
@@ -375,10 +363,84 @@ namespace ThreadPilot.Services
 
                 return true; // Change is needed
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogWarning(ex, "Could not determine if power plan change is needed for '{PowerPlanGuid}'", targetPowerPlanGuid);
                 return true; // If we can't determine, assume change is needed
             }
+        }
+
+        private static string QuoteArgument(string value) => $"\"{value.Replace("\"", "\\\"")}\"";
+
+        private bool TryNormalizePowerPlanPath(string filePath, out string normalizedPath, out string error)
+        {
+            normalizedPath = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                error = "Path is empty.";
+                return false;
+            }
+
+            if (_pathTraversalRegex.IsMatch(filePath))
+            {
+                error = "Path traversal segments are not allowed.";
+                return false;
+            }
+
+            if (!Path.IsPathFullyQualified(filePath))
+            {
+                error = "Path must be absolute.";
+                return false;
+            }
+
+            try
+            {
+                normalizedPath = Path.GetFullPath(filePath);
+            }
+            catch (Exception ex)
+            {
+                error = $"Invalid file path: {ex.Message}";
+                return false;
+            }
+
+            if (!string.Equals(Path.GetExtension(normalizedPath), ".pow", StringComparison.OrdinalIgnoreCase))
+            {
+                error = "Only .pow files are supported.";
+                return false;
+            }
+
+            if (!File.Exists(normalizedPath))
+            {
+                error = "File does not exist.";
+                return false;
+            }
+
+            var fileInfo = new FileInfo(normalizedPath);
+            if (fileInfo.Length > 10 * 1024 * 1024)
+            {
+                error = "Power plan file size exceeds 10 MB limit.";
+                return false;
+            }
+
+            error = string.Empty;
+            return true;
+        }
+
+        private static Process CreatePowerCfgProcess(string arguments)
+        {
+            return new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = _powerCfgExecutablePath,
+                    Arguments = arguments,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                }
+            };
         }
     }
 }

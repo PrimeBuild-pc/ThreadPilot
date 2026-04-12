@@ -1,90 +1,108 @@
-# ThreadPilot ✈️ <sup><kbd>v1.0.0</kbd></sup>
+# ThreadPilot v1.1.0
 
-[![Status](https://img.shields.io/badge/Status-v1.0.0-success.svg)]()
-[![Windows](https://img.shields.io/badge/Windows-10%2F11-blue?logo=windows&logoColor=white)](https://www.microsoft.com/windows)
-[![.NET](https://img.shields.io/badge/.NET-8.0-purple?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
-[![WPF](https://img.shields.io/badge/WPF-Windows%20Presentation%20Foundation-blue?logo=microsoft&logoColor=white)](https://docs.microsoft.com/en-us/dotnet/desktop/wpf/)
+[![Windows CI](https://img.shields.io/badge/CI-Windows-success)](.github/workflows/ci-devsecops.yml)
+[![Windows](https://img.shields.io/badge/Windows-11%20official%20%7C%2010%20best--effort-blue?logo=windows)](https://www.microsoft.com/windows)
+[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/badge/Release-Latest-brightgreen)](../../releases)
-[![Architecture](https://img.shields.io/badge/Architecture-x64-red?logo=windows&logoColor=white)](https://docs.microsoft.com/en-us/windows/win32/)
 
-**ThreadPilot** is a Windows application for advanced **process management**, **CPU affinity control**, and **power plan automation**.  
-Built with WPF and .NET 8, it is focused on deterministic performance workflows for power users, gamers, and system admins who want precise control over system resources.
+ThreadPilot is a free and open-source Windows process and power plan manager focused on deterministic performance workflows.
 
-[![Thread-Pilotbanner.png](https://i.postimg.cc/sDZLXMqr/Thread-Pilotbanner.png)](https://postimg.cc/cr0hkLd9)
+The project targets users who need Process Lasso style capabilities in a modern WPF desktop application with enterprise-grade reliability, security hardening, and automation support.
 
-## ✨ Features & Highlights
+## Key Features
 
-- **Advanced Process Management:** Real-time monitoring with CPU affinity and priority controls.
-- **Enterprise-Grade Rules & Automation:** Rule-based automation for process-triggered power plan behavior, featuring graceful failure handling for Anti-Cheat protected games (Vanguard, EAC, BattlEye).
-- **Performance Intelligence Dashboard:** Interactive dashboard with process hotspots, rule impact analysis, and timeline events.
-- **Global vs. Per-Process Control:** Explicit visual separation of global power plan management from per-process actions.
-- **System Tweaks:** Advanced Windows performance settings panel.
-- **Dynamic Theming:** Light/Dark theming with seamless runtime switching.
-- **Profile-based Configuration:** Persistent settings, customizable notification levels, and low-overhead minimized tray mode.
+- Process management with live refresh, filtering, and high-volume process handling.
+- CPU affinity and priority controls with topology-aware logic.
+- I/O and scheduling related tuning utilities.
+- Rule-driven power plan switching based on process start/stop events.
+- Conditional profiles, system tray controls, and runtime monitoring.
+- Windows 11 first-class support; Windows 10 support is best effort.
 
-<img width="1474" height="920" alt="Screenshot 2025-12-21 044753" src="https://github.com/user-attachments/assets/77fc944e-d2a1-4cc7-9915-e01b0776106c" />
+## Screenshots
 
-## ⚙️ Requirements
+<img width="1474" height="920" alt="ThreadPilot main view" src="https://github.com/user-attachments/assets/77fc944e-d2a1-4cc7-9915-e01b0776106c" />
 
-- **OS:** Windows 10 / 11 (x64)
-- **Privileges:** Administrator privileges required for full WMI functionality and process control.
-- **SDK:** .NET 8.0 SDK (only required for building from source).
+## Requirements
 
----
+- Windows 11 (official support), Windows 10 22H2+ (best effort).
+- .NET 8 SDK for source builds.
+- Administrator privileges for advanced process and power operations.
 
-## 📦 Installation
+## Installation
 
-### Portable / Setup (Recommended)
-1. Download the latest `ThreadPilot_v1.0.0` release from [GitHub Releases](../../releases)
-2. Extract the archive
-3. Run `ThreadPilot.exe` **as Administrator**
+### Prebuilt Release
+1. Download the latest package from Releases.
+2. Extract the archive.
+3. Start ThreadPilot as Administrator for full functionality.
 
-### Build from source
-```bash
-git clone [https://github.com/PrimeBuild-pc/ThreadPilot.git](https://github.com/PrimeBuild-pc/ThreadPilot.git)
+### Build from Source
+
+```powershell
+git clone https://github.com/PrimeBuild-pc/ThreadPilot.git
 cd ThreadPilot
-dotnet build "ThreadPilot_1.sln" --configuration Release
-dotnet run --project "ThreadPilot.csproj" --configuration Release
-````
-
-*Useful startup arguments: `--start-minimized`, `--autostart`, `--test`*
-
------
-
-## 🧪 Test Mode
-
-Console test mode runs via the app entrypoint and uses the integrated `TestRunner.cs`.
-*(Note: `dotnet test` will only execute tests in dedicated test projects; this repository currently uses an integrated runtime test runner).*
-
-```bash
-dotnet run --project "ThreadPilot.csproj" --configuration Release -- --test
+dotnet restore ThreadPilot_1.sln
+dotnet build ThreadPilot_1.sln --configuration Release
+dotnet run --project ThreadPilot.csproj --configuration Release
 ```
 
-*Note: In environments where elevation is required to start the app process, test mode requires an elevated terminal.*
+Useful startup arguments:
 
------
+- --start-minimized
+- --autostart
+- --test
 
-## 🛠️ Architecture & Tech Stack
+## Usage Examples
 
-  * **.NET 8.0** & **WPF**
-  * **MVVM** pattern using `CommunityToolkit.Mvvm`
-  * **Dependency Injection** (`Services/ServiceConfiguration.cs`)
-  * **Rules & Automation Engine** (`Services/ProcessPowerPlanAssociationService.cs` & `ViewModels/ProcessPowerPlanAssociationViewModel.cs`)
-  * **Performance Dashboard** (`Views/PerformanceView.xaml` & `ViewModels/PerformanceViewModel.cs`)
+Run integrated runtime tests:
 
------
+```powershell
+dotnet run --project ThreadPilot.csproj --configuration Release -- --test
+```
 
-## 📄 License
+Publish a self-contained build:
 
-This project is licensed under the **GNU General Public License v3.0**.
-See [LICENSE](https://www.google.com/search?q=LICENSE) for details.
+```powershell
+dotnet publish ThreadPilot.csproj --configuration Release --runtime win-x64 --self-contained true
+```
 
------
+Build release artifacts via script:
 
-## 📞 Support
+```powershell
+./build-release.ps1
+```
 
-**Made for Windows power users☕** [](https://paypal.me/PrimeBuildOfficial?country.x=IT&locale.x=it_IT)
+## Quality and Security
 
-  * **Issues**: [https://github.com/PrimeBuild-pc/ThreadPilot/issues](https://github.com/PrimeBuild-pc/ThreadPilot/issues)
-  * **Discussions**: [https://github.com/PrimeBuild-pc/ThreadPilot/discussions](https://github.com/PrimeBuild-pc/ThreadPilot/discussions)
+- CI validates build, formatting, analyzers, vulnerability checks, and secret scanning.
+- Security disclosures are handled through private GitHub advisories. See SECURITY.md.
+- Change history is tracked in CHANGELOG.md.
+
+## Repository Docs
+
+- docs/README.md
+- docs/RELEASE_SIGNING.md
+- ARCHITECTURE_GUIDE.md
+- API_REFERENCE.md
+- DEVELOPER_GUIDE.md
+- PROJECT_STRUCTURE.md
+- UI_STYLE_GUIDE.md
+
+## Contributing
+
+See CONTRIBUTING.md and CODE_OF_CONDUCT.md before opening pull requests.
+
+## Roadmap
+
+- Expand dedicated unit and integration coverage for core services.
+- Continue async reliability refactoring for long-running monitoring paths.
+- Improve accessibility and localization readiness in all major views.
+- Formalize release signing and distribution hardening.
+
+## License
+
+Licensed under GNU General Public License v3.0. See LICENSE.
+
+## Support
+
+- Issues: https://github.com/PrimeBuild-pc/ThreadPilot/issues
+- Discussions: https://github.com/PrimeBuild-pc/ThreadPilot/discussions

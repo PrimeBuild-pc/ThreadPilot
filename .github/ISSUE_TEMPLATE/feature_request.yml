@@ -1,0 +1,27 @@
+name: Feature Request
+description: Suggest an improvement for ThreadPilot
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem are you trying to solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution
+      description: Describe your preferred solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact Areas
+      description: Process management, affinity, power plans, UI, performance, etc.

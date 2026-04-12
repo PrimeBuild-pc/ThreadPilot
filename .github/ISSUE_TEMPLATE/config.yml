@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Report
+    url: https://github.com/PrimeBuild-pc/ThreadPilot/security/advisories/new
+    about: Report vulnerabilities privately using GitHub Security Advisories.

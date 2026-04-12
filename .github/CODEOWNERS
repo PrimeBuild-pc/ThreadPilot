@@ -1,0 +1,11 @@
+* @PrimeBuild-pc
+
+# Core system and process management
+/Services/ @PrimeBuild-pc
+/ViewModels/ @PrimeBuild-pc
+/Platforms/ @PrimeBuild-pc
+
+# Build and release
+/.github/workflows/ @PrimeBuild-pc
+/build-release.ps1 @PrimeBuild-pc
+/setup.iss @PrimeBuild-pc

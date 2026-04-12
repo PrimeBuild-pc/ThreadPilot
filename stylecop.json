@@ -1,0 +1,9 @@
+{
+  "$schema": "https://raw.githubusercontent.com/DotNetAnalyzers/StyleCopAnalyzers/master/StyleCop.Analyzers/StyleCop.Analyzers.StyleCopSettings.schema.json",
+  "settings": {
+    "documentationRules": {
+      "companyName": "Prime Build",
+      "copyrightText": "ThreadPilot - Advanced Windows Process and Power Plan Manager"
+    }
+  }
+}
