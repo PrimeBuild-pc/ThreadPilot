@@ -4,8 +4,8 @@
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <!-- Request administrator privileges -->
-        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+        <!-- Run as standard user by default; specific operations request UAC elevation on demand. -->
+        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
       </requestedPrivileges>
     </security>
   </trustInfo>

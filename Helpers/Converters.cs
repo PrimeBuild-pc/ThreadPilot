@@ -14,13 +14,13 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Globalization;
-using System.Windows;
-using System.Windows.Data;
-
 namespace ThreadPilot.Helpers
 {
+    using System;
+    using System.Globalization;
+    using System.Windows;
+    using System.Windows.Data;
+
     public class BytesToMbConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -57,7 +57,9 @@ namespace ThreadPilot.Helpers
                 }
 
                 if (selectedIndices.Count == 0)
+                {
                     return "None";
+                }
 
                 // Build the display string
                 var indicesStr = string.Join(", ", selectedIndices);

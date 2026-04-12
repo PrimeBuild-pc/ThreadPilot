@@ -14,14 +14,14 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Threading.Tasks;
-using ThreadPilot.Models;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Threading.Tasks;
+    using ThreadPilot.Models;
+
     /// <summary>
-    /// Interface for process monitoring service that uses WMI events with fallback polling
+    /// Interface for process monitoring service that uses WMI events with fallback polling.
     /// </summary>
     public interface IProcessMonitorService : IDisposable
     {
@@ -41,37 +41,37 @@ namespace ThreadPilot.Services
         event EventHandler<MonitoringStatusEventArgs>? MonitoringStatusChanged;
 
         /// <summary>
-        /// Gets whether the service is currently monitoring
+        /// Gets a value indicating whether gets whether the service is currently monitoring.
         /// </summary>
         bool IsMonitoring { get; }
 
         /// <summary>
-        /// Gets whether WMI monitoring is available and working
+        /// Gets a value indicating whether gets whether WMI monitoring is available and working.
         /// </summary>
         bool IsWmiAvailable { get; }
 
         /// <summary>
-        /// Gets whether fallback polling is currently active
+        /// Gets a value indicating whether gets whether fallback polling is currently active.
         /// </summary>
         bool IsFallbackPollingActive { get; }
 
         /// <summary>
-        /// Starts monitoring processes
+        /// Starts monitoring processes.
         /// </summary>
         Task StartMonitoringAsync();
 
         /// <summary>
-        /// Stops monitoring processes
+        /// Stops monitoring processes.
         /// </summary>
         Task StopMonitoringAsync();
 
         /// <summary>
-        /// Gets all currently running processes
+        /// Gets all currently running processes.
         /// </summary>
         Task<IEnumerable<ProcessModel>> GetRunningProcessesAsync();
 
         /// <summary>
-        /// Checks if a specific process is currently running
+        /// Checks if a specific process is currently running.
         /// </summary>
         Task<bool> IsProcessRunningAsync(string executableName);
 
@@ -82,38 +82,43 @@ namespace ThreadPilot.Services
     }
 
     /// <summary>
-    /// Event arguments for process events
+    /// Event arguments for process events.
     /// </summary>
     public class ProcessEventArgs : EventArgs
     {
         public ProcessModel Process { get; }
+
         public DateTime Timestamp { get; }
 
         public ProcessEventArgs(ProcessModel process)
         {
-            Process = process;
-            Timestamp = DateTime.Now;
+            this.Process = process;
+            this.Timestamp = DateTime.Now;
         }
     }
 
     /// <summary>
-    /// Event arguments for monitoring status changes
+    /// Event arguments for monitoring status changes.
     /// </summary>
     public class MonitoringStatusEventArgs : EventArgs
     {
         public bool IsMonitoring { get; }
+
         public bool IsWmiAvailable { get; }
+
         public bool IsFallbackPollingActive { get; }
+
         public string? StatusMessage { get; }
+
         public Exception? Error { get; }
 
         public MonitoringStatusEventArgs(bool isMonitoring, bool isWmiAvailable, bool isFallbackPollingActive, string? statusMessage = null, Exception? error = null)
         {
-            IsMonitoring = isMonitoring;
-            IsWmiAvailable = isWmiAvailable;
-            IsFallbackPollingActive = isFallbackPollingActive;
-            StatusMessage = statusMessage;
-            Error = error;
+            this.IsMonitoring = isMonitoring;
+            this.IsWmiAvailable = isWmiAvailable;
+            this.IsFallbackPollingActive = isFallbackPollingActive;
+            this.StatusMessage = statusMessage;
+            this.Error = error;
         }
     }
 }

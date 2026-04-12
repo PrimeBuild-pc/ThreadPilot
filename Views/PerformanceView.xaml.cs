@@ -14,24 +14,25 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System.Windows.Controls;
-using ThreadPilot.ViewModels;
-
 namespace ThreadPilot.Views
 {
+    using System.Windows.Controls;
+    using ThreadPilot.ViewModels;
+
     /// <summary>
-    /// Interaction logic for PerformanceView.xaml
+    /// Interaction logic for PerformanceView.xaml.
     /// </summary>
     public partial class PerformanceView : System.Windows.Controls.UserControl
     {
         public PerformanceView()
         {
-            InitializeComponent();
+            this.InitializeComponent();
         }
 
-        public PerformanceView(PerformanceViewModel viewModel) : this()
+        public PerformanceView(PerformanceViewModel viewModel)
+            : this()
         {
-            DataContext = viewModel;
+            this.DataContext = viewModel;
         }
     }
 }

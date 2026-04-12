@@ -14,16 +14,16 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using System.IO;
-using CommunityToolkit.Mvvm.ComponentModel;
-using ThreadPilot.Models.Core;
-
 namespace ThreadPilot.Models
 {
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using CommunityToolkit.Mvvm.ComponentModel;
+    using ThreadPilot.Models.Core;
+
     /// <summary>
-    /// Represents an association between an executable and a power plan
+    /// Represents an association between an executable and a power plan.
     /// </summary>
     public partial class ProcessPowerPlanAssociation : ObservableObject, IModel
     {
@@ -43,19 +43,19 @@ namespace ThreadPilot.Models
         private string powerPlanName = string.Empty;
 
         /// <summary>
-        /// Core mask ID to apply to this process (optional)
+        /// Core mask ID to apply to this process (optional).
         /// </summary>
         [ObservableProperty]
         private string? coreMaskId = null;
 
         /// <summary>
-        /// Core mask name for display (optional)
+        /// Core mask name for display (optional).
         /// </summary>
         [ObservableProperty]
         private string? coreMaskName = null;
 
         /// <summary>
-        /// Process priority to apply (optional)
+        /// Process priority to apply (optional).
         /// </summary>
         [ObservableProperty]
         private string? processPriority = null;
@@ -75,14 +75,14 @@ namespace ThreadPilot.Models
         private string description = string.Empty;
 
         /// <summary>
-        /// Whether to match by exact executable name or path
+        /// Whether to match by exact executable name or path.
         /// </summary>
         [ObservableProperty]
         private bool matchByPath = false;
 
         /// <summary>
         /// Priority for this association (higher number = higher priority)
-        /// Used when multiple associations could match the same process
+        /// Used when multiple associations could match the same process.
         /// </summary>
         [ObservableProperty]
         private int priority = 0;
@@ -93,37 +93,44 @@ namespace ThreadPilot.Models
 
         public ProcessPowerPlanAssociation(string executableName, string powerPlanGuid, string powerPlanName)
         {
-            ExecutableName = executableName;
-            PowerPlanGuid = powerPlanGuid;
-            PowerPlanName = powerPlanName;
+            this.ExecutableName = executableName;
+            this.PowerPlanGuid = powerPlanGuid;
+            this.PowerPlanName = powerPlanName;
         }
 
         /// <summary>
-        /// Checks if this association matches the given process
+        /// Checks if this association matches the given process.
         /// </summary>
         public bool MatchesProcess(ProcessModel process)
         {
-            if (!IsEnabled) return false;
-
-            if (MatchByPath && !string.IsNullOrEmpty(ExecutablePath))
+            if (!this.IsEnabled)
             {
-                return string.Equals(process.ExecutablePath, ExecutablePath, StringComparison.OrdinalIgnoreCase);
+                return false;
+            }
+
+            if (this.MatchByPath && !string.IsNullOrEmpty(this.ExecutablePath))
+            {
+                return string.Equals(process.ExecutablePath, this.ExecutablePath, StringComparison.OrdinalIgnoreCase);
             }
             else
             {
                 var processName = NormalizeExecutableName(process.Name);
-                var associationName = NormalizeExecutableName(ExecutableName);
+                var associationName = NormalizeExecutableName(this.ExecutableName);
                 return string.Equals(processName, associationName, StringComparison.OrdinalIgnoreCase);
             }
         }
 
         /// <summary>
-        /// Checks if this association matches the given executable name
+        /// Checks if this association matches the given executable name.
         /// </summary>
         public bool MatchesExecutable(string executableName)
         {
-            if (!IsEnabled) return false;
-            var associationName = NormalizeExecutableName(ExecutableName);
+            if (!this.IsEnabled)
+            {
+                return false;
+            }
+
+            var associationName = NormalizeExecutableName(this.ExecutableName);
             var inputName = NormalizeExecutableName(executableName);
             return string.Equals(associationName, inputName, StringComparison.OrdinalIgnoreCase);
         }
@@ -144,14 +151,20 @@ namespace ThreadPilot.Models
         {
             var errors = new List<string>();
 
-            if (string.IsNullOrWhiteSpace(ExecutableName))
+            if (string.IsNullOrWhiteSpace(this.ExecutableName))
+            {
                 errors.Add("Executable name is required");
+            }
 
-            if (string.IsNullOrWhiteSpace(PowerPlanGuid))
+            if (string.IsNullOrWhiteSpace(this.PowerPlanGuid))
+            {
                 errors.Add("Power plan GUID is required");
+            }
 
-            if (string.IsNullOrWhiteSpace(PowerPlanName))
+            if (string.IsNullOrWhiteSpace(this.PowerPlanName))
+            {
                 errors.Add("Power plan name is required");
+            }
 
             return errors.Count == 0 ? ValidationResult.Success() : ValidationResult.Failure(errors.ToArray());
         }
@@ -172,7 +185,7 @@ namespace ThreadPilot.Models
                 Description = this.Description,
                 MatchByPath = this.MatchByPath,
                 createdAt = DateTime.UtcNow,
-                updatedAt = DateTime.UtcNow
+                updatedAt = DateTime.UtcNow,
             };
         }
     }

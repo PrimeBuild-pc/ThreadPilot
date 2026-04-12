@@ -14,39 +14,41 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using ThreadPilot.Models;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Linq;
+    using System.Text.Json;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using System.Windows.Forms;
+    using Microsoft.Extensions.Logging;
+    using ThreadPilot.Models;
+
     /// <summary>
-    /// Implementation of conditional process profile service
+    /// Implementation of conditional process profile service.
     /// </summary>
     public class ConditionalProfileService : IConditionalProfileService, IDisposable
     {
-        private readonly ILogger<ConditionalProfileService> _logger;
-        private readonly IProcessService _processService;
-        private readonly IRetryPolicyService _retryPolicy;
-        private readonly List<ConditionalProcessProfile> _profiles = new();
-        private readonly System.Threading.Timer _monitoringTimer;
-        private readonly SemaphoreSlim _profileLock = new(1, 1);
-        
-        private SystemState _lastSystemState = new();
-        private bool _isMonitoring;
-        private bool _disposed;
+        private readonly ILogger<ConditionalProfileService> logger;
+        private readonly IProcessService processService;
+        private readonly IRetryPolicyService retryPolicy;
+        private readonly List<ConditionalProcessProfile> profiles = new();
+        private readonly System.Threading.Timer monitoringTimer;
+        private readonly SemaphoreSlim profileLock = new(1, 1);
 
-        public bool IsMonitoring => _isMonitoring;
+        private SystemState lastSystemState = new();
+        private bool isMonitoring;
+        private bool disposed;
+
+        public bool IsMonitoring => this.isMonitoring;
 
         public event EventHandler<ProfileApplicationEventArgs>? ProfileApplied;
+
         public event EventHandler<ProfileConflictEventArgs>? ProfileConflictResolved;
+
         public event EventHandler<SystemState>? SystemStateChanged;
 
         public ConditionalProfileService(
@@ -54,120 +56,121 @@ namespace ThreadPilot.Services
             IProcessService processService,
             IRetryPolicyService retryPolicy)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _processService = processService ?? throw new ArgumentNullException(nameof(processService));
-            _retryPolicy = retryPolicy ?? throw new ArgumentNullException(nameof(retryPolicy));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
+            this.retryPolicy = retryPolicy ?? throw new ArgumentNullException(nameof(retryPolicy));
 
             // Set up monitoring timer (check every 10 seconds)
-            _monitoringTimer = new System.Threading.Timer(MonitoringCallback, null, Timeout.Infinite, Timeout.Infinite);
+            this.monitoringTimer = new System.Threading.Timer(this.MonitoringCallback, null, Timeout.Infinite, Timeout.Infinite);
         }
 
         public async Task InitializeAsync()
         {
-            _logger.LogInformation("Initializing ConditionalProfileService");
-            
+            this.logger.LogInformation("Initializing ConditionalProfileService");
+
             // Load initial system state
-            _lastSystemState = await GetSystemStateAsync();
-            
+            this.lastSystemState = await this.GetSystemStateAsync();
+
             // Create some default profiles for demonstration
-            await CreateDefaultProfilesAsync();
+            await this.CreateDefaultProfilesAsync();
         }
 
         public async Task AddProfileAsync(ConditionalProcessProfile profile)
         {
-            await _profileLock.WaitAsync();
+            await this.profileLock.WaitAsync();
             try
             {
-                var (isValid, errors) = await ValidateProfileAsync(profile);
+                var (isValid, errors) = await this.ValidateProfileAsync(profile);
                 if (!isValid)
                 {
                     throw new ArgumentException($"Invalid profile: {string.Join(", ", errors)}");
                 }
 
-                _profiles.Add(profile);
-                _logger.LogInformation("Added conditional profile: {ProfileName} for process {ProcessName}", 
+                this.profiles.Add(profile);
+                this.logger.LogInformation(
+                    "Added conditional profile: {ProfileName} for process {ProcessName}",
                     profile.Name, profile.ProcessName);
             }
             finally
             {
-                _profileLock.Release();
+                this.profileLock.Release();
             }
         }
 
         public async Task RemoveProfileAsync(string profileId)
         {
-            await _profileLock.WaitAsync();
+            await this.profileLock.WaitAsync();
             try
             {
-                var profile = _profiles.FirstOrDefault(p => p.Id == profileId);
+                var profile = this.profiles.FirstOrDefault(p => p.Id == profileId);
                 if (profile != null)
                 {
-                    _profiles.Remove(profile);
-                    _logger.LogInformation("Removed conditional profile: {ProfileName}", profile.Name);
+                    this.profiles.Remove(profile);
+                    this.logger.LogInformation("Removed conditional profile: {ProfileName}", profile.Name);
                 }
             }
             finally
             {
-                _profileLock.Release();
+                this.profileLock.Release();
             }
         }
 
         public async Task UpdateProfileAsync(ConditionalProcessProfile profile)
         {
-            await _profileLock.WaitAsync();
+            await this.profileLock.WaitAsync();
             try
             {
-                var existingProfile = _profiles.FirstOrDefault(p => p.Id == profile.Id);
+                var existingProfile = this.profiles.FirstOrDefault(p => p.Id == profile.Id);
                 if (existingProfile != null)
                 {
-                    var index = _profiles.IndexOf(existingProfile);
-                    _profiles[index] = profile;
-                    _logger.LogInformation("Updated conditional profile: {ProfileName}", profile.Name);
+                    var index = this.profiles.IndexOf(existingProfile);
+                    this.profiles[index] = profile;
+                    this.logger.LogInformation("Updated conditional profile: {ProfileName}", profile.Name);
                 }
             }
             finally
             {
-                _profileLock.Release();
+                this.profileLock.Release();
             }
         }
 
         public async Task<List<ConditionalProcessProfile>> GetAllProfilesAsync()
         {
-            await _profileLock.WaitAsync();
+            await this.profileLock.WaitAsync();
             try
             {
-                return _profiles.ToList();
+                return this.profiles.ToList();
             }
             finally
             {
-                _profileLock.Release();
+                this.profileLock.Release();
             }
         }
 
         public async Task<List<ConditionalProcessProfile>> GetProfilesForProcessAsync(string processName)
         {
-            await _profileLock.WaitAsync();
+            await this.profileLock.WaitAsync();
             try
             {
-                return _profiles
+                return this.profiles
                     .Where(p => p.ProcessName.Equals(processName, StringComparison.OrdinalIgnoreCase))
                     .ToList();
             }
             finally
             {
-                _profileLock.Release();
+                this.profileLock.Release();
             }
         }
 
         public async Task<List<ConditionalProcessProfile>> EvaluateProfilesAsync(ProcessModel process)
         {
-            var systemState = await GetSystemStateAsync();
+            var systemState = await this.GetSystemStateAsync();
             var applicableProfiles = new List<ConditionalProcessProfile>();
 
-            await _profileLock.WaitAsync();
+            await this.profileLock.WaitAsync();
             try
             {
-                var processProfiles = _profiles
+                var processProfiles = this.profiles
                     .Where(p => p.ProcessName.Equals(process.Name, StringComparison.OrdinalIgnoreCase))
                     .ToList();
 
@@ -184,7 +187,7 @@ namespace ThreadPilot.Services
             }
             finally
             {
-                _profileLock.Release();
+                this.profileLock.Release();
             }
 
             return applicableProfiles;
@@ -194,15 +197,15 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var applicableProfiles = await EvaluateProfilesAsync(process);
-                
+                var applicableProfiles = await this.EvaluateProfilesAsync(process);
+
                 if (!applicableProfiles.Any())
                 {
                     return false;
                 }
 
                 ConditionalProcessProfile selectedProfile;
-                
+
                 if (applicableProfiles.Count == 1)
                 {
                     selectedProfile = applicableProfiles[0];
@@ -210,31 +213,31 @@ namespace ThreadPilot.Services
                 else
                 {
                     // Handle conflicts
-                    selectedProfile = ResolveProfileConflict(applicableProfiles, process);
-                    
-                    ProfileConflictResolved?.Invoke(this, new ProfileConflictEventArgs
+                    selectedProfile = this.ResolveProfileConflict(applicableProfiles, process);
+
+                    this.ProfileConflictResolved?.Invoke(this, new ProfileConflictEventArgs
                     {
                         ConflictingProfiles = applicableProfiles,
                         Process = process,
                         SelectedProfile = selectedProfile,
-                        Resolution = "Priority-based selection"
+                        Resolution = "Priority-based selection",
                     });
                 }
 
                 // Apply the profile (simplified - would use actual process service)
-                var success = await ApplyProfileToProcessAsync(process, selectedProfile);
-                
+                var success = await this.ApplyProfileToProcessAsync(process, selectedProfile);
+
                 if (success)
                 {
                     selectedProfile.MarkAsApplied();
-                    
-                    ProfileApplied?.Invoke(this, new ProfileApplicationEventArgs
+
+                    this.ProfileApplied?.Invoke(this, new ProfileApplicationEventArgs
                     {
                         Profile = selectedProfile,
                         Process = process,
-                        SystemState = await GetSystemStateAsync(),
+                        SystemState = await this.GetSystemStateAsync(),
                         WasApplied = true,
-                        Reason = "Conditions satisfied"
+                        Reason = "Conditions satisfied",
                     });
                 }
 
@@ -242,58 +245,65 @@ namespace ThreadPilot.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error applying profile for process {ProcessName}", process.Name);
+                this.logger.LogError(ex, "Error applying profile for process {ProcessName}", process.Name);
                 return false;
             }
         }
 
         public async Task<SystemState> GetSystemStateAsync()
         {
-            return await _retryPolicy.ExecuteAsync(async () =>
+            return await this.retryPolicy.ExecuteAsync(
+                async () =>
             {
                 var systemState = new SystemState
                 {
                     CurrentTime = DateTime.Now,
-                    CpuUsage = await GetCpuUsageAsync(),
-                    MemoryUsage = await GetMemoryUsageAsync(),
-                    ProcessCount = await GetProcessCountAsync(),
-                    IsOnBattery = GetBatteryStatus(),
-                    BatteryLevel = GetBatteryLevel(),
-                    IsUserIdle = GetUserIdleStatus(),
-                    UserIdleTime = GetUserIdleTime(),
-                    NetworkActivity = await GetNetworkActivityAsync()
+                    CpuUsage = await this.GetCpuUsageAsync(),
+                    MemoryUsage = await this.GetMemoryUsageAsync(),
+                    ProcessCount = await this.GetProcessCountAsync(),
+                    IsOnBattery = this.GetBatteryStatus(),
+                    BatteryLevel = this.GetBatteryLevel(),
+                    IsUserIdle = this.GetUserIdleStatus(),
+                    UserIdleTime = this.GetUserIdleTime(),
+                    NetworkActivity = await this.GetNetworkActivityAsync(),
                 };
 
                 // Check if system state changed significantly
-                if (HasSystemStateChangedSignificantly(systemState, _lastSystemState))
+                if (this.HasSystemStateChangedSignificantly(systemState, this.lastSystemState))
                 {
-                    SystemStateChanged?.Invoke(this, systemState);
-                    _lastSystemState = systemState;
+                    this.SystemStateChanged?.Invoke(this, systemState);
+                    this.lastSystemState = systemState;
                 }
 
                 return systemState;
-            }, _retryPolicy.CreateProcessOperationPolicy());
+            }, this.retryPolicy.CreateProcessOperationPolicy());
         }
 
         public async Task StartMonitoringAsync()
         {
-            if (_isMonitoring) return;
+            if (this.isMonitoring)
+            {
+                return;
+            }
 
-            _logger.LogInformation("Starting conditional profile monitoring");
-            _isMonitoring = true;
-            
+            this.logger.LogInformation("Starting conditional profile monitoring");
+            this.isMonitoring = true;
+
             // Start monitoring timer (check every 10 seconds)
-            _monitoringTimer.Change(TimeSpan.Zero, TimeSpan.FromSeconds(10));
+            this.monitoringTimer.Change(TimeSpan.Zero, TimeSpan.FromSeconds(10));
         }
 
         public async Task StopMonitoringAsync()
         {
-            if (!_isMonitoring) return;
+            if (!this.isMonitoring)
+            {
+                return;
+            }
 
-            _logger.LogInformation("Stopping conditional profile monitoring");
-            _isMonitoring = false;
-            
-            _monitoringTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            this.logger.LogInformation("Stopping conditional profile monitoring");
+            this.isMonitoring = false;
+
+            this.monitoringTimer.Change(Timeout.Infinite, Timeout.Infinite);
         }
 
         public ConditionalProcessProfile ResolveProfileConflict(List<ConditionalProcessProfile> conflictingProfiles, ProcessModel process)
@@ -330,7 +340,7 @@ namespace ThreadPilot.Services
                             }
                         }
                     }
-                }
+                },
             };
         }
 
@@ -339,19 +349,27 @@ namespace ThreadPilot.Services
             var errors = new List<string>();
 
             if (string.IsNullOrWhiteSpace(profile.Name))
+            {
                 errors.Add("Profile name is required");
+            }
 
             if (string.IsNullOrWhiteSpace(profile.ProcessName))
+            {
                 errors.Add("Process name is required");
+            }
 
             if (profile.AutoApplyDelay < TimeSpan.Zero)
+            {
                 errors.Add("Auto-apply delay cannot be negative");
+            }
 
             // Validate condition groups
             foreach (var group in profile.ConditionGroups)
             {
                 if (!group.Conditions.Any() && !group.SubGroups.Any())
+                {
                     errors.Add($"Condition group '{group.Name}' must have at least one condition or sub-group");
+                }
             }
 
             return (errors.Count == 0, errors);
@@ -359,14 +377,14 @@ namespace ThreadPilot.Services
 
         public async Task<string> ExportProfilesToJsonAsync()
         {
-            await _profileLock.WaitAsync();
+            await this.profileLock.WaitAsync();
             try
             {
-                return JsonSerializer.Serialize(_profiles, new JsonSerializerOptions { WriteIndented = true });
+                return JsonSerializer.Serialize(this.profiles, new JsonSerializerOptions { WriteIndented = true });
             }
             finally
             {
-                _profileLock.Release();
+                this.profileLock.Release();
             }
         }
 
@@ -375,62 +393,69 @@ namespace ThreadPilot.Services
             try
             {
                 var importedProfiles = JsonSerializer.Deserialize<List<ConditionalProcessProfile>>(json);
-                if (importedProfiles == null) return 0;
+                if (importedProfiles == null)
+                {
+                    return 0;
+                }
 
-                await _profileLock.WaitAsync();
+                await this.profileLock.WaitAsync();
                 try
                 {
                     var validProfiles = 0;
                     foreach (var profile in importedProfiles)
                     {
-                        var (isValid, _) = await ValidateProfileAsync(profile);
+                        var (isValid, _) = await this.ValidateProfileAsync(profile);
                         if (isValid)
                         {
-                            _profiles.Add(profile);
+                            this.profiles.Add(profile);
                             validProfiles++;
                         }
                     }
 
-                    _logger.LogInformation("Imported {ValidProfiles} valid profiles out of {TotalProfiles}", 
+                    this.logger.LogInformation(
+                        "Imported {ValidProfiles} valid profiles out of {TotalProfiles}",
                         validProfiles, importedProfiles.Count);
-                    
+
                     return validProfiles;
                 }
                 finally
                 {
-                    _profileLock.Release();
+                    this.profileLock.Release();
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error importing profiles from JSON");
+                this.logger.LogError(ex, "Error importing profiles from JSON");
                 return 0;
             }
         }
 
         private void MonitoringCallback(object? state)
         {
-            TaskSafety.FireAndForget(MonitoringCallbackAsync(), ex =>
+            TaskSafety.FireAndForget(this.MonitoringCallbackAsync(), ex =>
             {
-                _logger.LogWarning(ex, "Error during profile monitoring cycle");
+                this.logger.LogWarning(ex, "Error during profile monitoring cycle");
             });
         }
 
         private async Task MonitoringCallbackAsync()
         {
-            if (!_isMonitoring) return;
+            if (!this.isMonitoring)
+            {
+                return;
+            }
 
             try
             {
-                var processes = await _processService.GetProcessesAsync();
+                var processes = await this.processService.GetProcessesAsync();
                 foreach (var process in processes)
                 {
-                    await ApplyBestProfileAsync(process);
+                    await this.ApplyBestProfileAsync(process);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Error during profile monitoring cycle");
+                this.logger.LogWarning(ex, "Error during profile monitoring cycle");
             }
         }
 
@@ -439,13 +464,14 @@ namespace ThreadPilot.Services
             try
             {
                 // Simplified profile application - would use actual process service methods
-                _logger.LogInformation("Applying profile {ProfileName} to process {ProcessName}",
+                this.logger.LogInformation(
+                    "Applying profile {ProfileName} to process {ProcessName}",
                     profile.Name, process.Name);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error applying profile {ProfileName} to process {ProcessName}",
+                this.logger.LogError(ex, "Error applying profile {ProfileName} to process {ProcessName}",
                     profile.Name, process.Name);
                 return false;
             }
@@ -486,10 +512,10 @@ namespace ThreadPilot.Services
                             }
                         }
                     }
-                }
+                },
             };
 
-            await AddProfileAsync(gameProfile);
+            await this.AddProfileAsync(gameProfile);
         }
 
         private Task<double> GetCpuUsageAsync()
@@ -506,7 +532,7 @@ namespace ThreadPilot.Services
 
         private async Task<int> GetProcessCountAsync()
         {
-            var processes = await _processService.GetProcessesAsync();
+            var processes = await this.processService.GetProcessesAsync();
             return processes.Count;
         }
 
@@ -522,7 +548,7 @@ namespace ThreadPilot.Services
 
         private bool GetUserIdleStatus()
         {
-            return GetUserIdleTime() > TimeSpan.FromMinutes(5);
+            return this.GetUserIdleTime() > TimeSpan.FromMinutes(5);
         }
 
         private TimeSpan GetUserIdleTime()
@@ -549,21 +575,21 @@ namespace ThreadPilot.Services
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!_disposed)
+            if (!this.disposed)
             {
                 if (disposing)
                 {
-                    _monitoringTimer?.Dispose();
-                    _profileLock?.Dispose();
-                    _logger.LogInformation("ConditionalProfileService disposed");
+                    this.monitoringTimer?.Dispose();
+                    this.profileLock?.Dispose();
+                    this.logger.LogInformation("ConditionalProfileService disposed");
                 }
-                _disposed = true;
+                this.disposed = true;
             }
         }
 
         public void Dispose()
         {
-            Dispose(disposing: true);
+            this.Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
     }

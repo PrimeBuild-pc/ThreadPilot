@@ -14,37 +14,37 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using System.Windows.Input;
-using System.Windows.Interop;
-using Microsoft.Extensions.Logging;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Runtime.InteropServices;
+    using System.Threading.Tasks;
+    using System.Windows.Input;
+    using System.Windows.Interop;
+    using Microsoft.Extensions.Logging;
+
     /// <summary>
-    /// Service for managing global keyboard shortcuts using Windows API
+    /// Service for managing global keyboard shortcuts using Windows API.
     /// </summary>
     public class KeyboardShortcutService : IKeyboardShortcutService, IDisposable
     {
-        private readonly ILogger<KeyboardShortcutService> _logger;
-        private readonly IApplicationSettingsService _settingsService;
-        private readonly Dictionary<string, KeyboardShortcut> _registeredShortcuts = new();
-        private readonly Dictionary<int, string> _hotkeyIdToAction = new();
-        private int _nextHotkeyId = 1;
-        private IntPtr _windowHandle = IntPtr.Zero;
-        private HwndSource? _hwndSource;
-        private bool _disposed;
+        private readonly ILogger<KeyboardShortcutService> logger;
+        private readonly IApplicationSettingsService settingsService;
+        private readonly Dictionary<string, KeyboardShortcut> registeredShortcuts = new();
+        private readonly Dictionary<int, string> hotkeyIdToAction = new();
+        private int nextHotkeyId = 1;
+        private IntPtr windowHandle = IntPtr.Zero;
+        private HwndSource? hwndSource;
+        private bool disposed;
 
         // Windows API constants
-        private const int WM_HOTKEY = 0x0312;
-        private const int MOD_ALT = 0x0001;
-        private const int MOD_CONTROL = 0x0002;
-        private const int MOD_SHIFT = 0x0004;
-        private const int MOD_WIN = 0x0008;
+        private const int WMHOTKEY = 0x0312;
+        private const int MODALT = 0x0001;
+        private const int MODCONTROL = 0x0002;
+        private const int MODSHIFT = 0x0004;
+        private const int MODWIN = 0x0008;
 
         // Windows API functions
         [DllImport("user32.dll")]
@@ -59,8 +59,8 @@ namespace ThreadPilot.Services
             ILogger<KeyboardShortcutService> logger,
             IApplicationSettingsService settingsService)
         {
-            _logger = logger;
-            _settingsService = settingsService;
+            this.logger = logger;
+            this.settingsService = settingsService;
         }
 
         public async Task<bool> RegisterShortcutAsync(string actionName, Key key, ModifierKeys modifiers)
@@ -68,19 +68,21 @@ namespace ThreadPilot.Services
             try
             {
                 if (string.IsNullOrEmpty(actionName))
+                {
                     return false;
+                }
 
                 // Check if shortcut is already registered
-                if (await IsShortcutRegisteredAsync(key, modifiers))
+                if (await this.IsShortcutRegisteredAsync(key, modifiers))
                 {
-                    _logger.LogWarning("Shortcut {Key}+{Modifiers} is already registered", key, modifiers);
+                    this.logger.LogWarning("Shortcut {Key}+{Modifiers} is already registered", key, modifiers);
                     return false;
                 }
 
                 // Unregister existing shortcut for this action if it exists
-                if (_registeredShortcuts.ContainsKey(actionName))
+                if (this.registeredShortcuts.ContainsKey(actionName))
                 {
-                    await UnregisterShortcutAsync(actionName);
+                    await this.UnregisterShortcutAsync(actionName);
                 }
 
                 var shortcut = new KeyboardShortcut
@@ -88,35 +90,37 @@ namespace ThreadPilot.Services
                     ActionName = actionName,
                     Key = key,
                     Modifiers = modifiers,
-                    Description = GetActionDescription(actionName),
+                    Description = this.GetActionDescription(actionName),
                     IsEnabled = true,
-                    IsGlobal = true
+                    IsGlobal = true,
                 };
 
                 // Register with Windows API
-                var hotkeyId = _nextHotkeyId++;
-                var winModifiers = ConvertToWinModifiers(modifiers);
+                var hotkeyId = this.nextHotkeyId++;
+                var winModifiers = this.ConvertToWinModifiers(modifiers);
                 var virtualKey = KeyInterop.VirtualKeyFromKey(key);
 
-                if (RegisterHotKey(_windowHandle, hotkeyId, winModifiers, (uint)virtualKey))
+                if (RegisterHotKey(this.windowHandle, hotkeyId, winModifiers, (uint)virtualKey))
                 {
-                    _registeredShortcuts[actionName] = shortcut;
-                    _hotkeyIdToAction[hotkeyId] = actionName;
-                    
-                    _logger.LogInformation("Registered global shortcut {Shortcut} for action {Action}", 
+                    this.registeredShortcuts[actionName] = shortcut;
+                    this.hotkeyIdToAction[hotkeyId] = actionName;
+
+                    this.logger.LogInformation(
+                        "Registered global shortcut {Shortcut} for action {Action}",
                         shortcut.ToString(), actionName);
                     return true;
                 }
                 else
                 {
-                    _logger.LogError("Failed to register global shortcut {Shortcut} for action {Action}", 
+                    this.logger.LogError(
+                        "Failed to register global shortcut {Shortcut} for action {Action}",
                         shortcut.ToString(), actionName);
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error registering shortcut for action {Action}", actionName);
+                this.logger.LogError(ex, "Error registering shortcut for action {Action}", actionName);
                 return false;
             }
         }
@@ -125,34 +129,40 @@ namespace ThreadPilot.Services
         {
             try
             {
-                if (!_registeredShortcuts.TryGetValue(actionName, out var shortcut))
+                if (!this.registeredShortcuts.TryGetValue(actionName, out var shortcut))
+                {
                     return false;
+                }
 
                 // Find the hotkey ID
-                var hotkeyId = _hotkeyIdToAction.FirstOrDefault(kvp => kvp.Value == actionName).Key;
+                var hotkeyId = this.hotkeyIdToAction.FirstOrDefault(kvp => kvp.Value == actionName).Key;
                 if (hotkeyId == 0)
+                {
                     return false;
+                }
 
                 // Unregister from Windows API
-                if (UnregisterHotKey(_windowHandle, hotkeyId))
+                if (UnregisterHotKey(this.windowHandle, hotkeyId))
                 {
-                    _registeredShortcuts.Remove(actionName);
-                    _hotkeyIdToAction.Remove(hotkeyId);
-                    
-                    _logger.LogInformation("Unregistered shortcut {Shortcut} for action {Action}", 
+                    this.registeredShortcuts.Remove(actionName);
+                    this.hotkeyIdToAction.Remove(hotkeyId);
+
+                    this.logger.LogInformation(
+                        "Unregistered shortcut {Shortcut} for action {Action}",
                         shortcut.ToString(), actionName);
                     return true;
                 }
                 else
                 {
-                    _logger.LogError("Failed to unregister shortcut {Shortcut} for action {Action}", 
+                    this.logger.LogError(
+                        "Failed to unregister shortcut {Shortcut} for action {Action}",
                         shortcut.ToString(), actionName);
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error unregistering shortcut for action {Action}", actionName);
+                this.logger.LogError(ex, "Error unregistering shortcut for action {Action}", actionName);
                 return false;
             }
         }
@@ -160,46 +170,46 @@ namespace ThreadPilot.Services
         public async Task<bool> UpdateShortcutAsync(string actionName, Key key, ModifierKeys modifiers)
         {
             // Unregister existing shortcut and register new one
-            await UnregisterShortcutAsync(actionName);
-            return await RegisterShortcutAsync(actionName, key, modifiers);
+            await this.UnregisterShortcutAsync(actionName);
+            return await this.RegisterShortcutAsync(actionName, key, modifiers);
         }
 
         public async Task<Dictionary<string, KeyboardShortcut>> GetRegisteredShortcutsAsync()
         {
-            return new Dictionary<string, KeyboardShortcut>(_registeredShortcuts);
+            return new Dictionary<string, KeyboardShortcut>(this.registeredShortcuts);
         }
 
         public async Task<bool> IsShortcutRegisteredAsync(Key key, ModifierKeys modifiers)
         {
-            return _registeredShortcuts.Values.Any(s => s.Key == key && s.Modifiers == modifiers);
+            return this.registeredShortcuts.Values.Any(s => s.Key == key && s.Modifiers == modifiers);
         }
 
         public async Task LoadShortcutsFromSettingsAsync()
         {
             try
             {
-                var settings = _settingsService.Settings;
+                var settings = this.settingsService.Settings;
                 if (settings.KeyboardShortcuts != null)
                 {
                     foreach (var shortcutSetting in settings.KeyboardShortcuts)
                     {
                         if (shortcutSetting.IsEnabled)
                         {
-                            await RegisterShortcutAsync(shortcutSetting.ActionName, shortcutSetting.Key, shortcutSetting.Modifiers);
+                            await this.RegisterShortcutAsync(shortcutSetting.ActionName, shortcutSetting.Key, shortcutSetting.Modifiers);
                         }
                     }
                 }
                 else
                 {
                     // Load default shortcuts if none are configured
-                    await LoadDefaultShortcutsAsync();
+                    await this.LoadDefaultShortcutsAsync();
                 }
 
-                _logger.LogInformation("Loaded {Count} keyboard shortcuts from settings", _registeredShortcuts.Count);
+                this.logger.LogInformation("Loaded {Count} keyboard shortcuts from settings", this.registeredShortcuts.Count);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading shortcuts from settings");
+                this.logger.LogError(ex, "Error loading shortcuts from settings");
             }
         }
 
@@ -207,24 +217,24 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var settings = _settingsService.Settings;
-                settings.KeyboardShortcuts = _registeredShortcuts.Values.ToList();
-                await _settingsService.UpdateSettingsAsync(settings);
-                
-                _logger.LogInformation("Saved {Count} keyboard shortcuts to settings", _registeredShortcuts.Count);
+                var settings = this.settingsService.Settings;
+                settings.KeyboardShortcuts = this.registeredShortcuts.Values.ToList();
+                await this.settingsService.UpdateSettingsAsync(settings);
+
+                this.logger.LogInformation("Saved {Count} keyboard shortcuts to settings", this.registeredShortcuts.Count);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error saving shortcuts to settings");
+                this.logger.LogError(ex, "Error saving shortcuts to settings");
             }
         }
 
         public async Task ClearAllShortcutsAsync()
         {
-            var actions = _registeredShortcuts.Keys.ToList();
+            var actions = this.registeredShortcuts.Keys.ToList();
             foreach (var action in actions)
             {
-                await UnregisterShortcutAsync(action);
+                await this.UnregisterShortcutAsync(action);
             }
         }
 
@@ -239,7 +249,7 @@ namespace ThreadPilot.Services
                     Modifiers = ModifierKeys.Control | ModifierKeys.Shift,
                     Description = "Show/Hide main window",
                     IsEnabled = true,
-                    IsGlobal = true
+                    IsGlobal = true,
                 },
                 [ShortcutActions.ToggleMonitoring] = new KeyboardShortcut
                 {
@@ -248,7 +258,7 @@ namespace ThreadPilot.Services
                     Modifiers = ModifierKeys.Control | ModifierKeys.Shift,
                     Description = "Toggle process monitoring",
                     IsEnabled = true,
-                    IsGlobal = true
+                    IsGlobal = true,
                 },
                 [ShortcutActions.PowerPlanHighPerformance] = new KeyboardShortcut
                 {
@@ -257,7 +267,7 @@ namespace ThreadPilot.Services
                     Modifiers = ModifierKeys.Control | ModifierKeys.Shift,
                     Description = "Switch to High Performance power plan",
                     IsEnabled = true,
-                    IsGlobal = true
+                    IsGlobal = true,
                 },
                 [ShortcutActions.OpenTweaks] = new KeyboardShortcut
                 {
@@ -267,63 +277,74 @@ namespace ThreadPilot.Services
                     Description = "Open System Tweaks tab",
                     IsEnabled = true,
                     IsGlobal = true
-                }
+                },
             };
         }
 
         public void SetWindowHandle(IntPtr windowHandle)
         {
-            _windowHandle = windowHandle;
-            
+            this.windowHandle = windowHandle;
+
             // Set up message hook for hotkey messages
-            if (_windowHandle != IntPtr.Zero)
+            if (this.windowHandle != nint.Zero)
             {
-                _hwndSource = HwndSource.FromHwnd(_windowHandle);
-                if (_hwndSource != null)
+                this.hwndSource = HwndSource.FromHwnd(this.windowHandle);
+                if (this.hwndSource != null)
                 {
-                    _hwndSource.AddHook(WndProc);
+                    this.hwndSource.AddHook(this.WndProc);
                 }
             }
         }
 
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
-            if (msg == WM_HOTKEY)
+            if (msg == WMHOTKEY)
             {
                 var hotkeyId = wParam.ToInt32();
-                if (_hotkeyIdToAction.TryGetValue(hotkeyId, out var actionName) &&
-                    _registeredShortcuts.TryGetValue(actionName, out var shortcut))
+                if (this.hotkeyIdToAction.TryGetValue(hotkeyId, out var actionName) &&
+                    this.registeredShortcuts.TryGetValue(actionName, out var shortcut))
                 {
-                    ShortcutActivated?.Invoke(this, new ShortcutActivatedEventArgs(actionName, shortcut));
+                    this.ShortcutActivated?.Invoke(this, new ShortcutActivatedEventArgs(actionName, shortcut));
                     handled = true;
                 }
             }
-            
+
             return IntPtr.Zero;
         }
 
         private async Task LoadDefaultShortcutsAsync()
         {
-            var defaultShortcuts = GetDefaultShortcuts();
+            var defaultShortcuts = this.GetDefaultShortcuts();
             foreach (var shortcut in defaultShortcuts.Values)
             {
-                await RegisterShortcutAsync(shortcut.ActionName, shortcut.Key, shortcut.Modifiers);
+                await this.RegisterShortcutAsync(shortcut.ActionName, shortcut.Key, shortcut.Modifiers);
             }
         }
 
         private uint ConvertToWinModifiers(ModifierKeys modifiers)
         {
             uint winModifiers = 0;
-            
+
             if (modifiers.HasFlag(ModifierKeys.Alt))
-                winModifiers |= MOD_ALT;
+            {
+                winModifiers |= MODALT;
+            }
+
             if (modifiers.HasFlag(ModifierKeys.Control))
-                winModifiers |= MOD_CONTROL;
+            {
+                winModifiers |= MODCONTROL;
+            }
+
             if (modifiers.HasFlag(ModifierKeys.Shift))
-                winModifiers |= MOD_SHIFT;
+            {
+                winModifiers |= MODSHIFT;
+            }
+
             if (modifiers.HasFlag(ModifierKeys.Windows))
-                winModifiers |= MOD_WIN;
-                
+            {
+                winModifiers |= MODWIN;
+            }
+
             return winModifiers;
         }
 
@@ -342,23 +363,23 @@ namespace ThreadPilot.Services
                 ShortcutActions.OpenSettings => "Open Settings tab",
                 ShortcutActions.OpenTweaks => "Open System Tweaks tab",
                 ShortcutActions.ExitApplication => "Exit application",
-                _ => actionName
+                _ => actionName,
             };
         }
 
         public void Dispose()
         {
-            if (!_disposed)
+            if (!this.disposed)
             {
-                ClearAllShortcutsAsync().Wait();
-                
-                if (_hwndSource != null)
+                this.ClearAllShortcutsAsync().Wait();
+
+                if (this.hwndSource != null)
                 {
-                    _hwndSource.RemoveHook(WndProc);
-                    _hwndSource = null;
+                    this.hwndSource.RemoveHook(this.WndProc);
+                    this.hwndSource = null;
                 }
-                
-                _disposed = true;
+
+                this.disposed = true;
             }
         }
     }

@@ -14,23 +14,23 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Threading.Tasks;
-using ThreadPilot.Models;
-using ThreadPilot.Services;
-using ThreadPilot.ViewModels;
-
 namespace ThreadPilot
 {
+    using System;
+    using System.Threading.Tasks;
+    using CommunityToolkit.Mvvm.ComponentModel;
+    using CommunityToolkit.Mvvm.Input;
+    using Microsoft.Extensions.Logging;
+    using ThreadPilot.Models;
+    using ThreadPilot.Services;
+    using ThreadPilot.ViewModels;
+
     public partial class MainWindowViewModel : BaseViewModel
     {
-        private readonly IProcessMonitorManagerService? _processMonitorManagerService;
-        private readonly INotificationService? _notificationService;
-        private readonly IElevationService? _elevationService;
-        private readonly ISecurityService? _securityService;
+        private readonly IProcessMonitorManagerService? processMonitorManagerService;
+        private readonly INotificationService? notificationService;
+        private readonly IElevationService? elevationService;
+        private readonly ISecurityService? securityService;
 
         [ObservableProperty]
         private bool isProcessMonitoringActive = false;
@@ -56,65 +56,74 @@ namespace ThreadPilot
             ISecurityService? securityService = null)
             : base(logger, enhancedLoggingService)
         {
-            _processMonitorManagerService = processMonitorManagerService;
-            _notificationService = notificationService;
-            _elevationService = elevationService;
-            _securityService = securityService;
+            this.processMonitorManagerService = processMonitorManagerService;
+            this.notificationService = notificationService;
+            this.elevationService = elevationService;
+            this.securityService = securityService;
         }
 
         public override async Task InitializeAsync()
         {
-            await ExecuteAsync(async () =>
+            await this.ExecuteAsync(
+                async () =>
             {
                 // Subscribe to service events
-                if (_processMonitorManagerService != null)
+                if (this.processMonitorManagerService != null)
                 {
-                    _processMonitorManagerService.ServiceStatusChanged += OnServiceStatusChanged;
+                    this.processMonitorManagerService.ServiceStatusChanged += this.OnServiceStatusChanged;
                 }
 
                 // Initialize status
-                await UpdateStatusAsync();
-                UpdateElevationStatus();
+                await this.UpdateStatusAsync();
+                this.UpdateElevationStatus();
 
-                await LogUserActionAsync("MainWindow", "Initialized main window", "Application startup");
+                await this.LogUserActionAsync("MainWindow", "Initialized main window", "Application startup");
             }, "Initializing main window...");
         }
 
         [RelayCommand]
         private async Task ToggleProcessMonitoringAsync()
         {
-            if (_processMonitorManagerService == null) return;
-
-            await ExecuteAsync(async () =>
+            if (this.processMonitorManagerService == null)
             {
-                if (IsProcessMonitoringActive)
+                return;
+            }
+
+            await this.ExecuteAsync(
+                async () =>
+            {
+                if (this.IsProcessMonitoringActive)
                 {
-                    await _processMonitorManagerService.StopAsync();
-                    await LogUserActionAsync("ProcessMonitoring", "Stopped process monitoring", "User action");
+                    await this.processMonitorManagerService.StopAsync();
+                    await this.LogUserActionAsync("ProcessMonitoring", "Stopped process monitoring", "User action");
                 }
                 else
                 {
-                    await _processMonitorManagerService.StartAsync();
-                    await LogUserActionAsync("ProcessMonitoring", "Started process monitoring", "User action");
+                    await this.processMonitorManagerService.StartAsync();
+                    await this.LogUserActionAsync("ProcessMonitoring", "Started process monitoring", "User action");
                 }
-            }, IsProcessMonitoringActive ? "Stopping monitoring..." : "Starting monitoring...");
+            }, this.IsProcessMonitoringActive ? "Stopping monitoring..." : "Starting monitoring...");
         }
 
         [RelayCommand]
         private async Task RequestElevationAsync()
         {
-            if (_elevationService == null) return;
-
-            await ExecuteAsync(async () =>
+            if (this.elevationService == null)
             {
-                var success = await _elevationService.RequestElevationIfNeeded();
+                return;
+            }
+
+            await this.ExecuteAsync(
+                async () =>
+            {
+                var success = await this.elevationService.RequestElevationIfNeeded();
                 if (success)
                 {
-                    await LogUserActionAsync("Elevation", "Requested elevation", "User action");
+                    await this.LogUserActionAsync("Elevation", "Requested elevation", "User action");
                 }
                 else
                 {
-                    await LogUserActionAsync("Elevation", "Elevation request failed or cancelled", "User action");
+                    await this.LogUserActionAsync("Elevation", "Elevation request failed or cancelled", "User action");
                 }
             }, "Requesting elevation...");
         }
@@ -124,36 +133,36 @@ namespace ThreadPilot
             try
             {
                 // Update process monitoring status
-                if (_processMonitorManagerService != null)
+                if (this.processMonitorManagerService != null)
                 {
-                    IsProcessMonitoringActive = _processMonitorManagerService.IsRunning;
-                    ProcessMonitoringStatusText = IsProcessMonitoringActive
+                    this.IsProcessMonitoringActive = this.processMonitorManagerService.IsRunning;
+                    this.ProcessMonitoringStatusText = this.IsProcessMonitoringActive
                         ? "Process Monitoring: Active"
                         : "Process Monitoring: Inactive";
                 }
 
                 // Update elevation status
-                UpdateElevationStatus();
+                this.UpdateElevationStatus();
             }
             catch (Exception ex)
             {
-                SetError("Failed to update status", ex);
+                this.SetError("Failed to update status", ex);
             }
         }
 
         private void UpdateElevationStatus()
         {
-            if (_elevationService == null)
+            if (this.elevationService == null)
             {
-                IsRunningAsAdministrator = false;
-                ElevationStatusText = "Elevation service not available";
-                ShowElevationPrompt = false;
+                this.IsRunningAsAdministrator = false;
+                this.ElevationStatusText = "Elevation service not available";
+                this.ShowElevationPrompt = false;
                 return;
             }
 
-            IsRunningAsAdministrator = _elevationService.IsRunningAsAdministrator();
-            ElevationStatusText = _elevationService.GetElevationStatus();
-            ShowElevationPrompt = !IsRunningAsAdministrator;
+            this.IsRunningAsAdministrator = this.elevationService.IsRunningAsAdministrator();
+            this.ElevationStatusText = this.elevationService.GetElevationStatus();
+            this.ShowElevationPrompt = !this.IsRunningAsAdministrator;
         }
 
         private void OnServiceStatusChanged(object? sender, ServiceStatusEventArgs e)
@@ -161,8 +170,8 @@ namespace ThreadPilot
             // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
             System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                IsProcessMonitoringActive = e.IsRunning;
-                ProcessMonitoringStatusText = $"Process Monitoring: {e.Status}";
+                this.IsProcessMonitoringActive = e.IsRunning;
+                this.ProcessMonitoringStatusText = $"Process Monitoring: {e.Status}";
             });
         }
 
@@ -170,24 +179,24 @@ namespace ThreadPilot
         {
             if (System.Windows.Application.Current.Dispatcher.CheckAccess())
             {
-                IsProcessMonitoringActive = isActive;
-                ProcessMonitoringStatusText = $"Process Monitoring: {status}";
+                this.IsProcessMonitoringActive = isActive;
+                this.ProcessMonitoringStatusText = $"Process Monitoring: {status}";
             }
             else
             {
                 System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    IsProcessMonitoringActive = isActive;
-                    ProcessMonitoringStatusText = $"Process Monitoring: {status}";
+                    this.IsProcessMonitoringActive = isActive;
+                    this.ProcessMonitoringStatusText = $"Process Monitoring: {status}";
                 });
             }
         }
 
         protected override void OnDispose()
         {
-            if (_processMonitorManagerService != null)
+            if (this.processMonitorManagerService != null)
             {
-                _processMonitorManagerService.ServiceStatusChanged -= OnServiceStatusChanged;
+                this.processMonitorManagerService.ServiceStatusChanged -= this.OnServiceStatusChanged;
             }
 
             base.OnDispose();

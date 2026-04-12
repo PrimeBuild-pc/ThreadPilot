@@ -14,14 +14,14 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Globalization;
-using System.Windows.Data;
-
 namespace ThreadPilot.Converters
 {
+    using System;
+    using System.Globalization;
+    using System.Windows.Data;
+
     /// <summary>
-    /// Converts boolean values to strings based on parameter format
+    /// Converts boolean values to strings based on parameter format.
     /// </summary>
     public class BoolToStringConverter : IValueConverter
     {
@@ -35,7 +35,7 @@ namespace ThreadPilot.Converters
                     return boolValue ? parts[0] : parts[1];
                 }
             }
-            
+
             return value?.ToString() ?? string.Empty;
         }
 

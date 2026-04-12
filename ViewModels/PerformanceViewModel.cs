@@ -14,30 +14,30 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.Logging;
-using ThreadPilot.Models;
-using ThreadPilot.Services;
-
 namespace ThreadPilot.ViewModels
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Collections.ObjectModel;
+    using System.Diagnostics;
+    using System.Linq;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using CommunityToolkit.Mvvm.ComponentModel;
+    using CommunityToolkit.Mvvm.Input;
+    using Microsoft.Extensions.Logging;
+    using ThreadPilot.Models;
+    using ThreadPilot.Services;
+
     public partial class PerformanceViewModel : BaseViewModel
     {
-        private readonly IPerformanceMonitoringService _performanceService;
-        private readonly IProcessService _processService;
-        private readonly IProcessPowerPlanAssociationService _associationService;
-        private readonly IPowerPlanService _powerPlanService;
-        private readonly IProcessMonitorManagerService _processMonitorManagerService;
-        private readonly ISystemTweaksService _systemTweaksService;
-        private readonly ILogger<PerformanceViewModel> _logger;
+        private readonly IPerformanceMonitoringService performanceService;
+        private readonly IProcessService processService;
+        private readonly IProcessPowerPlanAssociationService associationService;
+        private readonly IPowerPlanService powerPlanService;
+        private readonly IProcessMonitorManagerService processMonitorManagerService;
+        private readonly ISystemTweaksService systemTweaksService;
+        private readonly ILogger<PerformanceViewModel> logger;
 
         [ObservableProperty]
         private ObservableCollection<CpuCoreUsage> coreUsages = new();
@@ -153,10 +153,10 @@ namespace ThreadPilot.ViewModels
         [ObservableProperty]
         private bool isRuleCreateBusy;
 
-        private readonly Dictionary<string, DateTime> _lastRuleApplyByExecutable = new(StringComparer.OrdinalIgnoreCase);
-        private bool _monitoringWasActiveBeforeSuspend;
-        private readonly SemaphoreSlim _topProcessRefreshGate = new(1, 1);
-        private bool _pendingTopProcessRefresh;
+        private readonly Dictionary<string, DateTime> lastRuleApplyByExecutable = new(StringComparer.OrdinalIgnoreCase);
+        private bool monitoringWasActiveBeforeSuspend;
+        private readonly SemaphoreSlim topProcessRefreshGate = new(1, 1);
+        private bool pendingTopProcessRefresh;
 
         public PerformanceViewModel(
             IPerformanceMonitoringService performanceService,
@@ -165,40 +165,41 @@ namespace ThreadPilot.ViewModels
             IPowerPlanService powerPlanService,
             IProcessMonitorManagerService processMonitorManagerService,
             ISystemTweaksService systemTweaksService,
-            ILogger<PerformanceViewModel> logger) : base(logger, null)
+            ILogger<PerformanceViewModel> logger)
+            : base(logger, null)
         {
-            _performanceService = performanceService;
-            _processService = processService;
-            _associationService = associationService;
-            _powerPlanService = powerPlanService;
-            _processMonitorManagerService = processMonitorManagerService;
-            _systemTweaksService = systemTweaksService;
-            _logger = logger;
+            this.performanceService = performanceService;
+            this.processService = processService;
+            this.associationService = associationService;
+            this.powerPlanService = powerPlanService;
+            this.processMonitorManagerService = processMonitorManagerService;
+            this.systemTweaksService = systemTweaksService;
+            this.logger = logger;
 
-            _performanceService.MetricsUpdated += OnMetricsUpdated;
-            _processMonitorManagerService.ProcessPowerPlanChanged += OnProcessPowerPlanChanged;
-            _powerPlanService.PowerPlanChanged += OnPowerPlanChanged;
-            _systemTweaksService.TweakStatusChanged += OnTweakStatusChanged;
+            this.performanceService.MetricsUpdated += this.OnMetricsUpdated;
+            this.processMonitorManagerService.ProcessPowerPlanChanged += this.OnProcessPowerPlanChanged;
+            this.powerPlanService.PowerPlanChanged += this.OnPowerPlanChanged;
+            this.systemTweaksService.TweakStatusChanged += this.OnTweakStatusChanged;
         }
 
         public override async Task InitializeAsync()
         {
             try
             {
-                SetStatus("Initializing performance dashboard...");
+                this.SetStatus("Initializing performance dashboard...");
 
-                await RefreshMetricsAsync();
-                await LoadHistoricalDataAsync();
-                await LoadTopProcessesAsync();
-                await RefreshGlobalPowerPlanAsync();
+                await this.RefreshMetricsAsync();
+                await this.LoadHistoricalDataAsync();
+                await this.LoadTopProcessesAsync();
+                await this.RefreshGlobalPowerPlanAsync();
 
-                MonitoringStateText = IsMonitoring ? "Active" : "Stopped";
-                SetStatus("Performance dashboard initialized", false);
+                this.MonitoringStateText = this.IsMonitoring ? "Active" : "Stopped";
+                this.SetStatus("Performance dashboard initialized", false);
             }
             catch (Exception ex)
             {
-                SetError("Failed to initialize performance dashboard", ex);
-                _logger.LogError(ex, "Error initializing performance dashboard");
+                this.SetError("Failed to initialize performance dashboard", ex);
+                this.logger.LogError(ex, "Error initializing performance dashboard");
             }
         }
 
@@ -207,19 +208,19 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                SetStatus("Starting performance monitoring...");
-                await _performanceService.StartMonitoringAsync();
+                this.SetStatus("Starting performance monitoring...");
+                await this.performanceService.StartMonitoringAsync();
 
-                IsMonitoring = true;
-                MonitoringStatusText = "Monitoring Active";
-                MonitoringStateText = "Active";
-                AddTimelineEvent("Monitoring", "Real-time monitoring started.", "Info");
+                this.IsMonitoring = true;
+                this.MonitoringStatusText = "Monitoring Active";
+                this.MonitoringStateText = "Active";
+                this.AddTimelineEvent("Monitoring", "Real-time monitoring started.", "Info");
 
-                SetStatus("Performance monitoring started", false);
+                this.SetStatus("Performance monitoring started", false);
             }
             catch (Exception ex)
             {
-                SetError("Failed to start performance monitoring", ex);
+                this.SetError("Failed to start performance monitoring", ex);
             }
         }
 
@@ -228,19 +229,19 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                SetStatus("Stopping performance monitoring...");
-                await _performanceService.StopMonitoringAsync();
+                this.SetStatus("Stopping performance monitoring...");
+                await this.performanceService.StopMonitoringAsync();
 
-                IsMonitoring = false;
-                MonitoringStatusText = "Monitoring Stopped";
-                MonitoringStateText = "Stopped";
-                AddTimelineEvent("Monitoring", "Real-time monitoring stopped.", "Warning");
+                this.IsMonitoring = false;
+                this.MonitoringStatusText = "Monitoring Stopped";
+                this.MonitoringStateText = "Stopped";
+                this.AddTimelineEvent("Monitoring", "Real-time monitoring stopped.", "Warning");
 
-                SetStatus("Performance monitoring stopped", false);
+                this.SetStatus("Performance monitoring stopped", false);
             }
             catch (Exception ex)
             {
-                SetError("Failed to stop performance monitoring", ex);
+                this.SetError("Failed to stop performance monitoring", ex);
             }
         }
 
@@ -248,23 +249,23 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                if (!IsMonitoring)
+                if (!this.IsMonitoring)
                 {
-                    _monitoringWasActiveBeforeSuspend = false;
+                    this.monitoringWasActiveBeforeSuspend = false;
                     return;
                 }
 
-                _monitoringWasActiveBeforeSuspend = true;
-                await _performanceService.StopMonitoringAsync();
+                this.monitoringWasActiveBeforeSuspend = true;
+                await this.performanceService.StopMonitoringAsync();
 
-                IsMonitoring = false;
-                MonitoringStatusText = "Monitoring Paused";
-                MonitoringStateText = "Paused";
-                AddTimelineEvent("Monitoring", "Monitoring paused while app is minimized.", "Info");
+                this.IsMonitoring = false;
+                this.MonitoringStatusText = "Monitoring Paused";
+                this.MonitoringStateText = "Paused";
+                this.AddTimelineEvent("Monitoring", "Monitoring paused while app is minimized.", "Info");
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to suspend performance monitoring while minimized");
+                this.logger.LogWarning(ex, "Failed to suspend performance monitoring while minimized");
             }
         }
 
@@ -272,22 +273,22 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                if (!_monitoringWasActiveBeforeSuspend || IsMonitoring)
+                if (!this.monitoringWasActiveBeforeSuspend || this.IsMonitoring)
                 {
                     return;
                 }
 
-                await _performanceService.StartMonitoringAsync();
+                await this.performanceService.StartMonitoringAsync();
 
-                IsMonitoring = true;
-                MonitoringStatusText = "Monitoring Active";
-                MonitoringStateText = "Active";
-                AddTimelineEvent("Monitoring", "Monitoring resumed after restore.", "Info");
-                _monitoringWasActiveBeforeSuspend = false;
+                this.IsMonitoring = true;
+                this.MonitoringStatusText = "Monitoring Active";
+                this.MonitoringStateText = "Active";
+                this.AddTimelineEvent("Monitoring", "Monitoring resumed after restore.", "Info");
+                this.monitoringWasActiveBeforeSuspend = false;
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to resume performance monitoring after restore");
+                this.logger.LogWarning(ex, "Failed to resume performance monitoring after restore");
             }
         }
 
@@ -296,19 +297,19 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                SetStatus("Refreshing performance snapshot...");
+                this.SetStatus("Refreshing performance snapshot...");
 
-                var metrics = await _performanceService.GetSystemMetricsAsync();
-                await RefreshGlobalPowerPlanAsync();
-                await LoadTopProcessesAsync();
-                UpdateMetrics(metrics);
+                var metrics = await this.performanceService.GetSystemMetricsAsync();
+                await this.RefreshGlobalPowerPlanAsync();
+                await this.LoadTopProcessesAsync();
+                this.UpdateMetrics(metrics);
 
-                LastManualRefreshText = $"Refreshed at {DateTime.Now:HH:mm:ss}";
-                SetStatus("Performance snapshot refreshed", false);
+                this.LastManualRefreshText = $"Refreshed at {DateTime.Now:HH:mm:ss}";
+                this.SetStatus("Performance snapshot refreshed", false);
             }
             catch (Exception ex)
             {
-                SetError("Failed to refresh performance snapshot", ex);
+                this.SetError("Failed to refresh performance snapshot", ex);
             }
         }
 
@@ -317,15 +318,15 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                await _performanceService.ClearHistoricalDataAsync();
-                HistoricalData.Clear();
-                UpdateTimelineSummary();
-                AddTimelineEvent("History", "Historical metrics cleared.", "Info");
-                SetStatus("Historical data cleared", false);
+                await this.performanceService.ClearHistoricalDataAsync();
+                this.HistoricalData.Clear();
+                this.UpdateTimelineSummary();
+                this.AddTimelineEvent("History", "Historical metrics cleared.", "Info");
+                this.SetStatus("Historical data cleared", false);
             }
             catch (Exception ex)
             {
-                SetError("Failed to clear historical data", ex);
+                this.SetError("Failed to clear historical data", ex);
             }
         }
 
@@ -334,48 +335,48 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                var history = await _performanceService.GetHistoricalDataAsync(TimeSpan.FromHours(1));
-                HistoricalData = new ObservableCollection<SystemPerformanceMetrics>(history);
-                UpdateTimelineSummary();
+                var history = await this.performanceService.GetHistoricalDataAsync(TimeSpan.FromHours(1));
+                this.HistoricalData = new ObservableCollection<SystemPerformanceMetrics>(history);
+                this.UpdateTimelineSummary();
             }
             catch (Exception ex)
             {
-                SetError("Failed to load historical data", ex);
+                this.SetError("Failed to load historical data", ex);
             }
         }
 
         [RelayCommand]
         private async Task CreateRuleFromSelectedProcessAsync()
         {
-            if (SelectedHotspotProcess == null || IsRuleCreateBusy)
+            if (this.SelectedHotspotProcess == null || this.IsRuleCreateBusy)
             {
                 return;
             }
 
-            IsRuleCreateBusy = true;
+            this.IsRuleCreateBusy = true;
 
             try
             {
-                var liveProcesses = await _processService.GetProcessesAsync();
-                var targetProcess = liveProcesses.FirstOrDefault(p => p.ProcessId == SelectedHotspotProcess.ProcessId)
+                var liveProcesses = await this.processService.GetProcessesAsync();
+                var targetProcess = liveProcesses.FirstOrDefault(p => p.ProcessId == this.SelectedHotspotProcess.ProcessId)
                                    ?? liveProcesses.FirstOrDefault(p =>
-                                       string.Equals(p.Name, SelectedHotspotProcess.ProcessName, StringComparison.OrdinalIgnoreCase));
+                                       string.Equals(p.Name, this.SelectedHotspotProcess.ProcessName, StringComparison.OrdinalIgnoreCase));
 
                 if (targetProcess == null)
                 {
-                    SetStatus("Selected hotspot process is no longer running", false);
+                    this.SetStatus("Selected hotspot process is no longer running", false);
                     return;
                 }
 
-                var activePlan = await _powerPlanService.GetActivePowerPlan();
+                var activePlan = await this.powerPlanService.GetActivePowerPlan();
                 if (activePlan == null)
                 {
-                    SetStatus("Could not resolve active global power plan", false);
+                    this.SetStatus("Could not resolve active global power plan", false);
                     return;
                 }
 
                 var executableName = NormalizeExecutableName(targetProcess.Name);
-                var existing = await _associationService.FindAssociationByExecutableAsync(executableName);
+                var existing = await this.associationService.FindAssociationByExecutableAsync(executableName);
 
                 if (existing == null)
                 {
@@ -390,18 +391,18 @@ namespace ThreadPilot.ViewModels
                         Priority = 0,
                         Description = $"Created from Performance hotspot on {DateTime.Now:g}",
                         IsEnabled = true,
-                        UpdatedAt = DateTime.UtcNow
+                        UpdatedAt = DateTime.UtcNow,
                     };
 
-                    var added = await _associationService.AddAssociationAsync(association);
+                    var added = await this.associationService.AddAssociationAsync(association);
                     if (!added)
                     {
-                        SetStatus("A rule already exists and could not be created", false);
+                        this.SetStatus("A rule already exists and could not be created", false);
                         return;
                     }
 
-                    AddTimelineEvent("Rule", $"Rule created for {executableName} from hotspot panel.", "Success");
-                    SetStatus($"Rule created for {executableName} and ready for automation.", false);
+                    this.AddTimelineEvent("Rule", $"Rule created for {executableName} from hotspot panel.", "Success");
+                    this.SetStatus($"Rule created for {executableName} and ready for automation.", false);
                 }
                 else
                 {
@@ -414,41 +415,41 @@ namespace ThreadPilot.ViewModels
                     existing.Description = $"Updated from Performance hotspot on {DateTime.Now:g}";
                     existing.UpdatedAt = DateTime.UtcNow;
 
-                    var updated = await _associationService.UpdateAssociationAsync(existing);
+                    var updated = await this.associationService.UpdateAssociationAsync(existing);
                     if (!updated)
                     {
-                        SetStatus("Failed to update existing rule from hotspot", false);
+                        this.SetStatus("Failed to update existing rule from hotspot", false);
                         return;
                     }
 
-                    AddTimelineEvent("Rule", $"Rule updated for {executableName} from hotspot panel.", "Success");
-                    SetStatus($"Rule updated for {executableName} from hotspot panel.", false);
+                    this.AddTimelineEvent("Rule", $"Rule updated for {executableName} from hotspot panel.", "Success");
+                    this.SetStatus($"Rule updated for {executableName} from hotspot panel.", false);
                 }
 
-                await RefreshSelectedProcessRuleImpactAsync();
-                await LoadTopProcessesAsync();
+                await this.RefreshSelectedProcessRuleImpactAsync();
+                await this.LoadTopProcessesAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to create or update rule from performance hotspot");
-                SetError("Failed to create rule from selected hotspot", ex);
+                this.logger.LogError(ex, "Failed to create or update rule from performance hotspot");
+                this.SetError("Failed to create rule from selected hotspot", ex);
             }
             finally
             {
-                IsRuleCreateBusy = false;
+                this.IsRuleCreateBusy = false;
             }
         }
 
         [RelayCommand]
         private void ToggleCoreDetails()
         {
-            ShowCoreDetails = !ShowCoreDetails;
+            this.ShowCoreDetails = !this.ShowCoreDetails;
         }
 
         [RelayCommand]
         private void ToggleProcessDetails()
         {
-            ShowProcessDetails = !ShowProcessDetails;
+            this.ShowProcessDetails = !this.ShowProcessDetails;
         }
 
         partial void OnSelectedHotspotProcessChanged(ProcessPerformanceInfo? value)
@@ -481,72 +482,72 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                if (SelectedHotspotProcess == null)
+                if (this.SelectedHotspotProcess == null)
                 {
-                    SelectedProcessName = "No hotspot selected";
-                    SelectedProcessExecutable = "-";
-                    SelectedProcessCpuText = "-";
-                    SelectedProcessMemoryText = "-";
-                    SelectedProcessRuleStatus = "No linked rule";
-                    SelectedProcessRuleSummary = "Create a rule from this process to automate affinity and priority behavior.";
-                    SelectedProcessLastApplyText = "No recent automation event";
+                    this.SelectedProcessName = "No hotspot selected";
+                    this.SelectedProcessExecutable = "-";
+                    this.SelectedProcessCpuText = "-";
+                    this.SelectedProcessMemoryText = "-";
+                    this.SelectedProcessRuleStatus = "No linked rule";
+                    this.SelectedProcessRuleSummary = "Create a rule from this process to automate affinity and priority behavior.";
+                    this.SelectedProcessLastApplyText = "No recent automation event";
                     return;
                 }
 
-                var executableName = NormalizeExecutableName(SelectedHotspotProcess.ProcessName);
-                var association = await _associationService.FindAssociationByExecutableAsync(executableName);
+                var executableName = NormalizeExecutableName(this.SelectedHotspotProcess.ProcessName);
+                var association = await this.associationService.FindAssociationByExecutableAsync(executableName);
 
-                SelectedProcessName = SelectedHotspotProcess.ProcessName;
-                SelectedProcessExecutable = string.IsNullOrWhiteSpace(SelectedHotspotProcess.ExecutablePath)
+                this.SelectedProcessName = this.SelectedHotspotProcess.ProcessName;
+                this.SelectedProcessExecutable = string.IsNullOrWhiteSpace(this.SelectedHotspotProcess.ExecutablePath)
                     ? executableName
-                    : SelectedHotspotProcess.ExecutablePath;
-                SelectedProcessCpuText = $"{SelectedHotspotProcess.CpuUsage:F1}% CPU";
-                SelectedProcessMemoryText = FormatBytes(SelectedHotspotProcess.MemoryUsage);
+                    : this.SelectedHotspotProcess.ExecutablePath;
+                this.SelectedProcessCpuText = $"{this.SelectedHotspotProcess.CpuUsage:F1}% CPU";
+                this.SelectedProcessMemoryText = FormatBytes(this.SelectedHotspotProcess.MemoryUsage);
 
                 if (association == null)
                 {
-                    SelectedProcessRuleStatus = "No linked rule";
-                    SelectedProcessRuleSummary = "No automation rule matches this executable yet.";
+                    this.SelectedProcessRuleStatus = "No linked rule";
+                    this.SelectedProcessRuleSummary = "No automation rule matches this executable yet.";
                 }
                 else
                 {
-                    SelectedProcessRuleStatus = association.IsEnabled ? "Linked rule is active" : "Linked rule is disabled";
-                    SelectedProcessRuleSummary = BuildRuleSummary(association);
+                    this.SelectedProcessRuleStatus = association.IsEnabled ? "Linked rule is active" : "Linked rule is disabled";
+                    this.SelectedProcessRuleSummary = BuildRuleSummary(association);
                 }
 
-                if (_lastRuleApplyByExecutable.TryGetValue(executableName, out var appliedAt))
+                if (this.lastRuleApplyByExecutable.TryGetValue(executableName, out var appliedAt))
                 {
-                    SelectedProcessLastApplyText = $"Last rule application: {appliedAt:HH:mm:ss}";
+                    this.SelectedProcessLastApplyText = $"Last rule application: {appliedAt:HH:mm:ss}";
                 }
                 else
                 {
-                    SelectedProcessLastApplyText = "No recent automation event";
+                    this.SelectedProcessLastApplyText = "No recent automation event";
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to refresh rule impact panel");
+                this.logger.LogError(ex, "Failed to refresh rule impact panel");
             }
         }
 
         private async Task LoadTopProcessesAsync()
         {
-            if (_topProcessRefreshGate.CurrentCount == 0)
+            if (this.topProcessRefreshGate.CurrentCount == 0)
             {
-                _pendingTopProcessRefresh = true;
+                this.pendingTopProcessRefresh = true;
                 return;
             }
 
-            await _topProcessRefreshGate.WaitAsync();
+            await this.topProcessRefreshGate.WaitAsync();
 
             try
             {
                 do
                 {
-                    _pendingTopProcessRefresh = false;
+                    this.pendingTopProcessRefresh = false;
 
-                    var topCpu = await _performanceService.GetTopCpuProcessesAsync(25);
-                    var topMemory = await _performanceService.GetTopMemoryProcessesAsync(25);
+                    var topCpu = await this.performanceService.GetTopCpuProcessesAsync(25);
+                    var topMemory = await this.performanceService.GetTopMemoryProcessesAsync(25);
 
                     var merged = topCpu
                         .Concat(topMemory)
@@ -554,7 +555,7 @@ namespace ThreadPilot.ViewModels
                         .Select(g => g.OrderByDescending(x => x.CpuUsage).First())
                         .ToList();
 
-                    var associations = await _associationService.GetAssociationsAsync();
+                    var associations = await this.associationService.GetAssociationsAsync();
                     var associationSet = associations
                         .Select(a => NormalizeExecutableName(a.ExecutableName))
                         .Where(name => !string.IsNullOrWhiteSpace(name))
@@ -562,55 +563,55 @@ namespace ThreadPilot.ViewModels
 
                     IEnumerable<ProcessPerformanceInfo> filtered = merged;
 
-                    if (!string.IsNullOrWhiteSpace(ProcessSearchText))
+                    if (!string.IsNullOrWhiteSpace(this.ProcessSearchText))
                     {
-                        filtered = filtered.Where(p => p.ProcessName.Contains(ProcessSearchText, StringComparison.OrdinalIgnoreCase));
+                        filtered = filtered.Where(p => p.ProcessName.Contains(this.ProcessSearchText, StringComparison.OrdinalIgnoreCase));
                     }
 
-                    if (ShowOnlyRuleBackedHotspots)
+                    if (this.ShowOnlyRuleBackedHotspots)
                     {
                         filtered = filtered.Where(p => associationSet.Contains(NormalizeExecutableName(p.ProcessName)));
                     }
 
-                    if (ShowOnlyActionableHotspots)
+                    if (this.ShowOnlyActionableHotspots)
                     {
                         filtered = filtered.Where(p => p.CpuUsage >= 1.0 || p.MemoryUsage >= (200L * 1024 * 1024));
                     }
 
-                    filtered = SortMode switch
+                    filtered = this.SortMode switch
                     {
                         "Memory" => filtered.OrderByDescending(p => p.MemoryUsage),
                         "Name" => filtered.OrderBy(p => p.ProcessName),
-                        _ => filtered.OrderByDescending(p => p.CpuUsage)
+                        _ => filtered.OrderByDescending(p => p.CpuUsage),
                     };
 
                     var snapshot = filtered.Take(50).ToList();
 
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        TopCpuProcesses = new ObservableCollection<ProcessPerformanceInfo>(snapshot);
+                        this.TopCpuProcesses = new ObservableCollection<ProcessPerformanceInfo>(snapshot);
 
-                        if (SelectedHotspotProcess != null)
+                        if (this.SelectedHotspotProcess != null)
                         {
-                            var refreshedSelection = TopCpuProcesses.FirstOrDefault(p => p.ProcessId == SelectedHotspotProcess.ProcessId);
+                            var refreshedSelection = this.TopCpuProcesses.FirstOrDefault(p => p.ProcessId == this.SelectedHotspotProcess.ProcessId);
                             if (refreshedSelection != null)
                             {
-                                SelectedHotspotProcess = refreshedSelection;
+                                this.SelectedHotspotProcess = refreshedSelection;
                             }
                         }
                     });
 
-                    await RefreshSelectedProcessRuleImpactAsync();
+                    await this.RefreshSelectedProcessRuleImpactAsync();
                 }
-                while (_pendingTopProcessRefresh);
+                while (this.pendingTopProcessRefresh);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading hotspot process lists");
+                this.logger.LogError(ex, "Error loading hotspot process lists");
             }
             finally
             {
-                _topProcessRefreshGate.Release();
+                this.topProcessRefreshGate.Release();
             }
         }
 
@@ -618,13 +619,13 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                var activePlan = await _powerPlanService.GetActivePowerPlan();
-                CurrentGlobalPowerPlanText = activePlan?.Name ?? "Unknown";
+                var activePlan = await this.powerPlanService.GetActivePowerPlan();
+                this.CurrentGlobalPowerPlanText = activePlan?.Name ?? "Unknown";
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to refresh global power plan text");
-                CurrentGlobalPowerPlanText = "Unknown";
+                this.logger.LogWarning(ex, "Failed to refresh global power plan text");
+                this.CurrentGlobalPowerPlanText = "Unknown";
             }
         }
 
@@ -634,54 +635,54 @@ namespace ThreadPilot.ViewModels
             {
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
-                    UpdateMetrics(e.Metrics);
-                    _ = LoadTopProcessesAsync();
+                    this.UpdateMetrics(e.Metrics);
+                    _ = this.LoadTopProcessesAsync();
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating performance metrics in UI");
+                this.logger.LogError(ex, "Error updating performance metrics in UI");
             }
         }
 
         private void UpdateMetrics(SystemPerformanceMetrics metrics)
         {
-            TotalCpuUsage = metrics.TotalCpuUsage;
-            TotalMemoryUsage = metrics.TotalMemoryUsage;
-            AvailableMemory = metrics.AvailableMemory;
-            TotalMemory = metrics.TotalMemory;
-            MemoryUsagePercentage = metrics.MemoryUsagePercentage;
-            ActiveProcessCount = metrics.ActiveProcessCount;
-            LastUpdateTime = metrics.Timestamp;
+            this.TotalCpuUsage = metrics.TotalCpuUsage;
+            this.TotalMemoryUsage = metrics.TotalMemoryUsage;
+            this.AvailableMemory = metrics.AvailableMemory;
+            this.TotalMemory = metrics.TotalMemory;
+            this.MemoryUsagePercentage = metrics.MemoryUsagePercentage;
+            this.ActiveProcessCount = metrics.ActiveProcessCount;
+            this.LastUpdateTime = metrics.Timestamp;
 
-            CpuUsageText = $"{TotalCpuUsage:F1}%";
-            MemoryUsageText = $"{FormatBytes(TotalMemoryUsage)} / {FormatBytes(TotalMemory)}";
-            ProcessCountText = ActiveProcessCount.ToString();
+            this.CpuUsageText = $"{this.TotalCpuUsage:F1}%";
+            this.MemoryUsageText = $"{FormatBytes(this.TotalMemoryUsage)} / {FormatBytes(this.TotalMemory)}";
+            this.ProcessCountText = this.ActiveProcessCount.ToString();
 
-            void apply()
+            void Apply()
             {
-                CoreUsages = new ObservableCollection<CpuCoreUsage>(metrics.CpuCoreUsages);
+                this.CoreUsages = new ObservableCollection<CpuCoreUsage>(metrics.CpuCoreUsages);
 
-                if (IsMonitoring)
+                if (this.IsMonitoring)
                 {
-                    HistoricalData.Add(metrics);
-                    while (HistoricalData.Count > 360)
+                    this.HistoricalData.Add(metrics);
+                    while (this.HistoricalData.Count > 360)
                     {
-                        HistoricalData.RemoveAt(0);
+                        this.HistoricalData.RemoveAt(0);
                     }
                 }
 
-                UpdateTimelineSummary();
+                this.UpdateTimelineSummary();
             }
 
             var dispatcher = System.Windows.Application.Current?.Dispatcher;
             if (dispatcher != null && !dispatcher.CheckAccess())
             {
-                dispatcher.Invoke(apply);
+                dispatcher.Invoke(Apply);
             }
             else
             {
-                apply();
+                Apply();
             }
         }
 
@@ -690,30 +691,30 @@ namespace ThreadPilot.ViewModels
             try
             {
                 var executable = NormalizeExecutableName(e.Process.Name);
-                _lastRuleApplyByExecutable[executable] = e.Timestamp;
+                this.lastRuleApplyByExecutable[executable] = e.Timestamp;
 
                 var detail = $"{e.Action}: {e.Process.Name} -> {e.NewPowerPlan?.Name ?? "Unknown"}";
-                AddTimelineEvent("Rule Applied", detail, "Success");
+                this.AddTimelineEvent("Rule Applied", detail, "Success");
 
-                _ = RefreshSelectedProcessRuleImpactAsync();
+                _ = this.RefreshSelectedProcessRuleImpactAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed handling process power plan change event");
+                this.logger.LogWarning(ex, "Failed handling process power plan change event");
             }
         }
 
         private void OnPowerPlanChanged(object? sender, PowerPlanChangedEventArgs e)
         {
             var detail = $"Global plan changed to {e.NewPowerPlan?.Name ?? "Unknown"}";
-            AddTimelineEvent("Power Plan", detail, "Info");
-            CurrentGlobalPowerPlanText = e.NewPowerPlan?.Name ?? "Unknown";
+            this.AddTimelineEvent("Power Plan", detail, "Info");
+            this.CurrentGlobalPowerPlanText = e.NewPowerPlan?.Name ?? "Unknown";
         }
 
         private void OnTweakStatusChanged(object? sender, TweakStatusChangedEventArgs e)
         {
             var state = e.Status.IsEnabled ? "enabled" : "disabled";
-            AddTimelineEvent("Tweak", $"{e.TweakName} {state}", "Warning");
+            this.AddTimelineEvent("Tweak", $"{e.TweakName} {state}", "Warning");
         }
 
         private void AddTimelineEvent(string category, string detail, string severity)
@@ -723,42 +724,42 @@ namespace ThreadPilot.ViewModels
                 Category = category,
                 Detail = detail,
                 Severity = severity,
-                Timestamp = DateTime.Now
+                Timestamp = DateTime.Now,
             };
 
-            void apply()
+            void Apply()
             {
-                TimelineEvents.Insert(0, evt);
-                while (TimelineEvents.Count > 200)
+                this.TimelineEvents.Insert(0, evt);
+                while (this.TimelineEvents.Count > 200)
                 {
-                    TimelineEvents.RemoveAt(TimelineEvents.Count - 1);
+                    this.TimelineEvents.RemoveAt(this.TimelineEvents.Count - 1);
                 }
 
-                UpdateTimelineSummary();
+                this.UpdateTimelineSummary();
             }
 
             var dispatcher = System.Windows.Application.Current?.Dispatcher;
             if (dispatcher != null && !dispatcher.CheckAccess())
             {
-                dispatcher.Invoke(apply);
+                dispatcher.Invoke(Apply);
             }
             else
             {
-                apply();
+                Apply();
             }
         }
 
         private void UpdateTimelineSummary()
         {
-            TimelineSampleCountText = $"{HistoricalData.Count} samples";
-            if (TimelineEvents.Count == 0)
+            this.TimelineSampleCountText = $"{this.HistoricalData.Count} samples";
+            if (this.TimelineEvents.Count == 0)
             {
-                LastTimelineEventText = "No events yet";
+                this.LastTimelineEventText = "No events yet";
                 return;
             }
 
-            var latest = TimelineEvents[0];
-            LastTimelineEventText = $"{latest.Timestamp:HH:mm:ss} - {latest.Category}";
+            var latest = this.TimelineEvents[0];
+            this.LastTimelineEventText = $"{latest.Timestamp:HH:mm:ss} - {latest.Category}";
         }
 
         private static string BuildRuleSummary(ProcessPowerPlanAssociation association)
@@ -815,16 +816,16 @@ namespace ThreadPilot.ViewModels
 
         protected override void OnDispose()
         {
-            _performanceService.MetricsUpdated -= OnMetricsUpdated;
-            _processMonitorManagerService.ProcessPowerPlanChanged -= OnProcessPowerPlanChanged;
-            _powerPlanService.PowerPlanChanged -= OnPowerPlanChanged;
-            _systemTweaksService.TweakStatusChanged -= OnTweakStatusChanged;
+            this.performanceService.MetricsUpdated -= this.OnMetricsUpdated;
+            this.processMonitorManagerService.ProcessPowerPlanChanged -= this.OnProcessPowerPlanChanged;
+            this.powerPlanService.PowerPlanChanged -= this.OnPowerPlanChanged;
+            this.systemTweaksService.TweakStatusChanged -= this.OnTweakStatusChanged;
 
-            _topProcessRefreshGate.Dispose();
+            this.topProcessRefreshGate.Dispose();
 
-            if (IsMonitoring)
+            if (this.IsMonitoring)
             {
-                _ = Task.Run(async () => await _performanceService.StopMonitoringAsync());
+                _ = Task.Run(async () => await this.performanceService.StopMonitoringAsync());
             }
 
             base.OnDispose();
@@ -834,8 +835,11 @@ namespace ThreadPilot.ViewModels
     public class PerformanceTimelineEvent
     {
         public DateTime Timestamp { get; set; }
+
         public string Category { get; set; } = string.Empty;
+
         public string Detail { get; set; } = string.Empty;
+
         public string Severity { get; set; } = "Info";
     }
 }

@@ -14,21 +14,21 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Management;
-using System.ServiceProcess;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Microsoft.Win32;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Management;
+    using System.ServiceProcess;
+    using System.Text.RegularExpressions;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Win32;
+
     /// <summary>
-    /// Service for managing Windows system tweaks and optimizations
+    /// Service for managing Windows system tweaks and optimizations.
     /// </summary>
     public class SystemTweaksService : ISystemTweaksService
     {
@@ -39,8 +39,9 @@ namespace ThreadPilot.Services
         {
             Path.GetFullPath(BcdEditExecutablePath),
             Path.GetFullPath(PowerCfgExecutablePath),
-            Path.GetFullPath(ScExecutablePath)
+            Path.GetFullPath(ScExecutablePath),
         };
+
         private static readonly Regex HexValueRegex = new("0x([0-9a-fA-F]+)", RegexOptions.Compiled);
         private static readonly Regex ServiceNameRegex = new("^[A-Za-z0-9_.-]+$", RegexOptions.Compiled);
         private static readonly TimeSpan ExternalCommandTimeout = TimeSpan.FromSeconds(20);
@@ -50,8 +51,8 @@ namespace ThreadPilot.Services
         private const string CoreParkingVisibilityKeyPath = @"SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583";
         private const string PriorityControlKeyPath = @"SYSTEM\CurrentControlSet\Control\PriorityControl";
         private const string PrioritySeparationValueName = "Win32PrioritySeparation";
-        private readonly ILogger<SystemTweaksService> _logger;
-        private readonly IElevationService _elevationService;
+        private readonly ILogger<SystemTweaksService> logger;
+        private readonly IElevationService elevationService;
 
         public event EventHandler<TweakStatusChangedEventArgs>? TweakStatusChanged;
 
@@ -59,17 +60,17 @@ namespace ThreadPilot.Services
             ILogger<SystemTweaksService> logger,
             IElevationService elevationService)
         {
-            _logger = logger;
-            _elevationService = elevationService;
+            this.logger = logger;
+            this.elevationService = elevationService;
         }
 
         public async Task<TweakStatus> GetCoreParkingStatusAsync()
         {
             try
             {
-                await EnsurePowerSettingVisibleAsync(ProcessorSubgroupAlias, CoreParkingSettingAlias);
+                await this.EnsurePowerSettingVisibleAsync(ProcessorSubgroupAlias, CoreParkingSettingAlias);
 
-                var acValue = await GetPowerCfgAcSettingValueAsync(ProcessorSubgroupAlias, CoreParkingSettingAlias);
+                var acValue = await this.GetPowerCfgAcSettingValueAsync(ProcessorSubgroupAlias, CoreParkingSettingAlias);
                 if (!acValue.HasValue)
                 {
                     return new TweakStatus { IsAvailable = false, ErrorMessage = "Could not query Core Parking value via powercfg" };
@@ -78,16 +79,16 @@ namespace ThreadPilot.Services
                 // ON = disable parking (keep all cores unparked, typically 100)
                 var isEnabled = acValue.Value >= 100;
 
-                return new TweakStatus 
-                { 
-                    IsEnabled = isEnabled, 
+                return new TweakStatus
+                {
+                    IsEnabled = isEnabled,
                     IsAvailable = true,
-                    Description = "ON disables core parking (all cores unparked); OFF allows parking"
+                    Description = "ON disables core parking (all cores unparked); OFF allows parking",
                 };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting Core Parking status");
+                this.logger.LogError(ex, "Error getting Core Parking status");
                 return new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message };
             }
         }
@@ -96,20 +97,22 @@ namespace ThreadPilot.Services
         {
             try
             {
-                if (!_elevationService.IsRunningAsAdministrator())
+                if (!this.elevationService.IsRunningAsAdministrator())
                 {
-                    _logger.LogWarning("Administrator privileges required to modify Core Parking");
+                    this.logger.LogWarning("Administrator privileges required to modify Core Parking");
                     return false;
                 }
 
-                await EnsurePowerSettingVisibleAsync(ProcessorSubgroupAlias, CoreParkingSettingAlias);
+                await this.EnsurePowerSettingVisibleAsync(ProcessorSubgroupAlias, CoreParkingSettingAlias);
 
                 var acValue = enabled ? 100 : 10;
-                var setValueResult = await RunProcessAsync(PowerCfgExecutablePath,
+                var setValueResult = await RunProcessAsync(
+                    PowerCfgExecutablePath,
                     $"-setacvalueindex SCHEME_CURRENT {ProcessorSubgroupAlias} {CoreParkingSettingAlias} {acValue}");
                 if (setValueResult.ExitCode != 0)
                 {
-                    _logger.LogError("Failed setting Core Parking AC value. ExitCode={ExitCode}, Error={Error}",
+                    this.logger.LogError(
+                        "Failed setting Core Parking AC value. ExitCode={ExitCode}, Error={Error}",
                         setValueResult.ExitCode, setValueResult.StandardError);
                     return false;
                 }
@@ -117,7 +120,8 @@ namespace ThreadPilot.Services
                 var activateResult = await RunProcessAsync(PowerCfgExecutablePath, "/setactive SCHEME_CURRENT");
                 if (activateResult.ExitCode != 0)
                 {
-                    _logger.LogError("Failed activating current power scheme after Core Parking change. ExitCode={ExitCode}, Error={Error}",
+                    this.logger.LogError(
+                        "Failed activating current power scheme after Core Parking change. ExitCode={ExitCode}, Error={Error}",
                         activateResult.ExitCode, activateResult.StandardError);
                     return false;
                 }
@@ -129,15 +133,15 @@ namespace ThreadPilot.Services
                     visibilityKey.SetValue("Attributes", 2, RegistryValueKind.DWord);
                 }
 
-                var status = await GetCoreParkingStatusAsync();
-                TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("CoreParking", status));
+                var status = await this.GetCoreParkingStatusAsync();
+                this.TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("CoreParking", status));
 
-                _logger.LogInformation("Core Parking {Status}", enabled ? "enabled" : "disabled");
+                this.logger.LogInformation("Core Parking {Status}", enabled ? "enabled" : "disabled");
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error setting Core Parking to {Enabled}", enabled);
+                this.logger.LogError(ex, "Error setting Core Parking to {Enabled}", enabled);
                 return false;
             }
         }
@@ -146,9 +150,9 @@ namespace ThreadPilot.Services
         {
             try
             {
-                await EnsurePowerSettingVisibleAsync(ProcessorSubgroupAlias, CStatesSettingAlias);
+                await this.EnsurePowerSettingVisibleAsync(ProcessorSubgroupAlias, CStatesSettingAlias);
 
-                var acValue = await GetPowerCfgAcSettingValueAsync(ProcessorSubgroupAlias, CStatesSettingAlias);
+                var acValue = await this.GetPowerCfgAcSettingValueAsync(ProcessorSubgroupAlias, CStatesSettingAlias);
                 if (!acValue.HasValue)
                 {
                     return new TweakStatus { IsAvailable = false, ErrorMessage = "Could not query C-States value via powercfg" };
@@ -157,16 +161,16 @@ namespace ThreadPilot.Services
                 // ON = enable C-States (IDLEDISABLE=0), OFF = disable C-States (IDLEDISABLE=1)
                 var isEnabled = acValue.Value == 0;
 
-                return new TweakStatus 
-                { 
-                    IsEnabled = isEnabled, 
+                return new TweakStatus
+                {
+                    IsEnabled = isEnabled,
                     IsAvailable = true,
-                    Description = "ON enables C-States; OFF disables C-States for lower latency"
+                    Description = "ON enables C-States; OFF disables C-States for lower latency",
                 };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting C-States status");
+                this.logger.LogError(ex, "Error getting C-States status");
                 return new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message };
             }
         }
@@ -175,20 +179,22 @@ namespace ThreadPilot.Services
         {
             try
             {
-                if (!_elevationService.IsRunningAsAdministrator())
+                if (!this.elevationService.IsRunningAsAdministrator())
                 {
-                    _logger.LogWarning("Administrator privileges required to modify C-States");
+                    this.logger.LogWarning("Administrator privileges required to modify C-States");
                     return false;
                 }
 
-                await EnsurePowerSettingVisibleAsync(ProcessorSubgroupAlias, CStatesSettingAlias);
+                await this.EnsurePowerSettingVisibleAsync(ProcessorSubgroupAlias, CStatesSettingAlias);
 
                 var value = enabled ? 0 : 1;
-                var setValueResult = await RunProcessAsync(PowerCfgExecutablePath,
+                var setValueResult = await RunProcessAsync(
+                    PowerCfgExecutablePath,
                     $"-setacvalueindex SCHEME_CURRENT {ProcessorSubgroupAlias} {CStatesSettingAlias} {value}");
                 if (setValueResult.ExitCode != 0)
                 {
-                    _logger.LogError("Failed setting C-States AC value. ExitCode={ExitCode}, Error={Error}",
+                    this.logger.LogError(
+                        "Failed setting C-States AC value. ExitCode={ExitCode}, Error={Error}",
                         setValueResult.ExitCode, setValueResult.StandardError);
                     return false;
                 }
@@ -196,20 +202,21 @@ namespace ThreadPilot.Services
                 var activateResult = await RunProcessAsync(PowerCfgExecutablePath, "/setactive SCHEME_CURRENT");
                 if (activateResult.ExitCode != 0)
                 {
-                    _logger.LogError("Failed activating current power scheme after C-States change. ExitCode={ExitCode}, Error={Error}",
+                    this.logger.LogError(
+                        "Failed activating current power scheme after C-States change. ExitCode={ExitCode}, Error={Error}",
                         activateResult.ExitCode, activateResult.StandardError);
                     return false;
                 }
 
-                var status = await GetCStatesStatusAsync();
-                TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("CStates", status));
+                var status = await this.GetCStatesStatusAsync();
+                this.TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("CStates", status));
 
-                _logger.LogInformation("C-States {Status}", enabled ? "enabled" : "disabled");
+                this.logger.LogInformation("C-States {Status}", enabled ? "enabled" : "disabled");
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error setting C-States to {Enabled}", enabled);
+                this.logger.LogError(ex, "Error setting C-States to {Enabled}", enabled);
                 return false;
             }
         }
@@ -223,16 +230,16 @@ namespace ThreadPilot.Services
                 var isEnabled = serviceController.StartType != ServiceStartMode.Disabled;
                 var isAvailable = true;
 
-                return Task.FromResult(new TweakStatus 
-                { 
-                    IsEnabled = isEnabled, 
+                return Task.FromResult(new TweakStatus
+                {
+                    IsEnabled = isEnabled,
                     IsAvailable = isAvailable,
-                    Description = "Windows Superfetch/SysMain service for memory management"
+                    Description = "Windows Superfetch/SysMain service for memory management",
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting SysMain status");
+                this.logger.LogError(ex, "Error getting SysMain status");
                 return Task.FromResult(new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message });
             }
         }
@@ -241,21 +248,21 @@ namespace ThreadPilot.Services
         {
             try
             {
-                if (!_elevationService.IsRunningAsAdministrator())
+                if (!this.elevationService.IsRunningAsAdministrator())
                 {
-                    _logger.LogWarning("Administrator privileges required to modify SysMain service");
+                    this.logger.LogWarning("Administrator privileges required to modify SysMain service");
                     return false;
                 }
 
                 using var serviceController = new ServiceController("SysMain");
-                if (!await SetServiceStartModeAsync("SysMain", enabled ? ServiceStartMode.Automatic : ServiceStartMode.Disabled))
+                if (!await this.SetServiceStartModeAsync("SysMain", enabled ? ServiceStartMode.Automatic : ServiceStartMode.Disabled))
                 {
-                    _logger.LogError("Failed to set SysMain startup mode");
+                    this.logger.LogError("Failed to set SysMain startup mode");
                     return false;
                 }
 
                 serviceController.Refresh();
-                
+
                 if (enabled && serviceController.Status == ServiceControllerStatus.Stopped)
                 {
                     serviceController.Start();
@@ -267,15 +274,15 @@ namespace ThreadPilot.Services
                     serviceController.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(30));
                 }
 
-                var status = await GetSysMainStatusAsync();
-                TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("SysMain", status));
+                var status = await this.GetSysMainStatusAsync();
+                this.TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("SysMain", status));
 
-                _logger.LogInformation("SysMain service {Status}", enabled ? "started" : "stopped");
+                this.logger.LogInformation("SysMain service {Status}", enabled ? "started" : "stopped");
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error setting SysMain service to {Enabled}", enabled);
+                this.logger.LogError(ex, "Error setting SysMain service to {Enabled}", enabled);
                 return false;
             }
         }
@@ -293,16 +300,16 @@ namespace ThreadPilot.Services
                 var enablePrefetcher = key.GetValue("EnablePrefetcher");
                 var isEnabled = enablePrefetcher?.ToString() != "0"; // 0 = disabled, 1-3 = enabled
 
-                return Task.FromResult(new TweakStatus 
-                { 
-                    IsEnabled = isEnabled, 
+                return Task.FromResult(new TweakStatus
+                {
+                    IsEnabled = isEnabled,
                     IsAvailable = true,
-                    Description = "Windows Prefetch feature for faster application loading"
+                    Description = "Windows Prefetch feature for faster application loading",
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting Prefetch status");
+                this.logger.LogError(ex, "Error getting Prefetch status");
                 return Task.FromResult(new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message });
             }
         }
@@ -311,31 +318,31 @@ namespace ThreadPilot.Services
         {
             try
             {
-                if (!_elevationService.IsRunningAsAdministrator())
+                if (!this.elevationService.IsRunningAsAdministrator())
                 {
-                    _logger.LogWarning("Administrator privileges required to modify Prefetch");
+                    this.logger.LogWarning("Administrator privileges required to modify Prefetch");
                     return false;
                 }
 
                 using var key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters", true);
                 if (key == null)
                 {
-                    _logger.LogError("Prefetch registry key not found");
+                    this.logger.LogError("Prefetch registry key not found");
                     return false;
                 }
 
                 // Set EnablePrefetcher: 0 = disabled, 3 = enabled for both applications and boot
                 key.SetValue("EnablePrefetcher", enabled ? 3 : 0, RegistryValueKind.DWord);
 
-                var status = await GetPrefetchStatusAsync();
-                TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("Prefetch", status));
+                var status = await this.GetPrefetchStatusAsync();
+                this.TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("Prefetch", status));
 
-                _logger.LogInformation("Prefetch {Status}", enabled ? "enabled" : "disabled");
+                this.logger.LogInformation("Prefetch {Status}", enabled ? "enabled" : "disabled");
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error setting Prefetch to {Enabled}", enabled);
+                this.logger.LogError(ex, "Error setting Prefetch to {Enabled}", enabled);
                 return false;
             }
         }
@@ -358,12 +365,12 @@ namespace ThreadPilot.Services
                 {
                     IsEnabled = isEnabled,
                     IsAvailable = true,
-                    Description = "ON disables Windows Power Throttling for sustained performance"
+                    Description = "ON disables Windows Power Throttling for sustained performance",
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting Power Throttling status");
+                this.logger.LogError(ex, "Error getting Power Throttling status");
                 return Task.FromResult(new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message });
             }
         }
@@ -372,31 +379,31 @@ namespace ThreadPilot.Services
         {
             try
             {
-                if (!_elevationService.IsRunningAsAdministrator())
+                if (!this.elevationService.IsRunningAsAdministrator())
                 {
-                    _logger.LogWarning("Administrator privileges required to modify Power Throttling");
+                    this.logger.LogWarning("Administrator privileges required to modify Power Throttling");
                     return false;
                 }
 
                 using var key = Registry.LocalMachine.CreateSubKey(@"SYSTEM\CurrentControlSet\Control\Power\PowerThrottling");
                 if (key == null)
                 {
-                    _logger.LogError("Could not create Power Throttling registry key");
+                    this.logger.LogError("Could not create Power Throttling registry key");
                     return false;
                 }
 
                 // Set PowerThrottlingOff: 1 = throttling disabled, 0 = throttling enabled
                 key.SetValue("PowerThrottlingOff", enabled ? 1 : 0, RegistryValueKind.DWord);
 
-                var status = await GetPowerThrottlingStatusAsync();
-                TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("PowerThrottling", status));
+                var status = await this.GetPowerThrottlingStatusAsync();
+                this.TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("PowerThrottling", status));
 
-                _logger.LogInformation("Power Throttling {Status}", enabled ? "enabled" : "disabled");
+                this.logger.LogInformation("Power Throttling {Status}", enabled ? "enabled" : "disabled");
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error setting Power Throttling to {Enabled}", enabled);
+                this.logger.LogError(ex, "Error setting Power Throttling to {Enabled}", enabled);
                 return false;
             }
         }
@@ -413,7 +420,7 @@ namespace ThreadPilot.Services
                         IsAvailable = false,
                         ErrorMessage = string.IsNullOrWhiteSpace(result.StandardError)
                             ? "Could not query bcdedit status"
-                            : result.StandardError
+                            : result.StandardError,
                     };
                 }
 
@@ -433,12 +440,12 @@ namespace ThreadPilot.Services
                 {
                     IsEnabled = isEnabled,
                     IsAvailable = true,
-                    Description = "High Precision Event Timer for system timing"
+                    Description = "High Precision Event Timer for system timing",
                 };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting HPET status");
+                this.logger.LogError(ex, "Error getting HPET status");
                 return new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message };
             }
         }
@@ -447,9 +454,9 @@ namespace ThreadPilot.Services
         {
             try
             {
-                if (!_elevationService.IsRunningAsAdministrator())
+                if (!this.elevationService.IsRunningAsAdministrator())
                 {
-                    _logger.LogWarning("Administrator privileges required to modify HPET");
+                    this.logger.LogWarning("Administrator privileges required to modify HPET");
                     return false;
                 }
 
@@ -460,13 +467,14 @@ namespace ThreadPilot.Services
 
                 if (success)
                 {
-                    var status = await GetHpetStatusAsync();
-                    TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("Hpet", status));
-                    _logger.LogInformation("HPET {Status}", enabled ? "enabled" : "disabled");
+                    var status = await this.GetHpetStatusAsync();
+                    this.TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("Hpet", status));
+                    this.logger.LogInformation("HPET {Status}", enabled ? "enabled" : "disabled");
                 }
                 else
                 {
-                    _logger.LogWarning("Failed to set HPET. ExitCode={ExitCode}, Error={Error}",
+                    this.logger.LogWarning(
+                        "Failed to set HPET. ExitCode={ExitCode}, Error={Error}",
                         commandResult.ExitCode, commandResult.StandardError);
                 }
 
@@ -474,7 +482,7 @@ namespace ThreadPilot.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error setting HPET to {Enabled}", enabled);
+                this.logger.LogError(ex, "Error setting HPET to {Enabled}", enabled);
                 return false;
             }
         }
@@ -496,12 +504,12 @@ namespace ThreadPilot.Services
                 {
                     IsEnabled = isEnabled,
                     IsAvailable = true,
-                    Description = "ON applies high foreground boost (Win32PrioritySeparation=38)"
+                    Description = "ON applies high foreground boost (Win32PrioritySeparation=38)",
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting High Scheduling Category status");
+                this.logger.LogError(ex, "Error getting High Scheduling Category status");
                 return Task.FromResult(new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message });
             }
         }
@@ -510,31 +518,31 @@ namespace ThreadPilot.Services
         {
             try
             {
-                if (!_elevationService.IsRunningAsAdministrator())
+                if (!this.elevationService.IsRunningAsAdministrator())
                 {
-                    _logger.LogWarning("Administrator privileges required to modify High Scheduling Category");
+                    this.logger.LogWarning("Administrator privileges required to modify High Scheduling Category");
                     return false;
                 }
 
                 using var key = Registry.LocalMachine.OpenSubKey(PriorityControlKeyPath, true);
                 if (key == null)
                 {
-                    _logger.LogError("PriorityControl registry key not found");
+                    this.logger.LogError("PriorityControl registry key not found");
                     return false;
                 }
 
                 // ON = 38 (Short, Variable, High), OFF = 2 (default/minimal boost)
                 key.SetValue(PrioritySeparationValueName, enabled ? 38 : 2, RegistryValueKind.DWord);
 
-                var status = await GetHighSchedulingCategoryStatusAsync();
-                TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("HighSchedulingCategory", status));
+                var status = await this.GetHighSchedulingCategoryStatusAsync();
+                this.TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("HighSchedulingCategory", status));
 
-                _logger.LogInformation("High Scheduling Category {Status}", enabled ? "enabled" : "disabled");
+                this.logger.LogInformation("High Scheduling Category {Status}", enabled ? "enabled" : "disabled");
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error setting High Scheduling Category to {Enabled}", enabled);
+                this.logger.LogError(ex, "Error setting High Scheduling Category to {Enabled}", enabled);
                 return false;
             }
         }
@@ -543,7 +551,7 @@ namespace ThreadPilot.Services
         {
             if (!ServiceNameRegex.IsMatch(serviceName))
             {
-                _logger.LogWarning("Rejected invalid service name format: {ServiceName}", serviceName);
+                this.logger.LogWarning("Rejected invalid service name format: {ServiceName}", serviceName);
                 return false;
             }
 
@@ -552,13 +560,14 @@ namespace ThreadPilot.Services
                 ServiceStartMode.Automatic => "auto",
                 ServiceStartMode.Manual => "demand",
                 ServiceStartMode.Disabled => "disabled",
-                _ => "demand"
+                _ => "demand",
             };
 
             var result = await RunProcessAsync(ScExecutablePath, $"config \"{serviceName}\" start= {startModeValue}");
             if (result.ExitCode != 0)
             {
-                _logger.LogWarning("Failed to update service start mode for {ServiceName}. ExitCode={ExitCode}, Error={Error}",
+                this.logger.LogWarning(
+                    "Failed to update service start mode for {ServiceName}. ExitCode={ExitCode}, Error={Error}",
                     serviceName, result.ExitCode, result.StandardError);
                 return false;
             }
@@ -568,24 +577,28 @@ namespace ThreadPilot.Services
 
         private async Task EnsurePowerSettingVisibleAsync(string subgroupAlias, string settingAlias)
         {
-            var attributesResult = await RunProcessAsync(PowerCfgExecutablePath,
+            var attributesResult = await RunProcessAsync(
+                PowerCfgExecutablePath,
                 $"-attributes {subgroupAlias} {settingAlias} -ATTRIB_HIDE");
 
             if (attributesResult.ExitCode != 0)
             {
-                _logger.LogDebug("Could not unhide power setting {Subgroup}/{Setting}. ExitCode={ExitCode}, Error={Error}",
+                this.logger.LogDebug(
+                    "Could not unhide power setting {Subgroup}/{Setting}. ExitCode={ExitCode}, Error={Error}",
                     subgroupAlias, settingAlias, attributesResult.ExitCode, attributesResult.StandardError);
             }
         }
 
         private async Task<int?> GetPowerCfgAcSettingValueAsync(string subgroupAlias, string settingAlias)
         {
-            var queryResult = await RunProcessAsync(PowerCfgExecutablePath,
+            var queryResult = await RunProcessAsync(
+                PowerCfgExecutablePath,
                 $"-query SCHEME_CURRENT {subgroupAlias} {settingAlias}");
 
             if (queryResult.ExitCode != 0)
             {
-                _logger.LogWarning("powercfg query failed for {Subgroup}/{Setting}. ExitCode={ExitCode}, Error={Error}",
+                this.logger.LogWarning(
+                    "powercfg query failed for {Subgroup}/{Setting}. ExitCode={ExitCode}, Error={Error}",
                     subgroupAlias, settingAlias, queryResult.ExitCode, queryResult.StandardError);
                 return null;
             }
@@ -624,7 +637,7 @@ namespace ThreadPilot.Services
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                CreateNoWindow = true
+                CreateNoWindow = true,
             };
 
             using var process = Process.Start(processInfo);
@@ -676,7 +689,7 @@ namespace ThreadPilot.Services
                 uint uintValue => unchecked((int)uintValue),
                 long longValue when longValue >= int.MinValue && longValue <= int.MaxValue => (int)longValue,
                 string stringValue when int.TryParse(stringValue, out var parsed) => parsed,
-                _ => null
+                _ => null,
             };
         }
 
@@ -684,9 +697,9 @@ namespace ThreadPilot.Services
         {
             public ProcessResult(int exitCode, string standardOutput, string standardError)
             {
-                ExitCode = exitCode;
-                StandardOutput = standardOutput;
-                StandardError = standardError;
+                this.ExitCode = exitCode;
+                this.StandardOutput = standardOutput;
+                this.StandardError = standardError;
             }
 
             public int ExitCode { get; }
@@ -713,12 +726,12 @@ namespace ThreadPilot.Services
                 {
                     IsEnabled = isEnabled,
                     IsAvailable = true,
-                    Description = "Delay before showing context menus"
+                    Description = "Delay before showing context menus",
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting Menu Show Delay status");
+                this.logger.LogError(ex, "Error getting Menu Show Delay status");
                 return Task.FromResult(new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message });
             }
         }
@@ -730,22 +743,22 @@ namespace ThreadPilot.Services
                 using var key = Registry.CurrentUser.OpenSubKey(@"Control Panel\Desktop", true);
                 if (key == null)
                 {
-                    _logger.LogError("Desktop registry key not found");
+                    this.logger.LogError("Desktop registry key not found");
                     return false;
                 }
 
                 // Set MenuShowDelay: 0 = no delay, 400 = default delay
                 key.SetValue("MenuShowDelay", enabled ? "400" : "0", RegistryValueKind.String);
 
-                var status = await GetMenuShowDelayStatusAsync();
-                TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("MenuShowDelay", status));
+                var status = await this.GetMenuShowDelayStatusAsync();
+                this.TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("MenuShowDelay", status));
 
-                _logger.LogInformation("Menu Show Delay {Status}", enabled ? "enabled" : "disabled");
+                this.logger.LogInformation("Menu Show Delay {Status}", enabled ? "enabled" : "disabled");
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error setting Menu Show Delay to {Enabled}", enabled);
+                this.logger.LogError(ex, "Error setting Menu Show Delay to {Enabled}", enabled);
                 return false;
             }
         }
@@ -754,26 +767,26 @@ namespace ThreadPilot.Services
         {
             try
             {
-                _logger.LogInformation("Refreshing all system tweak statuses");
+                this.logger.LogInformation("Refreshing all system tweak statuses");
 
                 var tasks = new[]
                 {
-                    GetCoreParkingStatusAsync(),
-                    GetCStatesStatusAsync(),
-                    GetSysMainStatusAsync(),
-                    GetPrefetchStatusAsync(),
-                    GetPowerThrottlingStatusAsync(),
-                    GetHpetStatusAsync(),
-                    GetHighSchedulingCategoryStatusAsync(),
-                    GetMenuShowDelayStatusAsync()
+                    this.GetCoreParkingStatusAsync(),
+                    this.GetCStatesStatusAsync(),
+                    this.GetSysMainStatusAsync(),
+                    this.GetPrefetchStatusAsync(),
+                    this.GetPowerThrottlingStatusAsync(),
+                    this.GetHpetStatusAsync(),
+                    this.GetHighSchedulingCategoryStatusAsync(),
+                    this.GetMenuShowDelayStatusAsync(),
                 };
 
                 await Task.WhenAll(tasks);
-                _logger.LogInformation("All system tweak statuses refreshed");
+                this.logger.LogInformation("All system tweak statuses refreshed");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error refreshing system tweak statuses");
+                this.logger.LogError(ex, "Error refreshing system tweak statuses");
             }
         }
     }

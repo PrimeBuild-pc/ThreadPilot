@@ -14,27 +14,36 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using CommunityToolkit.Mvvm.ComponentModel;
-
 namespace ThreadPilot.Models
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using CommunityToolkit.Mvvm.ComponentModel;
+
     /// <summary>
-    /// Represents a logical CPU core with topology information
+    /// Represents a logical CPU core with topology information.
     /// </summary>
     public partial class CpuCoreModel : ObservableObject
     {
         public int LogicalCoreId { get; set; }
+
         public int PhysicalCoreId { get; set; }
+
         public int SocketId { get; set; }
+
         public int? CcdId { get; set; } // Core Complex Die (AMD)
+
         public int? ClusterId { get; set; } // Intel Cluster
+
         public CpuCoreType CoreType { get; set; } = CpuCoreType.Unknown;
+
         public bool IsHyperThreaded { get; set; }
+
         public int? HyperThreadSibling { get; set; }
+
         public string Label { get; set; } = string.Empty;
+
         public string LogicalProcessorName { get; set; } = string.Empty; // e.g., "Core0_T0", "Core0_T1" (T0 = physical, T1+ = SMT)
 
         [ObservableProperty]
@@ -44,13 +53,13 @@ namespace ThreadPilot.Models
         private bool isSelected = false;
 
         /// <summary>
-        /// Gets the affinity mask bit for this logical core
+        /// Gets the affinity mask bit for this logical core.
         /// </summary>
-        public long AffinityMask => 1L << LogicalCoreId;
+        public long AffinityMask => 1L << this.LogicalCoreId;
     }
 
     /// <summary>
-    /// Types of CPU cores
+    /// Types of CPU cores.
     /// </summary>
     public enum CpuCoreType
     {
@@ -62,72 +71,86 @@ namespace ThreadPilot.Models
         ZenPlus,         // AMD Zen+ cores
         Zen2,            // AMD Zen2 cores
         Zen3,            // AMD Zen3 cores
-        Zen4             // AMD Zen4 cores
+        Zen4,             // AMD Zen4 cores
     }
 
     /// <summary>
-    /// Represents CPU topology information
+    /// Represents CPU topology information.
     /// </summary>
     public class CpuTopologyModel
     {
         public List<CpuCoreModel> LogicalCores { get; set; } = new();
-        public int TotalLogicalCores => LogicalCores.Count;
-        public int TotalPhysicalCores => LogicalCores.GroupBy(c => c.PhysicalCoreId).Count();
-        public int TotalSockets => LogicalCores.GroupBy(c => c.SocketId).Count();
-        public int SocketCount => TotalSockets; // Alias for TotalSockets
-        public bool HasHyperThreading => LogicalCores.Any(c => c.IsHyperThreaded);
-        public bool HasSmt => HasHyperThreading; // SMT is AMD's term for HyperThreading
-        public bool HasIntelHybrid => LogicalCores.Any(c => c.CoreType == CpuCoreType.PerformanceCore || c.CoreType == CpuCoreType.EfficiencyCore);
-        public bool HasHybridArchitecture => HasIntelHybrid; // Alias for HasIntelHybrid
-        public bool HasAmdCcd => LogicalCores.Any(c => c.CcdId.HasValue);
-        public int CcdCount => LogicalCores.Where(c => c.CcdId.HasValue).Select(c => c.CcdId!.Value).Distinct().Count();
-        public string Architecture => CpuArchitecture; // Alias for CpuArchitecture
+
+        public int TotalLogicalCores => this.LogicalCores.Count;
+
+        public int TotalPhysicalCores => this.LogicalCores.GroupBy(c => c.PhysicalCoreId).Count();
+
+        public int TotalSockets => this.LogicalCores.GroupBy(c => c.SocketId).Count();
+
+        public int SocketCount => this.TotalSockets; // Alias for TotalSockets
+
+        public bool HasHyperThreading => this.LogicalCores.Any(c => c.IsHyperThreaded);
+
+        public bool HasSmt => this.HasHyperThreading; // SMT is AMD's term for HyperThreading
+
+        public bool HasIntelHybrid => this.LogicalCores.Any(c => c.CoreType == CpuCoreType.PerformanceCore || c.CoreType == CpuCoreType.EfficiencyCore);
+
+        public bool HasHybridArchitecture => this.HasIntelHybrid; // Alias for HasIntelHybrid
+
+        public bool HasAmdCcd => this.LogicalCores.Any(c => c.CcdId.HasValue);
+
+        public int CcdCount => this.LogicalCores.Where(c => c.CcdId.HasValue).Select(c => c.CcdId!.Value).Distinct().Count();
+
+        public string Architecture => this.CpuArchitecture; // Alias for CpuArchitecture
+
         public string CpuArchitecture { get; set; } = "Unknown";
+
         public string CpuBrand { get; set; } = "Unknown";
+
         public bool TopologyDetectionSuccessful { get; set; } = false;
 
         /// <summary>
-        /// Gets all CCDs (Core Complex Dies) available
+        /// Gets all CCDs (Core Complex Dies) available.
         /// </summary>
-        public IEnumerable<int> AvailableCcds => LogicalCores
+        public IEnumerable<int> AvailableCcds => this.LogicalCores
             .Where(c => c.CcdId.HasValue)
             .Select(c => c.CcdId!.Value)
             .Distinct()
             .OrderBy(id => id);
 
         /// <summary>
-        /// Gets all performance cores (Intel P-cores)
+        /// Gets all performance cores (Intel P-cores).
         /// </summary>
-        public IEnumerable<CpuCoreModel> PerformanceCores => LogicalCores
+        public IEnumerable<CpuCoreModel> PerformanceCores => this.LogicalCores
             .Where(c => c.CoreType == CpuCoreType.PerformanceCore);
 
         /// <summary>
-        /// Gets all efficiency cores (Intel E-cores)
+        /// Gets all efficiency cores (Intel E-cores).
         /// </summary>
-        public IEnumerable<CpuCoreModel> EfficiencyCores => LogicalCores
+        public IEnumerable<CpuCoreModel> EfficiencyCores => this.LogicalCores
             .Where(c => c.CoreType == CpuCoreType.EfficiencyCore);
 
         /// <summary>
-        /// Gets all physical cores (one logical core per physical core, excluding HT siblings)
+        /// Gets all physical cores (one logical core per physical core, excluding HT siblings).
         /// </summary>
-        public IEnumerable<CpuCoreModel> PhysicalCores => LogicalCores
+        public IEnumerable<CpuCoreModel> PhysicalCores => this.LogicalCores
             .GroupBy(c => c.PhysicalCoreId)
             .Select(g => g.OrderBy(c => c.LogicalCoreId).First());
 
         /// <summary>
-        /// Gets cores by CCD ID
+        /// Gets cores by CCD ID.
         /// </summary>
-        public IEnumerable<CpuCoreModel> GetCoresByCcd(int ccdId) => LogicalCores
+        public IEnumerable<CpuCoreModel> GetCoresByCcd(int ccdId) => this.LogicalCores
             .Where(c => c.CcdId == ccdId);
 
         /// <summary>
-        /// Gets cores by socket ID
+        /// Gets cores by socket ID.
         /// </summary>
-        public IEnumerable<CpuCoreModel> GetCoresBySocket(int socketId) => LogicalCores
+        public IEnumerable<CpuCoreModel> GetCoresBySocket(int socketId) => this.LogicalCores
             .Where(c => c.SocketId == socketId);
 
         /// <summary>
-        /// Calculates affinity mask for selected cores
+        /// Calculates affinity mask for selected cores.
         /// </summary>
         public long CalculateAffinityMask(IEnumerable<CpuCoreModel> cores)
         {
@@ -135,35 +158,39 @@ namespace ThreadPilot.Models
         }
 
         /// <summary>
-        /// Gets affinity mask for all physical cores (excluding HT siblings)
+        /// Gets affinity mask for all physical cores (excluding HT siblings).
         /// </summary>
-        public long GetPhysicalCoresAffinityMask() => CalculateAffinityMask(PhysicalCores);
+        public long GetPhysicalCoresAffinityMask() => this.CalculateAffinityMask(this.PhysicalCores);
 
         /// <summary>
-        /// Gets affinity mask for performance cores
+        /// Gets affinity mask for performance cores.
         /// </summary>
-        public long GetPerformanceCoresAffinityMask() => CalculateAffinityMask(PerformanceCores);
+        public long GetPerformanceCoresAffinityMask() => this.CalculateAffinityMask(this.PerformanceCores);
 
         /// <summary>
-        /// Gets affinity mask for efficiency cores
+        /// Gets affinity mask for efficiency cores.
         /// </summary>
-        public long GetEfficiencyCoresAffinityMask() => CalculateAffinityMask(EfficiencyCores);
+        public long GetEfficiencyCoresAffinityMask() => this.CalculateAffinityMask(this.EfficiencyCores);
 
         /// <summary>
-        /// Gets affinity mask for a specific CCD
+        /// Gets affinity mask for a specific CCD.
         /// </summary>
-        public long GetCcdAffinityMask(int ccdId) => CalculateAffinityMask(GetCoresByCcd(ccdId));
+        public long GetCcdAffinityMask(int ccdId) => this.CalculateAffinityMask(this.GetCoresByCcd(ccdId));
     }
 
     /// <summary>
-    /// Quick selection preset for CPU affinity
+    /// Quick selection preset for CPU affinity.
     /// </summary>
     public class CpuAffinityPreset
     {
         public string Name { get; set; } = string.Empty;
+
         public string Description { get; set; } = string.Empty;
+
         public long AffinityMask { get; set; }
+
         public bool IsAvailable { get; set; } = true;
+
         public string UnavailableReason { get; set; } = string.Empty;
     }
 }

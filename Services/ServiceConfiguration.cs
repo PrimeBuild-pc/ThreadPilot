@@ -14,34 +14,34 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using ThreadPilot.ViewModels;
-
 namespace ThreadPilot.Services
 {
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Logging;
+    using ThreadPilot.ViewModels;
+
     /// <summary>
-    /// Centralized service configuration for dependency injection
+    /// Centralized service configuration for dependency injection.
     /// </summary>
     public static class ServiceConfiguration
     {
         /// <summary>
-        /// Configure all application services
+        /// Configure all application services.
         /// </summary>
         public static IServiceCollection ConfigureApplicationServices(this IServiceCollection services)
         {
             // Configure service infrastructure
             services.ConfigureServiceInfrastructure();
-            
+
             // Configure core system services
             services.ConfigureCoreSystemServices();
-            
+
             // Configure process management services
             services.ConfigureProcessManagementServices();
-            
+
             // Configure application services
             services.ConfigureApplicationLevelServices();
-            
+
             // Configure presentation layer
             services.ConfigurePresentationLayer();
 
@@ -80,7 +80,7 @@ namespace ThreadPilot.Services
         }
 
         /// <summary>
-        /// Configure core system services that interact directly with the OS
+        /// Configure core system services that interact directly with the OS.
         /// </summary>
         private static IServiceCollection ConfigureCoreSystemServices(this IServiceCollection services)
         {
@@ -90,9 +90,9 @@ namespace ThreadPilot.Services
             services.AddSingleton<IConditionalProfileService, ConditionalProfileService>();
             services.AddSingleton<IPowerPlanService, PowerPlanService>();
             services.AddSingleton<ICpuTopologyService, CpuTopologyService>();
-            
+
             // CoreMaskService needs IServiceProvider for checking profile references
-            services.AddSingleton<ICoreMaskService>(sp => 
+            services.AddSingleton<ICoreMaskService>(sp =>
             {
                 var logger = sp.GetRequiredService<ILogger<CoreMaskService>>();
                 var cpuTopologyService = sp.GetRequiredService<ICpuTopologyService>();
@@ -103,7 +103,7 @@ namespace ThreadPilot.Services
         }
 
         /// <summary>
-        /// Configure process monitoring and management services
+        /// Configure process monitoring and management services.
         /// </summary>
         private static IServiceCollection ConfigureProcessManagementServices(this IServiceCollection services)
         {
@@ -126,12 +126,12 @@ namespace ThreadPilot.Services
             // Application configuration and settings
             services.AddSingleton<IApplicationSettingsService, ApplicationSettingsService>();
             services.AddSingleton<IThemeService, ThemeService>();
-            
+
             // User interface services
             services.AddSingleton<INotificationService, NotificationService>();
             services.AddSingleton<ISmartNotificationService, SmartNotificationService>();
             services.AddSingleton<ISystemTrayService, SystemTrayService>();
-            
+
             // System integration services
             services.AddSingleton<IAutostartService, AutostartService>();
 
@@ -152,7 +152,7 @@ namespace ThreadPilot.Services
         }
 
         /// <summary>
-        /// Configure presentation layer (ViewModels and Views)
+        /// Configure presentation layer (ViewModels and Views).
         /// </summary>
         private static IServiceCollection ConfigurePresentationLayer(this IServiceCollection services)
         {
@@ -176,13 +176,13 @@ namespace ThreadPilot.Services
         }
 
         /// <summary>
-        /// Validate service configuration
+        /// Validate service configuration.
         /// </summary>
         public static void ValidateServiceConfiguration(IServiceProvider serviceProvider)
         {
             var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
             var logger = loggerFactory.CreateLogger("ServiceConfiguration");
-            
+
             try
             {
                 // Validate core services can be resolved
@@ -192,7 +192,7 @@ namespace ThreadPilot.Services
                     typeof(IPowerPlanService),
                     typeof(ICpuTopologyService),
                     typeof(IEnhancedLoggingService),
-                    typeof(IApplicationSettingsService)
+                    typeof(IApplicationSettingsService),
                 };
 
                 foreach (var serviceType in coreServices)

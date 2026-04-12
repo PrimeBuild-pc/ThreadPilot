@@ -14,29 +14,29 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.ObjectModel;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Input;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.Logging;
-using Microsoft.Win32;
-using ThreadPilot.Models;
-using ThreadPilot.Services;
-using ThreadPilot.ViewModels;
-
 namespace ThreadPilot.ViewModels
 {
+    using System;
+    using System.Collections.ObjectModel;
+    using System.IO;
+    using System.Linq;
+    using System.Threading.Tasks;
+    using System.Windows.Input;
+    using CommunityToolkit.Mvvm.ComponentModel;
+    using CommunityToolkit.Mvvm.Input;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Win32;
+    using ThreadPilot.Models;
+    using ThreadPilot.Services;
+    using ThreadPilot.ViewModels;
+
     public partial class ProcessPowerPlanAssociationViewModel : BaseViewModel
     {
-        private readonly IProcessPowerPlanAssociationService _associationService;
-        private readonly IPowerPlanService _powerPlanService;
-        private readonly IProcessService _processService;
-        private readonly IProcessMonitorManagerService _monitorManagerService;
-        private readonly ICoreMaskService _coreMaskService;
+        private readonly IProcessPowerPlanAssociationService associationService;
+        private readonly IPowerPlanService powerPlanService;
+        private readonly IProcessService processService;
+        private readonly IProcessMonitorManagerService monitorManagerService;
+        private readonly ICoreMaskService coreMaskService;
 
         [ObservableProperty]
         private ObservableCollection<ProcessPowerPlanAssociation> associations = new();
@@ -55,7 +55,7 @@ namespace ThreadPilot.ViewModels
             "Normal",
             "AboveNormal",
             "High",
-            "RealTime"
+            "RealTime",
         };
 
         [ObservableProperty]
@@ -138,25 +138,25 @@ namespace ThreadPilot.ViewModels
             IEnhancedLoggingService? enhancedLoggingService = null)
             : base(logger, enhancedLoggingService)
         {
-            _associationService = associationService ?? throw new ArgumentNullException(nameof(associationService));
-            _powerPlanService = powerPlanService ?? throw new ArgumentNullException(nameof(powerPlanService));
-            _processService = processService ?? throw new ArgumentNullException(nameof(processService));
-            _monitorManagerService = monitorManagerService ?? throw new ArgumentNullException(nameof(monitorManagerService));
-            _coreMaskService = coreMaskService ?? throw new ArgumentNullException(nameof(coreMaskService));
+            this.associationService = associationService ?? throw new ArgumentNullException(nameof(associationService));
+            this.powerPlanService = powerPlanService ?? throw new ArgumentNullException(nameof(powerPlanService));
+            this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
+            this.monitorManagerService = monitorManagerService ?? throw new ArgumentNullException(nameof(monitorManagerService));
+            this.coreMaskService = coreMaskService ?? throw new ArgumentNullException(nameof(coreMaskService));
 
             // Subscribe to events
-            _associationService.ConfigurationChanged += OnConfigurationChanged;
-            _monitorManagerService.ServiceStatusChanged += OnServiceStatusChanged;
-            _monitorManagerService.ProcessPowerPlanChanged += OnProcessPowerPlanChanged;
+            this.associationService.ConfigurationChanged += this.OnConfigurationChanged;
+            this.monitorManagerService.ServiceStatusChanged += this.OnServiceStatusChanged;
+            this.monitorManagerService.ProcessPowerPlanChanged += this.OnProcessPowerPlanChanged;
 
             // Initialize
-            _ = InitializeAsync();
+            _ = this.InitializeAsync();
         }
 
         public override async Task InitializeAsync()
         {
-            await LoadDataAsync();
-            UpdateServiceStatus();
+            await this.LoadDataAsync();
+            this.UpdateServiceStatus();
         }
 
         partial void OnSelectedAssociationChanged(ProcessPowerPlanAssociation? value)
@@ -174,41 +174,41 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                SetStatus("Loading data...");
+                this.SetStatus("Loading data...");
 
                 // Load associations
-                var associationsData = await _associationService.GetAssociationsAsync();
-                Associations = new ObservableCollection<ProcessPowerPlanAssociation>(associationsData);
+                var associationsData = await this.associationService.GetAssociationsAsync();
+                this.Associations = new ObservableCollection<ProcessPowerPlanAssociation>(associationsData);
 
                 // Load power plans
-                var powerPlans = await _powerPlanService.GetPowerPlansAsync();
-                AvailablePowerPlans = powerPlans;
+                var powerPlans = await this.powerPlanService.GetPowerPlansAsync();
+                this.AvailablePowerPlans = powerPlans;
 
                 // Load core masks
-                await _coreMaskService.InitializeAsync();
-                AvailableCoreMasks = _coreMaskService.AvailableMasks;
+                await this.coreMaskService.InitializeAsync();
+                this.AvailableCoreMasks = this.coreMaskService.AvailableMasks;
 
                 // Load running processes
-                var processes = await _processService.GetProcessesAsync();
-                RunningProcesses = processes;
+                var processes = await this.processService.GetProcessesAsync();
+                this.RunningProcesses = processes;
 
                 // Load configuration settings
-                var config = _associationService.Configuration;
-                IsEventBasedMonitoringEnabled = config.IsEventBasedMonitoringEnabled;
-                IsFallbackPollingEnabled = config.IsFallbackPollingEnabled;
-                PollingIntervalSeconds = config.PollingIntervalSeconds;
-                PreventDuplicatePowerPlanChanges = config.PreventDuplicatePowerPlanChanges;
-                PowerPlanChangeDelayMs = config.PowerPlanChangeDelayMs;
+                var config = this.associationService.Configuration;
+                this.IsEventBasedMonitoringEnabled = config.IsEventBasedMonitoringEnabled;
+                this.IsFallbackPollingEnabled = config.IsFallbackPollingEnabled;
+                this.PollingIntervalSeconds = config.PollingIntervalSeconds;
+                this.PreventDuplicatePowerPlanChanges = config.PreventDuplicatePowerPlanChanges;
+                this.PowerPlanChangeDelayMs = config.PowerPlanChangeDelayMs;
 
                 // Load default power plan
-                var (defaultGuid, defaultName) = await _associationService.GetDefaultPowerPlanAsync();
-                DefaultPowerPlan = AvailablePowerPlans.FirstOrDefault(p => p.Guid == defaultGuid);
+                var (defaultGuid, defaultName) = await this.associationService.GetDefaultPowerPlanAsync();
+                this.DefaultPowerPlan = this.AvailablePowerPlans.FirstOrDefault(p => p.Guid == defaultGuid);
 
-                ClearStatus();
+                this.ClearStatus();
             }
             catch (Exception ex)
             {
-                SetStatus($"Error loading data: {ex.Message}", false);
+                this.SetStatus($"Error loading data: {ex.Message}", false);
             }
         }
 
@@ -217,54 +217,54 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(NewExecutableName) || SelectedPowerPlan == null)
+                if (string.IsNullOrWhiteSpace(this.NewExecutableName) || this.SelectedPowerPlan == null)
                 {
-                    SetStatus("Please select an executable and a power plan", false);
+                    this.SetStatus("Please select an executable and a power plan", false);
                     return;
                 }
 
-                SetStatus("Adding association...");
+                this.SetStatus("Adding association...");
 
                 var association = new ProcessPowerPlanAssociation
                 {
-                    ExecutableName = NewExecutableName.Trim(),
-                    ExecutablePath = NewExecutablePath.Trim(),
-                    PowerPlanGuid = SelectedPowerPlan.Guid,
-                    PowerPlanName = SelectedPowerPlan.Name,
-                    CoreMaskId = SelectedCoreMask?.Id,
-                    CoreMaskName = SelectedCoreMask?.Name,
-                    ProcessPriority = SelectedProcessPriority,
-                    MatchByPath = MatchByPath,
-                    Priority = Priority,
-                    Description = Description.Trim(),
-                    IsEnabled = true
+                    ExecutableName = this.NewExecutableName.Trim(),
+                    ExecutablePath = this.NewExecutablePath.Trim(),
+                    PowerPlanGuid = this.SelectedPowerPlan.Guid,
+                    PowerPlanName = this.SelectedPowerPlan.Name,
+                    CoreMaskId = this.SelectedCoreMask?.Id,
+                    CoreMaskName = this.SelectedCoreMask?.Name,
+                    ProcessPriority = this.SelectedProcessPriority,
+                    MatchByPath = this.MatchByPath,
+                    Priority = this.Priority,
+                    Description = this.Description.Trim(),
+                    IsEnabled = true,
                 };
 
-                var success = await _associationService.AddAssociationAsync(association);
+                var success = await this.associationService.AddAssociationAsync(association);
                 if (success)
                 {
                     // Clear form
-                    NewExecutableName = string.Empty;
-                    NewExecutablePath = string.Empty;
-                    SelectedPowerPlan = null;
-                    SelectedCoreMask = null;
-                    SelectedProcessPriority = null;
-                    MatchByPath = false;
-                    Priority = 0;
-                    Description = string.Empty;
-                    SelectedAssociation = null;
+                    this.NewExecutableName = string.Empty;
+                    this.NewExecutablePath = string.Empty;
+                    this.SelectedPowerPlan = null;
+                    this.SelectedCoreMask = null;
+                    this.SelectedProcessPriority = null;
+                    this.MatchByPath = false;
+                    this.Priority = 0;
+                    this.Description = string.Empty;
+                    this.SelectedAssociation = null;
 
-                    await LoadDataAsync();
-                    SetStatus("Rule created and applied successfully.", false);
+                    await this.LoadDataAsync();
+                    this.SetStatus("Rule created and applied successfully.", false);
                 }
                 else
                 {
-                    SetStatus("Failed to add rule - it may already exist", false);
+                    this.SetStatus("Failed to add rule - it may already exist", false);
                 }
             }
             catch (Exception ex)
             {
-                SetStatus($"Error adding rule: {ex.Message}", false);
+                this.SetStatus($"Error adding rule: {ex.Message}", false);
             }
         }
 
@@ -273,36 +273,36 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                if (SelectedAssociation == null)
+                if (this.SelectedAssociation == null)
                 {
-                    SetStatus("Please select a rule to update", false);
+                    this.SetStatus("Please select a rule to update", false);
                     return;
                 }
 
-                if (string.IsNullOrWhiteSpace(NewExecutableName) || SelectedPowerPlan == null)
+                if (string.IsNullOrWhiteSpace(this.NewExecutableName) || this.SelectedPowerPlan == null)
                 {
-                    SetStatus("Executable and power plan are required", false);
+                    this.SetStatus("Executable and power plan are required", false);
                     return;
                 }
 
-                SetStatus("Updating rule...");
+                this.SetStatus("Updating rule...");
 
-                ApplyEditorToAssociation(SelectedAssociation);
+                this.ApplyEditorToAssociation(this.SelectedAssociation);
 
-                var success = await _associationService.UpdateAssociationAsync(SelectedAssociation);
+                var success = await this.associationService.UpdateAssociationAsync(this.SelectedAssociation);
                 if (success)
                 {
-                    await LoadDataAsync();
-                    SetStatus("Rule updated and applied successfully.", false);
+                    await this.LoadDataAsync();
+                    this.SetStatus("Rule updated and applied successfully.", false);
                 }
                 else
                 {
-                    SetStatus("Failed to update rule", false);
+                    this.SetStatus("Failed to update rule", false);
                 }
             }
             catch (Exception ex)
             {
-                SetStatus($"Error updating rule: {ex.Message}", false);
+                this.SetStatus($"Error updating rule: {ex.Message}", false);
             }
         }
 
@@ -311,29 +311,29 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                if (SelectedAssociation == null)
+                if (this.SelectedAssociation == null)
                 {
-                    SetStatus("Please select a rule to remove", false);
+                    this.SetStatus("Please select a rule to remove", false);
                     return;
                 }
 
-                SetStatus("Removing rule...");
+                this.SetStatus("Removing rule...");
 
-                var success = await _associationService.RemoveAssociationAsync(SelectedAssociation.Id);
+                var success = await this.associationService.RemoveAssociationAsync(this.SelectedAssociation.Id);
                 if (success)
                 {
-                    SelectedAssociation = null;
-                    await LoadDataAsync();
-                    SetStatus("Rule removed successfully");
+                    this.SelectedAssociation = null;
+                    await this.LoadDataAsync();
+                    this.SetStatus("Rule removed successfully");
                 }
                 else
                 {
-                    SetStatus("Failed to remove rule", false);
+                    this.SetStatus("Failed to remove rule", false);
                 }
             }
             catch (Exception ex)
             {
-                SetStatus($"Error removing rule: {ex.Message}", false);
+                this.SetStatus($"Error removing rule: {ex.Message}", false);
             }
         }
 
@@ -342,27 +342,27 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                if (DefaultPowerPlan == null)
+                if (this.DefaultPowerPlan == null)
                 {
-                    SetStatus("Please select a default power plan", false);
+                    this.SetStatus("Please select a default power plan", false);
                     return;
                 }
 
-                SetStatus("Setting default power plan...");
+                this.SetStatus("Setting default power plan...");
 
-                var success = await _associationService.SetDefaultPowerPlanAsync(DefaultPowerPlan.Guid, DefaultPowerPlan.Name);
+                var success = await this.associationService.SetDefaultPowerPlanAsync(this.DefaultPowerPlan.Guid, this.DefaultPowerPlan.Name);
                 if (success)
                 {
-                    SetStatus("Default power plan set successfully");
+                    this.SetStatus("Default power plan set successfully");
                 }
                 else
                 {
-                    SetStatus("Failed to set default power plan", false);
+                    this.SetStatus("Failed to set default power plan", false);
                 }
             }
             catch (Exception ex)
             {
-                SetStatus($"Error setting default power plan: {ex.Message}", false);
+                this.SetStatus($"Error setting default power plan: {ex.Message}", false);
             }
         }
 
@@ -371,12 +371,12 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                SetStatus("Starting monitoring service...");
-                await _monitorManagerService.StartAsync();
+                this.SetStatus("Starting monitoring service...");
+                await this.monitorManagerService.StartAsync();
             }
             catch (Exception ex)
             {
-                SetStatus($"Error starting monitoring: {ex.Message}", false);
+                this.SetStatus($"Error starting monitoring: {ex.Message}", false);
             }
         }
 
@@ -385,12 +385,12 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                SetStatus("Stopping monitoring service...");
-                await _monitorManagerService.StopAsync();
+                this.SetStatus("Stopping monitoring service...");
+                await this.monitorManagerService.StopAsync();
             }
             catch (Exception ex)
             {
-                SetStatus($"Error stopping monitoring: {ex.Message}", false);
+                this.SetStatus($"Error stopping monitoring: {ex.Message}", false);
             }
         }
 
@@ -399,42 +399,42 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                SetStatus("Saving configuration...");
+                this.SetStatus("Saving configuration...");
 
                 // Update configuration with current settings
-                var config = _associationService.Configuration;
-                config.IsEventBasedMonitoringEnabled = IsEventBasedMonitoringEnabled;
-                config.IsFallbackPollingEnabled = IsFallbackPollingEnabled;
-                config.PollingIntervalSeconds = PollingIntervalSeconds;
-                config.PreventDuplicatePowerPlanChanges = PreventDuplicatePowerPlanChanges;
-                config.PowerPlanChangeDelayMs = PowerPlanChangeDelayMs;
+                var config = this.associationService.Configuration;
+                config.IsEventBasedMonitoringEnabled = this.IsEventBasedMonitoringEnabled;
+                config.IsFallbackPollingEnabled = this.IsFallbackPollingEnabled;
+                config.PollingIntervalSeconds = this.PollingIntervalSeconds;
+                config.PreventDuplicatePowerPlanChanges = this.PreventDuplicatePowerPlanChanges;
+                config.PowerPlanChangeDelayMs = this.PowerPlanChangeDelayMs;
 
-                var success = await _associationService.SaveConfigurationAsync();
+                var success = await this.associationService.SaveConfigurationAsync();
                 if (success)
                 {
-                    SetStatus("Configuration saved and active.", false);
+                    this.SetStatus("Configuration saved and active.", false);
                 }
                 else
                 {
-                    SetStatus("Failed to save configuration", false);
+                    this.SetStatus("Failed to save configuration", false);
                 }
             }
             catch (Exception ex)
             {
-                SetStatus($"Error saving configuration: {ex.Message}", false);
+                this.SetStatus($"Error saving configuration: {ex.Message}", false);
             }
         }
 
         [RelayCommand]
         public void UseSelectedProcessForAssociation()
         {
-            if (SelectedProcess != null)
+            if (this.SelectedProcess != null)
             {
-                NewExecutableName = SelectedProcess.Name;
-                NewExecutablePath = SelectedProcess.ExecutablePath;
+                this.NewExecutableName = this.SelectedProcess.Name;
+                this.NewExecutablePath = this.SelectedProcess.ExecutablePath;
 
                 // Update the selected executable display
-                UpdateSelectedExecutableDisplay(SelectedProcess.ExecutablePath, SelectedProcess.Name);
+                this.UpdateSelectedExecutableDisplay(this.SelectedProcess.ExecutablePath, this.SelectedProcess.Name);
             }
         }
 
@@ -450,7 +450,7 @@ namespace ThreadPilot.ViewModels
                     FilterIndex = 1,
                     CheckFileExists = true,
                     CheckPathExists = true,
-                    Multiselect = false
+                    Multiselect = false,
                 };
 
                 if (openFileDialog.ShowDialog() == true)
@@ -458,9 +458,9 @@ namespace ThreadPilot.ViewModels
                     var selectedFilePath = openFileDialog.FileName;
 
                     // Validate that it's an executable file
-                    if (!IsValidExecutable(selectedFilePath))
+                    if (!this.IsValidExecutable(selectedFilePath))
                     {
-                        SetStatus("Selected file is not a valid executable", false);
+                        this.SetStatus("Selected file is not a valid executable", false);
                         return;
                     }
 
@@ -468,36 +468,36 @@ namespace ThreadPilot.ViewModels
                     var executableName = Path.GetFileName(selectedFilePath);
 
                     // Auto-populate the fields
-                    NewExecutableName = executableName;
-                    NewExecutablePath = selectedFilePath;
+                    this.NewExecutableName = executableName;
+                    this.NewExecutablePath = selectedFilePath;
 
                     // Update the display
-                    UpdateSelectedExecutableDisplay(selectedFilePath, executableName);
+                    this.UpdateSelectedExecutableDisplay(selectedFilePath, executableName);
 
-                    SetStatus($"Selected executable: {executableName}");
+                    this.SetStatus($"Selected executable: {executableName}");
                 }
             }
             catch (Exception ex)
             {
-                SetStatus($"Error selecting executable: {ex.Message}", false);
+                this.SetStatus($"Error selecting executable: {ex.Message}", false);
             }
         }
 
         [RelayCommand]
         public void ClearSelectedExecutable()
         {
-            NewExecutableName = string.Empty;
-            NewExecutablePath = string.Empty;
-            SelectedExecutableDisplayName = "No executable selected";
-            SelectedExecutableFullPath = string.Empty;
-            HasSelectedExecutable = false;
-            SetStatus("Executable selection cleared");
+            this.NewExecutableName = string.Empty;
+            this.NewExecutablePath = string.Empty;
+            this.SelectedExecutableDisplayName = "No executable selected";
+            this.SelectedExecutableFullPath = string.Empty;
+            this.HasSelectedExecutable = false;
+            this.SetStatus("Executable selection cleared");
         }
 
         private void OnConfigurationChanged(object? sender, ConfigurationChangedEventArgs e)
         {
             // Reload data when configuration changes - marshal to UI thread to prevent cross-thread access exceptions
-            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () => await LoadDataAsync());
+            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () => await this.LoadDataAsync());
         }
 
         private void OnServiceStatusChanged(object? sender, ServiceStatusEventArgs e)
@@ -505,8 +505,8 @@ namespace ThreadPilot.ViewModels
             // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
             System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                ServiceStatus = e.Status;
-                IsServiceRunning = e.IsRunning;
+                this.ServiceStatus = e.Status;
+                this.IsServiceRunning = e.IsRunning;
             });
         }
 
@@ -515,7 +515,9 @@ namespace ThreadPilot.ViewModels
             try
             {
                 if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+                {
                     return false;
+                }
 
                 var extension = Path.GetExtension(filePath);
                 return string.Equals(extension, ".exe", StringComparison.OrdinalIgnoreCase);
@@ -530,52 +532,52 @@ namespace ThreadPilot.ViewModels
         {
             if (string.IsNullOrWhiteSpace(fullPath))
             {
-                SelectedExecutableDisplayName = "No executable selected";
-                SelectedExecutableFullPath = string.Empty;
-                HasSelectedExecutable = false;
+                this.SelectedExecutableDisplayName = "No executable selected";
+                this.SelectedExecutableFullPath = string.Empty;
+                this.HasSelectedExecutable = false;
             }
             else
             {
-                SelectedExecutableDisplayName = executableName;
-                SelectedExecutableFullPath = fullPath;
-                HasSelectedExecutable = true;
+                this.SelectedExecutableDisplayName = executableName;
+                this.SelectedExecutableFullPath = fullPath;
+                this.HasSelectedExecutable = true;
             }
         }
 
         private void PopulateEditorFromAssociation(ProcessPowerPlanAssociation association)
         {
-            NewExecutableName = association.ExecutableName ?? string.Empty;
-            NewExecutablePath = association.ExecutablePath ?? string.Empty;
-            MatchByPath = association.MatchByPath;
-            Priority = association.Priority;
-            Description = association.Description ?? string.Empty;
-            SelectedProcessPriority = association.ProcessPriority;
+            this.NewExecutableName = association.ExecutableName ?? string.Empty;
+            this.NewExecutablePath = association.ExecutablePath ?? string.Empty;
+            this.MatchByPath = association.MatchByPath;
+            this.Priority = association.Priority;
+            this.Description = association.Description ?? string.Empty;
+            this.SelectedProcessPriority = association.ProcessPriority;
 
-            SelectedPowerPlan = AvailablePowerPlans.FirstOrDefault(p =>
+            this.SelectedPowerPlan = this.AvailablePowerPlans.FirstOrDefault(p =>
                 string.Equals(p.Guid, association.PowerPlanGuid, StringComparison.OrdinalIgnoreCase));
 
-            SelectedCoreMask = AvailableCoreMasks.FirstOrDefault(m =>
+            this.SelectedCoreMask = this.AvailableCoreMasks.FirstOrDefault(m =>
                 string.Equals(m.Id, association.CoreMaskId, StringComparison.Ordinal));
 
-            UpdateSelectedExecutableDisplay(
-                NewExecutablePath,
-                string.IsNullOrWhiteSpace(NewExecutableName)
-                    ? Path.GetFileName(NewExecutablePath)
-                    : NewExecutableName);
+            this.UpdateSelectedExecutableDisplay(
+                this.NewExecutablePath,
+                string.IsNullOrWhiteSpace(this.NewExecutableName)
+                    ? Path.GetFileName(this.NewExecutablePath)
+                    : this.NewExecutableName);
         }
 
         private void ApplyEditorToAssociation(ProcessPowerPlanAssociation association)
         {
-            association.ExecutableName = NewExecutableName.Trim();
-            association.ExecutablePath = NewExecutablePath.Trim();
-            association.MatchByPath = MatchByPath;
-            association.Priority = Priority;
-            association.Description = Description.Trim();
-            association.ProcessPriority = SelectedProcessPriority;
-            association.PowerPlanGuid = SelectedPowerPlan?.Guid ?? string.Empty;
-            association.PowerPlanName = SelectedPowerPlan?.Name ?? string.Empty;
-            association.CoreMaskId = SelectedCoreMask?.Id;
-            association.CoreMaskName = SelectedCoreMask?.Name;
+            association.ExecutableName = this.NewExecutableName.Trim();
+            association.ExecutablePath = this.NewExecutablePath.Trim();
+            association.MatchByPath = this.MatchByPath;
+            association.Priority = this.Priority;
+            association.Description = this.Description.Trim();
+            association.ProcessPriority = this.SelectedProcessPriority;
+            association.PowerPlanGuid = this.SelectedPowerPlan?.Guid ?? string.Empty;
+            association.PowerPlanName = this.SelectedPowerPlan?.Name ?? string.Empty;
+            association.CoreMaskId = this.SelectedCoreMask?.Id;
+            association.CoreMaskName = this.SelectedCoreMask?.Name;
             association.UpdatedAt = DateTime.UtcNow;
         }
 
@@ -585,14 +587,14 @@ namespace ThreadPilot.ViewModels
             System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 // Update status when power plan changes occur
-                SetStatus($"Power plan changed: {e.NewPowerPlan?.Name} for {e.Process.Name}");
+                this.SetStatus($"Power plan changed: {e.NewPowerPlan?.Name} for {e.Process.Name}");
             });
         }
 
         private void UpdateServiceStatus()
         {
-            ServiceStatus = _monitorManagerService.Status;
-            IsServiceRunning = _monitorManagerService.IsRunning;
+            this.ServiceStatus = this.monitorManagerService.Status;
+            this.IsServiceRunning = this.monitorManagerService.IsRunning;
         }
     }
 }

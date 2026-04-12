@@ -14,17 +14,17 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.IO;
-using System.Threading.Tasks;
-using ThreadPilot.ViewModels;
-using ThreadPilot.Services;
-using Microsoft.Extensions.Logging;
-
 namespace ThreadPilot.Tests
 {
+    using System;
+    using System.IO;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
+    using ThreadPilot.Services;
+    using ThreadPilot.ViewModels;
+
     /// <summary>
-    /// Test class to validate the new executable browse functionality
+    /// Test class to validate the new executable browse functionality.
     /// </summary>
     public class ExecutableBrowseTest
     {
@@ -34,7 +34,7 @@ namespace ThreadPilot.Tests
         }
 
         /// <summary>
-        /// Test the executable validation logic (static test)
+        /// Test the executable validation logic (static test).
         /// </summary>
         public bool TestExecutableValidation()
         {
@@ -82,7 +82,7 @@ namespace ThreadPilot.Tests
         }
 
         /// <summary>
-        /// Test path extraction functionality
+        /// Test path extraction functionality.
         /// </summary>
         public bool TestPathExtraction()
         {
@@ -109,7 +109,7 @@ namespace ThreadPilot.Tests
         }
 
         /// <summary>
-        /// Test file dialog filter validation
+        /// Test file dialog filter validation.
         /// </summary>
         public bool TestFileDialogFilter()
         {
@@ -140,20 +140,20 @@ namespace ThreadPilot.Tests
         }
 
         /// <summary>
-        /// Run all tests
+        /// Run all tests.
         /// </summary>
         public bool RunAllTests()
         {
             Console.WriteLine("=== Executable Browse Functionality Tests ===");
             Console.WriteLine();
 
-            bool test1 = TestExecutableValidation();
+            bool test1 = this.TestExecutableValidation();
             Console.WriteLine();
 
-            bool test2 = TestPathExtraction();
+            bool test2 = this.TestPathExtraction();
             Console.WriteLine();
 
-            bool test3 = TestFileDialogFilter();
+            bool test3 = this.TestFileDialogFilter();
             Console.WriteLine();
 
             bool allPassed = test1 && test2 && test3;

@@ -14,23 +14,26 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Globalization;
-using System.Windows;
-using System.Windows.Data;
-using System.Windows.Media;
-using ThreadPilot.Models;
-
 namespace ThreadPilot.Converters
 {
+    using System;
+    using System.Globalization;
+    using System.Windows;
+    using System.Windows.Data;
+    using System.Windows.Media;
+    using ThreadPilot.Models;
+
     /// <summary>
-    /// Converter for CPU core type to color
+    /// Converter for CPU core type to color.
     /// </summary>
     public class CoreTypeToColorConverter : IMultiValueConverter
     {
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
         {
-            if (values.Length < 2) return ResolveBrush("TextFillColorPrimaryBrush", System.Windows.Media.Brushes.Black);
+            if (values.Length < 2)
+            {
+                return ResolveBrush("TextFillColorPrimaryBrush", System.Windows.Media.Brushes.Black);
+            }
 
             var coreType = values[0] as CpuCoreType? ?? CpuCoreType.Unknown;
             var isHyperThreaded = values[1] as bool? ?? false;
@@ -47,7 +50,7 @@ namespace ThreadPilot.Converters
                     isHyperThreaded
                         ? ResolveBrush("SystemAccentColorSecondaryBrush", System.Windows.Media.Brushes.DarkOrange)
                         : ResolveBrush("SystemAccentColorPrimaryBrush", System.Windows.Media.Brushes.Orange),
-                _ => ResolveBrush("TextFillColorSecondaryBrush", System.Windows.Media.Brushes.Gray)
+                _ => ResolveBrush("TextFillColorSecondaryBrush", System.Windows.Media.Brushes.Gray),
             };
         }
 
@@ -68,7 +71,7 @@ namespace ThreadPilot.Converters
     }
 
     /// <summary>
-    /// Converter for boolean to color (success/failure indication)
+    /// Converter for boolean to color (success/failure indication).
     /// </summary>
     public class BoolToColorConverter : IValueConverter
     {
@@ -100,7 +103,7 @@ namespace ThreadPilot.Converters
     }
 
     /// <summary>
-    /// Converter for boolean to visibility
+    /// Converter for boolean to visibility.
     /// </summary>
     public class BoolToVisibilityConverter : IValueConverter
     {
@@ -120,7 +123,7 @@ namespace ThreadPilot.Converters
     }
 
     /// <summary>
-    /// Converter for affinity mask to readable string
+    /// Converter for affinity mask to readable string.
     /// </summary>
     public class AffinityMaskConverter : IValueConverter
     {
@@ -128,8 +131,11 @@ namespace ThreadPilot.Converters
         {
             if (value is long mask)
             {
-                if (mask == 0) return "None";
-                
+                if (mask == 0)
+                {
+                    return "None";
+                }
+
                 var cores = new System.Collections.Generic.List<int>();
                 for (int i = 0; i < 64; i++)
                 {
@@ -138,11 +144,22 @@ namespace ThreadPilot.Converters
                         cores.Add(i);
                     }
                 }
-                
-                if (cores.Count == 0) return "None";
-                if (cores.Count == 1) return $"Core {cores[0]}";
-                if (cores.Count <= 4) return $"Cores {string.Join(", ", cores)}";
-                
+
+                if (cores.Count == 0)
+                {
+                    return "None";
+                }
+
+                if (cores.Count == 1)
+                {
+                    return $"Core {cores[0]}";
+                }
+
+                if (cores.Count <= 4)
+                {
+                    return $"Cores {string.Join(", ", cores)}";
+                }
+
                 return $"Cores {cores[0]}-{cores[cores.Count - 1]} ({cores.Count} cores)";
             }
             return "Unknown";
@@ -155,7 +172,7 @@ namespace ThreadPilot.Converters
     }
 
     /// <summary>
-    /// Converter for bytes to megabytes
+    /// Converter for bytes to megabytes.
     /// </summary>
     public class BytesToMbConverter : IValueConverter
     {
@@ -175,7 +192,7 @@ namespace ThreadPilot.Converters
     }
 
     /// <summary>
-    /// Converter for string to visibility (empty/null = collapsed)
+    /// Converter for string to visibility (empty/null = collapsed).
     /// </summary>
     public class StringToVisibilityConverter : IValueConverter
     {

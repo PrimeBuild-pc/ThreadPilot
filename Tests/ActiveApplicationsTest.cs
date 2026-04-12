@@ -14,29 +14,29 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
-using ThreadPilot.Services;
-using ThreadPilot.Models;
-
 namespace ThreadPilot.Tests
 {
+    using System;
+    using System.Diagnostics;
+    using System.Linq;
+    using System.Threading.Tasks;
+    using ThreadPilot.Models;
+    using ThreadPilot.Services;
+
     /// <summary>
-    /// Test class to validate the Active Applications filtering functionality
+    /// Test class to validate the Active Applications filtering functionality.
     /// </summary>
     public class ActiveApplicationsTest
     {
-        private readonly ProcessService _processService;
+        private readonly ProcessService processService;
 
         public ActiveApplicationsTest()
         {
-            _processService = new ProcessService();
+            this.processService = new ProcessService();
         }
 
         /// <summary>
-        /// Test that demonstrates the difference between all processes and active applications
+        /// Test that demonstrates the difference between all processes and active applications.
         /// </summary>
         public async Task TestActiveApplicationsFiltering()
         {
@@ -44,11 +44,11 @@ namespace ThreadPilot.Tests
             Console.WriteLine();
 
             // Get all processes
-            var allProcesses = await _processService.GetProcessesAsync();
+            var allProcesses = await this.processService.GetProcessesAsync();
             Console.WriteLine($"Total processes found: {allProcesses.Count}");
 
             // Get only active applications
-            var activeApplications = await _processService.GetActiveApplicationsAsync();
+            var activeApplications = await this.processService.GetActiveApplicationsAsync();
             Console.WriteLine($"Active applications found: {activeApplications.Count}");
             Console.WriteLine();
 
@@ -77,7 +77,7 @@ namespace ThreadPilot.Tests
             // Validate that active applications are a subset of all processes
             var activeAppIds = activeApplications.Select(a => a.ProcessId).ToHashSet();
             var allProcessIds = allProcesses.Select(p => p.ProcessId).ToHashSet();
-            
+
             bool isSubset = activeAppIds.IsSubsetOf(allProcessIds);
             Console.WriteLine($"Active applications are subset of all processes: {isSubset}");
 
@@ -91,22 +91,22 @@ namespace ThreadPilot.Tests
         }
 
         /// <summary>
-        /// Test specific process properties for window information
+        /// Test specific process properties for window information.
         /// </summary>
         public async Task TestProcessWindowProperties()
         {
             Console.WriteLine("\n=== Process Window Properties Test ===");
-            
-            var allProcesses = await _processService.GetProcessesAsync();
-            
+
+            var allProcesses = await this.processService.GetProcessesAsync();
+
             // Find some common applications that should have windows
             var commonApps = new[] { "explorer", "chrome", "firefox", "notepad", "code", "devenv" };
-            
+
             foreach (var appName in commonApps)
             {
-                var matchingProcesses = allProcesses.Where(p => 
+                var matchingProcesses = allProcesses.Where(p =>
                     p.Name.Contains(appName, StringComparison.OrdinalIgnoreCase)).ToList();
-                
+
                 if (matchingProcesses.Any())
                 {
                     Console.WriteLine($"\n--- {appName.ToUpper()} Processes ---");
@@ -125,17 +125,17 @@ namespace ThreadPilot.Tests
         }
 
         /// <summary>
-        /// Run all tests
+        /// Run all tests.
         /// </summary>
         public static async Task RunTests()
         {
             var test = new ActiveApplicationsTest();
-            
+
             try
             {
                 await test.TestActiveApplicationsFiltering();
                 await test.TestProcessWindowProperties();
-                
+
                 Console.WriteLine("\n=== All tests completed successfully! ===");
             }
             catch (Exception ex)

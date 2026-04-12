@@ -14,12 +14,12 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System.Collections.Generic;
-using System.Linq;
-using System.Windows.Controls;
-
 namespace ThreadPilot.Helpers
 {
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Windows.Controls;
+
     public static class AffinityHelper
     {
         public static long CalculateAffinityMask(IEnumerable<System.Windows.Controls.CheckBox> cpuCheckboxes)

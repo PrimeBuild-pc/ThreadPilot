@@ -14,16 +14,17 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using Microsoft.Extensions.DependencyInjection;
-
 namespace ThreadPilot.Helpers
 {
+    using System;
+    using Microsoft.Extensions.DependencyInjection;
+
     public static class ServiceProviderExtensions
     {
         public static IServiceProvider Services => ((App)App.Current).ServiceProvider;
-        
-        public static T? GetService<T>() where T : class
+
+        public static T? GetService<T>()
+            where T : class
         {
             return Services.GetService(typeof(T)) as T;
         }

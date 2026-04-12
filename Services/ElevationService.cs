@@ -14,31 +14,32 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Security.Principal;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows;
-using Microsoft.Extensions.Logging;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Linq;
+    using System.Security.Principal;
+    using System.Text;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using System.Windows;
+    using Microsoft.Extensions.Logging;
+
     /// <summary>
-    /// Service for managing application elevation and administrator privileges
+    /// Service for managing application elevation and administrator privileges.
     /// </summary>
-    public class ElevationService : IElevationService
+    public partial class ElevationService : IElevationService
     {
-        private readonly ILogger<ElevationService> _logger;
-        private readonly ISecurityService _securityService;
-        private readonly SemaphoreSlim _elevationRequestSemaphore = new(1, 1);
+        private readonly ILogger<ElevationService> logger;
+        private readonly ISecurityService securityService;
+        private readonly SemaphoreSlim elevationRequestSemaphore = new(1, 1);
 
         public ElevationService(ILogger<ElevationService> logger, ISecurityService securityService)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _securityService = securityService ?? throw new ArgumentNullException(nameof(securityService));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.securityService = securityService ?? throw new ArgumentNullException(nameof(securityService));
         }
 
         public bool IsRunningAsAdministrator()
@@ -48,27 +49,27 @@ namespace ThreadPilot.Services
                 var identity = WindowsIdentity.GetCurrent();
                 var principal = new WindowsPrincipal(identity);
                 var isAdmin = principal.IsInRole(WindowsBuiltInRole.Administrator);
-                
-                _logger.LogDebug("Administrator privilege check: {IsAdmin}", isAdmin);
+
+                LogAdministratorPrivilegeCheck(this.logger, isAdmin);
                 return isAdmin;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to check administrator privileges");
+                LogPrivilegeCheckFailed(this.logger, ex);
                 return false;
             }
         }
 
         public async Task<bool> RequestElevationIfNeeded()
         {
-            if (IsRunningAsAdministrator())
+            if (this.IsRunningAsAdministrator())
             {
-                _logger.LogDebug("Application is already running with administrator privileges");
+                LogAlreadyElevated(this.logger);
                 return true;
             }
 
-            _logger.LogInformation("Requesting elevation to administrator privileges");
-            
+            LogRequestingElevation(this.logger);
+
             // Show elevation prompt to user
             var result = System.Windows.MessageBox.Show(
                 "ThreadPilot requires administrator privileges to manage process affinity and power plans.\n\n" +
@@ -79,24 +80,24 @@ namespace ThreadPilot.Services
 
             if (result != MessageBoxResult.Yes)
             {
-                _logger.LogInformation("User declined elevation request");
+                LogUserDeclinedElevation(this.logger);
                 return false;
             }
 
-            return await RestartWithElevation();
+            return await this.RestartWithElevation();
         }
 
         public async Task<bool> RestartWithElevation(string[]? arguments = null)
         {
-            await _elevationRequestSemaphore.WaitAsync();
+            await this.elevationRequestSemaphore.WaitAsync();
             try
             {
                 var currentProcess = Process.GetCurrentProcess();
                 var executablePath = currentProcess.MainModule?.FileName;
-                
-                if (string.IsNullOrEmpty(executablePath))
+
+                if (string.IsNullOrWhiteSpace(executablePath) || !Path.IsPathFullyQualified(executablePath) || !File.Exists(executablePath))
                 {
-                    _logger.LogError("Could not determine executable path for elevation");
+                    LogMissingExecutablePath(this.logger);
                     return false;
                 }
 
@@ -104,6 +105,7 @@ namespace ThreadPilot.Services
                 var currentArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
                 var allArgs = arguments != null ? currentArgs.Concat(arguments).ToArray() : currentArgs;
                 var argumentString = string.Join(" ", allArgs.Select(EscapeCommandLineArgument));
+                var workingDirectory = Path.GetDirectoryName(executablePath);
 
                 var startInfo = new ProcessStartInfo
                 {
@@ -111,19 +113,19 @@ namespace ThreadPilot.Services
                     Arguments = argumentString,
                     UseShellExecute = true,
                     Verb = "runas", // This triggers UAC elevation
-                    WorkingDirectory = Environment.CurrentDirectory
+                    WorkingDirectory = string.IsNullOrWhiteSpace(workingDirectory) ? Environment.SystemDirectory : workingDirectory,
                 };
 
-                _logger.LogInformation("Starting elevated process: {FileName} {Arguments}", executablePath, argumentString);
-                
+                LogStartingElevatedProcess(this.logger, executablePath, argumentString);
+
                 var elevatedProcess = Process.Start(startInfo);
                 if (elevatedProcess != null)
                 {
-                    _logger.LogInformation("Elevated process started successfully. Shutting down current instance.");
-                    
+                    LogElevatedProcessStarted(this.logger);
+
                     // Audit the elevation request
-                    await _securityService.AuditElevatedAction("ApplicationRestart", "Self", true);
-                    
+                    await this.securityService.AuditElevatedAction("ApplicationRestart", "Self", true);
+
                     // Shutdown current instance
                     await Task.Delay(1000); // Give the new process time to start
                     System.Windows.Application.Current.Shutdown();
@@ -131,47 +133,46 @@ namespace ThreadPilot.Services
                 }
                 else
                 {
-                    _logger.LogError("Failed to start elevated process");
+                    LogElevatedProcessStartFailed(this.logger);
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to restart with elevation");
-                await _securityService.AuditElevatedAction("ApplicationRestart", "Self", false);
-                
+                LogRestartWithElevationFailed(this.logger, ex);
+                await this.securityService.AuditElevatedAction("ApplicationRestart", "Self", false);
+
                 // Show user-friendly error message
                 System.Windows.MessageBox.Show(
                     "Failed to restart with administrator privileges. Please manually run ThreadPilot as administrator.",
                     "Elevation Failed",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
-                
+
                 return false;
             }
             finally
             {
-                _elevationRequestSemaphore.Release();
+                this.elevationRequestSemaphore.Release();
             }
         }
 
         public bool ValidateElevationForOperation(string operation)
         {
-            var isElevated = IsRunningAsAdministrator();
-            var isValidOperation = _securityService.ValidateElevatedOperation(operation);
-            
+            var isElevated = this.IsRunningAsAdministrator();
+            var isValidOperation = this.securityService.ValidateElevatedOperation(operation);
+
             var canPerform = isElevated && isValidOperation;
-            
-            _logger.LogDebug("Elevation validation for operation '{Operation}': Elevated={IsElevated}, Valid={IsValid}, CanPerform={CanPerform}",
-                operation, isElevated, isValidOperation, canPerform);
-            
+
+            LogElevationValidation(this.logger, operation, isElevated, isValidOperation, canPerform);
+
             return canPerform;
         }
 
         public string GetElevationStatus()
         {
-            return IsRunningAsAdministrator() 
-                ? "Running with Administrator privileges" 
+            return this.IsRunningAsAdministrator()
+                ? "Running with Administrator privileges"
                 : "Running with limited privileges";
         }
 
@@ -200,6 +201,42 @@ namespace ThreadPilot.Services
             escaped.Append('"');
             return escaped.ToString();
         }
+
+        [LoggerMessage(EventId = 4100, Level = LogLevel.Debug, Message = "Administrator privilege check: {IsAdmin}")]
+        private static partial void LogAdministratorPrivilegeCheck(ILogger logger, bool isAdmin);
+
+        [LoggerMessage(EventId = 4101, Level = LogLevel.Error, Message = "Failed to check administrator privileges")]
+        private static partial void LogPrivilegeCheckFailed(ILogger logger, Exception ex);
+
+        [LoggerMessage(EventId = 4102, Level = LogLevel.Debug, Message = "Application is already running with administrator privileges")]
+        private static partial void LogAlreadyElevated(ILogger logger);
+
+        [LoggerMessage(EventId = 4103, Level = LogLevel.Information, Message = "Requesting elevation to administrator privileges")]
+        private static partial void LogRequestingElevation(ILogger logger);
+
+        [LoggerMessage(EventId = 4104, Level = LogLevel.Information, Message = "User declined elevation request")]
+        private static partial void LogUserDeclinedElevation(ILogger logger);
+
+        [LoggerMessage(EventId = 4105, Level = LogLevel.Error, Message = "Could not determine executable path for elevation")]
+        private static partial void LogMissingExecutablePath(ILogger logger);
+
+        [LoggerMessage(EventId = 4106, Level = LogLevel.Information, Message = "Starting elevated process: {FileName} {Arguments}")]
+        private static partial void LogStartingElevatedProcess(ILogger logger, string fileName, string arguments);
+
+        [LoggerMessage(EventId = 4107, Level = LogLevel.Information, Message = "Elevated process started successfully. Shutting down current instance.")]
+        private static partial void LogElevatedProcessStarted(ILogger logger);
+
+        [LoggerMessage(EventId = 4108, Level = LogLevel.Error, Message = "Failed to start elevated process")]
+        private static partial void LogElevatedProcessStartFailed(ILogger logger);
+
+        [LoggerMessage(EventId = 4109, Level = LogLevel.Error, Message = "Failed to restart with elevation")]
+        private static partial void LogRestartWithElevationFailed(ILogger logger, Exception ex);
+
+        [LoggerMessage(
+            EventId = 4110,
+            Level = LogLevel.Debug,
+            Message = "Elevation validation for operation '{Operation}': Elevated={IsElevated}, Valid={IsValid}, CanPerform={CanPerform}")]
+        private static partial void LogElevationValidation(ILogger logger, string operation, bool isElevated, bool isValid, bool canPerform);
     }
 }
 

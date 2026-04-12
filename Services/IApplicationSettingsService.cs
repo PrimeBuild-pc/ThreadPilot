@@ -14,14 +14,14 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Threading.Tasks;
-using ThreadPilot.Models;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Threading.Tasks;
+    using ThreadPilot.Models;
+
     /// <summary>
-    /// Service for managing application settings
+    /// Service for managing application settings.
     /// </summary>
     public interface IApplicationSettingsService
     {
@@ -31,68 +31,70 @@ namespace ThreadPilot.Services
         event EventHandler<ApplicationSettingsChangedEventArgs>? SettingsChanged;
 
         /// <summary>
-        /// Gets the current application settings
+        /// Gets the current application settings.
         /// </summary>
         ApplicationSettingsModel Settings { get; }
 
         /// <summary>
-        /// Loads settings from storage
+        /// Loads settings from storage.
         /// </summary>
         Task LoadSettingsAsync();
 
         /// <summary>
-        /// Saves current settings to storage
+        /// Saves current settings to storage.
         /// </summary>
         Task SaveSettingsAsync();
 
         /// <summary>
-        /// Updates settings and saves them
+        /// Updates settings and saves them.
         /// </summary>
         Task UpdateSettingsAsync(ApplicationSettingsModel newSettings);
 
         /// <summary>
-        /// Resets settings to default values
+        /// Resets settings to default values.
         /// </summary>
         Task ResetToDefaultsAsync();
 
         /// <summary>
-        /// Gets the settings file path
+        /// Gets the settings file path.
         /// </summary>
         string GetSettingsFilePath();
 
         /// <summary>
-        /// Validates settings and fixes any invalid values
+        /// Validates settings and fixes any invalid values.
         /// </summary>
         void ValidateAndFixSettings();
 
         /// <summary>
-        /// Exports settings to a file
+        /// Exports settings to a file.
         /// </summary>
         Task ExportSettingsAsync(string filePath);
 
         /// <summary>
-        /// Imports settings from a file
+        /// Imports settings from a file.
         /// </summary>
         Task ImportSettingsAsync(string filePath);
     }
 
     /// <summary>
-    /// Event args for settings changed event
+    /// Event args for settings changed event.
     /// </summary>
     public class ApplicationSettingsChangedEventArgs : EventArgs
     {
         public ApplicationSettingsModel OldSettings { get; }
+
         public ApplicationSettingsModel NewSettings { get; }
+
         public string[] ChangedProperties { get; }
 
         public ApplicationSettingsChangedEventArgs(
-            ApplicationSettingsModel oldSettings, 
-            ApplicationSettingsModel newSettings, 
+            ApplicationSettingsModel oldSettings,
+            ApplicationSettingsModel newSettings,
             string[] changedProperties)
         {
-            OldSettings = oldSettings;
-            NewSettings = newSettings;
-            ChangedProperties = changedProperties;
+            this.OldSettings = oldSettings;
+            this.NewSettings = newSettings;
+            this.ChangedProperties = changedProperties;
         }
     }
 }

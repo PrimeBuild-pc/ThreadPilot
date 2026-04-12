@@ -14,27 +14,27 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Microsoft.Win32;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Win32;
+
     /// <summary>
     /// Service for managing Windows Game Mode settings
     /// Windows Game Mode can interfere with CPU Sets and affinity, particularly on AMD systems
-    /// Reference: CPU Set Setter warning system
+    /// Reference: CPU Set Setter warning system.
     /// </summary>
     public class GameModeService : IGameModeService
     {
-        private readonly ILogger<GameModeService> _logger;
+        private readonly ILogger<GameModeService> logger;
         private const string GameBarKeyPath = @"Software\Microsoft\GameBar";
         private const string GameModeValueName = "AutoGameModeEnabled";
 
         public GameModeService(ILogger<GameModeService> logger)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         /// <inheritdoc/>
@@ -47,7 +47,7 @@ namespace ThreadPilot.Services
                 using var key = Registry.CurrentUser.OpenSubKey(GameBarKeyPath, writable: false);
                 if (key == null)
                 {
-                    _logger.LogDebug("GameBar registry key not found, assuming Game Mode is disabled");
+                    this.logger.LogDebug("GameBar registry key not found, assuming Game Mode is disabled");
                     return false;
                 }
 
@@ -55,16 +55,16 @@ namespace ThreadPilot.Services
                 if (value is int intValue)
                 {
                     bool isEnabled = intValue != 0;
-                    _logger.LogDebug("Game Mode status: {Status}", isEnabled ? "Enabled" : "Disabled");
+                    this.logger.LogDebug("Game Mode status: {Status}", isEnabled ? "Enabled" : "Disabled");
                     return isEnabled;
                 }
 
-                _logger.LogDebug("GameMode value not found, assuming disabled");
+                this.logger.LogDebug("GameMode value not found, assuming disabled");
                 return false;
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to read Game Mode registry key, assuming disabled");
+                this.logger.LogWarning(ex, "Failed to read Game Mode registry key, assuming disabled");
                 return false;
             }
         }
@@ -79,22 +79,22 @@ namespace ThreadPilot.Services
                 using var key = Registry.CurrentUser.OpenSubKey(GameBarKeyPath, writable: true);
                 if (key == null)
                 {
-                    _logger.LogWarning("GameBar registry key not found, cannot modify Game Mode");
+                    this.logger.LogWarning("GameBar registry key not found, cannot modify Game Mode");
                     return false;
                 }
 
                 key.SetValue(GameModeValueName, enabled ? 1 : 0, RegistryValueKind.DWord);
-                _logger.LogInformation("Set Windows Game Mode to {State}", enabled ? "enabled" : "disabled");
+                this.logger.LogInformation("Set Windows Game Mode to {State}", enabled ? "enabled" : "disabled");
                 return true;
             }
             catch (UnauthorizedAccessException ex)
             {
-                _logger.LogWarning(ex, "Insufficient permissions to modify Game Mode registry key");
+                this.logger.LogWarning(ex, "Insufficient permissions to modify Game Mode registry key");
                 return false;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to set Game Mode to {State}", enabled ? "enabled" : "disabled");
+                this.logger.LogError(ex, "Failed to set Game Mode to {State}", enabled ? "enabled" : "disabled");
                 return false;
             }
         }
@@ -104,30 +104,30 @@ namespace ThreadPilot.Services
         {
             try
             {
-                bool isEnabled = await IsGameModeEnabledAsync();
+                bool isEnabled = await this.IsGameModeEnabledAsync();
                 if (!isEnabled)
                 {
-                    _logger.LogDebug("Game Mode already disabled, no action needed");
+                    this.logger.LogDebug("Game Mode already disabled, no action needed");
                     return false;
                 }
 
-                _logger.LogInformation("Game Mode is enabled, disabling for better CPU affinity control");
-                bool success = await SetGameModeAsync(false);
+                this.logger.LogInformation("Game Mode is enabled, disabling for better CPU affinity control");
+                bool success = await this.SetGameModeAsync(false);
 
                 if (success)
                 {
-                    _logger.LogInformation("Successfully disabled Windows Game Mode for CPU affinity optimization");
+                    this.logger.LogInformation("Successfully disabled Windows Game Mode for CPU affinity optimization");
                 }
                 else
                 {
-                    _logger.LogWarning("Failed to disable Game Mode, CPU affinity may be affected");
+                    this.logger.LogWarning("Failed to disable Game Mode, CPU affinity may be affected");
                 }
 
                 return success;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error disabling Game Mode for affinity");
+                this.logger.LogError(ex, "Error disabling Game Mode for affinity");
                 return false;
             }
         }

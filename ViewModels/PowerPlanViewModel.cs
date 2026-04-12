@@ -14,24 +14,24 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Input;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.Logging;
-using ThreadPilot.Models;
-using ThreadPilot.Services;
-using ThreadPilot.ViewModels;
-
 namespace ThreadPilot.ViewModels
 {
+    using System;
+    using System.Collections.ObjectModel;
+    using System.Linq;
+    using System.Threading.Tasks;
+    using System.Windows.Input;
+    using CommunityToolkit.Mvvm.ComponentModel;
+    using CommunityToolkit.Mvvm.Input;
+    using Microsoft.Extensions.Logging;
+    using ThreadPilot.Models;
+    using ThreadPilot.Services;
+    using ThreadPilot.ViewModels;
+
     public partial class PowerPlanViewModel : BaseViewModel
     {
-        private readonly IPowerPlanService _powerPlanService;
-        private System.Timers.Timer? _refreshTimer;
+        private readonly IPowerPlanService powerPlanService;
+        private System.Timers.Timer? refreshTimer;
 
         [ObservableProperty]
         private ObservableCollection<PowerPlanModel> powerPlans = new();
@@ -54,21 +54,21 @@ namespace ThreadPilot.ViewModels
             IEnhancedLoggingService? enhancedLoggingService = null)
             : base(logger, enhancedLoggingService)
         {
-            _powerPlanService = powerPlanService;
-            SetupRefreshTimer();
+            this.powerPlanService = powerPlanService;
+            this.SetupRefreshTimer();
         }
 
         private void SetupRefreshTimer()
         {
-            _refreshTimer = new System.Timers.Timer(10000); // PERFORMANCE OPTIMIZATION: Increased to 10 second refresh - power plans change infrequently
-            _refreshTimer.Elapsed += async (s, e) =>
+            this.refreshTimer = new System.Timers.Timer(10000); // PERFORMANCE OPTIMIZATION: Increased to 10 second refresh - power plans change infrequently
+            this.refreshTimer.Elapsed += async (s, e) =>
             {
                 try
                 {
                     // Marshal timer callback to UI thread to prevent cross-thread access exceptions
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
                     {
-                        await RefreshPowerPlansCommand.ExecuteAsync(null);
+                        await this.RefreshPowerPlansCommand.ExecuteAsync(null);
                     });
                 }
                 catch (Exception ex)
@@ -76,7 +76,7 @@ namespace ThreadPilot.ViewModels
                     System.Diagnostics.Debug.WriteLine($"Power plan refresh timer error: {ex.Message}");
                 }
             };
-            _refreshTimer.Start();
+            this.refreshTimer.Start();
         }
 
         [RelayCommand]
@@ -84,96 +84,105 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                SetStatus("Loading power plans...");
-                PowerPlans = await _powerPlanService.GetPowerPlansAsync();
-                CustomPowerPlans = await _powerPlanService.GetCustomPowerPlansAsync();
-                ActivePowerPlan = await _powerPlanService.GetActivePowerPlan();
-                ClearStatus();
+                this.SetStatus("Loading power plans...");
+                this.PowerPlans = await this.powerPlanService.GetPowerPlansAsync();
+                this.CustomPowerPlans = await this.powerPlanService.GetCustomPowerPlansAsync();
+                this.ActivePowerPlan = await this.powerPlanService.GetActivePowerPlan();
+                this.ClearStatus();
             }
             catch (Exception ex)
             {
-                SetStatus($"Error loading power plans: {ex.Message}", false);
+                this.SetStatus($"Error loading power plans: {ex.Message}", false);
             }
         }
 
         [RelayCommand]
         private async Task RefreshPowerPlans()
         {
-            if (IsBusy) return;
+            if (this.IsBusy)
+            {
+                return;
+            }
 
             try
             {
-                var currentPlans = await _powerPlanService.GetPowerPlansAsync();
-                var currentActive = await _powerPlanService.GetActivePowerPlan();
-                var customPlans = await _powerPlanService.GetCustomPowerPlansAsync();
+                var currentPlans = await this.powerPlanService.GetPowerPlansAsync();
+                var currentActive = await this.powerPlanService.GetActivePowerPlan();
+                var customPlans = await this.powerPlanService.GetCustomPowerPlansAsync();
 
                 // Update power plans
-                PowerPlans = new ObservableCollection<PowerPlanModel>(currentPlans);
-                CustomPowerPlans = new ObservableCollection<PowerPlanModel>(customPlans);
-                ActivePowerPlan = currentActive;
+                this.PowerPlans = new ObservableCollection<PowerPlanModel>(currentPlans);
+                this.CustomPowerPlans = new ObservableCollection<PowerPlanModel>(customPlans);
+                this.ActivePowerPlan = currentActive;
 
                 // Update selected plan if it exists
-                if (SelectedPowerPlan != null)
+                if (this.SelectedPowerPlan != null)
                 {
-                    SelectedPowerPlan = PowerPlans.FirstOrDefault(p => p.Guid == SelectedPowerPlan.Guid);
+                    this.SelectedPowerPlan = this.PowerPlans.FirstOrDefault(p => p.Guid == this.SelectedPowerPlan.Guid);
                 }
             }
             catch (Exception ex)
             {
-                SetStatus($"Error refreshing power plans: {ex.Message}", false);
+                this.SetStatus($"Error refreshing power plans: {ex.Message}", false);
             }
         }
 
         [RelayCommand]
         private async Task SetActivePlan()
         {
-            if (SelectedPowerPlan == null) return;
+            if (this.SelectedPowerPlan == null)
+            {
+                return;
+            }
 
             try
             {
-                SetStatus($"Setting active power plan to {SelectedPowerPlan.Name}...");
-                var success = await _powerPlanService.SetActivePowerPlan(SelectedPowerPlan);
-                
+                this.SetStatus($"Setting active power plan to {this.SelectedPowerPlan.Name}...");
+                var success = await this.powerPlanService.SetActivePowerPlan(this.SelectedPowerPlan);
+
                 if (success)
                 {
-                    ActivePowerPlan = SelectedPowerPlan;
-                    await RefreshPowerPlans();
-                    ClearStatus();
+                    this.ActivePowerPlan = this.SelectedPowerPlan;
+                    await this.RefreshPowerPlans();
+                    this.ClearStatus();
                 }
                 else
                 {
-                    SetStatus($"Failed to set power plan {SelectedPowerPlan.Name}", false);
+                    this.SetStatus($"Failed to set power plan {this.SelectedPowerPlan.Name}", false);
                 }
             }
             catch (Exception ex)
             {
-                SetStatus($"Error setting power plan: {ex.Message}", false);
+                this.SetStatus($"Error setting power plan: {ex.Message}", false);
             }
         }
 
         [RelayCommand]
         private async Task ImportCustomPlan()
         {
-            if (SelectedCustomPlan == null) return;
+            if (this.SelectedCustomPlan == null)
+            {
+                return;
+            }
 
             try
             {
-                SetStatus($"Importing custom power plan {SelectedCustomPlan.Name}...");
-                var success = await _powerPlanService.ImportCustomPowerPlan(SelectedCustomPlan.FilePath);
-                
+                this.SetStatus($"Importing custom power plan {this.SelectedCustomPlan.Name}...");
+                var success = await this.powerPlanService.ImportCustomPowerPlan(this.SelectedCustomPlan.FilePath);
+
                 if (success)
                 {
-                    await RefreshPowerPlans();
-                    ClearStatus();
+                    await this.RefreshPowerPlans();
+                    this.ClearStatus();
                 }
                 else
                 {
-                    SetStatus($"Failed to import power plan {SelectedCustomPlan.Name}", false);
+                    this.SetStatus($"Failed to import power plan {this.SelectedCustomPlan.Name}", false);
                 }
             }
             catch (Exception ex)
             {
-                SetStatus($"Error importing power plan: {ex.Message}", false);
+                this.SetStatus($"Error importing power plan: {ex.Message}", false);
             }
         }
     }

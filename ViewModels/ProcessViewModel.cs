@@ -14,40 +14,40 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Input;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.Logging;
-using ThreadPilot.Models;
-using ThreadPilot.Services;
-
 namespace ThreadPilot.ViewModels
 {
+    using System;
+    using System.Collections.ObjectModel;
+    using System.ComponentModel;
+    using System.Diagnostics;
+    using System.Linq;
+    using System.Threading.Tasks;
+    using System.Windows.Input;
+    using CommunityToolkit.Mvvm.ComponentModel;
+    using CommunityToolkit.Mvvm.Input;
+    using Microsoft.Extensions.Logging;
+    using ThreadPilot.Models;
+    using ThreadPilot.Services;
+
     public partial class ProcessViewModel : BaseViewModel
     {
         public event EventHandler? OpenRulesRequested;
 
-        private readonly IProcessService _processService;
-        private readonly IVirtualizedProcessService _virtualizedProcessService;
-        private readonly ICpuTopologyService _cpuTopologyService;
-        private readonly IPowerPlanService _powerPlanService;
-        private readonly INotificationService _notificationService;
-        private readonly ISystemTrayService _systemTrayService;
-        private readonly ICoreMaskService _coreMaskService;
-        private readonly IProcessPowerPlanAssociationService _associationService;
-        private readonly IGameModeService _gameModeService;
-        private System.Timers.Timer? _refreshTimer;
-        private System.Timers.Timer? _searchDebounceTimer;
-        private bool _isApplyingFilter;
-        private bool _filterRefreshPending;
-        private bool _suppressCoreSelectionEvents;
-        private bool _hasPendingAffinityEdits;
+        private readonly IProcessService processService;
+        private readonly IVirtualizedProcessService virtualizedProcessService;
+        private readonly ICpuTopologyService cpuTopologyService;
+        private readonly IPowerPlanService powerPlanService;
+        private readonly INotificationService notificationService;
+        private readonly ISystemTrayService systemTrayService;
+        private readonly ICoreMaskService coreMaskService;
+        private readonly IProcessPowerPlanAssociationService associationService;
+        private readonly IGameModeService gameModeService;
+        private System.Timers.Timer? refreshTimer;
+        private System.Timers.Timer? searchDebounceTimer;
+        private bool isApplyingFilter;
+        private bool filterRefreshPending;
+        private bool suppressCoreSelectionEvents;
+        private bool hasPendingAffinityEdits;
 
         [ObservableProperty]
         private ObservableCollection<ProcessModel> processes = new();
@@ -161,44 +161,44 @@ namespace ThreadPilot.ViewModels
             IEnhancedLoggingService? enhancedLoggingService = null)
             : base(logger, enhancedLoggingService)
         {
-            _processService = processService ?? throw new ArgumentNullException(nameof(processService));
-            _virtualizedProcessService = virtualizedProcessService ?? throw new ArgumentNullException(nameof(virtualizedProcessService));
-            _cpuTopologyService = cpuTopologyService ?? throw new ArgumentNullException(nameof(cpuTopologyService));
-            _powerPlanService = powerPlanService ?? throw new ArgumentNullException(nameof(powerPlanService));
-            _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
-            _systemTrayService = systemTrayService ?? throw new ArgumentNullException(nameof(systemTrayService));
-            _coreMaskService = coreMaskService ?? throw new ArgumentNullException(nameof(coreMaskService));
-            _associationService = associationService ?? throw new ArgumentNullException(nameof(associationService));
-            _gameModeService = gameModeService ?? throw new ArgumentNullException(nameof(gameModeService));
+            this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
+            this.virtualizedProcessService = virtualizedProcessService ?? throw new ArgumentNullException(nameof(virtualizedProcessService));
+            this.cpuTopologyService = cpuTopologyService ?? throw new ArgumentNullException(nameof(cpuTopologyService));
+            this.powerPlanService = powerPlanService ?? throw new ArgumentNullException(nameof(powerPlanService));
+            this.notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+            this.systemTrayService = systemTrayService ?? throw new ArgumentNullException(nameof(systemTrayService));
+            this.coreMaskService = coreMaskService ?? throw new ArgumentNullException(nameof(coreMaskService));
+            this.associationService = associationService ?? throw new ArgumentNullException(nameof(associationService));
+            this.gameModeService = gameModeService ?? throw new ArgumentNullException(nameof(gameModeService));
 
             // Subscribe to topology detection events
-            _cpuTopologyService.TopologyDetected += OnTopologyDetected;
+            this.cpuTopologyService.TopologyDetected += this.OnTopologyDetected;
 
             // Subscribe to system tray events
-            _systemTrayService.QuickApplyRequested += OnTrayQuickApplyRequested;
+            this.systemTrayService.QuickApplyRequested += this.OnTrayQuickApplyRequested;
 
-            SetupRefreshTimer();
-            SetupVirtualizedProcessService();
+            this.SetupRefreshTimer();
+            this.SetupVirtualizedProcessService();
             // Note: InitializeAsync() will be called explicitly by MainWindow loading overlay
         }
 
         private void SetupVirtualizedProcessService()
         {
             // Configure virtualization settings
-            _virtualizedProcessService.Configuration.BatchSize = 50;
-            _virtualizedProcessService.Configuration.EnableBackgroundLoading = true;
+            this.virtualizedProcessService.Configuration.BatchSize = 50;
+            this.virtualizedProcessService.Configuration.EnableBackgroundLoading = true;
 
             // Subscribe to events
-            _virtualizedProcessService.BatchLoadProgress += OnBatchLoadProgress;
-            _virtualizedProcessService.BackgroundBatchLoaded += OnBackgroundBatchLoaded;
+            this.virtualizedProcessService.BatchLoadProgress += this.OnBatchLoadProgress;
+            this.virtualizedProcessService.BackgroundBatchLoaded += this.OnBackgroundBatchLoaded;
         }
 
         private void OnBatchLoadProgress(object? sender, BatchLoadProgressEventArgs e)
         {
             _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                LoadingProgress = e.ProgressPercentage;
-                LoadingStatusText = e.StatusMessage;
+                this.LoadingProgress = e.ProgressPercentage;
+                this.LoadingStatusText = e.StatusMessage;
             });
         }
 
@@ -207,7 +207,8 @@ namespace ThreadPilot.ViewModels
             _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 // Background batch loaded - could update UI if needed
-                Logger.LogDebug("Background batch {BatchIndex} loaded with {ProcessCount} processes",
+                this.Logger.LogDebug(
+                    "Background batch {BatchIndex} loaded with {ProcessCount} processes",
                     e.BatchIndex, e.Processes.Count);
             });
         }
@@ -219,42 +220,42 @@ namespace ThreadPilot.ViewModels
                 // Update status on UI thread
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus("Initializing CPU topology and power plans...");
+                    this.SetStatus("Initializing CPU topology and power plans...");
                 });
                 System.Diagnostics.Debug.WriteLine("ProcessViewModel.InitializeAsync: Starting initialization");
 
                 // Initialize CPU topology
                 System.Diagnostics.Debug.WriteLine("ProcessViewModel.InitializeAsync: About to detect CPU topology");
-                await _cpuTopologyService.DetectTopologyAsync();
+                await this.cpuTopologyService.DetectTopologyAsync();
                 System.Diagnostics.Debug.WriteLine("ProcessViewModel.InitializeAsync: CPU topology detection completed");
 
                 // Initialize core masks service
                 System.Diagnostics.Debug.WriteLine("ProcessViewModel.InitializeAsync: About to initialize core masks");
-                await _coreMaskService.InitializeAsync();
-                AvailableCoreMasks = _coreMaskService.AvailableMasks;
-                SelectedCoreMask = _coreMaskService.DefaultMask;
+                await this.coreMaskService.InitializeAsync();
+                this.AvailableCoreMasks = this.coreMaskService.AvailableMasks;
+                this.SelectedCoreMask = this.coreMaskService.DefaultMask;
                 System.Diagnostics.Debug.WriteLine("ProcessViewModel.InitializeAsync: Core masks initialized");
 
                 // Load power plans
                 System.Diagnostics.Debug.WriteLine("ProcessViewModel.InitializeAsync: About to load power plans");
-                await RefreshPowerPlansAsync();
+                await this.RefreshPowerPlansAsync();
                 System.Diagnostics.Debug.WriteLine("ProcessViewModel.InitializeAsync: Power plans loaded");
 
                 // Load processes automatically on startup (Bug #8 fix)
                 System.Diagnostics.Debug.WriteLine("ProcessViewModel.InitializeAsync: About to load processes automatically");
-                await LoadProcessesCommand.ExecuteAsync(null);
+                await this.LoadProcessesCommand.ExecuteAsync(null);
 
                 // Access process count on UI thread to avoid threading issues
                 int processCount = 0;
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    processCount = Processes?.Count ?? 0;
+                    processCount = this.Processes?.Count ?? 0;
                 });
                 System.Diagnostics.Debug.WriteLine($"ProcessViewModel.InitializeAsync: Processes loaded automatically, count: {processCount}");
 
                 // Start refresh timer for real-time updates
                 System.Diagnostics.Debug.WriteLine("ProcessViewModel.InitializeAsync: Starting refresh timer");
-                _refreshTimer?.Start();
+                this.refreshTimer?.Start();
                 System.Diagnostics.Debug.WriteLine("ProcessViewModel.InitializeAsync: Initialization completed successfully");
             }
             catch (Exception ex)
@@ -263,7 +264,7 @@ namespace ThreadPilot.ViewModels
                 // Update status on UI thread
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus($"Failed to initialize: {ex.Message}", false);
+                    this.SetStatus($"Failed to initialize: {ex.Message}", false);
                 });
             }
         }
@@ -272,26 +273,26 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                var plans = await _powerPlanService.GetPowerPlansAsync();
-                var activePlan = await _powerPlanService.GetActivePowerPlan();
+                var plans = await this.powerPlanService.GetPowerPlansAsync();
+                var activePlan = await this.powerPlanService.GetActivePowerPlan();
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    PowerPlans.Clear();
+                    this.PowerPlans.Clear();
                     foreach (var plan in plans)
                     {
                         plan.IsActive = plan.Guid == activePlan?.Guid;
-                        PowerPlans.Add(plan);
+                        this.PowerPlans.Add(plan);
                     }
 
-                    SelectedPowerPlan = PowerPlans.FirstOrDefault(p => p.Guid == activePlan?.Guid);
+                    this.SelectedPowerPlan = this.PowerPlans.FirstOrDefault(p => p.Guid == activePlan?.Guid);
                 });
             }
             catch (Exception ex)
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus($"Failed to load power plans: {ex.Message}", false);
+                    this.SetStatus($"Failed to load power plans: {ex.Message}", false);
                 });
             }
         }
@@ -300,7 +301,7 @@ namespace ThreadPilot.ViewModels
         {
             if (value != null && CpuTopology != null)
             {
-                _hasPendingAffinityEdits = false;
+                hasPendingAffinityEdits = false;
                 // Immediately fetch and display real-time process information
                 TaskSafety.FireAndForget(HandleSelectedProcessChangedAsync(value), ex =>
                 {
@@ -314,7 +315,7 @@ namespace ThreadPilot.ViewModels
             }
 
             // Update system tray context menu
-            _systemTrayService.UpdateContextMenu(value?.Name, value != null);
+            systemTrayService.UpdateContextMenu(value?.Name, value != null);
         }
 
         private async Task HandleSelectedProcessChangedAsync(ProcessModel value)
@@ -322,20 +323,20 @@ namespace ThreadPilot.ViewModels
             try
             {
                 // First check if the process is still running
-                bool isStillRunning = await _processService.IsProcessStillRunning(value);
+                bool isStillRunning = await this.processService.IsProcessStillRunning(value);
                 if (!isStillRunning)
                 {
                     System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     {
-                        SetStatus($"Process {value.Name} (PID: {value.ProcessId}) has terminated", false);
-                        SelectedProcess = null;
-                        ClearProcessSelection();
+                        this.SetStatus($"Process {value.Name} (PID: {value.ProcessId}) has terminated", false);
+                        this.SelectedProcess = null;
+                        this.ClearProcessSelection();
                     });
                     return;
                 }
 
                 // Refresh process info to get current state from OS
-                await _processService.RefreshProcessInfo(value);
+                await this.processService.RefreshProcessInfo(value);
 
                 // Update UI on main thread with fresh data
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
@@ -343,16 +344,16 @@ namespace ThreadPilot.ViewModels
                     // Update CPU affinity display
                     // If a Core Mask is selected, show that instead of the process's current affinity
                     // This ensures visual coherence between selected mask and Advanced CPU Affinity
-                    if (SelectedCoreMask != null)
+                    if (this.SelectedCoreMask != null)
                     {
-                        UpdateCoreSelectionsFromMask(SelectedCoreMask);
+                        this.UpdateCoreSelectionsFromMask(this.SelectedCoreMask);
                         // Auto-apply the selected mask to the newly selected process
-                        _ = ApplyCoreMaskToProcessAsync(SelectedCoreMask);
+                        _ = this.ApplyCoreMaskToProcessAsync(this.SelectedCoreMask);
                     }
                     else
                     {
                         // No mask selected - show process's current affinity
-                        UpdateCoreSelections(value.ProcessorAffinity);
+                        this.UpdateCoreSelections(value.ProcessorAffinity);
 
                         // Force ProcessorAffinity notification for DataGrid column
                         // Ensures Affinity column displays the correct current value immediately
@@ -360,46 +361,47 @@ namespace ThreadPilot.ViewModels
                     }
 
                     // Update priority display - trigger property change to refresh ComboBox
-                    OnPropertyChanged(nameof(SelectedProcess));
+                    this.OnPropertyChanged(nameof(this.SelectedProcess));
 
                     // Update feature states from the selected process
-                    IsIdleServerDisabled = value.IsIdleServerDisabled;
-                    IsRegistryPriorityEnabled = value.IsRegistryPriorityEnabled;
+                    this.IsIdleServerDisabled = value.IsIdleServerDisabled;
+                    this.IsRegistryPriorityEnabled = value.IsRegistryPriorityEnabled;
 
                     // BUG FIX: Update status without setting busy state for process selection
-                    SetStatus($"Selected process: {value.Name} (PID: {value.ProcessId}) - " +
+                    this.SetStatus(
+                        $"Selected process: {value.Name} (PID: {value.ProcessId}) - " +
                             $"Priority: {value.Priority}, Affinity: 0x{value.ProcessorAffinity:X}", false);
                 });
 
                 // Load current power plan association if available
-                await LoadProcessPowerPlanAssociation(value);
+                await this.LoadProcessPowerPlanAssociation(value);
             }
             catch (InvalidOperationException ex) when (ex.Message.Contains("terminated") || ex.Message.Contains("exited") || ex.Message.Contains("no longer exists"))
             {
                 // Process has terminated
-                Logger.LogInformation("Process {ProcessName} (PID: {ProcessId}) has terminated", value.Name, value.ProcessId);
+                this.Logger.LogInformation("Process {ProcessName} (PID: {ProcessId}) has terminated", value.Name, value.ProcessId);
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
-                    SetStatus($"Process {value.Name} (PID: {value.ProcessId}) has terminated", false);
-                    SelectedProcess = null;
-                    ClearProcessSelection();
+                    this.SetStatus($"Process {value.Name} (PID: {value.ProcessId}) has terminated", false);
+                    this.SelectedProcess = null;
+                    this.ClearProcessSelection();
                 });
             }
             catch (Exception ex)
             {
-                Logger.LogWarning(ex, "Failed to refresh process info for {ProcessName}", value.Name);
+                this.Logger.LogWarning(ex, "Failed to refresh process info for {ProcessName}", value.Name);
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
-                    SetStatus($"Warning: Could not access process {value.Name} - it may have terminated or require elevated privileges", false);
+                    this.SetStatus($"Warning: Could not access process {value.Name} - it may have terminated or require elevated privileges", false);
                 });
             }
         }
 
         private void OnTrayQuickApplyRequested(object? sender, EventArgs e)
         {
-            TaskSafety.FireAndForget(OnTrayQuickApplyRequestedAsync(), ex =>
+            TaskSafety.FireAndForget(this.OnTrayQuickApplyRequestedAsync(), ex =>
             {
-                Logger.LogWarning(ex, "Quick apply request failed");
+                this.Logger.LogWarning(ex, "Quick apply request failed");
             });
         }
 
@@ -410,9 +412,10 @@ namespace ThreadPilot.ViewModels
                 // Marshal UI operations to the UI thread to prevent cross-thread access exceptions
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
                 {
-                    await QuickApplyAffinityAndPowerPlanCommand.ExecuteAsync(null);
-                    _systemTrayService.ShowBalloonTip("ThreadPilot",
-                        $"Settings applied to {SelectedProcess?.Name ?? "selected process"}", 2000);
+                    await this.QuickApplyAffinityAndPowerPlanCommand.ExecuteAsync(null);
+                    this.systemTrayService.ShowBalloonTip(
+                        "ThreadPilot",
+                        $"Settings applied to {this.SelectedProcess?.Name ?? "selected process"}", 2000);
                 });
             }
             catch (Exception ex)
@@ -420,7 +423,8 @@ namespace ThreadPilot.ViewModels
                 // Marshal UI operations to the UI thread to prevent cross-thread access exceptions
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    _systemTrayService.ShowBalloonTip("ThreadPilot Error",
+                    this.systemTrayService.ShowBalloonTip(
+                        "ThreadPilot Error",
                         $"Failed to apply settings: {ex.Message}", 3000);
                 });
             }
@@ -431,37 +435,40 @@ namespace ThreadPilot.ViewModels
             // Ensure all UI updates happen on the dispatcher thread
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
-                CpuTopology = e.Topology;
-                IsTopologyDetectionSuccessful = e.DetectionSuccessful;
+                this.CpuTopology = e.Topology;
+                this.IsTopologyDetectionSuccessful = e.DetectionSuccessful;
 
                 if (e.DetectionSuccessful)
                 {
-                    TopologyStatus = $"Detected: {e.Topology.TotalLogicalCores} logical CPUs, " +
+                    this.TopologyStatus = $"Detected: {e.Topology.TotalLogicalCores} logical CPUs, " +
                                    $"{e.Topology.TotalPhysicalCores} physical CPUs";
-                    AreAdvancedFeaturesAvailable = e.Topology.HasIntelHybrid || e.Topology.HasAmdCcd || e.Topology.HasHyperThreading;
+                    this.AreAdvancedFeaturesAvailable = e.Topology.HasIntelHybrid || e.Topology.HasAmdCcd || e.Topology.HasHyperThreading;
                 }
                 else
                 {
-                    TopologyStatus = $"Detection failed: {e.ErrorMessage ?? "Unknown error"}";
-                    AreAdvancedFeaturesAvailable = false;
+                    this.TopologyStatus = $"Detection failed: {e.ErrorMessage ?? "Unknown error"}";
+                    this.AreAdvancedFeaturesAvailable = false;
                 }
 
-                UpdateCpuCores();
-                UpdateAffinityPresets();
-                UpdateHyperThreadingStatus();
+                this.UpdateCpuCores();
+                this.UpdateAffinityPresets();
+                this.UpdateHyperThreadingStatus();
             });
         }
 
         private void UpdateCpuCores()
         {
-            if (CpuTopology == null) return;
-
-            CpuCores.Clear();
-            foreach (var core in CpuTopology.LogicalCores)
+            if (this.CpuTopology == null)
             {
-                core.PropertyChanged -= OnCorePropertyChanged;
-                core.PropertyChanged += OnCorePropertyChanged;
-                CpuCores.Add(core);
+                return;
+            }
+
+            this.CpuCores.Clear();
+            foreach (var core in this.CpuTopology.LogicalCores)
+            {
+                core.PropertyChanged -= this.OnCorePropertyChanged;
+                core.PropertyChanged += this.OnCorePropertyChanged;
+                this.CpuCores.Add(core);
             }
         }
 
@@ -470,54 +477,61 @@ namespace ThreadPilot.ViewModels
             // Note: Advanced CPU Affinity cores are now read-only (ProcessView.xaml has IsHitTestVisible="False")
             // This event handler is kept for compatibility but should not be triggered
             // Core modifications are done exclusively through the Core Mask tab
-            if (_suppressCoreSelectionEvents) return;
+            if (this.suppressCoreSelectionEvents)
+            {
+                return;
+            }
 
-            Logger.LogDebug("Core property changed but cores are read-only - no action taken");
+            this.Logger.LogDebug("Core property changed but cores are read-only - no action taken");
         }
 
         private async Task AutoApplyAffinityAsync()
         {
-            if (SelectedProcess == null || !_hasPendingAffinityEdits) return;
+            if (this.SelectedProcess == null || !this.hasPendingAffinityEdits)
+            {
+                return;
+            }
 
             try
             {
-                var affinityMask = CalculateAffinityMask();
+                var affinityMask = this.CalculateAffinityMask();
                 if (affinityMask == 0)
                 {
-                    Logger.LogDebug("Affinity mask is zero, skipping auto-apply");
+                    this.Logger.LogDebug("Affinity mask is zero, skipping auto-apply");
                     return;
                 }
 
-                Logger.LogInformation("Auto-applying affinity 0x{AffinityMask:X} to process {ProcessName} (PID: {ProcessId})",
-                    affinityMask, SelectedProcess.Name, SelectedProcess.ProcessId);
+                this.Logger.LogInformation(
+                    "Auto-applying affinity 0x{AffinityMask:X} to process {ProcessName} (PID: {ProcessId})",
+                    affinityMask, this.SelectedProcess.Name, this.SelectedProcess.ProcessId);
 
                 // Apply the affinity change
-                await _processService.SetProcessorAffinity(SelectedProcess, affinityMask);
+                await this.processService.SetProcessorAffinity(this.SelectedProcess, affinityMask);
 
                 // Immediately refresh the process to get the actual system state
-                await _processService.RefreshProcessInfo(SelectedProcess);
+                await this.processService.RefreshProcessInfo(this.SelectedProcess);
 
                 // Update UI to reflect the actual system affinity
-                UpdateCoreSelections(SelectedProcess.ProcessorAffinity, true);
+                this.UpdateCoreSelections(this.SelectedProcess.ProcessorAffinity, true);
 
                 // Notify UI of all changes
-                OnPropertyChanged(nameof(SelectedProcess));
+                this.OnPropertyChanged(nameof(this.SelectedProcess));
 
                 // Clear pending edits flag
-                _hasPendingAffinityEdits = false;
+                this.hasPendingAffinityEdits = false;
 
-                Logger.LogInformation("Auto-applied affinity successfully to {ProcessName}", SelectedProcess.Name);
+                this.Logger.LogInformation("Auto-applied affinity successfully to {ProcessName}", this.SelectedProcess.Name);
             }
             catch (Exception ex)
             {
-                Logger.LogWarning(ex, "Failed to auto-apply affinity to {ProcessName}", SelectedProcess.Name);
+                this.Logger.LogWarning(ex, "Failed to auto-apply affinity to {ProcessName}", this.SelectedProcess.Name);
 
                 // Try to refresh process info even if setting failed, to show current state
                 try
                 {
-                    await _processService.RefreshProcessInfo(SelectedProcess);
-                    UpdateCoreSelections(SelectedProcess.ProcessorAffinity, true);
-                    OnPropertyChanged(nameof(SelectedProcess));
+                    await this.processService.RefreshProcessInfo(this.SelectedProcess);
+                    this.UpdateCoreSelections(this.SelectedProcess.ProcessorAffinity, true);
+                    this.OnPropertyChanged(nameof(this.SelectedProcess));
                 }
                 catch
                 {
@@ -528,62 +542,65 @@ namespace ThreadPilot.ViewModels
 
         private void UpdateHyperThreadingStatus()
         {
-            if (CpuTopology == null)
+            if (this.CpuTopology == null)
             {
-                HyperThreadingStatusText = "Multi-Threading: Unknown";
-                IsHyperThreadingActive = false;
+                this.HyperThreadingStatusText = "Multi-Threading: Unknown";
+                this.IsHyperThreadingActive = false;
                 return;
             }
 
             // Determine if hyperthreading/SMT is present and active
-            bool hasMultiThreading = CpuTopology.HasHyperThreading;
-            IsHyperThreadingActive = hasMultiThreading;
+            bool hasMultiThreading = this.CpuTopology.HasHyperThreading;
+            this.IsHyperThreadingActive = hasMultiThreading;
 
             // Determine the appropriate technology name based on CPU vendor
             string technologyName = "Multi-Threading";
-            if (CpuTopology.CpuBrand.Contains("Intel", StringComparison.OrdinalIgnoreCase))
+            if (this.CpuTopology.CpuBrand.Contains("Intel", StringComparison.OrdinalIgnoreCase))
             {
                 technologyName = "Hyper-Threading";
             }
-            else if (CpuTopology.CpuBrand.Contains("AMD", StringComparison.OrdinalIgnoreCase))
+            else if (this.CpuTopology.CpuBrand.Contains("AMD", StringComparison.OrdinalIgnoreCase))
             {
                 technologyName = "SMT";
             }
 
             // Set the status text
             string status = hasMultiThreading ? "Active" : "Not Available";
-            HyperThreadingStatusText = $"{technologyName}: {status}";
+            this.HyperThreadingStatusText = $"{technologyName}: {status}";
 
-            Logger.LogInformation("Updated hyperthreading status: {StatusText} (Active: {IsActive})",
-                HyperThreadingStatusText, IsHyperThreadingActive);
+            this.Logger.LogInformation(
+                "Updated hyperthreading status: {StatusText} (Active: {IsActive})",
+                this.HyperThreadingStatusText, this.IsHyperThreadingActive);
         }
 
         private void UpdateAffinityPresets()
         {
-            AffinityPresets.Clear();
-            var presets = _cpuTopologyService.GetAffinityPresets();
+            this.AffinityPresets.Clear();
+            var presets = this.cpuTopologyService.GetAffinityPresets();
             foreach (var preset in presets)
             {
-                AffinityPresets.Add(preset);
+                this.AffinityPresets.Add(preset);
             }
         }
 
         private void UpdateCoreSelections(long affinityMask, bool forceSync = false)
         {
-            if (CpuTopology == null || CpuCores.Count == 0)
+            if (this.CpuTopology == null || this.CpuCores.Count == 0)
             {
-                Logger.LogWarning("Cannot update core selections: CpuTopology={CpuTopology}, CpuCores.Count={CpuCoresCount}",
-                    CpuTopology != null, CpuCores.Count);
+                this.Logger.LogWarning(
+                    "Cannot update core selections: CpuTopology={CpuTopology}, CpuCores.Count={CpuCoresCount}",
+                    this.CpuTopology != null, this.CpuCores.Count);
                 return;
             }
 
-            if (_hasPendingAffinityEdits && !forceSync)
+            if (this.hasPendingAffinityEdits && !forceSync)
             {
-                Logger.LogDebug("Skipping affinity sync because user edits are pending");
+                this.Logger.LogDebug("Skipping affinity sync because user edits are pending");
                 return;
             }
 
-            Logger.LogDebug("Updating core selections for affinity mask 0x{AffinityMask:X} ({AffinityMaskBinary})",
+            this.Logger.LogDebug(
+                "Updating core selections for affinity mask 0x{AffinityMask:X} ({AffinityMaskBinary})",
                 affinityMask, Convert.ToString(affinityMask, 2).PadLeft(Environment.ProcessorCount, '0'));
 
             // Update each core's selection state based on the actual OS affinity mask
@@ -591,9 +608,9 @@ namespace ThreadPilot.ViewModels
 
             try
             {
-                _suppressCoreSelectionEvents = true;
+                this.suppressCoreSelectionEvents = true;
 
-                foreach (var core in CpuCores)
+                foreach (var core in this.CpuCores)
                 {
                     bool wasSelected = core.IsSelected;
                     bool shouldBeSelected = (affinityMask & core.AffinityMask) != 0;
@@ -607,42 +624,47 @@ namespace ThreadPilot.ViewModels
             }
             finally
             {
-                _suppressCoreSelectionEvents = false;
+                this.suppressCoreSelectionEvents = false;
             }
 
             // The UI will automatically update since CpuCoreModel now implements INotifyPropertyChanged
             // No need to force collection refresh as individual property changes will be notified
 
             // Log the affinity update for debugging
-            var selectedCoreIds = CpuCores.Where(c => c.IsSelected).Select(c => c.LogicalCoreId).OrderBy(id => id).ToList();
-            var totalCores = CpuCores.Count;
+            var selectedCoreIds = this.CpuCores.Where(c => c.IsSelected).Select(c => c.LogicalCoreId).OrderBy(id => id).ToList();
+            var totalCores = this.CpuCores.Count;
             var selectedCount = selectedCoreIds.Count;
 
-            Logger.LogInformation("Updated core selections for affinity mask 0x{AffinityMask:X}: " +
+            this.Logger.LogInformation(
+                "Updated core selections for affinity mask 0x{AffinityMask:X}: " +
                                 "Selected {SelectedCount}/{TotalCores} cores: [{CoreIds}]",
                 affinityMask, selectedCount, totalCores, string.Join(", ", selectedCoreIds));
 
             if (updatedCores.Count > 0)
             {
-                Logger.LogDebug("Core selection changes: {Changes}",
+                this.Logger.LogDebug(
+                    "Core selection changes: {Changes}",
                     string.Join("; ", updatedCores.Select(c => $"Core {c.CoreId}: {c.WasSelected} -> {c.IsSelected}")));
             }
             else
             {
-                Logger.LogDebug("No core selection changes needed - UI already matches affinity mask");
+                this.Logger.LogDebug("No core selection changes needed - UI already matches affinity mask");
             }
 
             if (forceSync)
             {
-                _hasPendingAffinityEdits = false;
+                this.hasPendingAffinityEdits = false;
             }
         }
 
         private long CalculateAffinityMask()
         {
-            if (CpuTopology == null) return 0;
+            if (this.CpuTopology == null)
+            {
+                return 0;
+            }
 
-            var selectedCores = CpuCores.Where(core => core.IsSelected);
+            var selectedCores = this.CpuCores.Where(core => core.IsSelected);
 
             // Note: Removed hyperthreading filtering - user can manually select desired cores
             // All selected cores (including HT siblings) are now included in the affinity mask
@@ -653,51 +675,53 @@ namespace ThreadPilot.ViewModels
         [RelayCommand]
         public async Task LoadMoreProcesses()
         {
-            if (!IsVirtualizationEnabled || !HasMoreBatches || IsBusy)
+            if (!this.IsVirtualizationEnabled || !this.HasMoreBatches || this.IsBusy)
+            {
                 return;
+            }
 
             try
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus($"Loading more processes (batch {CurrentBatchIndex + 2})...");
+                    this.SetStatus($"Loading more processes (batch {this.CurrentBatchIndex + 2})...");
                 });
 
-                var nextBatchIndex = CurrentBatchIndex + 1;
-                var batch = await _virtualizedProcessService.LoadProcessBatchAsync(nextBatchIndex, ShowActiveApplicationsOnly);
+                var nextBatchIndex = this.CurrentBatchIndex + 1;
+                var batch = await this.virtualizedProcessService.LoadProcessBatchAsync(nextBatchIndex, this.ShowActiveApplicationsOnly);
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     // Add new processes to existing collection
                     foreach (var process in batch.Processes)
                     {
-                        Processes.Add(process);
+                        this.Processes.Add(process);
                     }
 
-                    CurrentBatchIndex = batch.BatchIndex;
-                    TotalBatches = batch.TotalBatches;
-                    HasMoreBatches = batch.HasMoreBatches;
-                    TotalProcessCount = batch.TotalProcessCount;
+                    this.CurrentBatchIndex = batch.BatchIndex;
+                    this.TotalBatches = batch.TotalBatches;
+                    this.HasMoreBatches = batch.HasMoreBatches;
+                    this.TotalProcessCount = batch.TotalProcessCount;
 
-                    FilterProcesses();
+                    this.FilterProcesses();
 
                     // BUG FIX: Ensure loading state is properly cleared
-                    ClearStatus();
-                    LoadingProgress = 0.0;
-                    LoadingStatusText = string.Empty;
+                    this.ClearStatus();
+                    this.LoadingProgress = 0.0;
+                    this.LoadingStatusText = string.Empty;
                 });
 
                 // Preload next batch in background
-                await _virtualizedProcessService.PreloadNextBatchAsync(CurrentBatchIndex, ShowActiveApplicationsOnly);
+                await this.virtualizedProcessService.PreloadNextBatchAsync(this.CurrentBatchIndex, this.ShowActiveApplicationsOnly);
             }
             catch (Exception ex)
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     // BUG FIX: Ensure loading state is cleared even on error
-                    LoadingProgress = 0.0;
-                    LoadingStatusText = string.Empty;
-                    SetStatus($"Error loading more processes: {ex.Message}", false);
+                    this.LoadingProgress = 0.0;
+                    this.LoadingStatusText = string.Empty;
+                    this.SetStatus($"Error loading more processes: {ex.Message}", false);
                 });
             }
         }
@@ -707,78 +731,78 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine($"LoadProcesses: Starting, ShowActiveApplicationsOnly={ShowActiveApplicationsOnly}");
+                System.Diagnostics.Debug.WriteLine($"LoadProcesses: Starting, ShowActiveApplicationsOnly={this.ShowActiveApplicationsOnly}");
 
                 // PERFORMANCE IMPROVEMENT: Progressive loading with status updates
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    LoadingProgress = 0.0;
-                    LoadingStatusText = ShowActiveApplicationsOnly ? "Loading active applications..." : "Loading processes...";
-                    SetStatus(LoadingStatusText);
+                    this.LoadingProgress = 0.0;
+                    this.LoadingStatusText = this.ShowActiveApplicationsOnly ? "Loading active applications..." : "Loading processes...";
+                    this.SetStatus(this.LoadingStatusText);
                 });
 
                 ObservableCollection<ProcessModel> newProcesses;
 
                 // VIRTUALIZATION ENHANCEMENT: Use virtualized loading for large process lists
-                if (IsVirtualizationEnabled)
+                if (this.IsVirtualizationEnabled)
                 {
                     System.Diagnostics.Debug.WriteLine("LoadProcesses: Using virtualized loading");
-                    await _virtualizedProcessService.InitializeAsync();
+                    await this.virtualizedProcessService.InitializeAsync();
 
-                    var totalCount = await _virtualizedProcessService.GetTotalProcessCountAsync(ShowActiveApplicationsOnly);
-                    if (totalCount > _virtualizedProcessService.Configuration.BatchSize)
+                    var totalCount = await this.virtualizedProcessService.GetTotalProcessCountAsync(this.ShowActiveApplicationsOnly);
+                    if (totalCount > this.virtualizedProcessService.Configuration.BatchSize)
                     {
                         // Load first batch only
-                        var batch = await _virtualizedProcessService.LoadProcessBatchAsync(0, ShowActiveApplicationsOnly);
+                        var batch = await this.virtualizedProcessService.LoadProcessBatchAsync(0, this.ShowActiveApplicationsOnly);
                         newProcesses = new ObservableCollection<ProcessModel>(batch.Processes);
 
                         // Update virtualization state
                         await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                         {
-                            CurrentBatchIndex = batch.BatchIndex;
-                            TotalBatches = batch.TotalBatches;
-                            HasMoreBatches = batch.HasMoreBatches;
-                            TotalProcessCount = batch.TotalProcessCount;
+                            this.CurrentBatchIndex = batch.BatchIndex;
+                            this.TotalBatches = batch.TotalBatches;
+                            this.HasMoreBatches = batch.HasMoreBatches;
+                            this.TotalProcessCount = batch.TotalProcessCount;
                         });
 
                         // Preload next batch in background
-                        await _virtualizedProcessService.PreloadNextBatchAsync(0, ShowActiveApplicationsOnly);
+                        await this.virtualizedProcessService.PreloadNextBatchAsync(0, this.ShowActiveApplicationsOnly);
                     }
                     else
                     {
                         // Small list, load all processes normally
-                        newProcesses = ShowActiveApplicationsOnly
-                            ? await _processService.GetActiveApplicationsAsync()
-                            : await _processService.GetProcessesAsync();
+                        newProcesses = this.ShowActiveApplicationsOnly
+                            ? await this.processService.GetActiveApplicationsAsync()
+                            : await this.processService.GetProcessesAsync();
                     }
                 }
                 else
                 {
                     // Traditional loading
-                    if (ShowActiveApplicationsOnly)
+                    if (this.ShowActiveApplicationsOnly)
                     {
                         System.Diagnostics.Debug.WriteLine("LoadProcesses: Getting active applications");
-                        newProcesses = await _processService.GetActiveApplicationsAsync();
+                        newProcesses = await this.processService.GetActiveApplicationsAsync();
                     }
                     else
                     {
                         System.Diagnostics.Debug.WriteLine("LoadProcesses: Getting all processes");
-                        newProcesses = await _processService.GetProcessesAsync();
+                        newProcesses = await this.processService.GetProcessesAsync();
                     }
                 }
 
                 // Update UI on the UI thread
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    Processes = newProcesses;
-                    System.Diagnostics.Debug.WriteLine($"LoadProcesses: Retrieved {Processes?.Count ?? 0} processes");
-                    FilterProcesses();
-                    System.Diagnostics.Debug.WriteLine($"LoadProcesses: After filtering, {FilteredProcesses?.Count ?? 0} processes visible");
+                    this.Processes = newProcesses;
+                    System.Diagnostics.Debug.WriteLine($"LoadProcesses: Retrieved {this.Processes?.Count ?? 0} processes");
+                    this.FilterProcesses();
+                    System.Diagnostics.Debug.WriteLine($"LoadProcesses: After filtering, {this.FilteredProcesses?.Count ?? 0} processes visible");
 
                     // BUG FIX: Ensure loading state is properly cleared
-                    ClearStatus();
-                    LoadingProgress = 0.0;
-                    LoadingStatusText = string.Empty;
+                    this.ClearStatus();
+                    this.LoadingProgress = 0.0;
+                    this.LoadingStatusText = string.Empty;
                 });
 
                 System.Diagnostics.Debug.WriteLine("LoadProcesses: Completed successfully");
@@ -789,9 +813,9 @@ namespace ThreadPilot.ViewModels
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     // BUG FIX: Ensure loading state is cleared even on error
-                    LoadingProgress = 0.0;
-                    LoadingStatusText = string.Empty;
-                    SetStatus($"Error loading processes: {ex.Message}", false);
+                    this.LoadingProgress = 0.0;
+                    this.LoadingStatusText = string.Empty;
+                    this.SetStatus($"Error loading processes: {ex.Message}", false);
                 });
             }
         }
@@ -799,16 +823,19 @@ namespace ThreadPilot.ViewModels
         [RelayCommand]
         private async Task RefreshProcesses()
         {
-            if (IsBusy) return;
+            if (this.IsBusy)
+            {
+                return;
+            }
 
             try
             {
                 // Store the currently selected process ID to preserve selection
-                var selectedProcessId = SelectedProcess?.ProcessId;
+                var selectedProcessId = this.SelectedProcess?.ProcessId;
 
-                var currentProcesses = ShowActiveApplicationsOnly
-                    ? await _processService.GetActiveApplicationsAsync()
-                    : await _processService.GetProcessesAsync();
+                var currentProcesses = this.ShowActiveApplicationsOnly
+                    ? await this.processService.GetActiveApplicationsAsync()
+                    : await this.processService.GetProcessesAsync();
 
                 // Update UI on the UI thread
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
@@ -816,7 +843,7 @@ namespace ThreadPilot.ViewModels
                     // Update existing processes or add new ones
                     foreach (var process in currentProcesses)
                     {
-                        var existingProcess = Processes.FirstOrDefault(p => p.ProcessId == process.ProcessId);
+                        var existingProcess = this.Processes.FirstOrDefault(p => p.ProcessId == process.ProcessId);
                         if (existingProcess != null)
                         {
                             // Update existing process data by copying properties
@@ -830,12 +857,12 @@ namespace ThreadPilot.ViewModels
                         }
                         else
                         {
-                            Processes.Add(process);
+                            this.Processes.Add(process);
                         }
                     }
 
                     // Remove terminated processes
-                    var terminatedProcesses = Processes
+                    var terminatedProcesses = this.Processes
                         .Where(p => !currentProcesses.Any(cp => cp.ProcessId == p.ProcessId))
                         .ToList();
 
@@ -847,25 +874,25 @@ namespace ThreadPilot.ViewModels
                         {
                             selectedProcessTerminated = true;
                         }
-                        Processes.Remove(terminated);
+                        this.Processes.Remove(terminated);
                     }
 
-                    FilterProcesses();
+                    this.FilterProcesses();
 
                     // Restore selection if the process still exists
                     if (selectedProcessId.HasValue && !selectedProcessTerminated)
                     {
-                        var processToSelect = FilteredProcesses.FirstOrDefault(p => p.ProcessId == selectedProcessId.Value);
+                        var processToSelect = this.FilteredProcesses.FirstOrDefault(p => p.ProcessId == selectedProcessId.Value);
                         if (processToSelect != null)
                         {
-                            SelectedProcess = processToSelect;
+                            this.SelectedProcess = processToSelect;
                         }
                     }
                     else if (selectedProcessTerminated)
                     {
                         // Clear selection and reset UI if selected process was terminated
-                        SelectedProcess = null;
-                        ClearProcessSelection();
+                        this.SelectedProcess = null;
+                        this.ClearProcessSelection();
                     }
                 });
             }
@@ -873,7 +900,7 @@ namespace ThreadPilot.ViewModels
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus($"Error refreshing processes: {ex.Message}", false);
+                    this.SetStatus($"Error refreshing processes: {ex.Message}", false);
                 });
             }
         }
@@ -881,50 +908,53 @@ namespace ThreadPilot.ViewModels
         [RelayCommand]
         private async Task SetAffinity()
         {
-            if (SelectedProcess == null) return;
+            if (this.SelectedProcess == null)
+            {
+                return;
+            }
 
             try
             {
-                var affinityMask = CalculateAffinityMask();
+                var affinityMask = this.CalculateAffinityMask();
                 if (affinityMask == 0)
                 {
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        SetStatus("Please select at least one CPU core", false);
+                        this.SetStatus("Please select at least one CPU core", false);
                     });
                     return;
                 }
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus($"Setting affinity for {SelectedProcess.Name}...");
+                    this.SetStatus($"Setting affinity for {this.SelectedProcess.Name}...");
                 });
 
                 // Apply the affinity change
-                await _processService.SetProcessorAffinity(SelectedProcess, affinityMask);
+                await this.processService.SetProcessorAffinity(this.SelectedProcess, affinityMask);
 
                 // Immediately refresh the process to get the actual system state
-                await _processService.RefreshProcessInfo(SelectedProcess);
+                await this.processService.RefreshProcessInfo(this.SelectedProcess);
 
                 // Update UI to reflect the actual system affinity (not our calculated one)
                 // This ensures we show what the OS actually set, which may differ from our request
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    UpdateCoreSelections(SelectedProcess.ProcessorAffinity, true);
+                    this.UpdateCoreSelections(this.SelectedProcess.ProcessorAffinity, true);
 
                     // Notify UI of all changes
-                    OnPropertyChanged(nameof(SelectedProcess));
+                    this.OnPropertyChanged(nameof(this.SelectedProcess));
 
                     // Verify the affinity was set correctly
-                    if (SelectedProcess.ProcessorAffinity == affinityMask)
+                    if (this.SelectedProcess.ProcessorAffinity == affinityMask)
                     {
-                        SetStatus($"Affinity applied successfully to {SelectedProcess.Name} (0x{affinityMask:X}).", false);
-                        _ = _notificationService.ShowNotificationAsync("Affinity applied", $"{SelectedProcess.Name}: 0x{affinityMask:X}", NotificationType.Success);
+                        this.SetStatus($"Affinity applied successfully to {this.SelectedProcess.Name} (0x{affinityMask:X}).", false);
+                        _ = this.notificationService.ShowNotificationAsync("Affinity applied", $"{this.SelectedProcess.Name}: 0x{affinityMask:X}", NotificationType.Success);
                     }
                     else
                     {
-                        SetStatus($"Affinity adjusted by system for {SelectedProcess.Name} to 0x{SelectedProcess.ProcessorAffinity:X}.", false);
-                        _ = _notificationService.ShowNotificationAsync("Affinity adjusted", $"{SelectedProcess.Name}: 0x{SelectedProcess.ProcessorAffinity:X}", NotificationType.Warning);
+                        this.SetStatus($"Affinity adjusted by system for {this.SelectedProcess.Name} to 0x{this.SelectedProcess.ProcessorAffinity:X}.", false);
+                        _ = this.notificationService.ShowNotificationAsync("Affinity adjusted", $"{this.SelectedProcess.Name}: 0x{this.SelectedProcess.ProcessorAffinity:X}", NotificationType.Warning);
                     }
                 });
             }
@@ -935,30 +965,30 @@ namespace ThreadPilot.ViewModels
                     friendly.Contains("anti-cheat", StringComparison.OrdinalIgnoreCase))
                 {
                     friendly = "Affinity change blocked (anti-cheat or insufficient privileges).";
-                    _ = _notificationService.ShowNotificationAsync("Affinity blocked", friendly, NotificationType.Warning);
+                    _ = this.notificationService.ShowNotificationAsync("Affinity blocked", friendly, NotificationType.Warning);
                 }
                 else if (friendly.Contains("invalid affinity", StringComparison.OrdinalIgnoreCase))
                 {
-                    _ = _notificationService.ShowNotificationAsync("Affinity invalid", friendly, NotificationType.Error);
+                    _ = this.notificationService.ShowNotificationAsync("Affinity invalid", friendly, NotificationType.Error);
                 }
                 else
                 {
-                    _ = _notificationService.ShowNotificationAsync("Affinity error", friendly, NotificationType.Error);
+                    _ = this.notificationService.ShowNotificationAsync("Affinity error", friendly, NotificationType.Error);
                 }
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus($"Error setting affinity: {friendly}", false);
+                    this.SetStatus($"Error setting affinity: {friendly}", false);
                 });
 
                 // Try to refresh process info even if setting failed, to show current state
                 try
                 {
-                    await _processService.RefreshProcessInfo(SelectedProcess);
+                    await this.processService.RefreshProcessInfo(this.SelectedProcess);
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        UpdateCoreSelections(SelectedProcess.ProcessorAffinity, true);
-                        OnPropertyChanged(nameof(SelectedProcess));
+                        this.UpdateCoreSelections(this.SelectedProcess.ProcessorAffinity, true);
+                        this.OnPropertyChanged(nameof(this.SelectedProcess));
                     });
                 }
                 catch
@@ -970,7 +1000,7 @@ namespace ThreadPilot.ViewModels
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    ClearStatus();
+                    this.ClearStatus();
                 });
             }
         }
@@ -978,40 +1008,43 @@ namespace ThreadPilot.ViewModels
         [RelayCommand]
         private async Task ApplyAffinityPreset(CpuAffinityPreset preset)
         {
-            if (preset == null || !preset.IsAvailable || CpuTopology == null) return;
+            if (preset == null || !preset.IsAvailable || this.CpuTopology == null)
+            {
+                return;
+            }
 
             await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 try
                 {
-                    _suppressCoreSelectionEvents = true;
+                    this.suppressCoreSelectionEvents = true;
 
                     // Clear all selections first
-                    foreach (var core in CpuCores)
+                    foreach (var core in this.CpuCores)
                     {
                         core.IsSelected = false;
                     }
 
                     // Apply preset mask
-                    foreach (var core in CpuCores)
+                    foreach (var core in this.CpuCores)
                     {
                         core.IsSelected = (preset.AffinityMask & core.AffinityMask) != 0;
                     }
 
                     // Notify UI of changes
-                    OnPropertyChanged(nameof(CpuCores));
-                    SetStatus($"Applied preset: {preset.Name}");
+                    this.OnPropertyChanged(nameof(this.CpuCores));
+                    this.SetStatus($"Applied preset: {preset.Name}");
                 }
                 finally
                 {
-                    _suppressCoreSelectionEvents = false;
+                    this.suppressCoreSelectionEvents = false;
                 }
 
                 // Trigger auto-apply with the preset mask
-                _hasPendingAffinityEdits = true;
+                this.hasPendingAffinityEdits = true;
 
                 // Apply immediately for presets (no debounce needed)
-                _ = AutoApplyAffinityAsync();
+                _ = this.AutoApplyAffinityAsync();
             });
         }
 
@@ -1036,17 +1069,22 @@ namespace ThreadPilot.ViewModels
             });
         }
 
-        private static T? FindVisualChild<T>(System.Windows.DependencyObject obj) where T : System.Windows.DependencyObject
+        private static T? FindVisualChild<T>(System.Windows.DependencyObject obj)
+            where T : System.Windows.DependencyObject
         {
             for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(obj); i++)
             {
                 var child = System.Windows.Media.VisualTreeHelper.GetChild(obj, i);
                 if (child is T typedChild)
+                {
                     return typedChild;
+                }
 
                 var childOfChild = FindVisualChild<T>(child);
                 if (childOfChild != null)
+                {
                     return childOfChild;
+                }
             }
             return null;
         }
@@ -1073,34 +1111,37 @@ namespace ThreadPilot.ViewModels
 
         private async Task ApplyCoreMaskToProcessAsync(CoreMask mask)
         {
-            if (SelectedProcess == null || mask == null)
+            if (this.SelectedProcess == null || mask == null)
+            {
                 return;
+            }
 
-            IsBusy = true;
+            this.IsBusy = true;
             try
             {
-                Logger.LogInformation("Applying mask '{MaskName}' to process {ProcessName} (PID: {ProcessId})",
-                    mask.Name, SelectedProcess.Name, SelectedProcess.ProcessId);
+                this.Logger.LogInformation(
+                    "Applying mask '{MaskName}' to process {ProcessName} (PID: {ProcessId})",
+                    mask.Name, this.SelectedProcess.Name, this.SelectedProcess.ProcessId);
 
                 // Convert mask to affinity
                 long affinity = mask.ToProcessorAffinity();
 
                 if (affinity == 0)
                 {
-                    Logger.LogWarning("Mask '{MaskName}' produces zero affinity, skipping", mask.Name);
-                    SetStatus("Invalid mask: no cores selected");
+                    this.Logger.LogWarning("Mask '{MaskName}' produces zero affinity, skipping", mask.Name);
+                    this.SetStatus("Invalid mask: no cores selected");
                     return;
                 }
 
                 // Disable Windows Game Mode for better CPU affinity control
                 // Game Mode can interfere with CPU Sets, particularly on AMD systems
-                await _gameModeService.DisableGameModeForAffinityAsync();
+                await this.gameModeService.DisableGameModeForAffinityAsync();
 
                 // Apply affinity using ProcessService (which uses CPU Sets with fallback)
-                await _processService.SetProcessorAffinity(SelectedProcess, affinity);
+                await this.processService.SetProcessorAffinity(this.SelectedProcess, affinity);
 
                 // Refresh process info to get actual system state
-                await _processService.RefreshProcessInfo(SelectedProcess);
+                await this.processService.RefreshProcessInfo(this.SelectedProcess);
 
                 // CRITICAL: Force UI updates on UI thread
                 // RefreshProcessInfo runs on background thread, DataGrid won't receive PropertyChanged from non-UI threads
@@ -1108,49 +1149,51 @@ namespace ThreadPilot.ViewModels
                 {
                     // Force PropertyChanged notification for ProcessorAffinity property
                     // This ensures the DataGrid Affinity column binding updates immediately
-                    SelectedProcess.ForceNotifyProcessorAffinityChanged();
+                    this.SelectedProcess.ForceNotifyProcessorAffinityChanged();
 
                     // Update Advanced CPU Affinity checkboxes to reflect the mask
-                    UpdateCoreSelectionsFromMask(mask);
+                    this.UpdateCoreSelectionsFromMask(mask);
 
                     // Force complete refresh of SelectedProcess bindings in DataGrid
-                    OnPropertyChanged(nameof(SelectedProcess));
+                    this.OnPropertyChanged(nameof(this.SelectedProcess));
                 });
 
-                SetStatus($"Applied mask '{mask.Name}' to {SelectedProcess.Name}");
-                Logger.LogInformation("Successfully applied mask '{MaskName}' to {ProcessName}", mask.Name, SelectedProcess.Name);
+                this.SetStatus($"Applied mask '{mask.Name}' to {this.SelectedProcess.Name}");
+                this.Logger.LogInformation("Successfully applied mask '{MaskName}' to {ProcessName}", mask.Name, this.SelectedProcess.Name);
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Failed to apply mask '{MaskName}' to process {ProcessName}",
-                    mask.Name, SelectedProcess.Name);
-                SetStatus($"Error applying mask: {ex.Message}");
+                this.Logger.LogError(ex, "Failed to apply mask '{MaskName}' to process {ProcessName}",
+                    mask.Name, this.SelectedProcess.Name);
+                this.SetStatus($"Error applying mask: {ex.Message}");
             }
             finally
             {
-                IsBusy = false;
+                this.IsBusy = false;
             }
         }
 
         private void UpdateCoreSelectionsFromMask(CoreMask mask)
         {
-            if (mask == null || CpuCores.Count == 0)
+            if (mask == null || this.CpuCores.Count == 0)
+            {
                 return;
+            }
 
             try
             {
-                _suppressCoreSelectionEvents = true;
+                this.suppressCoreSelectionEvents = true;
 
-                for (int i = 0; i < CpuCores.Count && i < mask.BoolMask.Count; i++)
+                for (int i = 0; i < this.CpuCores.Count && i < mask.BoolMask.Count; i++)
                 {
-                    CpuCores[i].IsSelected = mask.BoolMask[i];
+                    this.CpuCores[i].IsSelected = mask.BoolMask[i];
                 }
 
-                OnPropertyChanged(nameof(CpuCores));
+                this.OnPropertyChanged(nameof(this.CpuCores));
             }
             finally
             {
-                _suppressCoreSelectionEvents = false;
+                this.suppressCoreSelectionEvents = false;
             }
         }
 
@@ -1158,46 +1201,49 @@ namespace ThreadPilot.ViewModels
         [RelayCommand]
         private async Task QuickApplyAffinityAndPowerPlan()
         {
-            if (SelectedProcess == null) return;
+            if (this.SelectedProcess == null)
+            {
+                return;
+            }
 
             try
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus($"Applying settings to {SelectedProcess.Name}...");
+                    this.SetStatus($"Applying settings to {this.SelectedProcess.Name}...");
                 });
 
                 // Apply CPU affinity
-                var affinityMask = CalculateAffinityMask();
+                var affinityMask = this.CalculateAffinityMask();
                 if (affinityMask > 0)
                 {
-                    await _processService.SetProcessorAffinity(SelectedProcess, affinityMask);
+                    await this.processService.SetProcessorAffinity(this.SelectedProcess, affinityMask);
                 }
 
                 // Apply power plan if selected
-                if (SelectedPowerPlan != null)
+                if (this.SelectedPowerPlan != null)
                 {
-                    await _powerPlanService.SetActivePowerPlan(SelectedPowerPlan);
+                    await this.powerPlanService.SetActivePowerPlan(this.SelectedPowerPlan);
                 }
 
-                await _processService.RefreshProcessInfo(SelectedProcess);
+                await this.processService.RefreshProcessInfo(this.SelectedProcess);
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    UpdateCoreSelections(SelectedProcess.ProcessorAffinity, true);
-                    OnPropertyChanged(nameof(SelectedProcess));
+                    this.UpdateCoreSelections(this.SelectedProcess.ProcessorAffinity, true);
+                    this.OnPropertyChanged(nameof(this.SelectedProcess));
                 });
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus($"Quick apply completed for {SelectedProcess.Name}.", false);
+                    this.SetStatus($"Quick apply completed for {this.SelectedProcess.Name}.", false);
                 });
             }
             catch (Exception ex)
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus($"Error applying settings: {ex.Message}", false);
+                    this.SetStatus($"Error applying settings: {ex.Message}", false);
                 });
             }
         }
@@ -1209,15 +1255,15 @@ namespace ThreadPilot.ViewModels
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus("Refreshing CPU topology...");
+                    this.SetStatus("Refreshing CPU topology...");
                 });
-                await _cpuTopologyService.RefreshTopologyAsync();
+                await this.cpuTopologyService.RefreshTopologyAsync();
             }
             catch (Exception ex)
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus($"Error refreshing topology: {ex.Message}", false);
+                    this.SetStatus($"Error refreshing topology: {ex.Message}", false);
                 });
             }
         }
@@ -1225,29 +1271,32 @@ namespace ThreadPilot.ViewModels
         [RelayCommand]
         private async Task SetPowerPlan()
         {
-            if (SelectedPowerPlan == null) return;
+            if (this.SelectedPowerPlan == null)
+            {
+                return;
+            }
 
             try
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus($"Setting power plan to {SelectedPowerPlan.Name}...");
+                    this.SetStatus($"Setting power plan to {this.SelectedPowerPlan.Name}...");
                 });
 
-                var success = await _powerPlanService.SetActivePowerPlan(SelectedPowerPlan);
+                var success = await this.powerPlanService.SetActivePowerPlan(this.SelectedPowerPlan);
 
-                await RefreshPowerPlansAsync();
+                await this.RefreshPowerPlansAsync();
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    var activePlan = PowerPlans.FirstOrDefault(p => p.IsActive);
-                    if (success && activePlan?.Guid == SelectedPowerPlan.Guid)
+                    var activePlan = this.PowerPlans.FirstOrDefault(p => p.IsActive);
+                    if (success && activePlan?.Guid == this.SelectedPowerPlan.Guid)
                     {
-                        SetStatus($"Power plan set successfully to {SelectedPowerPlan.Name}", false);
+                        this.SetStatus($"Power plan set successfully to {this.SelectedPowerPlan.Name}", false);
                     }
                     else
                     {
-                        SetStatus($"Power plan change attempted - current plan: {activePlan?.Name ?? "Unknown"}", false);
+                        this.SetStatus($"Power plan change attempted - current plan: {activePlan?.Name ?? "Unknown"}", false);
                     }
                 });
             }
@@ -1255,12 +1304,12 @@ namespace ThreadPilot.ViewModels
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus($"Error setting power plan: {ex.Message}", false);
+                    this.SetStatus($"Error setting power plan: {ex.Message}", false);
                 });
 
                 try
                 {
-                    await RefreshPowerPlansAsync();
+                    await this.RefreshPowerPlansAsync();
                 }
                 catch
                 {
@@ -1269,43 +1318,46 @@ namespace ThreadPilot.ViewModels
             }
             finally
             {
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(ClearStatus);
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(this.ClearStatus);
             }
         }
 
         [RelayCommand]
         private async Task SetPriority(ProcessPriorityClass priority)
         {
-            if (SelectedProcess == null) return;
+            if (this.SelectedProcess == null)
+            {
+                return;
+            }
 
             try
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus($"Setting priority for {SelectedProcess.Name} to {priority}...");
+                    this.SetStatus($"Setting priority for {this.SelectedProcess.Name} to {priority}...");
                 });
 
                 // Apply the priority change
-                await _processService.SetProcessPriority(SelectedProcess, priority);
+                await this.processService.SetProcessPriority(this.SelectedProcess, priority);
 
                 // Immediately refresh the process to get the actual system state
-                await _processService.RefreshProcessInfo(SelectedProcess);
+                await this.processService.RefreshProcessInfo(this.SelectedProcess);
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     // Notify UI that the process properties have changed
-                    OnPropertyChanged(nameof(SelectedProcess));
+                    this.OnPropertyChanged(nameof(this.SelectedProcess));
 
                     // Verify the priority was set correctly
-                    if (SelectedProcess.Priority == priority)
+                    if (this.SelectedProcess.Priority == priority)
                     {
-                        SetStatus($"Priority applied successfully to {SelectedProcess.Name}: {priority}.", false);
-                        _ = _notificationService.ShowNotificationAsync("Priority applied", $"{SelectedProcess.Name}: {priority}", NotificationType.Success);
+                        this.SetStatus($"Priority applied successfully to {this.SelectedProcess.Name}: {priority}.", false);
+                        _ = this.notificationService.ShowNotificationAsync("Priority applied", $"{this.SelectedProcess.Name}: {priority}", NotificationType.Success);
                     }
                     else
                     {
-                        SetStatus($"Priority adjusted by system for {SelectedProcess.Name} to {SelectedProcess.Priority}.", false);
-                        _ = _notificationService.ShowNotificationAsync("Priority adjusted", $"{SelectedProcess.Name}: {SelectedProcess.Priority}", NotificationType.Warning);
+                        this.SetStatus($"Priority adjusted by system for {this.SelectedProcess.Name} to {this.SelectedProcess.Priority}.", false);
+                        _ = this.notificationService.ShowNotificationAsync("Priority adjusted", $"{this.SelectedProcess.Name}: {this.SelectedProcess.Priority}", NotificationType.Warning);
                     }
                 });
             }
@@ -1316,25 +1368,25 @@ namespace ThreadPilot.ViewModels
                     message.Contains("anti-cheat", StringComparison.OrdinalIgnoreCase))
                 {
                     message = "Priority change blocked (anti-cheat or insufficient privileges).";
-                    _ = _notificationService.ShowNotificationAsync("Priority blocked", message, NotificationType.Warning);
+                    _ = this.notificationService.ShowNotificationAsync("Priority blocked", message, NotificationType.Warning);
                 }
                 else
                 {
-                    _ = _notificationService.ShowNotificationAsync("Priority error", message, NotificationType.Error);
+                    _ = this.notificationService.ShowNotificationAsync("Priority error", message, NotificationType.Error);
                 }
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus($"Error setting priority: {message}", false);
+                    this.SetStatus($"Error setting priority: {message}", false);
                 });
 
                 // Try to refresh process info even if setting failed, to show current state
                 try
                 {
-                    await _processService.RefreshProcessInfo(SelectedProcess);
+                    await this.processService.RefreshProcessInfo(this.SelectedProcess);
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        OnPropertyChanged(nameof(SelectedProcess));
+                        this.OnPropertyChanged(nameof(this.SelectedProcess));
                     });
                 }
                 catch
@@ -1344,32 +1396,35 @@ namespace ThreadPilot.ViewModels
             }
             finally
             {
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(ClearStatus);
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(this.ClearStatus);
             }
         }
 
         [RelayCommand]
         private async Task SaveProfile()
         {
-            if (SelectedProcess == null || string.IsNullOrWhiteSpace(ProfileName)) return;
+            if (this.SelectedProcess == null || string.IsNullOrWhiteSpace(this.ProfileName))
+            {
+                return;
+            }
 
             try
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus($"Saving profile {ProfileName}...");
+                    this.SetStatus($"Saving profile {this.ProfileName}...");
                 });
-                await _processService.SaveProcessProfile(ProfileName, SelectedProcess);
+                await this.processService.SaveProcessProfile(this.ProfileName, this.SelectedProcess);
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    ClearStatus();
+                    this.ClearStatus();
                 });
             }
             catch (Exception ex)
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus($"Error saving profile: {ex.Message}", false);
+                    this.SetStatus($"Error saving profile: {ex.Message}", false);
                 });
             }
         }
@@ -1377,40 +1432,43 @@ namespace ThreadPilot.ViewModels
         [RelayCommand]
         private async Task LoadProfile()
         {
-            if (SelectedProcess == null || string.IsNullOrWhiteSpace(ProfileName)) return;
+            if (this.SelectedProcess == null || string.IsNullOrWhiteSpace(this.ProfileName))
+            {
+                return;
+            }
 
             try
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus($"Loading profile {ProfileName}...");
+                    this.SetStatus($"Loading profile {this.ProfileName}...");
                 });
-                await _processService.LoadProcessProfile(ProfileName, SelectedProcess);
+                await this.processService.LoadProcessProfile(this.ProfileName, this.SelectedProcess);
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    ClearStatus();
+                    this.ClearStatus();
                 });
             }
             catch (Exception ex)
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus($"Error loading profile: {ex.Message}", false);
+                    this.SetStatus($"Error loading profile: {ex.Message}", false);
                 });
             }
         }
 
         private void SetupRefreshTimer()
         {
-            _refreshTimer = new System.Timers.Timer(5000); // PERFORMANCE OPTIMIZATION: Increased to 5 second refresh for better performance
-            _refreshTimer.Elapsed += async (s, e) =>
+            this.refreshTimer = new System.Timers.Timer(5000); // PERFORMANCE OPTIMIZATION: Increased to 5 second refresh for better performance
+            this.refreshTimer.Elapsed += async (s, e) =>
             {
                 try
                 {
                     // Marshal timer callback to UI thread to prevent cross-thread access exceptions
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
                     {
-                        await RefreshProcessesCommand.ExecuteAsync(null);
+                        await this.RefreshProcessesCommand.ExecuteAsync(null);
                     });
                 }
                 catch (Exception ex)
@@ -1423,31 +1481,31 @@ namespace ThreadPilot.ViewModels
 
         public void PauseRefresh()
         {
-            _refreshTimer?.Stop();
+            this.refreshTimer?.Stop();
             System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 // BUG FIX: Don't set busy state when pausing refresh
-                SetStatus("Process monitoring paused (minimized)", false);
+                this.SetStatus("Process monitoring paused (minimized)", false);
             });
         }
 
         public void ResumeRefresh()
         {
-            _refreshTimer?.Start();
+            this.refreshTimer?.Start();
             System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 // BUG FIX: Clear busy state when resuming refresh to prevent stuck loading state
-                ClearStatus();
-                SetStatus("Process monitoring resumed", false);
+                this.ClearStatus();
+                this.SetStatus("Process monitoring resumed", false);
 
                 // Clear the status after a short delay to avoid persistent status message
                 _ = Task.Delay(2000).ContinueWith(_ =>
                 {
                     System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        if (StatusMessage == "Process monitoring resumed")
+                        if (this.StatusMessage == "Process monitoring resumed")
                         {
-                            ClearStatus();
+                            this.ClearStatus();
                         }
                     });
                 });
@@ -1457,20 +1515,20 @@ namespace ThreadPilot.ViewModels
         partial void OnSearchTextChanged(string value)
         {
             // PERFORMANCE OPTIMIZATION: Debounce search to prevent excessive filtering
-            _searchDebounceTimer?.Stop();
-            _searchDebounceTimer?.Dispose();
+            searchDebounceTimer?.Stop();
+            searchDebounceTimer?.Dispose();
 
-            _searchDebounceTimer = new System.Timers.Timer(300); // 300ms debounce
-            _searchDebounceTimer.Elapsed += (s, e) =>
+            searchDebounceTimer = new System.Timers.Timer(300); // 300ms debounce
+            searchDebounceTimer.Elapsed += (s, e) =>
             {
-                _searchDebounceTimer?.Stop();
-                _searchDebounceTimer?.Dispose();
-                _searchDebounceTimer = null;
+                searchDebounceTimer?.Stop();
+                searchDebounceTimer?.Dispose();
+                searchDebounceTimer = null;
 
                 // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
                 System.Windows.Application.Current.Dispatcher.InvokeAsync(() => FilterProcesses());
             };
-            _searchDebounceTimer.Start();
+            searchDebounceTimer.Start();
         }
 
         partial void OnShowActiveApplicationsOnlyChanged(bool value)
@@ -1499,24 +1557,24 @@ namespace ThreadPilot.ViewModels
             DebounceFilterOperation();
         }
 
-        private System.Timers.Timer? _filterDebounceTimer;
+        private System.Timers.Timer? filterDebounceTimer;
 
         private void DebounceFilterOperation()
         {
-            _filterDebounceTimer?.Stop();
-            _filterDebounceTimer?.Dispose();
+            this.filterDebounceTimer?.Stop();
+            this.filterDebounceTimer?.Dispose();
 
-            _filterDebounceTimer = new System.Timers.Timer(100); // 100ms debounce for filter operations
-            _filterDebounceTimer.Elapsed += (s, e) =>
+            this.filterDebounceTimer = new System.Timers.Timer(100); // 100ms debounce for filter operations
+            this.filterDebounceTimer.Elapsed += (s, e) =>
             {
-                _filterDebounceTimer?.Stop();
-                _filterDebounceTimer?.Dispose();
-                _filterDebounceTimer = null;
+                this.filterDebounceTimer?.Stop();
+                this.filterDebounceTimer?.Dispose();
+                this.filterDebounceTimer = null;
 
                 // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
-                System.Windows.Application.Current.Dispatcher.InvokeAsync(() => FilterProcesses());
+                System.Windows.Application.Current.Dispatcher.InvokeAsync(() => this.FilterProcesses());
             };
-            _filterDebounceTimer.Start();
+            this.filterDebounceTimer.Start();
         }
 
         partial void OnIsIdleServerDisabledChanged(bool value)
@@ -1546,58 +1604,58 @@ namespace ThreadPilot.ViewModels
             var dispatcher = System.Windows.Application.Current?.Dispatcher;
             if (dispatcher != null && !dispatcher.CheckAccess())
             {
-                dispatcher.Invoke(FilterProcesses);
+                dispatcher.Invoke(this.FilterProcesses);
                 return;
             }
 
-            if (_isApplyingFilter)
+            if (this.isApplyingFilter)
             {
-                _filterRefreshPending = true;
+                this.filterRefreshPending = true;
                 return;
             }
 
-            _isApplyingFilter = true;
-            var filtered = Processes.AsEnumerable();
+            this.isApplyingFilter = true;
+            var filtered = this.Processes.AsEnumerable();
 
             try
             {
                 do
                 {
-                    _filterRefreshPending = false;
+                    this.filterRefreshPending = false;
 
-                    filtered = Processes.AsEnumerable();
+                    filtered = this.Processes.AsEnumerable();
 
-                    if (!string.IsNullOrWhiteSpace(SearchText))
+                    if (!string.IsNullOrWhiteSpace(this.SearchText))
                     {
-                        filtered = filtered.Where(p => p.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+                        filtered = filtered.Where(p => p.Name.Contains(this.SearchText, StringComparison.OrdinalIgnoreCase));
                     }
 
-                    if (HideSystemProcesses)
+                    if (this.HideSystemProcesses)
                     {
                         filtered = filtered.Where(p => !IsSystemProcess(p));
                     }
 
-                    if (HideIdleProcesses)
+                    if (this.HideIdleProcesses)
                     {
                         filtered = filtered.Where(p => p.CpuUsage > 0.1);
                     }
 
-                    filtered = SortMode switch
+                    filtered = this.SortMode switch
                     {
                         "CpuUsage" => filtered.OrderByDescending(p => p.CpuUsage),
                         "MemoryUsage" => filtered.OrderByDescending(p => p.MemoryUsage),
                         "Name" => filtered.OrderBy(p => p.Name),
                         "ProcessId" => filtered.OrderBy(p => p.ProcessId),
-                        _ => filtered.OrderByDescending(p => p.CpuUsage)
+                        _ => filtered.OrderByDescending(p => p.CpuUsage),
                     };
 
-                    FilteredProcesses = new ObservableCollection<ProcessModel>(filtered);
+                    this.FilteredProcesses = new ObservableCollection<ProcessModel>(filtered);
                 }
-                while (_filterRefreshPending);
+                while (this.filterRefreshPending);
             }
             finally
             {
-                _isApplyingFilter = false;
+                this.isApplyingFilter = false;
             }
         }
 
@@ -1609,7 +1667,7 @@ namespace ThreadPilot.ViewModels
                 "services.exe", "lsass.exe", "svchost.exe", "spoolsv.exe", "explorer.exe",
                 "dwm.exe", "audiodg.exe", "conhost.exe", "dllhost.exe", "rundll32.exe",
                 "taskhostw.exe", "SearchIndexer.exe", "WmiPrvSE.exe", "MsMpEng.exe",
-                "SecurityHealthService.exe", "SecurityHealthSystray.exe"
+                "SecurityHealthService.exe", "SecurityHealthSystray.exe",
             };
 
             return systemProcesses.Any(sp => process.Name.Equals(sp, StringComparison.OrdinalIgnoreCase)) ||
@@ -1620,18 +1678,18 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                await RefreshPowerPlansAsync();
+                await this.RefreshPowerPlansAsync();
             }
             catch (Exception ex)
             {
-                Logger.LogWarning(ex, "Failed to load power plan association for process {ProcessName}", process.Name);
+                this.Logger.LogWarning(ex, "Failed to load power plan association for process {ProcessName}", process.Name);
             }
         }
 
         private void ClearProcessSelection()
         {
             // Clear CPU core selections
-            foreach (var core in CpuCores)
+            foreach (var core in this.CpuCores)
             {
                 core.IsSelected = false;
             }
@@ -1641,11 +1699,11 @@ namespace ThreadPilot.ViewModels
             {
                 try
                 {
-                    await RefreshPowerPlansAsync();
+                    await this.RefreshPowerPlansAsync();
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogWarning(ex, "Failed to reset power plan selection");
+                    this.Logger.LogWarning(ex, "Failed to reset power plan selection");
                 }
             });
 
@@ -1653,22 +1711,22 @@ namespace ThreadPilot.ViewModels
             System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 // Reset feature states
-                IsIdleServerDisabled = false;
-                IsRegistryPriorityEnabled = false;
+                this.IsIdleServerDisabled = false;
+                this.IsRegistryPriorityEnabled = false;
 
-                OnPropertyChanged(nameof(CpuCores));
+                this.OnPropertyChanged(nameof(this.CpuCores));
 
                 // BUG FIX: Clear status without setting busy state and auto-clear after delay
-                SetStatus("Process selection cleared", false);
+                this.SetStatus("Process selection cleared", false);
 
                 // Clear the status after a short delay
                 _ = Task.Delay(2000).ContinueWith(_ =>
                 {
                     System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        if (StatusMessage == "Process selection cleared")
+                        if (this.StatusMessage == "Process selection cleared")
                         {
-                            ClearStatus();
+                            this.ClearStatus();
                         }
                     });
                 });
@@ -1676,72 +1734,79 @@ namespace ThreadPilot.ViewModels
         }
 
         /// <summary>
-        /// Toggles the idle server functionality for the selected process
+        /// Toggles the idle server functionality for the selected process.
         /// </summary>
         private async Task ToggleIdleServerAsync(bool disable)
         {
-            if (SelectedProcess == null) return;
+            if (this.SelectedProcess == null)
+            {
+                return;
+            }
 
             try
             {
-                SetStatus($"{(disable ? "Disabling" : "Enabling")} idle server for {SelectedProcess.Name}...");
+                this.SetStatus($"{(disable ? "Disabling" : "Enabling")} idle server for {this.SelectedProcess.Name}...");
 
                 // Implementation for disabling/enabling idle server
                 // This typically involves setting process execution state or power management settings
-                var success = await _processService.SetIdleServerStateAsync(SelectedProcess, !disable);
+                var success = await this.processService.SetIdleServerStateAsync(this.SelectedProcess, !disable);
 
                 if (success)
                 {
-                    SelectedProcess.IsIdleServerDisabled = disable;
-                    SetStatus($"Idle server {(disable ? "disabled" : "enabled")} for {SelectedProcess.Name}");
+                    this.SelectedProcess.IsIdleServerDisabled = disable;
+                    this.SetStatus($"Idle server {(disable ? "disabled" : "enabled")} for {this.SelectedProcess.Name}");
 
-                    await LogUserActionAsync("IdleServer",
-                        $"Idle server {(disable ? "disabled" : "enabled")} for process {SelectedProcess.Name}",
-                        $"PID: {SelectedProcess.ProcessId}");
+                    await this.LogUserActionAsync(
+                        "IdleServer",
+                        $"Idle server {(disable ? "disabled" : "enabled")} for process {this.SelectedProcess.Name}",
+                        $"PID: {this.SelectedProcess.ProcessId}");
                 }
                 else
                 {
-                    SetStatus($"Failed to {(disable ? "disable" : "enable")} idle server for {SelectedProcess.Name}", false);
+                    this.SetStatus($"Failed to {(disable ? "disable" : "enable")} idle server for {this.SelectedProcess.Name}", false);
                     // Revert the UI state
-                    IsIdleServerDisabled = !disable;
+                    this.IsIdleServerDisabled = !disable;
                 }
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error toggling idle server for process {ProcessName}", SelectedProcess.Name);
-                SetStatus($"Error: {ex.Message}", false);
+                this.Logger.LogError(ex, "Error toggling idle server for process {ProcessName}", this.SelectedProcess.Name);
+                this.SetStatus($"Error: {ex.Message}", false);
                 // Revert the UI state
-                IsIdleServerDisabled = !disable;
+                this.IsIdleServerDisabled = !disable;
             }
         }
 
         /// <summary>
-        /// Toggles registry-based priority enforcement for the selected process
+        /// Toggles registry-based priority enforcement for the selected process.
         /// </summary>
         private async Task ToggleRegistryPriorityAsync(bool enable)
         {
-            if (SelectedProcess == null) return;
+            if (this.SelectedProcess == null)
+            {
+                return;
+            }
 
             try
             {
-                SetStatus($"{(enable ? "Enabling" : "Disabling")} registry priority enforcement for {SelectedProcess.Name}...");
+                this.SetStatus($"{(enable ? "Enabling" : "Disabling")} registry priority enforcement for {this.SelectedProcess.Name}...");
 
                 // Implementation for registry-based priority setting
-                var success = await _processService.SetRegistryPriorityAsync(SelectedProcess, enable, SelectedProcess.Priority);
+                var success = await this.processService.SetRegistryPriorityAsync(this.SelectedProcess, enable, this.SelectedProcess.Priority);
 
                 if (success)
                 {
-                    SelectedProcess.IsRegistryPriorityEnabled = enable;
+                    this.SelectedProcess.IsRegistryPriorityEnabled = enable;
 
                     if (enable)
                     {
-                        SetStatus($"Registry priority enforcement enabled for {SelectedProcess.Name}. Process restart required for changes to take effect.");
+                        this.SetStatus($"Registry priority enforcement enabled for {this.SelectedProcess.Name}. Process restart required for changes to take effect.");
 
                         // Show notification about restart requirement
                         await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                         {
                             System.Windows.MessageBox.Show(
-                                $"Registry priority has been set for {SelectedProcess.Name}.\n\n" +
+                                $"Registry priority has been set for {this.SelectedProcess.Name}.\n\n" +
                                 "The process must be restarted for the registry changes to take effect.\n\n" +
                                 "This setting will persist across system reboots and will automatically apply the selected priority when the process starts.",
                                 "Registry Priority Set - Restart Required",
@@ -1751,89 +1816,93 @@ namespace ThreadPilot.ViewModels
                     }
                     else
                     {
-                        SetStatus($"Registry priority enforcement disabled for {SelectedProcess.Name}");
+                        this.SetStatus($"Registry priority enforcement disabled for {this.SelectedProcess.Name}");
                     }
 
-                    await LogUserActionAsync("RegistryPriority",
-                        $"Registry priority enforcement {(enable ? "enabled" : "disabled")} for process {SelectedProcess.Name}",
-                        $"PID: {SelectedProcess.ProcessId}, Priority: {SelectedProcess.Priority}");
+                    await this.LogUserActionAsync(
+                        "RegistryPriority",
+                        $"Registry priority enforcement {(enable ? "enabled" : "disabled")} for process {this.SelectedProcess.Name}",
+                        $"PID: {this.SelectedProcess.ProcessId}, Priority: {this.SelectedProcess.Priority}");
                 }
                 else
                 {
-                    SetStatus($"Failed to {(enable ? "enable" : "disable")} registry priority enforcement for {SelectedProcess.Name}", false);
+                    this.SetStatus($"Failed to {(enable ? "enable" : "disable")} registry priority enforcement for {this.SelectedProcess.Name}", false);
                     // Revert the UI state
-                    IsRegistryPriorityEnabled = !enable;
+                    this.IsRegistryPriorityEnabled = !enable;
                 }
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error toggling registry priority for process {ProcessName}", SelectedProcess.Name);
-                SetStatus($"Error: {ex.Message}", false);
+                this.Logger.LogError(ex, "Error toggling registry priority for process {ProcessName}", this.SelectedProcess.Name);
+                this.SetStatus($"Error: {ex.Message}", false);
                 // Revert the UI state
-                IsRegistryPriorityEnabled = !enable;
+                this.IsRegistryPriorityEnabled = !enable;
             }
         }
 
         /// <summary>
         /// Saves the current process settings (affinity mask, priority, power plan) as an association
-        /// Based on CPUSetSetter's SetMask pattern
+        /// Based on CPUSetSetter's SetMask pattern.
         /// </summary>
         [RelayCommand]
         private void OpenRulesTab()
         {
-            OpenRulesRequested?.Invoke(this, EventArgs.Empty);
+            this.OpenRulesRequested?.Invoke(this, EventArgs.Empty);
         }
 
         [RelayCommand]
         private async Task SaveCurrentAsAssociation()
         {
-            if (SelectedProcess == null)
+            if (this.SelectedProcess == null)
             {
-                await _notificationService.ShowNotificationAsync("No Process Selected",
+                await this.notificationService.ShowNotificationAsync(
+                    "No Process Selected",
                     "Please select a process to save as an association", NotificationType.Warning);
                 return;
             }
 
             try
             {
-                SetStatus($"Saving rule for {SelectedProcess.Name}...");
+                this.SetStatus($"Saving rule for {this.SelectedProcess.Name}...");
 
                 // Get current power plan
-                var currentPowerPlan = await _powerPlanService.GetActivePowerPlan();
+                var currentPowerPlan = await this.powerPlanService.GetActivePowerPlan();
 
                 // Create new association
                 var association = new ProcessPowerPlanAssociation
                 {
-                    ExecutableName = SelectedProcess.Name,
-                    ExecutablePath = SelectedProcess.ExecutablePath ?? string.Empty,
+                    ExecutableName = this.SelectedProcess.Name,
+                    ExecutablePath = this.SelectedProcess.ExecutablePath ?? string.Empty,
                     PowerPlanGuid = currentPowerPlan?.Guid ?? string.Empty,
                     PowerPlanName = currentPowerPlan?.Name ?? "Unknown",
-                    CoreMaskId = SelectedCoreMask?.Id,
-                    CoreMaskName = SelectedCoreMask?.Name,
-                    ProcessPriority = SelectedProcess.Priority.ToString(),
-                    MatchByPath = !string.IsNullOrEmpty(SelectedProcess.ExecutablePath),
+                    CoreMaskId = this.SelectedCoreMask?.Id,
+                    CoreMaskName = this.SelectedCoreMask?.Name,
+                    ProcessPriority = this.SelectedProcess.Priority.ToString(),
+                    MatchByPath = !string.IsNullOrEmpty(this.SelectedProcess.ExecutablePath),
                     Priority = 0,
                     Description = $"Saved from Process Management on {DateTime.Now:g}",
-                    IsEnabled = true
+                    IsEnabled = true,
                 };
 
                 // Try to add the association
-                var success = await _associationService.AddAssociationAsync(association);
+                var success = await this.associationService.AddAssociationAsync(association);
 
                 if (success)
                 {
-                    SetStatus($"Rule created for {SelectedProcess.Name} and ready for auto-apply.", false);
-                    await _notificationService.ShowNotificationAsync("Rule Saved",
-                        $"Settings for {SelectedProcess.Name} saved successfully", NotificationType.Success);
+                    this.SetStatus($"Rule created for {this.SelectedProcess.Name} and ready for auto-apply.", false);
+                    await this.notificationService.ShowNotificationAsync(
+                        "Rule Saved",
+                        $"Settings for {this.SelectedProcess.Name} saved successfully", NotificationType.Success);
 
-                    await LogUserActionAsync("SaveAssociation",
-                        $"Saved association for process {SelectedProcess.Name}",
-                        $"PID: {SelectedProcess.ProcessId}, PowerPlan: {currentPowerPlan?.Name}, " +
-                        $"CoreMask: {SelectedCoreMask?.Name ?? "None"}, Priority: {SelectedProcess.Priority}");
+                    await this.LogUserActionAsync(
+                        "SaveAssociation",
+                        $"Saved association for process {this.SelectedProcess.Name}",
+                        $"PID: {this.SelectedProcess.ProcessId}, PowerPlan: {currentPowerPlan?.Name}, " +
+                        $"CoreMask: {this.SelectedCoreMask?.Name ?? "None"}, Priority: {this.SelectedProcess.Priority}");
                 }
                 else
                 {
-                    var existingAssociation = await _associationService.FindAssociationByExecutableAsync(SelectedProcess.Name);
+                    var existingAssociation = await this.associationService.FindAssociationByExecutableAsync(this.SelectedProcess.Name);
                     if (existingAssociation != null)
                     {
                         existingAssociation.ExecutablePath = association.ExecutablePath;
@@ -1847,33 +1916,37 @@ namespace ThreadPilot.ViewModels
                         existingAssociation.IsEnabled = true;
                         existingAssociation.UpdatedAt = DateTime.UtcNow;
 
-                        var updated = await _associationService.UpdateAssociationAsync(existingAssociation);
+                        var updated = await this.associationService.UpdateAssociationAsync(existingAssociation);
                         if (updated)
                         {
-                            SetStatus($"Existing rule updated for {SelectedProcess.Name}.", false);
-                            await _notificationService.ShowNotificationAsync("Rule Updated",
-                                $"Existing rule for {SelectedProcess.Name} was updated", NotificationType.Information);
+                            this.SetStatus($"Existing rule updated for {this.SelectedProcess.Name}.", false);
+                            await this.notificationService.ShowNotificationAsync(
+                                "Rule Updated",
+                                $"Existing rule for {this.SelectedProcess.Name} was updated", NotificationType.Information);
                         }
                         else
                         {
-                            SetStatus($"Failed to update existing rule for {SelectedProcess.Name}", false);
-                            await _notificationService.ShowNotificationAsync("Rule Update Failed",
-                                $"Could not update existing rule for {SelectedProcess.Name}", NotificationType.Warning);
+                            this.SetStatus($"Failed to update existing rule for {this.SelectedProcess.Name}", false);
+                            await this.notificationService.ShowNotificationAsync(
+                                "Rule Update Failed",
+                                $"Could not update existing rule for {this.SelectedProcess.Name}", NotificationType.Warning);
                         }
                     }
                     else
                     {
-                        SetStatus($"Rule already exists for {SelectedProcess.Name}", false);
-                        await _notificationService.ShowNotificationAsync("Rule Exists",
-                            $"A rule for {SelectedProcess.Name} already exists", NotificationType.Warning);
+                        this.SetStatus($"Rule already exists for {this.SelectedProcess.Name}", false);
+                        await this.notificationService.ShowNotificationAsync(
+                            "Rule Exists",
+                            $"A rule for {this.SelectedProcess.Name} already exists", NotificationType.Warning);
                     }
                 }
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error saving association for process {ProcessName}", SelectedProcess.Name);
-                SetStatus($"Error saving rule: {ex.Message}", false);
-                await _notificationService.ShowNotificationAsync("Error",
+                this.Logger.LogError(ex, "Error saving association for process {ProcessName}", this.SelectedProcess.Name);
+                this.SetStatus($"Error saving rule: {ex.Message}", false);
+                await this.notificationService.ShowNotificationAsync(
+                    "Error",
                     $"Failed to save rule: {ex.Message}", NotificationType.Error);
             }
         }

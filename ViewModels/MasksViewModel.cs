@@ -14,61 +14,61 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Threading.Tasks;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.Logging;
-using ThreadPilot.Models;
-using ThreadPilot.Services;
-using MessageBox = System.Windows.MessageBox;
-using MessageBoxButton = System.Windows.MessageBoxButton;
-using MessageBoxImage = System.Windows.MessageBoxImage;
-using MessageBoxResult = System.Windows.MessageBoxResult;
-
 namespace ThreadPilot.ViewModels
 {
+    using System;
+    using System.Collections.ObjectModel;
+    using System.Linq;
+    using System.Threading.Tasks;
+    using CommunityToolkit.Mvvm.ComponentModel;
+    using CommunityToolkit.Mvvm.Input;
+    using Microsoft.Extensions.Logging;
+    using ThreadPilot.Models;
+    using ThreadPilot.Services;
+    using MessageBox = System.Windows.MessageBox;
+    using MessageBoxButton = System.Windows.MessageBoxButton;
+    using MessageBoxImage = System.Windows.MessageBoxImage;
+    using MessageBoxResult = System.Windows.MessageBoxResult;
+
     /// <summary>
-    /// Wrapper for individual core bit in the mask, similar to CPUSetSetter's MaskBitViewModel
+    /// Wrapper for individual core bit in the mask, similar to CPUSetSetter's MaskBitViewModel.
     /// </summary>
     public partial class CoreBitViewModel : ObservableObject
     {
-        private readonly ObservableCollection<bool> _boolMask;
-        private readonly int _index;
+        private readonly ObservableCollection<bool> boolMask;
+        private readonly int index;
 
-        public int Index => _index;
+        public int Index => this.index;
 
         public bool IsSelected
         {
-            get => _index < _boolMask.Count && _boolMask[_index];
+            get => this.index < this.boolMask.Count && this.boolMask[this.index];
             set
             {
-                if (_index < _boolMask.Count && _boolMask[_index] != value)
+                if (this.index < this.boolMask.Count && this.boolMask[this.index] != value)
                 {
-                    _boolMask[_index] = value;
-                    OnPropertyChanged();
+                    this.boolMask[this.index] = value;
+                    this.OnPropertyChanged();
                 }
             }
         }
 
         public CoreBitViewModel(ObservableCollection<bool> boolMask, int index)
         {
-            _boolMask = boolMask;
-            _index = index;
+            this.boolMask = boolMask;
+            this.index = index;
         }
     }
 
     /// <summary>
     /// ViewModel for managing CPU core affinity masks
-    /// Based on CPUSetSetter's MasksTabViewModel
+    /// Based on CPUSetSetter's MasksTabViewModel.
     /// </summary>
     public partial class MasksViewModel : ObservableObject
     {
-        private readonly ICoreMaskService _coreMaskService;
-        private readonly ICpuTopologyService _cpuTopologyService;
-        private readonly ILogger<MasksViewModel> _logger;
+        private readonly ICoreMaskService coreMaskService;
+        private readonly ICpuTopologyService cpuTopologyService;
+        private readonly ILogger<MasksViewModel> logger;
 
         [ObservableProperty]
         private ObservableCollection<CoreMask> coreMasks = new();
@@ -85,43 +85,44 @@ namespace ThreadPilot.ViewModels
         private ObservableCollection<CoreBitViewModel> coreBits = new();
 
         /// <summary>
-        /// Can delete if: mask selected, not "All Cores" baseline, not actively applied to processes
-        /// Note: The actual validation happens in DeleteMask command with proper async checks
+        /// Gets a value indicating whether can delete if: mask selected, not "All Cores" baseline, not actively applied to processes
+        /// Note: The actual validation happens in DeleteMask command with proper async checks.
         /// </summary>
-        public bool CanDeleteMask => SelectedCoreMask != null && SelectedCoreMask.Name != "All Cores";
-        public bool CanDuplicateMask => SelectedCoreMask != null;
+        public bool CanDeleteMask => this.SelectedCoreMask != null && this.SelectedCoreMask.Name != "All Cores";
+
+        public bool CanDuplicateMask => this.SelectedCoreMask != null;
 
         public MasksViewModel(
             ICoreMaskService coreMaskService,
             ICpuTopologyService cpuTopologyService,
             ILogger<MasksViewModel> logger)
         {
-            _coreMaskService = coreMaskService ?? throw new ArgumentNullException(nameof(coreMaskService));
-            _cpuTopologyService = cpuTopologyService ?? throw new ArgumentNullException(nameof(cpuTopologyService));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.coreMaskService = coreMaskService ?? throw new ArgumentNullException(nameof(coreMaskService));
+            this.cpuTopologyService = cpuTopologyService ?? throw new ArgumentNullException(nameof(cpuTopologyService));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             // Initialize
-            _ = InitializeAsync();
+            _ = this.InitializeAsync();
         }
 
         private async Task InitializeAsync()
         {
             try
             {
-                await _coreMaskService.InitializeAsync();
+                await this.coreMaskService.InitializeAsync();
 
                 // Link to the service's collection
-                CoreMasks = _coreMaskService.AvailableMasks;
+                this.CoreMasks = this.coreMaskService.AvailableMasks;
 
                 // Select the default mask
-                SelectedCoreMask = _coreMaskService.DefaultMask;
+                this.SelectedCoreMask = this.coreMaskService.DefaultMask;
 
-                _logger.LogInformation("MasksViewModel initialized with {Count} masks", CoreMasks.Count);
+                this.logger.LogInformation("MasksViewModel initialized with {Count} masks", this.CoreMasks.Count);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to initialize MasksViewModel");
-                StatusMessage = $"Error initializing masks: {ex.Message}";
+                this.logger.LogError(ex, "Failed to initialize MasksViewModel");
+                this.StatusMessage = $"Error initializing masks: {ex.Message}";
             }
         }
 
@@ -134,25 +135,27 @@ namespace ThreadPilot.ViewModels
                 var newMask = new CoreMask
                 {
                     Name = "New Mask",
-                    Description = $"Created at {DateTime.Now:HH:mm:ss}"
+                    Description = $"Created at {DateTime.Now:HH:mm:ss}",
                 };
 
                 // Initialize with all cores enabled
                 for (int i = 0; i < coreCount; i++)
+                {
                     newMask.BoolMask.Add(true);
+                }
 
-                CoreMasks.Add(newMask);
-                SelectedCoreMask = newMask;
+                this.CoreMasks.Add(newMask);
+                this.SelectedCoreMask = newMask;
 
-                await _coreMaskService.SaveMasksAsync();
+                await this.coreMaskService.SaveMasksAsync();
 
-                StatusMessage = $"Created mask '{newMask.Name}'";
-                _logger.LogInformation("Created new mask '{Name}'", newMask.Name);
+                this.StatusMessage = $"Created mask '{newMask.Name}'";
+                this.logger.LogInformation("Created new mask '{Name}'", newMask.Name);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to create mask");
-                StatusMessage = $"Error creating mask: {ex.Message}";
+                this.logger.LogError(ex, "Failed to create mask");
+                this.StatusMessage = $"Error creating mask: {ex.Message}";
                 MessageBox.Show($"Failed to create mask: {ex.Message}", "Error",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -161,13 +164,15 @@ namespace ThreadPilot.ViewModels
         [RelayCommand(CanExecute = nameof(CanDeleteMask))]
         private async Task DeleteMask()
         {
-            if (SelectedCoreMask == null)
+            if (this.SelectedCoreMask == null)
+            {
                 return;
+            }
 
             try
             {
-                var maskId = SelectedCoreMask.Id;
-                var maskName = SelectedCoreMask.Name;
+                var maskId = this.SelectedCoreMask.Id;
+                var maskName = this.SelectedCoreMask.Name;
 
                 // 1. Check if mask is the "All Cores" baseline (cannot be deleted)
                 if (maskName == "All Cores")
@@ -182,7 +187,7 @@ namespace ThreadPilot.ViewModels
                 }
 
                 // 2. Check if mask is actively applied to running processes
-                bool isActivelyApplied = await _coreMaskService.IsMaskActivelyAppliedAsync(maskId);
+                bool isActivelyApplied = await this.coreMaskService.IsMaskActivelyAppliedAsync(maskId);
                 if (isActivelyApplied)
                 {
                     MessageBox.Show(
@@ -196,12 +201,14 @@ namespace ThreadPilot.ViewModels
                 }
 
                 // 3. Check if mask is referenced by profiles/rules (not actively applied)
-                var referencingProfiles = (await _coreMaskService.GetProfilesReferencingMaskAsync(maskId)).ToList();
+                var referencingProfiles = (await this.coreMaskService.GetProfilesReferencingMaskAsync(maskId)).ToList();
                 if (referencingProfiles.Any())
                 {
                     var profileList = string.Join("\n  - ", referencingProfiles.Take(10));
                     if (referencingProfiles.Count > 10)
+                    {
                         profileList += $"\n  ... and {referencingProfiles.Count - 10} more";
+                    }
 
                     var result = MessageBox.Show(
                         $"The mask '{maskName}' is referenced by the following profiles/rules:\n\n" +
@@ -213,11 +220,13 @@ namespace ThreadPilot.ViewModels
                         MessageBoxImage.Warning);
 
                     if (result != MessageBoxResult.Yes)
+                    {
                         return;
+                    }
 
                     // Update all referencing profiles to use "All Cores"
-                    await _coreMaskService.UpdateProfilesToDefaultMaskAsync(maskId);
-                    StatusMessage = $"Updated {referencingProfiles.Count} profile(s) to use 'All Cores' mask";
+                    await this.coreMaskService.UpdateProfilesToDefaultMaskAsync(maskId);
+                    this.StatusMessage = $"Updated {referencingProfiles.Count} profile(s) to use 'All Cores' mask";
                 }
                 else
                 {
@@ -229,20 +238,22 @@ namespace ThreadPilot.ViewModels
                         MessageBoxImage.Question);
 
                     if (result != MessageBoxResult.Yes)
+                    {
                         return;
+                    }
                 }
 
                 // 4. Delete the mask
-                await _coreMaskService.DeleteMaskAsync(maskId);
-                SelectedCoreMask = CoreMasks.FirstOrDefault();
+                await this.coreMaskService.DeleteMaskAsync(maskId);
+                this.SelectedCoreMask = this.CoreMasks.FirstOrDefault();
 
-                StatusMessage = $"Deleted mask '{maskName}'";
-                _logger.LogInformation("Deleted mask '{Name}'", maskName);
+                this.StatusMessage = $"Deleted mask '{maskName}'";
+                this.logger.LogInformation("Deleted mask '{Name}'", maskName);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to delete mask");
-                StatusMessage = $"Error deleting mask: {ex.Message}";
+                this.logger.LogError(ex, "Failed to delete mask");
+                this.StatusMessage = $"Error deleting mask: {ex.Message}";
                 MessageBox.Show($"Failed to delete mask: {ex.Message}", "Error",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -251,24 +262,26 @@ namespace ThreadPilot.ViewModels
         [RelayCommand(CanExecute = nameof(CanDuplicateMask))]
         private async Task DuplicateMask()
         {
-            if (SelectedCoreMask == null)
+            if (this.SelectedCoreMask == null)
+            {
                 return;
+            }
 
             try
             {
-                var cloned = SelectedCoreMask.Clone();
-                CoreMasks.Add(cloned);
-                SelectedCoreMask = cloned;
+                var cloned = this.SelectedCoreMask.Clone();
+                this.CoreMasks.Add(cloned);
+                this.SelectedCoreMask = cloned;
 
-                await _coreMaskService.SaveMasksAsync();
+                await this.coreMaskService.SaveMasksAsync();
 
-                StatusMessage = $"Duplicated mask '{cloned.Name}'";
-                _logger.LogInformation("Duplicated mask to '{Name}'", cloned.Name);
+                this.StatusMessage = $"Duplicated mask '{cloned.Name}'";
+                this.logger.LogInformation("Duplicated mask to '{Name}'", cloned.Name);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to duplicate mask");
-                StatusMessage = $"Error duplicating mask: {ex.Message}";
+                this.logger.LogError(ex, "Failed to duplicate mask");
+                this.StatusMessage = $"Error duplicating mask: {ex.Message}";
                 MessageBox.Show($"Failed to duplicate mask: {ex.Message}", "Error",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -276,17 +289,19 @@ namespace ThreadPilot.ViewModels
 
         private async Task SaveCurrentMaskAsync()
         {
-            if (SelectedCoreMask == null)
+            if (this.SelectedCoreMask == null)
+            {
                 return;
+            }
 
             try
             {
-                await _coreMaskService.UpdateMaskAsync(SelectedCoreMask);
-                _logger.LogDebug("Saved mask '{Name}'", SelectedCoreMask.Name);
+                await this.coreMaskService.UpdateMaskAsync(this.SelectedCoreMask);
+                this.logger.LogDebug("Saved mask '{Name}'", this.SelectedCoreMask.Name);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to save mask");
+                this.logger.LogError(ex, "Failed to save mask");
             }
         }
 
@@ -318,42 +333,44 @@ namespace ThreadPilot.ViewModels
 
         private void RebuildCoreBits()
         {
-            CoreBits.Clear();
+            this.CoreBits.Clear();
 
-            if (SelectedCoreMask == null)
-                return;
-
-            for (int i = 0; i < SelectedCoreMask.BoolMask.Count; i++)
+            if (this.SelectedCoreMask == null)
             {
-                CoreBits.Add(new CoreBitViewModel(SelectedCoreMask.BoolMask, i));
+                return;
+            }
+
+            for (int i = 0; i < this.SelectedCoreMask.BoolMask.Count; i++)
+            {
+                this.CoreBits.Add(new CoreBitViewModel(this.SelectedCoreMask.BoolMask, i));
             }
         }
 
         private void OnBoolMaskCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            TaskSafety.FireAndForget(OnBoolMaskCollectionChangedAsync(), ex =>
+            TaskSafety.FireAndForget(this.OnBoolMaskCollectionChangedAsync(), ex =>
             {
-                _logger.LogWarning(ex, "Failed to handle mask collection change");
+                this.logger.LogWarning(ex, "Failed to handle mask collection change");
             });
         }
 
         private async Task OnBoolMaskCollectionChangedAsync()
         {
             // Auto-save when BoolMask changes (like CPUSetSetter's auto-save pattern)
-            await SaveCurrentMaskAsync();
+            await this.SaveCurrentMaskAsync();
 
             // Update status to show real-time changes
-            if (SelectedCoreMask != null)
+            if (this.SelectedCoreMask != null)
             {
-                StatusMessage = $"{SelectedCoreMask.SelectedCoreCount} of {SelectedCoreMask.BoolMask.Count} cores selected";
+                this.StatusMessage = $"{this.SelectedCoreMask.SelectedCoreCount} of {this.SelectedCoreMask.BoolMask.Count} cores selected";
             }
         }
 
         private void OnMaskPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            TaskSafety.FireAndForget(OnMaskPropertyChangedAsync(e), ex =>
+            TaskSafety.FireAndForget(this.OnMaskPropertyChangedAsync(e), ex =>
             {
-                _logger.LogWarning(ex, "Failed to handle mask property change");
+                this.logger.LogWarning(ex, "Failed to handle mask property change");
             });
         }
 
@@ -364,20 +381,20 @@ namespace ThreadPilot.ViewModels
                 e.PropertyName == nameof(CoreMask.IsDefault) ||
                 e.PropertyName == nameof(CoreMask.IsEnabled))
             {
-                await SaveCurrentMaskAsync();
+                await this.SaveCurrentMaskAsync();
             }
 
             if (e.PropertyName == nameof(CoreMask.Name))
             {
                 // CanDeleteMask depends on the name (e.g., "All Cores")
-                RefreshCommandStates();
+                this.RefreshCommandStates();
             }
         }
 
         private void RefreshCommandStates()
         {
-            DeleteMaskCommand.NotifyCanExecuteChanged();
-            DuplicateMaskCommand.NotifyCanExecuteChanged();
+            this.DeleteMaskCommand.NotifyCanExecuteChanged();
+            this.DuplicateMaskCommand.NotifyCanExecuteChanged();
         }
     }
 }

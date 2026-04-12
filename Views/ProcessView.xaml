@@ -10,6 +10,8 @@
              xmlns:sys="clr-namespace:System;assembly=mscorlib"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              mc:Ignorable="d"
+             KeyboardNavigation.TabNavigation="Cycle"
+             KeyboardNavigation.ControlTabNavigation="Cycle"
              d:DesignHeight="650" d:DesignWidth="1200">
 
     <UserControl.Resources>
@@ -60,10 +62,10 @@
                          <ColumnDefinition Width="Auto"/>
                      </Grid.ColumnDefinitions>
 
-                     <TextBox Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" ToolTip="Search processes by name" HorizontalAlignment="Stretch" />
+                     <TextBox Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" ToolTip="Search processes by name" HorizontalAlignment="Stretch" AutomationProperties.Name="Process search" />
                      <CheckBox Grid.Column="2" Content="Active Apps Only" IsChecked="{Binding ShowActiveApplicationsOnly}" VerticalAlignment="Center" ToolTip="Show only applications with visible windows"/>
-                     <Button Grid.Column="4" Command="{Binding LoadProcessesCommand}" Content="Refresh" ToolTip="Refresh the process list"/>
-                     <Button Grid.Column="6" Command="{Binding LoadMoreProcessesCommand}" Content="Load More" Visibility="{Binding HasMoreBatches, Converter={StaticResource BoolToVisibilityConverter}}" ToolTip="Load more processes"/>
+                     <Button Grid.Column="4" Command="{Binding LoadProcessesCommand}" Content="Refresh" ToolTip="Refresh the process list" AutomationProperties.Name="Refresh processes"/>
+                     <Button Grid.Column="6" Command="{Binding LoadMoreProcessesCommand}" Content="Load More" Visibility="{Binding HasMoreBatches, Converter={StaticResource BoolToVisibilityConverter}}" ToolTip="Load more processes" AutomationProperties.Name="Load more processes"/>
                  </Grid>
 
                 <!-- Smart Filtering Controls -->
@@ -110,7 +112,9 @@
                       VirtualizingPanel.ScrollUnit="Item"
                       EnableRowVirtualization="True"
                       EnableColumnVirtualization="True"
-                      ScrollViewer.CanContentScroll="True">
+                      ScrollViewer.CanContentScroll="True"
+                      AutomationProperties.Name="Running process list"
+                      AutomationProperties.HelpText="Virtualized process table with sorting and selection">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="150"/>
                     <DataGridTextColumn Header="ID" Binding="{Binding ProcessId}" Width="60"/>

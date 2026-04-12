@@ -14,17 +14,17 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using CommunityToolkit.Mvvm.ComponentModel;
-using ThreadPilot.Services;
-using ThreadPilot.Models.Core;
-
 namespace ThreadPilot.Models
 {
+    using System;
+    using System.Collections.Generic;
+    using System.ComponentModel;
+    using CommunityToolkit.Mvvm.ComponentModel;
+    using ThreadPilot.Models.Core;
+    using ThreadPilot.Services;
+
     /// <summary>
-    /// Model for application settings including notifications and tray preferences
+    /// Model for application settings including notifications and tray preferences.
     /// </summary>
     public partial class ApplicationSettingsModel : ObservableObject, IModel
     {
@@ -134,7 +134,7 @@ namespace ThreadPilot.Models
 
         /// <summary>
         /// When true, all applied CPU masks are cleared when exiting the application
-        /// (processes return to using all cores)
+        /// (processes return to using all cores).
         /// </summary>
         [ObservableProperty]
         private bool clearMasksOnClose = true;
@@ -172,71 +172,74 @@ namespace ThreadPilot.Models
         private int logRetentionDays = 7;
 
         /// <summary>
-        /// Keyboard shortcuts configuration
+        /// Keyboard shortcuts configuration.
         /// </summary>
         [ObservableProperty]
         private List<KeyboardShortcut> keyboardShortcuts = new();
 
         /// <summary>
-        /// Copies settings from another instance
+        /// Copies settings from another instance.
         /// </summary>
         public void CopyFrom(ApplicationSettingsModel other)
         {
-            if (other == null) return;
+            if (other == null)
+            {
+                return;
+            }
 
-            EnableNotifications = other.EnableNotifications;
-            NotificationLevel = other.NotificationLevel;
-            EnableBalloonNotifications = other.EnableBalloonNotifications;
-            EnableToastNotifications = other.EnableToastNotifications;
-            EnablePowerPlanChangeNotifications = other.EnablePowerPlanChangeNotifications;
-            EnableProcessMonitoringNotifications = other.EnableProcessMonitoringNotifications;
-            EnableErrorNotifications = other.EnableErrorNotifications;
-            EnableSuccessNotifications = other.EnableSuccessNotifications;
-            MinimizeToTray = other.MinimizeToTray;
-            CloseToTray = other.CloseToTray;
-            StartMinimized = other.StartMinimized;
-            ShowTrayIcon = other.ShowTrayIcon;
-            EnableQuickApplyFromTray = other.EnableQuickApplyFromTray;
-            EnableMonitoringControlFromTray = other.EnableMonitoringControlFromTray;
-            NotificationDisplayDurationMs = other.NotificationDisplayDurationMs;
-            BalloonNotificationTimeoutMs = other.BalloonNotificationTimeoutMs;
-            NotificationPosition = other.NotificationPosition;
-            NotificationSound = other.NotificationSound;
-            EnableNotificationSound = other.EnableNotificationSound;
-            CustomTrayIconPath = other.CustomTrayIconPath;
-            UseCustomTrayIcon = other.UseCustomTrayIcon;
-            TrayIconStyle = other.TrayIconStyle;
-            ShowDetailedTooltips = other.ShowDetailedTooltips;
-            EnableContextMenuAnimations = other.EnableContextMenuAnimations;
-            AutoHideNotifications = other.AutoHideNotifications;
-            EnableNotificationHistory = other.EnableNotificationHistory;
-            MaxNotificationHistoryItems = other.MaxNotificationHistoryItems;
+            this.EnableNotifications = other.EnableNotifications;
+            this.NotificationLevel = other.NotificationLevel;
+            this.EnableBalloonNotifications = other.EnableBalloonNotifications;
+            this.EnableToastNotifications = other.EnableToastNotifications;
+            this.EnablePowerPlanChangeNotifications = other.EnablePowerPlanChangeNotifications;
+            this.EnableProcessMonitoringNotifications = other.EnableProcessMonitoringNotifications;
+            this.EnableErrorNotifications = other.EnableErrorNotifications;
+            this.EnableSuccessNotifications = other.EnableSuccessNotifications;
+            this.MinimizeToTray = other.MinimizeToTray;
+            this.CloseToTray = other.CloseToTray;
+            this.StartMinimized = other.StartMinimized;
+            this.ShowTrayIcon = other.ShowTrayIcon;
+            this.EnableQuickApplyFromTray = other.EnableQuickApplyFromTray;
+            this.EnableMonitoringControlFromTray = other.EnableMonitoringControlFromTray;
+            this.NotificationDisplayDurationMs = other.NotificationDisplayDurationMs;
+            this.BalloonNotificationTimeoutMs = other.BalloonNotificationTimeoutMs;
+            this.NotificationPosition = other.NotificationPosition;
+            this.NotificationSound = other.NotificationSound;
+            this.EnableNotificationSound = other.EnableNotificationSound;
+            this.CustomTrayIconPath = other.CustomTrayIconPath;
+            this.UseCustomTrayIcon = other.UseCustomTrayIcon;
+            this.TrayIconStyle = other.TrayIconStyle;
+            this.ShowDetailedTooltips = other.ShowDetailedTooltips;
+            this.EnableContextMenuAnimations = other.EnableContextMenuAnimations;
+            this.AutoHideNotifications = other.AutoHideNotifications;
+            this.EnableNotificationHistory = other.EnableNotificationHistory;
+            this.MaxNotificationHistoryItems = other.MaxNotificationHistoryItems;
 
             // Autostart Settings
-            AutostartWithWindows = other.AutostartWithWindows;
+            this.AutostartWithWindows = other.AutostartWithWindows;
 
             // Power Plan Settings
-            DefaultPowerPlanId = other.DefaultPowerPlanId;
-            DefaultPowerPlanName = other.DefaultPowerPlanName;
-            RestoreDefaultPowerPlanOnExit = other.RestoreDefaultPowerPlanOnExit;
-            ClearMasksOnClose = other.ClearMasksOnClose;
-            UseDarkTheme = other.UseDarkTheme;
-            HasUserThemePreference = other.HasUserThemePreference;
+            this.DefaultPowerPlanId = other.DefaultPowerPlanId;
+            this.DefaultPowerPlanName = other.DefaultPowerPlanName;
+            this.RestoreDefaultPowerPlanOnExit = other.RestoreDefaultPowerPlanOnExit;
+            this.ClearMasksOnClose = other.ClearMasksOnClose;
+            this.UseDarkTheme = other.UseDarkTheme;
+            this.HasUserThemePreference = other.HasUserThemePreference;
 
             // Monitoring Settings
-            PollingIntervalMs = other.PollingIntervalMs;
-            FallbackPollingIntervalMs = other.FallbackPollingIntervalMs;
-            EnableWmiMonitoring = other.EnableWmiMonitoring;
-            EnableFallbackPolling = other.EnableFallbackPolling;
+            this.PollingIntervalMs = other.PollingIntervalMs;
+            this.FallbackPollingIntervalMs = other.FallbackPollingIntervalMs;
+            this.EnableWmiMonitoring = other.EnableWmiMonitoring;
+            this.EnableFallbackPolling = other.EnableFallbackPolling;
 
             // Advanced Settings
-            EnableDebugLogging = other.EnableDebugLogging;
-            EnablePerformanceCounters = other.EnablePerformanceCounters;
-            MaxLogFileSizeMb = other.MaxLogFileSizeMb;
-            LogRetentionDays = other.LogRetentionDays;
+            this.EnableDebugLogging = other.EnableDebugLogging;
+            this.EnablePerformanceCounters = other.EnablePerformanceCounters;
+            this.MaxLogFileSizeMb = other.MaxLogFileSizeMb;
+            this.LogRetentionDays = other.LogRetentionDays;
 
             // Keyboard Shortcuts
-            KeyboardShortcuts = other.KeyboardShortcuts != null
+            this.KeyboardShortcuts = other.KeyboardShortcuts != null
                 ? new List<KeyboardShortcut>(other.KeyboardShortcuts)
                 : new List<KeyboardShortcut>();
         }
@@ -246,14 +249,20 @@ namespace ThreadPilot.Models
         {
             var errors = new List<string>();
 
-            if (NotificationDisplayDurationMs < 1000 || NotificationDisplayDurationMs > 30000)
+            if (this.NotificationDisplayDurationMs < 1000 || this.NotificationDisplayDurationMs > 30000)
+            {
                 errors.Add("Notification display duration must be between 1 and 30 seconds");
+            }
 
-            if (PollingIntervalMs < 1000 || PollingIntervalMs > 60000)
+            if (this.PollingIntervalMs < 1000 || this.PollingIntervalMs > 60000)
+            {
                 errors.Add("Process polling interval must be between 1 and 60 seconds");
+            }
 
-            if (FallbackPollingIntervalMs < 1000 || FallbackPollingIntervalMs > 60000)
+            if (this.FallbackPollingIntervalMs < 1000 || this.FallbackPollingIntervalMs > 60000)
+            {
                 errors.Add("Fallback polling interval must be between 1 and 60 seconds");
+            }
 
             return errors.Count == 0 ? ValidationResult.Success() : ValidationResult.Failure(errors.ToArray());
         }
@@ -270,17 +279,17 @@ namespace ThreadPilot.Models
     }
 
     /// <summary>
-    /// Notification level profile options
+    /// Notification level profile options.
     /// </summary>
     public enum NotificationLevelProfile
     {
         All,
         WarningsAndErrorsOnly,
-        Silent
+        Silent,
     }
 
     /// <summary>
-    /// Notification position options
+    /// Notification position options.
     /// </summary>
     public enum NotificationPosition
     {
@@ -288,11 +297,11 @@ namespace ThreadPilot.Models
         TopRight,
         BottomLeft,
         BottomRight,
-        Center
+        Center,
     }
 
     /// <summary>
-    /// Notification sound options
+    /// Notification sound options.
     /// </summary>
     public enum NotificationSound
     {
@@ -301,18 +310,18 @@ namespace ThreadPilot.Models
         Information,
         Warning,
         Error,
-        Custom
+        Custom,
     }
 
     /// <summary>
-    /// Tray icon style options
+    /// Tray icon style options.
     /// </summary>
     public enum TrayIconStyle
     {
         Default,
         Monochrome,
         Colored,
-        Custom
+        Custom,
     }
 }
 

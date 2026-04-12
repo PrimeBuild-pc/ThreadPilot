@@ -14,22 +14,29 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text.Json;
-using System.Threading.Tasks;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Net.Http;
+    using System.Net.Http.Headers;
+    using System.Text.Json;
+    using System.Threading.Tasks;
+
     public static class GitHubUpdateChecker
     {
-        private record LatestRelease(string tag_name, bool prerelease, bool draft, string html_url);
+        private record LatestRelease(string Tag_name, bool Prerelease, bool Draft, string Html_url);
 
         public static async Task<(Version? latest, string? releaseUrl)> GetLatestVersionAsync(string owner, string repo)
         {
-            if (string.IsNullOrWhiteSpace(owner)) throw new ArgumentException("Owner is required", nameof(owner));
-            if (string.IsNullOrWhiteSpace(repo)) throw new ArgumentException("Repository is required", nameof(repo));
+            if (string.IsNullOrWhiteSpace(owner))
+            {
+                throw new ArgumentException("Owner is required", nameof(owner));
+            }
+
+            if (string.IsNullOrWhiteSpace(repo))
+            {
+                throw new ArgumentException("Repository is required", nameof(repo));
+            }
 
             var url = $"https://api.github.com/repos/{owner}/{repo}/releases/latest";
 
@@ -40,15 +47,15 @@ namespace ThreadPilot.Services
             var json = await http.GetStringAsync(url);
             var release = JsonSerializer.Deserialize<LatestRelease>(json, new JsonSerializerOptions
             {
-                PropertyNameCaseInsensitive = true
+                PropertyNameCaseInsensitive = true,
             });
 
-            if (release is null || release.draft || release.prerelease || string.IsNullOrWhiteSpace(release.tag_name))
+            if (release is null || release.Draft || release.Prerelease || string.IsNullOrWhiteSpace(release.Tag_name))
             {
                 return (null, null);
             }
 
-            var tag = release.tag_name.Trim();
+            var tag = release.Tag_name.Trim();
             if (tag.StartsWith("v", StringComparison.OrdinalIgnoreCase))
             {
                 tag = tag[1..];
@@ -57,8 +64,8 @@ namespace ThreadPilot.Services
             var sanitized = tag.Split('-', '+')[0];
 
             return Version.TryParse(sanitized, out var version)
-                ? (version, release.html_url)
-                : (null, release.html_url);
+                ? (version, release.Html_url)
+                : (null, release.Html_url);
         }
     }
 }

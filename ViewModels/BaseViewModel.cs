@@ -14,24 +14,24 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using ThreadPilot.Services;
-
 namespace ThreadPilot.ViewModels
 {
+    using System;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using CommunityToolkit.Mvvm.ComponentModel;
+    using Microsoft.Extensions.Logging;
+    using ThreadPilot.Services;
+
     /// <summary>
-    /// Base ViewModel with common functionality for all ViewModels
+    /// Base ViewModel with common functionality for all ViewModels.
     /// </summary>
     public abstract partial class BaseViewModel : ObservableObject, IDisposable
     {
         protected readonly ILogger Logger;
         protected readonly IEnhancedLoggingService? EnhancedLoggingService;
-        private bool _disposed;
-        private CancellationTokenSource? _statusLifetimeCts;
+        private bool disposed;
+        private CancellationTokenSource? statusLifetimeCts;
         private const int StatusVisibleDurationMs = 1500;
         private const int StatusFadeDurationMs = 500;
 
@@ -52,68 +52,68 @@ namespace ThreadPilot.ViewModels
 
         protected BaseViewModel(ILogger logger, IEnhancedLoggingService? enhancedLoggingService = null)
         {
-            Logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            EnhancedLoggingService = enhancedLoggingService;
+            this.Logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.EnhancedLoggingService = enhancedLoggingService;
         }
 
         /// <summary>
-        /// Set status message and busy state
+        /// Set status message and busy state.
         /// </summary>
         protected void SetStatus(string message, bool isBusyState = true)
         {
-            CancelStatusLifetime();
-            StatusOpacity = 1.0;
-            StatusMessage = message;
-            IsBusy = isBusyState;
-            ClearError();
+            this.CancelStatusLifetime();
+            this.StatusOpacity = 1.0;
+            this.StatusMessage = message;
+            this.IsBusy = isBusyState;
+            this.ClearError();
 
             if (!string.IsNullOrWhiteSpace(message) && !isBusyState)
             {
-                _ = StartStatusLifetimeAsync(message);
+                _ = this.StartStatusLifetimeAsync(message);
             }
         }
 
         /// <summary>
-        /// Clear status and busy state
+        /// Clear status and busy state.
         /// </summary>
         protected void ClearStatus()
         {
-            CancelStatusLifetime();
-            StatusMessage = string.Empty;
-            StatusOpacity = 1.0;
-            IsBusy = false;
+            this.CancelStatusLifetime();
+            this.StatusMessage = string.Empty;
+            this.StatusOpacity = 1.0;
+            this.IsBusy = false;
         }
 
         /// <summary>
-        /// Set error message and clear busy state
+        /// Set error message and clear busy state.
         /// </summary>
         protected void SetError(string message, Exception? exception = null)
         {
-            ErrorMessage = message;
-            HasError = true;
-            IsBusy = false;
+            this.ErrorMessage = message;
+            this.HasError = true;
+            this.IsBusy = false;
 
             if (exception != null)
             {
-                Logger.LogError(exception, "Error in {ViewModelType}: {Message}", GetType().Name, message);
+                this.Logger.LogError(exception, "Error in {ViewModelType}: {Message}", this.GetType().Name, message);
             }
             else
             {
-                Logger.LogWarning("Error in {ViewModelType}: {Message}", GetType().Name, message);
+                this.Logger.LogWarning("Error in {ViewModelType}: {Message}", this.GetType().Name, message);
             }
         }
 
         /// <summary>
-        /// Clear error state
+        /// Clear error state.
         /// </summary>
         protected void ClearError()
         {
-            ErrorMessage = string.Empty;
-            HasError = false;
+            this.ErrorMessage = string.Empty;
+            this.HasError = false;
         }
 
         /// <summary>
-        /// Execute an async operation with error handling and status updates
+        /// Execute an async operation with error handling and status updates.
         /// </summary>
         protected async Task ExecuteAsync(Func<Task> operation, string? statusMessage = null, string? successMessage = null)
         {
@@ -123,7 +123,7 @@ namespace ThreadPilot.ViewModels
                 {
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        SetStatus(statusMessage);
+                        this.SetStatus(statusMessage);
                     });
                 }
 
@@ -133,14 +133,14 @@ namespace ThreadPilot.ViewModels
                 {
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        SetStatus(successMessage, false);
+                        this.SetStatus(successMessage, false);
                     });
                 }
                 else
                 {
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        ClearStatus();
+                        this.ClearStatus();
                     });
                 }
             }
@@ -148,13 +148,13 @@ namespace ThreadPilot.ViewModels
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetError($"Operation failed: {ex.Message}", ex);
+                    this.SetError($"Operation failed: {ex.Message}", ex);
                 });
             }
         }
 
         /// <summary>
-        /// Execute an async operation with return value and error handling
+        /// Execute an async operation with return value and error handling.
         /// </summary>
         protected async Task<T?> ExecuteAsync<T>(Func<Task<T>> operation, string? statusMessage = null, string? successMessage = null)
         {
@@ -165,7 +165,7 @@ namespace ThreadPilot.ViewModels
                     // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        SetStatus(statusMessage);
+                        this.SetStatus(statusMessage);
                     });
                 }
 
@@ -176,7 +176,7 @@ namespace ThreadPilot.ViewModels
                     // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        SetStatus(successMessage, false);
+                        this.SetStatus(successMessage, false);
                     });
                 }
                 else
@@ -184,7 +184,7 @@ namespace ThreadPilot.ViewModels
                     // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        ClearStatus();
+                        this.ClearStatus();
                     });
                 }
 
@@ -195,32 +195,32 @@ namespace ThreadPilot.ViewModels
                 // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetError($"Operation failed: {ex.Message}", ex);
+                    this.SetError($"Operation failed: {ex.Message}", ex);
                 });
                 return default;
             }
         }
 
         /// <summary>
-        /// Log user action for audit purposes
+        /// Log user action for audit purposes.
         /// </summary>
         protected async Task LogUserActionAsync(string action, string details, string? context = null)
         {
             try
             {
-                if (EnhancedLoggingService != null)
+                if (this.EnhancedLoggingService != null)
                 {
-                    await EnhancedLoggingService.LogUserActionAsync(action, details, context);
+                    await this.EnhancedLoggingService.LogUserActionAsync(action, details, context);
                 }
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Failed to log user action: {Action}", action);
+                this.Logger.LogError(ex, "Failed to log user action: {Action}", action);
             }
         }
 
         /// <summary>
-        /// Initialize the ViewModel - override in derived classes
+        /// Initialize the ViewModel - override in derived classes.
         /// </summary>
         public virtual async Task InitializeAsync()
         {
@@ -229,18 +229,18 @@ namespace ThreadPilot.ViewModels
         }
 
         /// <summary>
-        /// Cleanup resources - override in derived classes
+        /// Cleanup resources - override in derived classes.
         /// </summary>
         protected virtual void OnDispose()
         {
-            CancelStatusLifetime();
+            this.CancelStatusLifetime();
             // Base implementation does nothing
         }
 
         private async Task StartStatusLifetimeAsync(string expectedMessage)
         {
             var cts = new CancellationTokenSource();
-            _statusLifetimeCts = cts;
+            this.statusLifetimeCts = cts;
 
             try
             {
@@ -252,19 +252,19 @@ namespace ThreadPilot.ViewModels
                 for (var i = 1; i <= fadeSteps; i++)
                 {
                     await Task.Delay(stepDelay, cts.Token);
-                    if (StatusMessage != expectedMessage)
+                    if (this.StatusMessage != expectedMessage)
                     {
                         return;
                     }
 
-                    StatusOpacity = 1.0 - (double)i / fadeSteps;
+                    this.StatusOpacity = 1.0 - ((double)i / fadeSteps);
                 }
 
-                if (StatusMessage == expectedMessage)
+                if (this.StatusMessage == expectedMessage)
                 {
-                    StatusMessage = string.Empty;
-                    StatusOpacity = 1.0;
-                    IsBusy = false;
+                    this.StatusMessage = string.Empty;
+                    this.StatusOpacity = 1.0;
+                    this.IsBusy = false;
                 }
             }
             catch (OperationCanceledException)
@@ -275,22 +275,22 @@ namespace ThreadPilot.ViewModels
 
         private void CancelStatusLifetime()
         {
-            if (_statusLifetimeCts == null)
+            if (this.statusLifetimeCts == null)
             {
                 return;
             }
 
-            _statusLifetimeCts.Cancel();
-            _statusLifetimeCts.Dispose();
-            _statusLifetimeCts = null;
+            this.statusLifetimeCts.Cancel();
+            this.statusLifetimeCts.Dispose();
+            this.statusLifetimeCts = null;
         }
 
         public void Dispose()
         {
-            if (!_disposed)
+            if (!this.disposed)
             {
-                OnDispose();
-                _disposed = true;
+                this.OnDispose();
+                this.disposed = true;
             }
         }
     }

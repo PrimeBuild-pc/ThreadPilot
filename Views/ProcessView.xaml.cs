@@ -14,18 +14,18 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System.Windows.Controls;
-using ThreadPilot.Helpers;
-using ThreadPilot.ViewModels;
-
 namespace ThreadPilot.Views
 {
+    using System.Windows.Controls;
+    using ThreadPilot.Helpers;
+    using ThreadPilot.ViewModels;
+
     public partial class ProcessView : System.Windows.Controls.UserControl
     {
         public ProcessView()
         {
-            InitializeComponent();
-            DataContext = ServiceProviderExtensions.GetService<ProcessViewModel>();
+            this.InitializeComponent();
+            this.DataContext = ServiceProviderExtensions.GetService<ProcessViewModel>();
         }
     }
 }

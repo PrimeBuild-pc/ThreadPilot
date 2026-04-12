@@ -14,17 +14,17 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using CommunityToolkit.Mvvm.ComponentModel;
-
 namespace ThreadPilot.Models
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Collections.ObjectModel;
+    using System.Linq;
+    using CommunityToolkit.Mvvm.ComponentModel;
+
     /// <summary>
     /// Represents a reusable CPU core affinity mask
-    /// Based on CPUSetSetter's LogicalProcessorMask
+    /// Based on CPUSetSetter's LogicalProcessorMask.
     /// </summary>
     public partial class CoreMask : ObservableObject
     {
@@ -38,7 +38,7 @@ namespace ThreadPilot.Models
         private string description = string.Empty;
 
         /// <summary>
-        /// Array of boolean values, one per logical core
+        /// Gets or sets array of boolean values, one per logical core.
         /// </summary>
         public ObservableCollection<bool> BoolMask { get; set; } = new();
 
@@ -55,31 +55,33 @@ namespace ThreadPilot.Models
         private DateTime updatedAt = DateTime.UtcNow;
 
         /// <summary>
-        /// Special mask that allows all cores (no restrictions)
+        /// Gets a value indicating whether special mask that allows all cores (no restrictions).
         /// </summary>
-        public bool IsNoMask => BoolMask.All(b => b);
+        public bool IsNoMask => this.BoolMask.All(b => b);
 
         /// <summary>
-        /// Gets the count of selected cores
+        /// Gets the count of selected cores.
         /// </summary>
-        public int SelectedCoreCount => BoolMask.Count(b => b);
+        public int SelectedCoreCount => this.BoolMask.Count(b => b);
 
         /// <summary>
-        /// Converts the boolean mask to a processor affinity value
+        /// Converts the boolean mask to a processor affinity value.
         /// </summary>
         public long ToProcessorAffinity()
         {
             long affinity = 0;
-            for (int i = 0; i < BoolMask.Count; i++)
+            for (int i = 0; i < this.BoolMask.Count; i++)
             {
-                if (BoolMask[i])
-                    affinity |= (1L << i);
+                if (this.BoolMask[i])
+                {
+                    affinity |= 1L << i;
+                }
             }
             return affinity;
         }
 
         /// <summary>
-        /// Creates a CoreMask from a processor affinity value
+        /// Creates a CoreMask from a processor affinity value.
         /// </summary>
         public static CoreMask FromProcessorAffinity(long affinity, int coreCount, string name = "Custom")
         {
@@ -92,7 +94,7 @@ namespace ThreadPilot.Models
         }
 
         /// <summary>
-        /// Creates a mask with all cores enabled
+        /// Creates a mask with all cores enabled.
         /// </summary>
         public static CoreMask CreateAllCoresMask(int coreCount)
         {
@@ -100,17 +102,19 @@ namespace ThreadPilot.Models
             {
                 Name = "All Cores",
                 Description = "Use all available CPU cores",
-                IsDefault = true
+                IsDefault = true,
             };
 
             for (int i = 0; i < coreCount; i++)
+            {
                 mask.BoolMask.Add(true);
+            }
 
             return mask;
         }
 
         /// <summary>
-        /// Creates a mask with no cores (empty mask, for deletion purposes)
+        /// Creates a mask with no cores (empty mask, for deletion purposes).
         /// </summary>
         public static CoreMask CreateNoMask()
         {
@@ -118,7 +122,7 @@ namespace ThreadPilot.Models
             {
                 Name = "No Restriction",
                 Description = "Process can use all cores",
-                IsDefault = false
+                IsDefault = false,
             };
         }
 
@@ -132,18 +136,20 @@ namespace ThreadPilot.Models
                 IsEnabled = this.IsEnabled,
                 IsDefault = false,
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
             };
 
-            foreach (var bit in BoolMask)
+            foreach (var bit in this.BoolMask)
+            {
                 cloned.BoolMask.Add(bit);
+            }
 
             return cloned;
         }
 
         public override string ToString()
         {
-            return $"{Name} ({SelectedCoreCount}/{BoolMask.Count} cores)";
+            return $"{this.Name} ({this.SelectedCoreCount}/{this.BoolMask.Count} cores)";
         }
     }
 }

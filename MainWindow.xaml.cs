@@ -14,65 +14,65 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Timers;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Media.Animation;
-using System.Windows.Media.Imaging;
-using System.Windows.Media.Effects;
-using ThreadPilot.ViewModels;
-using ThreadPilot.Services;
-using ThreadPilot.Views;
-using Microsoft.Extensions.DependencyInjection;
-
 namespace ThreadPilot
 {
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
+    using System.Runtime.InteropServices;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using System.Timers;
+    using System.Windows;
+    using System.Windows.Controls;
+    using System.Windows.Input;
+    using System.Windows.Media.Animation;
+    using System.Windows.Media.Effects;
+    using System.Windows.Media.Imaging;
+    using Microsoft.Extensions.DependencyInjection;
+    using ThreadPilot.Services;
+    using ThreadPilot.ViewModels;
+    using ThreadPilot.Views;
+
     public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     {
         private const int DwmUseImmersiveDarkMode = 20;
         private const int DwmUseImmersiveDarkModeLegacy = 19;
 
-        private readonly ProcessViewModel _processViewModel;
-        private readonly PowerPlanViewModel _powerPlanViewModel;
-        private readonly PerformanceViewModel _performanceViewModel;
-        private readonly ProcessPowerPlanAssociationViewModel _associationViewModel;
-        private readonly ISystemTrayService _systemTrayService;
-        private readonly IApplicationSettingsService _settingsService;
-        private readonly INotificationService _notificationService;
-        private readonly IProcessMonitorService _processMonitorService;
-        private readonly IProcessMonitorManagerService _processMonitorManagerService;
-        private readonly IProcessPowerPlanAssociationService _processPowerPlanAssociationService;
-        private readonly SettingsViewModel _settingsViewModel;
-        private readonly MainWindowViewModel _mainWindowViewModel;
-        private readonly SystemTweaksViewModel _systemTweaksViewModel;
-        private readonly IKeyboardShortcutService _keyboardShortcutService;
-        private readonly IServiceProvider _serviceProvider;
-        private readonly IThemeService _themeService;
-        private System.Timers.Timer? _systemTrayUpdateTimer;
-        private readonly IElevationService _elevationService;
-        private readonly ISecurityService _securityService;
+        private readonly ProcessViewModel processViewModel;
+        private readonly PowerPlanViewModel powerPlanViewModel;
+        private readonly PerformanceViewModel performanceViewModel;
+        private readonly ProcessPowerPlanAssociationViewModel associationViewModel;
+        private readonly ISystemTrayService systemTrayService;
+        private readonly IApplicationSettingsService settingsService;
+        private readonly INotificationService notificationService;
+        private readonly IProcessMonitorService processMonitorService;
+        private readonly IProcessMonitorManagerService processMonitorManagerService;
+        private readonly IProcessPowerPlanAssociationService processPowerPlanAssociationService;
+        private readonly SettingsViewModel settingsViewModel;
+        private readonly MainWindowViewModel mainWindowViewModel;
+        private readonly SystemTweaksViewModel systemTweaksViewModel;
+        private readonly IKeyboardShortcutService keyboardShortcutService;
+        private readonly IServiceProvider serviceProvider;
+        private readonly IThemeService themeService;
+        private System.Timers.Timer? systemTrayUpdateTimer;
+        private readonly IElevationService elevationService;
+        private readonly ISecurityService securityService;
 
         // Loading overlay management
-        private bool _isInitializationComplete = false;
-        private readonly List<string> _initializationTasks = new();
-        private readonly object _initializationLock = new();
-        private System.Timers.Timer? _initializationTimeoutTimer;
-        private readonly string _debugLogPath = Path.Combine(Path.GetTempPath(), "ThreadPilot_Debug.log");
+        private bool isInitializationComplete = false;
+        private readonly List<string> initializationTasks = new();
+        private readonly object initializationLock = new();
+        private System.Timers.Timer? initializationTimeoutTimer;
+        private readonly string debugLogPath = Path.Combine(Path.GetTempPath(), "ThreadPilot_Debug.log");
 
         // Flag to skip process monitoring during startup if it causes issues
-        private readonly bool _skipProcessMonitoringDuringStartup = false;
-        private bool _isPerformingShutdown = false;
-        private int _currentTabIndex = -1;
-        private bool _isHandlingTabSelection;
-        private readonly SemaphoreSlim _tabSwitchGuard = new(1, 1);
+        private readonly bool skipProcessMonitoringDuringStartup = false;
+        private bool isPerformingShutdown = false;
+        private int currentTabIndex = -1;
+        private bool isHandlingTabSelection;
+        private readonly SemaphoreSlim tabSwitchGuard = new(1, 1);
 
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int dwAttribute, ref int pvAttribute, int cbAttribute);
@@ -101,52 +101,53 @@ namespace ThreadPilot
             {
                 System.Diagnostics.Debug.WriteLine("MainWindow constructor starting...");
 
-                InitializeComponent();
+                this.InitializeComponent();
                 System.Diagnostics.Debug.WriteLine("InitializeComponent completed");
 
                 // Initialize loading overlay
-                InitializeLoadingOverlay();
-                LogDebug("Loading overlay initialized");
-                LogDebug($"Debug log file: {_debugLogPath}");
+                this.InitializeLoadingOverlay();
+                this.LogDebug("Loading overlay initialized");
+                this.LogDebug($"Debug log file: {this.debugLogPath}");
 
-                _processViewModel = processViewModel;
-                _powerPlanViewModel = powerPlanViewModel;
-                _performanceViewModel = performanceViewModel;
-                _associationViewModel = associationViewModel;
-                _systemTrayService = systemTrayService;
-                _settingsService = settingsService;
-                _notificationService = notificationService;
-                _processMonitorService = processMonitorService;
-                _processMonitorManagerService = processMonitorManagerService;
-                _processPowerPlanAssociationService = processPowerPlanAssociationService;
-                _settingsViewModel = settingsViewModel;
-                _mainWindowViewModel = mainWindowViewModel;
-                _systemTweaksViewModel = systemTweaksViewModel;
-                _keyboardShortcutService = keyboardShortcutService;
-                _themeService = themeService;
-                _serviceProvider = serviceProvider;
-                _elevationService = elevationService;
-                _securityService = securityService;
+                this.processViewModel = processViewModel;
+                this.powerPlanViewModel = powerPlanViewModel;
+                this.performanceViewModel = performanceViewModel;
+                this.associationViewModel = associationViewModel;
+                this.systemTrayService = systemTrayService;
+                this.settingsService = settingsService;
+                this.notificationService = notificationService;
+                this.processMonitorService = processMonitorService;
+                this.processMonitorManagerService = processMonitorManagerService;
+                this.processPowerPlanAssociationService = processPowerPlanAssociationService;
+                this.settingsViewModel = settingsViewModel;
+                this.mainWindowViewModel = mainWindowViewModel;
+                this.systemTweaksViewModel = systemTweaksViewModel;
+                this.keyboardShortcutService = keyboardShortcutService;
+                this.themeService = themeService;
+                this.serviceProvider = serviceProvider;
+                this.elevationService = elevationService;
+                this.securityService = securityService;
 
-                _processViewModel.OpenRulesRequested += OnOpenRulesRequested;
+                this.processViewModel.OpenRulesRequested += this.OnOpenRulesRequested;
 
                 System.Diagnostics.Debug.WriteLine("Dependencies assigned");
 
-                SetDataContexts();
+                this.SetDataContexts();
                 System.Diagnostics.Debug.WriteLine("DataContexts set");
 
                 // Start async initialization - marshal to UI thread to prevent cross-thread access exceptions
-                _ = Dispatcher.InvokeAsync(async () => await InitializeApplicationAsync());
+                _ = this.Dispatcher.InvokeAsync(async () => await this.InitializeApplicationAsync());
                 System.Diagnostics.Debug.WriteLine("Async initialization started");
                 System.Diagnostics.Debug.WriteLine("MainWindow constructor completed successfully");
 
                 // Initialize navigation index
-                _currentTabIndex = 0;
+                this.currentTabIndex = 0;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error in MainWindow constructor: {ex}");
-                System.Windows.MessageBox.Show($"Error initializing MainWindow:\n\n{ex.Message}\n\nStack Trace:\n{ex.StackTrace}",
+                System.Windows.MessageBox.Show(
+                    $"Error initializing MainWindow:\n\n{ex.Message}\n\nStack Trace:\n{ex.StackTrace}",
                     "MainWindow Initialization Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 throw;
             }
@@ -155,31 +156,31 @@ namespace ThreadPilot
         private void SetDataContexts()
         {
             // Set DataContext for the main window
-            DataContext = _mainWindowViewModel;
+            this.DataContext = this.mainWindowViewModel;
 
             // Set DataContext for the power plans view
-            PowerPlanViewControl.DataContext = _powerPlanViewModel;
+            this.PowerPlanViewControl.DataContext = this.powerPlanViewModel;
 
             // Set DataContext for the association view
-            AssociationView.DataContext = _associationViewModel;
+            this.AssociationView.DataContext = this.associationViewModel;
 
             // Set DataContext for the performance view
-            PerformanceViewControl.DataContext = _performanceViewModel;
+            this.PerformanceViewControl.DataContext = this.performanceViewModel;
 
             // Set DataContext for the system tweaks view
-            SystemTweaksView.DataContext = _systemTweaksViewModel;
+            this.SystemTweaksView.DataContext = this.systemTweaksViewModel;
 
             // Set DataContext for the settings view
-            SettingsView.DataContext = _settingsViewModel;
+            this.SettingsView.DataContext = this.settingsViewModel;
         }
 
         private void InitializeLoadingOverlay()
         {
             try
             {
-                var loadingOverlay = FindName("LoadingOverlay") as Grid;
-                var appContentLayer = FindName("AppContentLayer") as Grid;
-                var backdropBlur = FindName("BackdropBlur") as BlurEffect;
+                var loadingOverlay = this.FindName("LoadingOverlay") as Grid;
+                var appContentLayer = this.FindName("AppContentLayer") as Grid;
+                var backdropBlur = this.FindName("BackdropBlur") as BlurEffect;
 
                 // Ensure overlay is visible while initialization runs
                 if (loadingOverlay != null)
@@ -200,17 +201,16 @@ namespace ThreadPilot
                 }
 
                 // Start spinner animation if available
-                var spinnerAnimation = FindResource("SpinnerAnimation") as Storyboard;
+                var spinnerAnimation = this.FindResource("SpinnerAnimation") as Storyboard;
                 spinnerAnimation?.Begin();
 
                 // Set a timeout guard for initialization
-                _initializationTimeoutTimer = new System.Timers.Timer(15000)
+                this.initializationTimeoutTimer = new System.Timers.Timer(15000)
                 {
-                    AutoReset = false
+                    AutoReset = false,
                 };
-                _initializationTimeoutTimer.Elapsed += OnInitializationTimeout;
-                _initializationTimeoutTimer.Start();
-
+                this.initializationTimeoutTimer.Elapsed += this.OnInitializationTimeout;
+                this.initializationTimeoutTimer.Start();
             }
             catch (Exception ex)
             {
@@ -222,45 +222,45 @@ namespace ThreadPilot
         {
             try
             {
-                LogDebug("=== Starting InitializeApplicationAsync ===");
+                this.LogDebug("=== Starting InitializeApplicationAsync ===");
 
-                await Dispatcher.InvokeAsync(() => UpdateLoadingStatus("Loading ViewModels..."));
-                LogDebug("About to call LoadViewModelsAsync...");
-                await LoadViewModelsAsync();
-                LogDebug("LoadViewModelsAsync completed successfully");
-                CompleteInitializationTask("ViewModels");
+                await this.Dispatcher.InvokeAsync(() => this.UpdateLoadingStatus("Loading ViewModels..."));
+                this.LogDebug("About to call LoadViewModelsAsync...");
+                await this.LoadViewModelsAsync();
+                this.LogDebug("LoadViewModelsAsync completed successfully");
+                this.CompleteInitializationTask("ViewModels");
 
-                LogDebug("About to initialize MainWindowViewModel...");
-                await _mainWindowViewModel.InitializeAsync();
-                LogDebug("MainWindowViewModel initialized successfully");
-                CompleteInitializationTask("MainWindowViewModel");
+                this.LogDebug("About to initialize MainWindowViewModel...");
+                await this.mainWindowViewModel.InitializeAsync();
+                this.LogDebug("MainWindowViewModel initialized successfully");
+                this.CompleteInitializationTask("MainWindowViewModel");
 
-                await Dispatcher.InvokeAsync(() => UpdateLoadingStatus("Initializing services..."));
-                LogDebug("About to call InitializeServicesAsync...");
-                await InitializeServicesAsync();
-                LogDebug("InitializeServicesAsync completed successfully");
-                CompleteInitializationTask("Services");
+                await this.Dispatcher.InvokeAsync(() => this.UpdateLoadingStatus("Initializing services..."));
+                this.LogDebug("About to call InitializeServicesAsync...");
+                await this.InitializeServicesAsync();
+                this.LogDebug("InitializeServicesAsync completed successfully");
+                this.CompleteInitializationTask("Services");
 
-                await Dispatcher.InvokeAsync(() => UpdateLoadingStatus("Finalizing startup..."));
-                LogDebug("Finalizing startup...");
+                await this.Dispatcher.InvokeAsync(() => this.UpdateLoadingStatus("Finalizing startup..."));
+                this.LogDebug("Finalizing startup...");
                 await Task.Delay(500); // Brief delay to show final status
-                CompleteInitializationTask("Finalization");
+                this.CompleteInitializationTask("Finalization");
 
                 // All initialization complete
-                LogDebug("All initialization complete, hiding overlay...");
-                await Dispatcher.InvokeAsync(() => HideLoadingOverlay());
-                LogDebug("=== InitializeApplicationAsync completed successfully ===");
+                this.LogDebug("All initialization complete, hiding overlay...");
+                await this.Dispatcher.InvokeAsync(() => this.HideLoadingOverlay());
+                this.LogDebug("=== InitializeApplicationAsync completed successfully ===");
             }
             catch (Exception ex)
             {
-                LogDebug($"=== ERROR in InitializeApplicationAsync: {ex} ===");
-                await Dispatcher.InvokeAsync(() => ShowInitializationError(ex));
+                this.LogDebug($"=== ERROR in InitializeApplicationAsync: {ex} ===");
+                await this.Dispatcher.InvokeAsync(() => this.ShowInitializationError(ex));
             }
         }
 
         private void UpdateLoadingStatus(string status)
         {
-            var loadingStatus = FindName("LoadingStatus") as TextBlock;
+            var loadingStatus = this.FindName("LoadingStatus") as TextBlock;
             if (loadingStatus != null)
             {
                 loadingStatus.Text = status;
@@ -269,9 +269,9 @@ namespace ThreadPilot
 
         private void CompleteInitializationTask(string taskName)
         {
-            lock (_initializationLock)
+            lock (this.initializationLock)
             {
-                _initializationTasks.Add(taskName);
+                this.initializationTasks.Add(taskName);
                 System.Diagnostics.Debug.WriteLine($"Initialization task completed: {taskName}");
             }
         }
@@ -281,24 +281,24 @@ namespace ThreadPilot
             try
             {
                 System.Diagnostics.Debug.WriteLine("=== Starting HideLoadingOverlay ===");
-                _isInitializationComplete = true;
-                _initializationTimeoutTimer?.Stop();
-                _initializationTimeoutTimer?.Dispose();
+                this.isInitializationComplete = true;
+                this.initializationTimeoutTimer?.Stop();
+                this.initializationTimeoutTimer?.Dispose();
 
                 // Stop spinner animation
-                var spinnerAnimation = FindResource("SpinnerAnimation") as Storyboard;
+                var spinnerAnimation = this.FindResource("SpinnerAnimation") as Storyboard;
                 spinnerAnimation?.Stop();
                 System.Diagnostics.Debug.WriteLine("Spinner animation stopped");
 
                 // Start fade-out animation
-                var fadeOutAnimation = FindResource("FadeOutAnimation") as Storyboard;
+                var fadeOutAnimation = this.FindResource("FadeOutAnimation") as Storyboard;
                 if (fadeOutAnimation != null)
                 {
                     System.Diagnostics.Debug.WriteLine("Starting fade-out animation");
                     fadeOutAnimation.Completed += (s, e) =>
                     {
                         System.Diagnostics.Debug.WriteLine("Fade-out animation completed, hiding overlay");
-                        var loadingOverlay = FindName("LoadingOverlay") as Grid;
+                        var loadingOverlay = this.FindName("LoadingOverlay") as Grid;
                         if (loadingOverlay != null)
                         {
                             loadingOverlay.Visibility = Visibility.Collapsed;
@@ -306,7 +306,7 @@ namespace ThreadPilot
                         }
 
                         // Re-enable main content interaction
-                        var appContentLayer = FindName("AppContentLayer") as Grid;
+                        var appContentLayer = this.FindName("AppContentLayer") as Grid;
                         if (appContentLayer != null)
                         {
                             appContentLayer.IsHitTestVisible = true;
@@ -314,7 +314,7 @@ namespace ThreadPilot
                             System.Diagnostics.Debug.WriteLine("Main content interaction re-enabled");
                         }
 
-                        var backdropBlur = FindName("BackdropBlur") as BlurEffect;
+                        var backdropBlur = this.FindName("BackdropBlur") as BlurEffect;
                         if (backdropBlur != null)
                         {
                             backdropBlur.Radius = 0;
@@ -327,21 +327,21 @@ namespace ThreadPilot
                 {
                     System.Diagnostics.Debug.WriteLine("WARNING: FadeOutAnimation not found, hiding overlay immediately");
                     // Fallback: hide overlay immediately if animation fails
-                    var loadingOverlay = FindName("LoadingOverlay") as Grid;
+                    var loadingOverlay = this.FindName("LoadingOverlay") as Grid;
                     if (loadingOverlay != null)
                     {
                         loadingOverlay.Visibility = Visibility.Collapsed;
                     }
 
                     // Re-enable main content interaction
-                    var appContentLayer = FindName("AppContentLayer") as Grid;
+                    var appContentLayer = this.FindName("AppContentLayer") as Grid;
                     if (appContentLayer != null)
                     {
                         appContentLayer.IsHitTestVisible = true;
                         appContentLayer.Opacity = 1;
                     }
 
-                    var backdropBlur = FindName("BackdropBlur") as BlurEffect;
+                    var backdropBlur = this.FindName("BackdropBlur") as BlurEffect;
                     if (backdropBlur != null)
                     {
                         backdropBlur.Radius = 0;
@@ -355,19 +355,19 @@ namespace ThreadPilot
                 // Emergency fallback: hide overlay without animation
                 try
                 {
-                    var loadingOverlay = FindName("LoadingOverlay") as Grid;
+                    var loadingOverlay = this.FindName("LoadingOverlay") as Grid;
                     if (loadingOverlay != null)
                     {
                         loadingOverlay.Visibility = Visibility.Collapsed;
                     }
-                    var appContentLayer = FindName("AppContentLayer") as Grid;
+                    var appContentLayer = this.FindName("AppContentLayer") as Grid;
                     if (appContentLayer != null)
                     {
                         appContentLayer.IsHitTestVisible = true;
                         appContentLayer.Opacity = 1;
                     }
 
-                    var backdropBlur = FindName("BackdropBlur") as BlurEffect;
+                    var backdropBlur = this.FindName("BackdropBlur") as BlurEffect;
                     if (backdropBlur != null)
                     {
                         backdropBlur.Radius = 0;
@@ -383,11 +383,11 @@ namespace ThreadPilot
 
         private void OnInitializationTimeout(object? sender, ElapsedEventArgs e)
         {
-            Dispatcher.InvokeAsync(() =>
+            this.Dispatcher.InvokeAsync(() =>
             {
-                if (!_isInitializationComplete)
+                if (!this.isInitializationComplete)
                 {
-                    ShowInitializationError(new TimeoutException("Application initialization timed out after 15 seconds"));
+                    this.ShowInitializationError(new TimeoutException("Application initialization timed out after 15 seconds"));
                 }
             });
         }
@@ -396,10 +396,10 @@ namespace ThreadPilot
         {
             try
             {
-                UpdateLoadingStatus("Initialization failed");
+                this.UpdateLoadingStatus("Initialization failed");
 
                 var result = System.Windows.MessageBox.Show(
-                    $"ThreadPilot failed to initialize properly:\n\n{ex.Message}\n\nDebug log: {_debugLogPath}\n\nWould you like to retry initialization or close the application?",
+                    $"ThreadPilot failed to initialize properly:\n\n{ex.Message}\n\nDebug log: {this.debugLogPath}\n\nWould you like to retry initialization or close the application?",
                     "Initialization Error",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Error);
@@ -407,22 +407,22 @@ namespace ThreadPilot
                 if (result == MessageBoxResult.Yes)
                 {
                     // Retry initialization - marshal to UI thread to prevent cross-thread access exceptions
-                    _isInitializationComplete = false;
-                    _initializationTasks.Clear();
-                    UpdateLoadingStatus("Retrying initialization...");
-                    LogDebug("=== RETRYING INITIALIZATION ===");
-                    _ = Dispatcher.InvokeAsync(async () => await InitializeApplicationAsync());
+                    this.isInitializationComplete = false;
+                    this.initializationTasks.Clear();
+                    this.UpdateLoadingStatus("Retrying initialization...");
+                    this.LogDebug("=== RETRYING INITIALIZATION ===");
+                    _ = this.Dispatcher.InvokeAsync(async () => await this.InitializeApplicationAsync());
                 }
                 else
                 {
                     // Close application
-                    LogDebug("User chose to close application");
+                    this.LogDebug("User chose to close application");
                     System.Windows.Application.Current.Shutdown();
                 }
             }
             catch (Exception overlayEx)
             {
-                LogDebug($"Error showing initialization error: {overlayEx.Message}");
+                this.LogDebug($"Error showing initialization error: {overlayEx.Message}");
                 System.Windows.Application.Current.Shutdown();
             }
         }
@@ -431,185 +431,185 @@ namespace ThreadPilot
         {
             try
             {
-                LogDebug("=== Starting LoadViewModelsAsync ===");
+                this.LogDebug("=== Starting LoadViewModelsAsync ===");
 
-                LogDebug("About to initialize ProcessViewModel (including CPU topology)...");
+                this.LogDebug("About to initialize ProcessViewModel (including CPU topology)...");
                 try
                 {
                     // Use the full initialization method instead of just LoadProcesses
-                    var processTask = _processViewModel.InitializeAsync();
+                    var processTask = this.processViewModel.InitializeAsync();
                     var processResult = await Task.WhenAny(processTask, Task.Delay(15000)); // 15 second timeout for full initialization
                     if (processResult != processTask)
                     {
-                        LogDebug("ProcessViewModel.InitializeAsync() timed out, trying fallback...");
+                        this.LogDebug("ProcessViewModel.InitializeAsync() timed out, trying fallback...");
                         // Fallback: just load processes without full initialization
-                        await _processViewModel.LoadProcesses();
-                        LogDebug($"ProcessViewModel fallback (LoadProcesses only) completed, process count: {_processViewModel.Processes?.Count ?? 0}, filtered count: {_processViewModel.FilteredProcesses?.Count ?? 0}");
+                        await this.processViewModel.LoadProcesses();
+                        this.LogDebug($"ProcessViewModel fallback (LoadProcesses only) completed, process count: {this.processViewModel.Processes?.Count ?? 0}, filtered count: {this.processViewModel.FilteredProcesses?.Count ?? 0}");
                     }
                     else
                     {
                         await processTask; // Ensure we get any exceptions
-                        LogDebug($"ProcessViewModel initialized successfully (including CPU topology), process count: {_processViewModel.Processes?.Count ?? 0}, filtered count: {_processViewModel.FilteredProcesses?.Count ?? 0}");
+                        this.LogDebug($"ProcessViewModel initialized successfully (including CPU topology), process count: {this.processViewModel.Processes?.Count ?? 0}, filtered count: {this.processViewModel.FilteredProcesses?.Count ?? 0}");
                     }
                 }
                 catch (Exception processEx)
                 {
-                    LogDebug($"ProcessViewModel initialization failed: {processEx.Message}, trying fallback...");
+                    this.LogDebug($"ProcessViewModel initialization failed: {processEx.Message}, trying fallback...");
                     // Fallback: just load processes without full initialization
-                    await _processViewModel.LoadProcesses();
-                    LogDebug($"ProcessViewModel fallback (LoadProcesses only) completed after exception, process count: {_processViewModel.Processes?.Count ?? 0}, filtered count: {_processViewModel.FilteredProcesses?.Count ?? 0}");
+                    await this.processViewModel.LoadProcesses();
+                    this.LogDebug($"ProcessViewModel fallback (LoadProcesses only) completed after exception, process count: {this.processViewModel.Processes?.Count ?? 0}, filtered count: {this.processViewModel.FilteredProcesses?.Count ?? 0}");
                 }
 
-                LogDebug("About to load PowerPlanViewModel...");
-                var powerPlanTask = _powerPlanViewModel.LoadPowerPlans();
+                this.LogDebug("About to load PowerPlanViewModel...");
+                var powerPlanTask = this.powerPlanViewModel.LoadPowerPlans();
                 var powerPlanResult = await Task.WhenAny(powerPlanTask, Task.Delay(5000)); // 5 second timeout
                 if (powerPlanResult != powerPlanTask)
                 {
                     throw new TimeoutException("PowerPlanViewModel.LoadPowerPlans() timed out after 5 seconds");
                 }
                 await powerPlanTask; // Ensure we get any exceptions
-                LogDebug("PowerPlanViewModel loaded successfully");
+                this.LogDebug("PowerPlanViewModel loaded successfully");
 
-                LogDebug("About to initialize PerformanceViewModel...");
-                var performanceTask = _performanceViewModel.InitializeAsync();
+                this.LogDebug("About to initialize PerformanceViewModel...");
+                var performanceTask = this.performanceViewModel.InitializeAsync();
                 var performanceResult = await Task.WhenAny(performanceTask, Task.Delay(5000));
                 if (performanceResult != performanceTask)
                 {
                     throw new TimeoutException("PerformanceViewModel.InitializeAsync() timed out after 5 seconds");
                 }
                 await performanceTask; // Ensure we get any exceptions
-                LogDebug("PerformanceViewModel initialized successfully");
+                this.LogDebug("PerformanceViewModel initialized successfully");
 
-                LogDebug("About to load SystemTweaksViewModel...");
-                var systemTweaksTask = _systemTweaksViewModel.LoadCommand.ExecuteAsync(null);
+                this.LogDebug("About to load SystemTweaksViewModel...");
+                var systemTweaksTask = this.systemTweaksViewModel.LoadCommand.ExecuteAsync(null);
                 var systemTweaksResult = await Task.WhenAny(systemTweaksTask, Task.Delay(5000)); // 5 second timeout
                 if (systemTweaksResult != systemTweaksTask)
                 {
                     throw new TimeoutException("SystemTweaksViewModel.LoadCommand.ExecuteAsync() timed out after 5 seconds");
                 }
                 await systemTweaksTask; // Ensure we get any exceptions
-                LogDebug("SystemTweaksViewModel loaded successfully");
+                this.LogDebug("SystemTweaksViewModel loaded successfully");
 
                 // Initialize keyboard shortcuts after window is loaded
-                Loaded += OnWindowLoaded;
-                LogDebug("Keyboard shortcuts event handler attached");
+                this.Loaded += this.OnWindowLoaded;
+                this.LogDebug("Keyboard shortcuts event handler attached");
 
                 // The association view model loads its data automatically in its constructor
-                LogDebug("=== LoadViewModelsAsync completed successfully ===");
+                this.LogDebug("=== LoadViewModelsAsync completed successfully ===");
             }
             catch (Exception ex)
             {
-                LogDebug($"=== ERROR in LoadViewModelsAsync: {ex} ===");
+                this.LogDebug($"=== ERROR in LoadViewModelsAsync: {ex} ===");
                 throw; // Re-throw to be handled by initialization error handler
             }
         }
 
         private async Task InitializeServicesAsync()
         {
-            LogDebug("=== Starting InitializeServicesAsync ===");
+            this.LogDebug("=== Starting InitializeServicesAsync ===");
 
-            LogDebug("About to initialize settings...");
-            await InitializeSettingsAsync();
-            LogDebug("Settings initialized successfully");
+            this.LogDebug("About to initialize settings...");
+            await this.InitializeSettingsAsync();
+            this.LogDebug("Settings initialized successfully");
 
-            LogDebug("About to initialize system tray...");
+            this.LogDebug("About to initialize system tray...");
             try
             {
-                var systemTrayTask = InitializeSystemTrayAsync();
+                var systemTrayTask = this.InitializeSystemTrayAsync();
                 var systemTrayResult = await Task.WhenAny(systemTrayTask, Task.Delay(5000)); // 5 second timeout
                 if (systemTrayResult != systemTrayTask)
                 {
-                    LogDebug("System tray initialization timed out, continuing with basic tray setup...");
+                    this.LogDebug("System tray initialization timed out, continuing with basic tray setup...");
                     // Initialize basic system tray without context menu updates (Initialize() is idempotent)
-                    await InitializeBasicSystemTrayAsync();
-                    LogDebug("Basic system tray initialized (without context menu)");
+                    await this.InitializeBasicSystemTrayAsync();
+                    this.LogDebug("Basic system tray initialized (without context menu)");
                 }
                 else
                 {
                     await systemTrayTask; // Ensure we get any exceptions
-                    LogDebug("System tray initialized successfully");
+                    this.LogDebug("System tray initialized successfully");
                 }
             }
             catch (Exception systemTrayEx)
             {
-                LogDebug($"System tray initialization failed: {systemTrayEx.Message}, using basic tray...");
+                this.LogDebug($"System tray initialization failed: {systemTrayEx.Message}, using basic tray...");
                 // Fallback: basic system tray initialization
                 try
                 {
-                    await InitializeBasicSystemTrayAsync();
-                    LogDebug("Fallback system tray initialized");
+                    await this.InitializeBasicSystemTrayAsync();
+                    this.LogDebug("Fallback system tray initialized");
                 }
                 catch (Exception fallbackEx)
                 {
-                    LogDebug($"Even fallback system tray failed: {fallbackEx.Message}");
+                    this.LogDebug($"Even fallback system tray failed: {fallbackEx.Message}");
                 }
             }
 
-            LogDebug("About to initialize notifications...");
-            InitializeNotifications();
-            LogDebug("Notifications initialized successfully");
+            this.LogDebug("About to initialize notifications...");
+            this.InitializeNotifications();
+            this.LogDebug("Notifications initialized successfully");
 
-            LogDebug("About to initialize monitoring...");
-            await InitializeMonitoringAsync();
-            LogDebug("Monitoring initialized successfully");
+            this.LogDebug("About to initialize monitoring...");
+            await this.InitializeMonitoringAsync();
+            this.LogDebug("Monitoring initialized successfully");
 
-            if (_skipProcessMonitoringDuringStartup)
+            if (this.skipProcessMonitoringDuringStartup)
             {
-                LogDebug("Skipping process monitoring manager startup (temporary bypass enabled)");
+                this.LogDebug("Skipping process monitoring manager startup (temporary bypass enabled)");
             }
             else
             {
-                LogDebug("About to start process monitoring manager...");
+                this.LogDebug("About to start process monitoring manager...");
                 try
                 {
-                    var monitoringTask = StartProcessMonitoringManagerAsync();
+                    var monitoringTask = this.StartProcessMonitoringManagerAsync();
                     var timeoutTask = Task.Delay(8000); // 8 second timeout
                     var completedTask = await Task.WhenAny(monitoringTask, timeoutTask);
 
                     if (completedTask == timeoutTask)
                     {
-                        LogDebug("Process monitoring manager startup timed out after 8 seconds, continuing without monitoring...");
+                        this.LogDebug("Process monitoring manager startup timed out after 8 seconds, continuing without monitoring...");
                     }
                     else
                     {
                         try
                         {
                             await monitoringTask; // Ensure we get any exceptions
-                            LogDebug("Process monitoring manager started successfully");
+                            this.LogDebug("Process monitoring manager started successfully");
                         }
                         catch (Exception taskEx)
                         {
-                            LogDebug($"Process monitoring manager task failed: {taskEx.Message}");
+                            this.LogDebug($"Process monitoring manager task failed: {taskEx.Message}");
                         }
                     }
                 }
                 catch (Exception monitoringEx)
                 {
-                    LogDebug($"Process monitoring manager startup failed: {monitoringEx.Message}, continuing without monitoring...");
+                    this.LogDebug($"Process monitoring manager startup failed: {monitoringEx.Message}, continuing without monitoring...");
                 }
             }
 
-            LogDebug("=== InitializeServicesAsync completed successfully ===");
+            this.LogDebug("=== InitializeServicesAsync completed successfully ===");
         }
 
         private async Task InitializeSettingsAsync()
         {
             try
             {
-                await _settingsService.LoadSettingsAsync();
+                await this.settingsService.LoadSettingsAsync();
 
                 // Apply initial settings
-                var settings = _settingsService.Settings;
+                var settings = this.settingsService.Settings;
                 var useDarkTheme = settings.HasUserThemePreference
                     ? settings.UseDarkTheme
-                    : _themeService.GetSystemUsesDarkTheme();
+                    : this.themeService.GetSystemUsesDarkTheme();
 
-                _themeService.ApplyTheme(useDarkTheme);
-                ApplyWindowCaptionTheme(useDarkTheme);
+                this.themeService.ApplyTheme(useDarkTheme);
+                this.ApplyWindowCaptionTheme(useDarkTheme);
 
                 if (settings.StartMinimized)
                 {
-                    WindowState = WindowState.Minimized;
+                    this.WindowState = WindowState.Minimized;
                 }
             }
             catch (Exception ex)
@@ -622,30 +622,30 @@ namespace ThreadPilot
         {
             try
             {
-                _systemTrayService.Initialize();
-                _systemTrayService.Show();
+                this.systemTrayService.Initialize();
+                this.systemTrayService.Show();
 
                 // Subscribe to tray events
-                UnsubscribeSystemTrayEvents();
-                _systemTrayService.ShowMainWindowRequested += OnShowMainWindowRequested;
-                _systemTrayService.DashboardRequested += OnDashboardRequested;
-                _systemTrayService.ExitRequested += OnExitRequested;
-                _systemTrayService.MonitoringToggleRequested += OnMonitoringToggleRequested;
-                _systemTrayService.SettingsRequested += OnSettingsRequested;
-                _systemTrayService.PowerPlanChangeRequested += OnPowerPlanChangeRequested;
-                _systemTrayService.ProfileApplicationRequested += OnProfileApplicationRequested;
-                _systemTrayService.PerformanceDashboardRequested += OnPerformanceDashboardRequested;
+                this.UnsubscribeSystemTrayEvents();
+                this.systemTrayService.ShowMainWindowRequested += this.OnShowMainWindowRequested;
+                this.systemTrayService.DashboardRequested += this.OnDashboardRequested;
+                this.systemTrayService.ExitRequested += this.OnExitRequested;
+                this.systemTrayService.MonitoringToggleRequested += this.OnMonitoringToggleRequested;
+                this.systemTrayService.SettingsRequested += this.OnSettingsRequested;
+                this.systemTrayService.PowerPlanChangeRequested += this.OnPowerPlanChangeRequested;
+                this.systemTrayService.ProfileApplicationRequested += this.OnProfileApplicationRequested;
+                this.systemTrayService.PerformanceDashboardRequested += this.OnPerformanceDashboardRequested;
 
                 // Update settings and tooltip
-                _systemTrayService.UpdateSettings(_settingsService.Settings);
-                _systemTrayService.ApplyTheme(_themeService.IsDarkTheme);
-                _systemTrayService.UpdateTooltip("ThreadPilot - Process & Power Plan Manager");
+                this.systemTrayService.UpdateSettings(this.settingsService.Settings);
+                this.systemTrayService.ApplyTheme(this.themeService.IsDarkTheme);
+                this.systemTrayService.UpdateTooltip("ThreadPilot - Process & Power Plan Manager");
 
                 // Initialize system tray context menu with current data
-                await UpdateSystemTrayContextMenuAsync();
+                await this.UpdateSystemTrayContextMenuAsync();
 
                 // Start periodic system tray updates
-                StartSystemTrayUpdateTimer();
+                this.StartSystemTrayUpdateTimer();
             }
             catch (Exception ex)
             {
@@ -658,129 +658,129 @@ namespace ThreadPilot
         {
             try
             {
-                LogDebug("Initializing basic system tray (without full context menu)...");
+                this.LogDebug("Initializing basic system tray (without full context menu)...");
 
                 // Initialize basic tray icon (this is idempotent)
-                _systemTrayService.Initialize();
-                _systemTrayService.Show();
+                this.systemTrayService.Initialize();
+                this.systemTrayService.Show();
 
                 // Subscribe to essential tray events only
-                UnsubscribeSystemTrayEvents();
-                _systemTrayService.ShowMainWindowRequested += OnShowMainWindowRequested;
-                _systemTrayService.DashboardRequested += OnDashboardRequested;
-                _systemTrayService.ExitRequested += OnExitRequested;
+                this.UnsubscribeSystemTrayEvents();
+                this.systemTrayService.ShowMainWindowRequested += this.OnShowMainWindowRequested;
+                this.systemTrayService.DashboardRequested += this.OnDashboardRequested;
+                this.systemTrayService.ExitRequested += this.OnExitRequested;
 
                 // Update basic settings and tooltip
-                _systemTrayService.UpdateSettings(_settingsService.Settings);
-                _systemTrayService.ApplyTheme(_themeService.IsDarkTheme);
-                _systemTrayService.UpdateTooltip("ThreadPilot - Process & Power Plan Manager (Basic Mode)");
+                this.systemTrayService.UpdateSettings(this.settingsService.Settings);
+                this.systemTrayService.ApplyTheme(this.themeService.IsDarkTheme);
+                this.systemTrayService.UpdateTooltip("ThreadPilot - Process & Power Plan Manager (Basic Mode)");
 
-                LogDebug("Basic system tray initialization completed");
+                this.LogDebug("Basic system tray initialization completed");
             }
             catch (Exception ex)
             {
-                LogDebug($"Failed to initialize basic system tray: {ex.Message}");
+                this.LogDebug($"Failed to initialize basic system tray: {ex.Message}");
                 throw;
             }
         }
 
         private void OnShowMainWindowRequested(object? sender, EventArgs e)
         {
-            ShowWindowFromTray();
+            this.ShowWindowFromTray();
         }
 
         private void OnExitRequested(object? sender, EventArgs e)
         {
-            TaskSafety.FireAndForget(OnExitRequestedAsync(), ex =>
+            TaskSafety.FireAndForget(this.OnExitRequestedAsync(), ex =>
             {
-                LogDebug($"OnExitRequested failed: {ex.Message}");
+                this.LogDebug($"OnExitRequested failed: {ex.Message}");
             });
         }
 
         private async Task OnExitRequestedAsync()
         {
-            await PerformGracefulShutdownAsync();
+            await this.PerformGracefulShutdownAsync();
         }
 
         private void OnDashboardRequested(object? sender, EventArgs e)
         {
-            ShowWindowFromTray("Process");
+            this.ShowWindowFromTray("Process");
         }
 
         /// <summary>
         /// Performs graceful shutdown with cleanup of all applied optimizations
-        /// Similar to CPU Set Setter's ExitAppGracefully
+        /// Similar to CPU Set Setter's ExitAppGracefully.
         /// </summary>
         private async Task PerformGracefulShutdownAsync(bool validateUnsavedChanges = true)
         {
-            if (_isPerformingShutdown)
+            if (this.isPerformingShutdown)
             {
                 return;
             }
 
-            if (validateUnsavedChanges && !await HandleUnsavedSettingsBeforeExitAsync())
+            if (validateUnsavedChanges && !await this.HandleUnsavedSettingsBeforeExitAsync())
             {
                 return;
             }
 
-            _isPerformingShutdown = true;
+            this.isPerformingShutdown = true;
 
             try
             {
-                LogDebug("Starting graceful shutdown...");
+                this.LogDebug("Starting graceful shutdown...");
 
                 // 1. Stop monitoring services
                 try
                 {
-                    LogDebug("Stopping process monitoring manager...");
-                    await _processMonitorManagerService.StopAsync();
-                    LogDebug("Process monitoring manager stopped");
+                    this.LogDebug("Stopping process monitoring manager...");
+                    await this.processMonitorManagerService.StopAsync();
+                    this.LogDebug("Process monitoring manager stopped");
                 }
                 catch (Exception ex)
                 {
-                    LogDebug($"Error stopping process monitoring: {ex.Message}");
+                    this.LogDebug($"Error stopping process monitoring: {ex.Message}");
                 }
 
                 // 2. Cleanup applied CPU masks (like CPU Set Setter's ClearAllProcessMasksNoSave)
-                if (_settingsService.Settings.ClearMasksOnClose)
+                if (this.settingsService.Settings.ClearMasksOnClose)
                 {
                     try
                     {
-                        LogDebug("Clearing all applied CPU masks...");
-                        var processService = _serviceProvider.GetRequiredService<IProcessService>();
+                        this.LogDebug("Clearing all applied CPU masks...");
+                        var processService = this.serviceProvider.GetRequiredService<IProcessService>();
                         await processService.ClearAllAppliedMasksAsync();
-                        LogDebug("CPU masks cleared");
+                        this.LogDebug("CPU masks cleared");
                     }
                     catch (Exception ex)
                     {
-                        LogDebug($"Error clearing CPU masks: {ex.Message}");
+                        this.LogDebug($"Error clearing CPU masks: {ex.Message}");
                     }
 
                     // Also reset priorities
                     try
                     {
-                        LogDebug("Resetting all process priorities...");
-                        var processService = _serviceProvider.GetRequiredService<IProcessService>();
+                        this.LogDebug("Resetting all process priorities...");
+                        var processService = this.serviceProvider.GetRequiredService<IProcessService>();
                         await processService.ResetAllProcessPrioritiesAsync();
-                        LogDebug("Process priorities reset");
+                        this.LogDebug("Process priorities reset");
                     }
                     catch (Exception ex)
                     {
-                        LogDebug($"Error resetting priorities: {ex.Message}");
+                        this.LogDebug($"Error resetting priorities: {ex.Message}");
                     }
                 }
 
                 // 3. Restore default power plan if configured
-                if (_settingsService.Settings.RestoreDefaultPowerPlanOnExit)
+                if (this.settingsService.Settings.RestoreDefaultPowerPlanOnExit)
                 {
                     try
                     {
-                        var targetDefaultPowerPlanGuid = _settingsService.Settings.DefaultPowerPlanId;
+                        var targetDefaultPowerPlanGuid = this.settingsService.Settings.DefaultPowerPlanId;
 
                         try
                         {
-                            await _processPowerPlanAssociationService.LoadConfigurationAsync();
-                            var (associationDefaultPowerPlanGuid, _) = await _processPowerPlanAssociationService.GetDefaultPowerPlanAsync();
+                            await this.processPowerPlanAssociationService.LoadConfigurationAsync();
+                            var (associationDefaultPowerPlanGuid, _) = await this.processPowerPlanAssociationService.GetDefaultPowerPlanAsync();
                             if (!string.IsNullOrWhiteSpace(associationDefaultPowerPlanGuid))
                             {
                                 targetDefaultPowerPlanGuid = associationDefaultPowerPlanGuid;
@@ -788,56 +788,56 @@ namespace ThreadPilot
                         }
                         catch (Exception associationEx)
                         {
-                            LogDebug($"Could not read default power plan from association config: {associationEx.Message}");
+                            this.LogDebug($"Could not read default power plan from association config: {associationEx.Message}");
                         }
 
                         if (string.IsNullOrWhiteSpace(targetDefaultPowerPlanGuid))
                         {
-                            LogDebug("No default power plan configured for restore on exit");
+                            this.LogDebug("No default power plan configured for restore on exit");
                         }
                         else
                         {
-                        LogDebug("Restoring default power plan...");
-                        var powerPlanService = _serviceProvider.GetRequiredService<IPowerPlanService>();
-                        await powerPlanService.SetActivePowerPlanByGuidAsync(targetDefaultPowerPlanGuid);
-                        LogDebug("Default power plan restored");
+                            this.LogDebug("Restoring default power plan...");
+                            var powerPlanService = this.serviceProvider.GetRequiredService<IPowerPlanService>();
+                            await powerPlanService.SetActivePowerPlanByGuidAsync(targetDefaultPowerPlanGuid);
+                            this.LogDebug("Default power plan restored");
                         }
                     }
                     catch (Exception ex)
                     {
-                        LogDebug($"Error restoring power plan: {ex.Message}");
+                        this.LogDebug($"Error restoring power plan: {ex.Message}");
                     }
                 }
 
                 // 4. Save settings
                 try
                 {
-                    LogDebug("Saving settings...");
-                    await _settingsService.SaveSettingsAsync();
-                    LogDebug("Settings saved");
+                    this.LogDebug("Saving settings...");
+                    await this.settingsService.SaveSettingsAsync();
+                    this.LogDebug("Settings saved");
                 }
                 catch (Exception ex)
                 {
-                    LogDebug($"Error saving settings: {ex.Message}");
+                    this.LogDebug($"Error saving settings: {ex.Message}");
                 }
 
                 // 5. Dispose tray service
                 try
                 {
-                    LogDebug("Disposing system tray...");
-                    _systemTrayService.Dispose();
-                    LogDebug("System tray disposed");
+                    this.LogDebug("Disposing system tray...");
+                    this.systemTrayService.Dispose();
+                    this.LogDebug("System tray disposed");
                 }
                 catch (Exception ex)
                 {
-                    LogDebug($"Error disposing tray: {ex.Message}");
+                    this.LogDebug($"Error disposing tray: {ex.Message}");
                 }
 
-                LogDebug("Graceful shutdown completed");
+                this.LogDebug("Graceful shutdown completed");
             }
             catch (Exception ex)
             {
-                LogDebug($"Error during graceful shutdown: {ex.Message}");
+                this.LogDebug($"Error during graceful shutdown: {ex.Message}");
             }
             finally
             {
@@ -848,7 +848,7 @@ namespace ThreadPilot
 
         private async Task<bool> HandleUnsavedSettingsBeforeExitAsync()
         {
-            if (!_settingsViewModel.HasPendingChanges)
+            if (!this.settingsViewModel.HasPendingChanges)
             {
                 return true;
             }
@@ -866,35 +866,35 @@ namespace ThreadPilot
 
             if (result == MessageBoxResult.Yes)
             {
-                var saved = await _settingsViewModel.SaveIfDirtyAsync();
+                var saved = await this.settingsViewModel.SaveIfDirtyAsync();
                 return saved;
             }
 
-            await _settingsViewModel.DiscardPendingChangesAsync();
+            await this.settingsViewModel.DiscardPendingChangesAsync();
             return true;
         }
 
         private async Task HandleWindowCloseAsync()
         {
-            if (!await HandleUnsavedSettingsBeforeExitAsync())
+            if (!await this.HandleUnsavedSettingsBeforeExitAsync())
             {
                 return;
             }
 
-            if (_settingsService.Settings.CloseToTray)
+            if (this.settingsService.Settings.CloseToTray)
             {
-                WindowState = WindowState.Minimized;
+                this.WindowState = WindowState.Minimized;
                 return;
             }
 
-            await PerformGracefulShutdownAsync(validateUnsavedChanges: false);
+            await this.PerformGracefulShutdownAsync(validateUnsavedChanges: false);
         }
 
         private void OnMonitoringToggleRequested(object? sender, MonitoringToggleEventArgs e)
         {
-            TaskSafety.FireAndForget(OnMonitoringToggleRequestedAsync(e), ex =>
+            TaskSafety.FireAndForget(this.OnMonitoringToggleRequestedAsync(e), ex =>
             {
-                LogDebug($"OnMonitoringToggleRequested failed: {ex.Message}");
+                this.LogDebug($"OnMonitoringToggleRequested failed: {ex.Message}");
             });
         }
 
@@ -904,15 +904,15 @@ namespace ThreadPilot
             {
                 if (e.EnableMonitoring)
                 {
-                    await _processMonitorManagerService.StartAsync();
-                    await _notificationService.ShowSuccessNotificationAsync(
+                    await this.processMonitorManagerService.StartAsync();
+                    await this.notificationService.ShowSuccessNotificationAsync(
                         "Monitoring Enabled",
                         "Process monitoring and power plan management has been enabled");
                 }
                 else
                 {
-                    await _processMonitorManagerService.StopAsync();
-                    await _notificationService.ShowNotificationAsync(
+                    await this.processMonitorManagerService.StopAsync();
+                    await this.notificationService.ShowNotificationAsync(
                         "Monitoring Disabled",
                         "Process monitoring and power plan management has been disabled",
                         Models.NotificationType.Warning);
@@ -920,7 +920,7 @@ namespace ThreadPilot
             }
             catch (Exception ex)
             {
-                await _notificationService.ShowErrorNotificationAsync(
+                await this.notificationService.ShowErrorNotificationAsync(
                     "Monitoring Error",
                     "Failed to toggle process monitoring",
                     ex);
@@ -931,7 +931,7 @@ namespace ThreadPilot
         {
             try
             {
-                ShowWindowFromTray("Settings");
+                this.ShowWindowFromTray("Settings");
             }
             catch (Exception ex)
             {
@@ -941,9 +941,9 @@ namespace ThreadPilot
 
         private void OnPowerPlanChangeRequested(object? sender, PowerPlanChangeRequestedEventArgs e)
         {
-            TaskSafety.FireAndForget(OnPowerPlanChangeRequestedAsync(e), ex =>
+            TaskSafety.FireAndForget(this.OnPowerPlanChangeRequestedAsync(e), ex =>
             {
-                LogDebug($"OnPowerPlanChangeRequested failed: {ex.Message}");
+                this.LogDebug($"OnPowerPlanChangeRequested failed: {ex.Message}");
             });
         }
 
@@ -951,32 +951,35 @@ namespace ThreadPilot
         {
             try
             {
-                var powerPlanService = _serviceProvider.GetRequiredService<IPowerPlanService>();
+                var powerPlanService = this.serviceProvider.GetRequiredService<IPowerPlanService>();
                 var success = await powerPlanService.SetActivePowerPlanByGuidAsync(e.PowerPlanGuid);
 
                 if (success)
                 {
-                    _systemTrayService.ShowBalloonTip("ThreadPilot",
+                    this.systemTrayService.ShowBalloonTip(
+                        "ThreadPilot",
                         $"Power plan changed to {e.PowerPlanName}", 2000);
                 }
                 else
                 {
-                    _systemTrayService.ShowBalloonTip("ThreadPilot Error",
+                    this.systemTrayService.ShowBalloonTip(
+                        "ThreadPilot Error",
                         $"Failed to change power plan to {e.PowerPlanName}", 3000);
                 }
             }
             catch (Exception ex)
             {
-                _systemTrayService.ShowBalloonTip("ThreadPilot Error",
+                this.systemTrayService.ShowBalloonTip(
+                    "ThreadPilot Error",
                     $"Error changing power plan: {ex.Message}", 3000);
             }
         }
 
         private void OnProfileApplicationRequested(object? sender, ProfileApplicationRequestedEventArgs e)
         {
-            TaskSafety.FireAndForget(OnProfileApplicationRequestedAsync(e), ex =>
+            TaskSafety.FireAndForget(this.OnProfileApplicationRequestedAsync(e), ex =>
             {
-                LogDebug($"OnProfileApplicationRequested failed: {ex.Message}");
+                this.LogDebug($"OnProfileApplicationRequested failed: {ex.Message}");
             });
         }
 
@@ -984,8 +987,8 @@ namespace ThreadPilot
         {
             try
             {
-                var processService = _serviceProvider.GetRequiredService<IProcessService>();
-                var selectedProcess = _processViewModel.SelectedProcess;
+                var processService = this.serviceProvider.GetRequiredService<IProcessService>();
+                var selectedProcess = this.processViewModel.SelectedProcess;
 
                 if (selectedProcess != null)
                 {
@@ -993,24 +996,28 @@ namespace ThreadPilot
 
                     if (success)
                     {
-                        _systemTrayService.ShowBalloonTip("ThreadPilot",
+                        this.systemTrayService.ShowBalloonTip(
+                            "ThreadPilot",
                             $"Profile '{e.ProfileName}' applied to {selectedProcess.Name}", 2000);
                     }
                     else
                     {
-                        _systemTrayService.ShowBalloonTip("ThreadPilot Error",
+                        this.systemTrayService.ShowBalloonTip(
+                            "ThreadPilot Error",
                             $"Failed to apply profile '{e.ProfileName}'", 3000);
                     }
                 }
                 else
                 {
-                    _systemTrayService.ShowBalloonTip("ThreadPilot",
+                    this.systemTrayService.ShowBalloonTip(
+                        "ThreadPilot",
                         "No process selected for profile application", 2000);
                 }
             }
             catch (Exception ex)
             {
-                _systemTrayService.ShowBalloonTip("ThreadPilot Error",
+                this.systemTrayService.ShowBalloonTip(
+                    "ThreadPilot Error",
                     $"Error applying profile: {ex.Message}", 3000);
             }
         }
@@ -1019,7 +1026,7 @@ namespace ThreadPilot
         {
             try
             {
-                ShowWindowFromTray("Performance");
+                this.ShowWindowFromTray("Performance");
             }
             catch (Exception ex)
             {
@@ -1035,19 +1042,19 @@ namespace ThreadPilot
                 var windowInteropHelper = new System.Windows.Interop.WindowInteropHelper(this);
                 var handle = windowInteropHelper.EnsureHandle();
 
-                if (_keyboardShortcutService is KeyboardShortcutService service)
+                if (this.keyboardShortcutService is KeyboardShortcutService service)
                 {
                     service.SetWindowHandle(handle);
                 }
 
                 // Subscribe to shortcut activation events
-                _keyboardShortcutService.ShortcutActivated -= OnShortcutActivated;
-                _keyboardShortcutService.ShortcutActivated += OnShortcutActivated;
+                this.keyboardShortcutService.ShortcutActivated -= this.OnShortcutActivated;
+                this.keyboardShortcutService.ShortcutActivated += this.OnShortcutActivated;
 
                 // Load shortcuts from settings - with error handling
                 try
                 {
-                    await _keyboardShortcutService.LoadShortcutsFromSettingsAsync();
+                    await this.keyboardShortcutService.LoadShortcutsFromSettingsAsync();
                 }
                 catch (Exception settingsEx)
                 {
@@ -1068,7 +1075,7 @@ namespace ThreadPilot
             {
                 System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
                 {
-                    await HandleShortcutActionAsync(e.ActionName);
+                    await this.HandleShortcutActionAsync(e.ActionName);
                 });
             }
             catch (Exception ex)
@@ -1082,42 +1089,42 @@ namespace ThreadPilot
             switch (actionName)
             {
                 case ShortcutActions.ShowMainWindow:
-                    if (IsVisible && WindowState != WindowState.Minimized)
+                    if (this.IsVisible && this.WindowState != WindowState.Minimized)
                     {
-                        ShowInTaskbar = false;
-                        Hide();
+                        this.ShowInTaskbar = false;
+                        this.Hide();
                     }
                     else
                     {
-                        ShowWindowFromTray();
+                        this.ShowWindowFromTray();
                     }
                     break;
 
                 case ShortcutActions.ToggleMonitoring:
                     // Toggle monitoring - implementation can be added later
-                    await _notificationService.ShowNotificationAsync("Keyboard Shortcut", "Toggle monitoring shortcut activated");
+                    await this.notificationService.ShowNotificationAsync("Keyboard Shortcut", "Toggle monitoring shortcut activated");
                     break;
 
                 case ShortcutActions.PowerPlanHighPerformance:
                     // Switch to high performance power plan - implementation can be added later
-                    await _notificationService.ShowNotificationAsync("Keyboard Shortcut", "High Performance power plan shortcut activated");
+                    await this.notificationService.ShowNotificationAsync("Keyboard Shortcut", "High Performance power plan shortcut activated");
                     break;
 
                 case ShortcutActions.OpenTweaks:
-                    ShowWindowFromTray("Tweaks");
+                    this.ShowWindowFromTray("Tweaks");
                     break;
 
                 case ShortcutActions.OpenSettings:
-                    ShowWindowFromTray("Settings");
+                    this.ShowWindowFromTray("Settings");
                     break;
 
                 case ShortcutActions.RefreshProcessList:
                     // Refresh process list - implementation can be added later
-                    await _notificationService.ShowNotificationAsync("Keyboard Shortcut", "Refresh process list shortcut activated");
+                    await this.notificationService.ShowNotificationAsync("Keyboard Shortcut", "Refresh process list shortcut activated");
                     break;
 
                 case ShortcutActions.ExitApplication:
-                    Close();
+                    this.Close();
                     break;
             }
         }
@@ -1127,10 +1134,10 @@ namespace ThreadPilot
             try
             {
                 // Update power plans in system tray
-                var powerPlanService = _serviceProvider.GetRequiredService<IPowerPlanService>();
+                var powerPlanService = this.serviceProvider.GetRequiredService<IPowerPlanService>();
                 var powerPlans = await powerPlanService.GetPowerPlansAsync();
                 var activePowerPlan = await powerPlanService.GetActivePowerPlan();
-                _systemTrayService.UpdatePowerPlans(powerPlans, activePowerPlan);
+                this.systemTrayService.UpdatePowerPlans(powerPlans, activePowerPlan);
 
                 // Update profiles in system tray
                 var profilesDirectory = StoragePaths.ProfilesDirectory;
@@ -1144,19 +1151,19 @@ namespace ThreadPilot
                         .ToList()!;
                 }
 
-                _systemTrayService.UpdateProfiles(profileNames);
+                this.systemTrayService.UpdateProfiles(profileNames);
 
                 // Update system status (with timeout to prevent hanging)
                 try
                 {
-                    var performanceService = _serviceProvider.GetRequiredService<IPerformanceMonitoringService>();
+                    var performanceService = this.serviceProvider.GetRequiredService<IPerformanceMonitoringService>();
                     var metricsTask = performanceService.GetSystemMetricsAsync();
                     var metricsResult = await Task.WhenAny(metricsTask, Task.Delay(2000)); // 2 second timeout
 
                     if (metricsResult == metricsTask)
                     {
                         var currentMetrics = await metricsTask;
-                        _systemTrayService.UpdateSystemStatus(
+                        this.systemTrayService.UpdateSystemStatus(
                             activePowerPlan?.Name ?? "Unknown",
                             currentMetrics?.TotalCpuUsage ?? 0.0,
                             currentMetrics?.MemoryUsagePercentage ?? 0.0);
@@ -1164,7 +1171,7 @@ namespace ThreadPilot
                     else
                     {
                         // Timeout - use default values
-                        _systemTrayService.UpdateSystemStatus(
+                        this.systemTrayService.UpdateSystemStatus(
                             activePowerPlan?.Name ?? "Unknown",
                             0.0, 0.0);
                     }
@@ -1173,7 +1180,7 @@ namespace ThreadPilot
                 {
                     System.Diagnostics.Debug.WriteLine($"Failed to get performance metrics for tray: {metricsEx.Message}");
                     // Use default values
-                    _systemTrayService.UpdateSystemStatus(
+                    this.systemTrayService.UpdateSystemStatus(
                         activePowerPlan?.Name ?? "Unknown",
                         0.0, 0.0);
                 }
@@ -1188,21 +1195,21 @@ namespace ThreadPilot
         {
             try
             {
-                _systemTrayUpdateTimer = new System.Timers.Timer(10000); // PERFORMANCE OPTIMIZATION: Update every 10 seconds instead of 5
+                this.systemTrayUpdateTimer = new System.Timers.Timer(10000); // PERFORMANCE OPTIMIZATION: Update every 10 seconds instead of 5
                 // Marshal timer callback to UI thread to avoid cross-thread access issues
-                _systemTrayUpdateTimer.Elapsed += async (s, e) =>
+                this.systemTrayUpdateTimer.Elapsed += async (s, e) =>
                 {
                     try
                     {
-                        await Dispatcher.InvokeAsync(async () => await UpdateSystemTrayStatusAsync());
+                        await this.Dispatcher.InvokeAsync(async () => await this.UpdateSystemTrayStatusAsync());
                     }
                     catch (Exception ex)
                     {
                         System.Diagnostics.Debug.WriteLine($"Error in system tray update timer: {ex.Message}");
                     }
                 };
-                _systemTrayUpdateTimer.AutoReset = true;
-                _systemTrayUpdateTimer.Start();
+                this.systemTrayUpdateTimer.AutoReset = true;
+                this.systemTrayUpdateTimer.Start();
             }
             catch (Exception ex)
             {
@@ -1214,13 +1221,13 @@ namespace ThreadPilot
         {
             try
             {
-                var powerPlanService = _serviceProvider.GetRequiredService<IPowerPlanService>();
-                var performanceService = _serviceProvider.GetRequiredService<IPerformanceMonitoringService>();
+                var powerPlanService = this.serviceProvider.GetRequiredService<IPowerPlanService>();
+                var performanceService = this.serviceProvider.GetRequiredService<IPerformanceMonitoringService>();
 
                 var activePowerPlan = await powerPlanService.GetActivePowerPlan();
                 var currentMetrics = await performanceService.GetSystemMetricsAsync();
 
-                _systemTrayService.UpdateSystemStatus(
+                this.systemTrayService.UpdateSystemStatus(
                     activePowerPlan?.Name ?? "Unknown",
                     currentMetrics?.TotalCpuUsage ?? 0.0,
                     currentMetrics?.MemoryUsagePercentage ?? 0.0);
@@ -1236,7 +1243,7 @@ namespace ThreadPilot
             try
             {
                 // Subscribe to settings changes to update notification service
-                _settingsService.SettingsChanged += OnSettingsChanged;
+                this.settingsService.SettingsChanged += this.OnSettingsChanged;
             }
             catch (Exception ex)
             {
@@ -1249,12 +1256,12 @@ namespace ThreadPilot
             try
             {
                 // Subscribe to monitoring status changes
-                _processMonitorService.MonitoringStatusChanged += OnMonitoringStatusChanged;
+                this.processMonitorService.MonitoringStatusChanged += this.OnMonitoringStatusChanged;
 
                 // Update tray with initial monitoring status
-                _systemTrayService.UpdateMonitoringStatus(
-                    _processMonitorService.IsMonitoring,
-                    _processMonitorService.IsWmiAvailable);
+                this.systemTrayService.UpdateMonitoringStatus(
+                    this.processMonitorService.IsMonitoring,
+                    this.processMonitorService.IsWmiAvailable);
             }
             catch (Exception ex)
             {
@@ -1266,44 +1273,44 @@ namespace ThreadPilot
         {
             try
             {
-                LogDebug("Subscribing to process monitor manager events...");
+                this.LogDebug("Subscribing to process monitor manager events...");
                 // Subscribe to process monitor manager events
-                _processMonitorManagerService.ServiceStatusChanged += OnProcessMonitorManagerStatusChanged;
+                this.processMonitorManagerService.ServiceStatusChanged += this.OnProcessMonitorManagerStatusChanged;
 
-                LogDebug("Starting process monitoring manager service...");
+                this.LogDebug("Starting process monitoring manager service...");
                 // Start the process monitoring manager service with internal timeout
-                var startTask = _processMonitorManagerService.StartAsync();
+                var startTask = this.processMonitorManagerService.StartAsync();
                 var timeoutTask = Task.Delay(6000); // 6 second internal timeout
                 var completedTask = await Task.WhenAny(startTask, timeoutTask);
 
                 if (completedTask == timeoutTask)
                 {
-                    LogDebug("ProcessMonitorManagerService.StartAsync() timed out internally");
+                    this.LogDebug("ProcessMonitorManagerService.StartAsync() timed out internally");
                     throw new TimeoutException("Process monitoring manager service startup timed out");
                 }
 
                 await startTask; // Get any exceptions
-                LogDebug("Process monitoring manager service started, showing notification...");
+                this.LogDebug("Process monitoring manager service started, showing notification...");
 
-                await _notificationService.ShowSuccessNotificationAsync(
+                await this.notificationService.ShowSuccessNotificationAsync(
                     "ThreadPilot Started",
                     "Process monitoring and power plan management is now active");
 
-                LogDebug("Success notification shown");
+                this.LogDebug("Success notification shown");
             }
             catch (Exception ex)
             {
-                LogDebug($"Failed to start process monitoring manager: {ex.Message}");
+                this.LogDebug($"Failed to start process monitoring manager: {ex.Message}");
                 try
                 {
-                    await _notificationService.ShowErrorNotificationAsync(
+                    await this.notificationService.ShowErrorNotificationAsync(
                         "Startup Error",
                         "Failed to start process monitoring manager",
                         ex);
                 }
                 catch (Exception notificationEx)
                 {
-                    LogDebug($"Failed to show error notification: {notificationEx.Message}");
+                    this.LogDebug($"Failed to show error notification: {notificationEx.Message}");
                 }
                 throw; // Re-throw to be caught by outer handler
             }
@@ -1312,26 +1319,26 @@ namespace ThreadPilot
         private void OnSettingsChanged(object? sender, ApplicationSettingsChangedEventArgs e)
         {
             // Update tray service with new settings
-            _systemTrayService.UpdateSettings(e.NewSettings);
+            this.systemTrayService.UpdateSettings(e.NewSettings);
 
             var useDarkTheme = e.NewSettings.HasUserThemePreference
                 ? e.NewSettings.UseDarkTheme
-                : _themeService.GetSystemUsesDarkTheme();
+                : this.themeService.GetSystemUsesDarkTheme();
 
-            _themeService.ApplyTheme(useDarkTheme);
-            _systemTrayService.ApplyTheme(useDarkTheme);
-            ApplyWindowCaptionTheme(useDarkTheme);
+            this.themeService.ApplyTheme(useDarkTheme);
+            this.systemTrayService.ApplyTheme(useDarkTheme);
+            this.ApplyWindowCaptionTheme(useDarkTheme);
         }
 
         private void OnMonitoringStatusChanged(object? sender, MonitoringStatusEventArgs e)
         {
             // Update tray icon and status
-            _systemTrayService.UpdateMonitoringStatus(e.IsMonitoring, e.IsWmiAvailable);
+            this.systemTrayService.UpdateMonitoringStatus(e.IsMonitoring, e.IsWmiAvailable);
 
             // Show notification if there's an error
-            if (e.Error != null && _settingsService.Settings.EnableErrorNotifications)
+            if (e.Error != null && this.settingsService.Settings.EnableErrorNotifications)
             {
-                _notificationService.ShowErrorNotificationAsync(
+                this.notificationService.ShowErrorNotificationAsync(
                     "Monitoring Error",
                     e.StatusMessage ?? "An error occurred with process monitoring",
                     e.Error);
@@ -1341,12 +1348,12 @@ namespace ThreadPilot
         private void OnProcessMonitorManagerStatusChanged(object? sender, ServiceStatusEventArgs e)
         {
             // Update main window status
-            _mainWindowViewModel.UpdateProcessMonitoringStatus(e.IsRunning, e.Status);
+            this.mainWindowViewModel.UpdateProcessMonitoringStatus(e.IsRunning, e.Status);
 
             // Show notification for critical status changes
-            if (!e.IsRunning && e.Error != null && _settingsService.Settings.EnableErrorNotifications)
+            if (!e.IsRunning && e.Error != null && this.settingsService.Settings.EnableErrorNotifications)
             {
-                _notificationService.ShowErrorNotificationAsync(
+                this.notificationService.ShowErrorNotificationAsync(
                     "Process Monitoring Error",
                     e.Details ?? "Process monitoring manager encountered an error",
                     e.Error);
@@ -1357,36 +1364,36 @@ namespace ThreadPilot
         {
             try
             {
-                if (WindowState == WindowState.Minimized && _settingsService.Settings.MinimizeToTray)
+                if (this.WindowState == WindowState.Minimized && this.settingsService.Settings.MinimizeToTray)
                 {
-                    ShowInTaskbar = false;
-                    Hide();
-                    _systemTrayService.Show();
+                    this.ShowInTaskbar = false;
+                    this.Hide();
+                    this.systemTrayService.Show();
 
                     // Pause process refresh when minimized to reduce resource usage
-                    if (_processViewModel != null)
+                    if (this.processViewModel != null)
                     {
-                        _processViewModel.PauseRefresh();
+                        this.processViewModel.PauseRefresh();
                     }
 
-                    if (_performanceViewModel != null)
+                    if (this.performanceViewModel != null)
                     {
-                        _ = _performanceViewModel.SuspendBackgroundMonitoringAsync();
+                        _ = this.performanceViewModel.SuspendBackgroundMonitoringAsync();
                     }
                 }
-                else if (WindowState == WindowState.Normal)
+                else if (this.WindowState == WindowState.Normal)
                 {
-                    ShowInTaskbar = true;
+                    this.ShowInTaskbar = true;
 
                     // Resume process refresh when restored
-                    if (_processViewModel != null)
+                    if (this.processViewModel != null)
                     {
-                        _processViewModel.ResumeRefresh();
+                        this.processViewModel.ResumeRefresh();
                     }
 
-                    if (_performanceViewModel != null)
+                    if (this.performanceViewModel != null)
                     {
-                        _ = _performanceViewModel.ResumeBackgroundMonitoringAsync();
+                        _ = this.performanceViewModel.ResumeBackgroundMonitoringAsync();
                     }
                 }
             }
@@ -1401,7 +1408,7 @@ namespace ThreadPilot
         protected override void OnSourceInitialized(EventArgs e)
         {
             base.OnSourceInitialized(e);
-            ApplyWindowCaptionTheme(_themeService.IsDarkTheme);
+            this.ApplyWindowCaptionTheme(this.themeService.IsDarkTheme);
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
@@ -1411,7 +1418,7 @@ namespace ThreadPilot
             {
                 var timestampedMessage = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [MainWindow] {message}";
                 System.Diagnostics.Debug.WriteLine(timestampedMessage);
-                File.AppendAllText(_debugLogPath, timestampedMessage + Environment.NewLine);
+                File.AppendAllText(this.debugLogPath, timestampedMessage + Environment.NewLine);
             }
             catch
             {
@@ -1421,21 +1428,21 @@ namespace ThreadPilot
 
         private void OnWindowLoaded(object? sender, RoutedEventArgs e)
         {
-            TaskSafety.FireAndForget(OnWindowLoadedAsync(), ex =>
+            TaskSafety.FireAndForget(this.OnWindowLoadedAsync(), ex =>
             {
-                LogDebug($"OnWindowLoaded failed: {ex.Message}");
+                this.LogDebug($"OnWindowLoaded failed: {ex.Message}");
             });
         }
 
         private async Task OnWindowLoadedAsync()
         {
-            Loaded -= OnWindowLoaded;
-            await InitializeKeyboardShortcutsAsync();
+            this.Loaded -= this.OnWindowLoaded;
+            await this.InitializeKeyboardShortcutsAsync();
         }
 
         private void OnOpenRulesRequested(object? sender, EventArgs e)
         {
-            SelectMainTab("Rules");
+            this.SelectMainTab("Rules");
         }
 
         private static bool IsTabItem(object? item, object target)
@@ -1445,28 +1452,28 @@ namespace ThreadPilot
 
         private void ShowWindowFromTray(string? tabTag = null)
         {
-            ShowInTaskbar = true;
-            Visibility = Visibility.Visible;
+            this.ShowInTaskbar = true;
+            this.Visibility = Visibility.Visible;
 
-            if (!IsVisible)
+            if (!this.IsVisible)
             {
-                Show();
+                this.Show();
             }
 
-            if (WindowState == WindowState.Minimized)
+            if (this.WindowState == WindowState.Minimized)
             {
-                WindowState = WindowState.Normal;
+                this.WindowState = WindowState.Normal;
             }
 
             // Force foreground restoration when invoked from tray context menu.
-            Topmost = true;
-            Activate();
-            Focus();
-            Topmost = false;
+            this.Topmost = true;
+            this.Activate();
+            this.Focus();
+            this.Topmost = false;
 
             if (tabTag != null)
             {
-                _ = Dispatcher.InvokeAsync(() => SelectMainTab(tabTag));
+                _ = this.Dispatcher.InvokeAsync(() => this.SelectMainTab(tabTag));
             }
         }
 
@@ -1495,59 +1502,69 @@ namespace ThreadPilot
 
         private void SelectMainTab(string tag)
         {
-            if (string.IsNullOrEmpty(tag)) return;
+            if (string.IsNullOrEmpty(tag))
+            {
+                return;
+            }
 
-            ApplySectionVisibility(tag);
+            this.ApplySectionVisibility(tag);
 
             // Keep NavigationView internal state aligned when possible.
-            RootNavigation.Navigate(tag);
+            this.RootNavigation.Navigate(tag);
         }
 
         private void ApplySectionVisibility(string tag)
         {
-            ProcessManagementTab.Visibility = tag == "Process" ? Visibility.Visible : Visibility.Collapsed;
-            CoreMasksTab.Visibility = tag == "Masks" ? Visibility.Visible : Visibility.Collapsed;
-            PowerPlanViewControl.Visibility = tag == "Power" ? Visibility.Visible : Visibility.Collapsed;
-            AssociationView.Visibility = tag == "Rules" ? Visibility.Visible : Visibility.Collapsed;
-            PerformanceViewControl.Visibility = tag == "Performance" ? Visibility.Visible : Visibility.Collapsed;
-            SystemTweaksView.Visibility = tag == "Tweaks" ? Visibility.Visible : Visibility.Collapsed;
-            SettingsView.Visibility = tag == "Settings" ? Visibility.Visible : Visibility.Collapsed;
+            this.ProcessManagementTab.Visibility = tag == "Process" ? Visibility.Visible : Visibility.Collapsed;
+            this.CoreMasksTab.Visibility = tag == "Masks" ? Visibility.Visible : Visibility.Collapsed;
+            this.PowerPlanViewControl.Visibility = tag == "Power" ? Visibility.Visible : Visibility.Collapsed;
+            this.AssociationView.Visibility = tag == "Rules" ? Visibility.Visible : Visibility.Collapsed;
+            this.PerformanceViewControl.Visibility = tag == "Performance" ? Visibility.Visible : Visibility.Collapsed;
+            this.SystemTweaksView.Visibility = tag == "Tweaks" ? Visibility.Visible : Visibility.Collapsed;
+            this.SettingsView.Visibility = tag == "Settings" ? Visibility.Visible : Visibility.Collapsed;
 
-            NavProcess.IsActive = tag == "Process";
-            NavMasks.IsActive = tag == "Masks";
-            NavPower.IsActive = tag == "Power";
-            NavRules.IsActive = tag == "Rules";
-            NavPerf.IsActive = tag == "Performance";
-            NavTweaks.IsActive = tag == "Tweaks";
-            NavSettings.IsActive = tag == "Settings";
+            this.NavProcess.IsActive = tag == "Process";
+            this.NavMasks.IsActive = tag == "Masks";
+            this.NavPower.IsActive = tag == "Power";
+            this.NavRules.IsActive = tag == "Rules";
+            this.NavPerf.IsActive = tag == "Performance";
+            this.NavTweaks.IsActive = tag == "Tweaks";
+            this.NavSettings.IsActive = tag == "Settings";
         }
 
         private void NavMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            TaskSafety.FireAndForget(NavMenuItem_ClickAsync(sender, e), ex =>
+            TaskSafety.FireAndForget(this.NavMenuItem_ClickAsync(sender, e), ex =>
             {
-                LogDebug($"NavMenuItem_Click failed: {ex.Message}");
+                this.LogDebug($"NavMenuItem_Click failed: {ex.Message}");
             });
         }
 
         private async Task NavMenuItem_ClickAsync(object sender, RoutedEventArgs e)
         {
-            if (_isHandlingTabSelection)
+            if (this.isHandlingTabSelection)
             {
                 return;
             }
 
             var invokedItem = sender as Wpf.Ui.Controls.NavigationViewItem;
-            if (invokedItem == null) return;
+            if (invokedItem == null)
+            {
+                return;
+            }
 
             var tag = invokedItem.Tag?.ToString();
-            if (string.IsNullOrEmpty(tag)) return;
+            if (string.IsNullOrEmpty(tag))
+            {
+                return;
+            }
 
-            await _tabSwitchGuard.WaitAsync();
+            await this.tabSwitchGuard.WaitAsync();
+            this.isHandlingTabSelection = true;
 
             try
             {
-                if (!IsLoaded)
+                if (!this.IsLoaded)
                 {
                     return;
                 }
@@ -1556,7 +1573,7 @@ namespace ThreadPilot
                 // but since Wpf.Ui NavigationView selected items are harder to revert implicitly,
                 // we'll run the check here. If unsaved, focus gets yanked back potentially in complex way. 
                 // We keep it functionally safe:
-                if (_settingsViewModel.HasPendingChanges && tag != "Settings")
+                if (this.settingsViewModel.HasPendingChanges && tag != "Settings")
                 {
                     var result = System.Windows.MessageBox.Show(
                         "You have unsaved changes in Settings.\n\nChoose an action:\n- Yes: Save changes\n- No: Discard changes\n- Cancel: Stay on current tab",
@@ -1570,56 +1587,56 @@ namespace ThreadPilot
                     }
                     else if (result == MessageBoxResult.Yes)
                     {
-                        var saved = await _settingsViewModel.SaveIfDirtyAsync();
+                        var saved = await this.settingsViewModel.SaveIfDirtyAsync();
                     }
                     else if (result == MessageBoxResult.No)
                     {
-                        await _settingsViewModel.DiscardPendingChangesAsync();
+                        await this.settingsViewModel.DiscardPendingChangesAsync();
                     }
                 }
 
-                ApplySectionVisibility(tag);
-
+                this.ApplySectionVisibility(tag);
             }
             finally
             {
-                _tabSwitchGuard.Release();
+                this.isHandlingTabSelection = false;
+                this.tabSwitchGuard.Release();
             }
         }
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
-            if (_isPerformingShutdown)
+            if (this.isPerformingShutdown)
             {
                 base.OnClosing(e);
                 return;
             }
 
             e.Cancel = true;
-            _ = HandleWindowCloseAsync();
+            _ = this.HandleWindowCloseAsync();
         }
 
         protected override void OnClosed(EventArgs e)
         {
             try
             {
-                Loaded -= OnWindowLoaded;
-                _processViewModel.OpenRulesRequested -= OnOpenRulesRequested;
+                this.Loaded -= this.OnWindowLoaded;
+                this.processViewModel.OpenRulesRequested -= this.OnOpenRulesRequested;
 
-                _settingsService.SettingsChanged -= OnSettingsChanged;
-                _processMonitorService.MonitoringStatusChanged -= OnMonitoringStatusChanged;
-                _processMonitorManagerService.ServiceStatusChanged -= OnProcessMonitorManagerStatusChanged;
-                _keyboardShortcutService.ShortcutActivated -= OnShortcutActivated;
+                this.settingsService.SettingsChanged -= this.OnSettingsChanged;
+                this.processMonitorService.MonitoringStatusChanged -= this.OnMonitoringStatusChanged;
+                this.processMonitorManagerService.ServiceStatusChanged -= this.OnProcessMonitorManagerStatusChanged;
+                this.keyboardShortcutService.ShortcutActivated -= this.OnShortcutActivated;
 
-                UnsubscribeSystemTrayEvents();
+                this.UnsubscribeSystemTrayEvents();
 
-                _systemTrayUpdateTimer?.Stop();
-                _systemTrayUpdateTimer?.Dispose();
+                this.systemTrayUpdateTimer?.Stop();
+                this.systemTrayUpdateTimer?.Dispose();
 
-                _initializationTimeoutTimer?.Stop();
-                _initializationTimeoutTimer?.Dispose();
+                this.initializationTimeoutTimer?.Stop();
+                this.initializationTimeoutTimer?.Dispose();
 
-                _tabSwitchGuard.Dispose();
+                this.tabSwitchGuard.Dispose();
             }
             catch (Exception ex)
             {
@@ -1631,14 +1648,14 @@ namespace ThreadPilot
 
         private void UnsubscribeSystemTrayEvents()
         {
-            _systemTrayService.ShowMainWindowRequested -= OnShowMainWindowRequested;
-            _systemTrayService.DashboardRequested -= OnDashboardRequested;
-            _systemTrayService.ExitRequested -= OnExitRequested;
-            _systemTrayService.MonitoringToggleRequested -= OnMonitoringToggleRequested;
-            _systemTrayService.SettingsRequested -= OnSettingsRequested;
-            _systemTrayService.PowerPlanChangeRequested -= OnPowerPlanChangeRequested;
-            _systemTrayService.ProfileApplicationRequested -= OnProfileApplicationRequested;
-            _systemTrayService.PerformanceDashboardRequested -= OnPerformanceDashboardRequested;
+            this.systemTrayService.ShowMainWindowRequested -= this.OnShowMainWindowRequested;
+            this.systemTrayService.DashboardRequested -= this.OnDashboardRequested;
+            this.systemTrayService.ExitRequested -= this.OnExitRequested;
+            this.systemTrayService.MonitoringToggleRequested -= this.OnMonitoringToggleRequested;
+            this.systemTrayService.SettingsRequested -= this.OnSettingsRequested;
+            this.systemTrayService.PowerPlanChangeRequested -= this.OnPowerPlanChangeRequested;
+            this.systemTrayService.ProfileApplicationRequested -= this.OnProfileApplicationRequested;
+            this.systemTrayService.PerformanceDashboardRequested -= this.OnPerformanceDashboardRequested;
         }
     }
 }

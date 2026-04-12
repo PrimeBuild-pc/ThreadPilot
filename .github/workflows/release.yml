@@ -28,23 +28,95 @@ jobs:
       - name: Build
         run: dotnet build "ThreadPilot_1.sln" --configuration Release --no-restore
 
-      - name: Publish self-contained app
-        run: dotnet publish "ThreadPilot.csproj" --configuration Release --runtime win-x64 --self-contained true -o artifacts/release/win-x64
+      - name: Test
+        run: dotnet test "ThreadPilot_1.sln" --configuration Release --no-build
 
-      - name: Create release package
+      - name: Publish self-contained single-file
+        run: dotnet publish "ThreadPilot.csproj" --configuration Release -p:PublishProfile=WinX64-SingleFile
+
+      - name: Publish ReadyToRun
+        run: dotnet publish "ThreadPilot.csproj" --configuration Release -p:PublishProfile=WinX64-ReadyToRun
+
+      - name: Publish MSIX
+        run: dotnet publish "ThreadPilot.csproj" --configuration Release -p:PublishProfile=WinX64-MSIX
+
+      - name: Validate MSIX output
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $msixFiles = Get-ChildItem "artifacts/release/msix" -Recurse -File -Include *.msix,*.appx,*.msixbundle,*.appxbundle -ErrorAction SilentlyContinue
+          if (-not $msixFiles)
+          {
+            throw "MSIX package generation failed: no package artifacts found in artifacts/release/msix."
+          }
+
+          Write-Host "MSIX artifacts found: $($msixFiles.Count)"
+
+      - name: Prepare signing certificate (optional)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_CERT_BASE64) -or [string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_CERT_PASSWORD))
+          {
+            Write-Host "Signing secrets not provided via environment variables. Skipping certificate preparation."
+            exit 0
+          }
+
+          $certPath = Join-Path $env:RUNNER_TEMP "threadpilot-signing.pfx"
+          [System.IO.File]::WriteAllBytes($certPath, [System.Convert]::FromBase64String($env:WINDOWS_SIGNING_CERT_BASE64))
+          "THREADPILOT_SIGN_CERT_PATH=$certPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Sign binaries and packages (optional)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          if ([string]::IsNullOrWhiteSpace($env:THREADPILOT_SIGN_CERT_PATH) -or -not (Test-Path $env:THREADPILOT_SIGN_CERT_PATH))
+          {
+            Write-Host "No signing certificate prepared. Skipping signing step."
+            exit 0
+          }
+
+          if (-not (Get-Command signtool.exe -ErrorAction SilentlyContinue))
+          {
+            throw "signtool.exe not found on runner; install Windows SDK or disable signing."
+          }
+
+          $timestampUrl = "http://timestamp.digicert.com"
+          $password = $env:WINDOWS_SIGNING_CERT_PASSWORD
+          $targets = @()
+          $targets += Get-ChildItem "artifacts/release/singlefile" -Recurse -File -Include *.exe -ErrorAction SilentlyContinue
+          $targets += Get-ChildItem "artifacts/release/readytorun" -Recurse -File -Include *.exe -ErrorAction SilentlyContinue
+          $targets += Get-ChildItem "artifacts/release/msix" -Recurse -File -Include *.msix,*.appx,*.msixbundle,*.appxbundle -ErrorAction SilentlyContinue
+
+          foreach ($target in $targets)
+          {
+            signtool.exe sign /fd SHA256 /tr $timestampUrl /td SHA256 /f "$env:THREADPILOT_SIGN_CERT_PATH" /p $password "$($target.FullName)"
+          }
+
+      - name: Create release packages
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
           $version = "${{ github.ref_name }}"
-          $zipName = "ThreadPilot_$version`_win-x64.zip"
-          Compress-Archive -Path "artifacts/release/win-x64/*" -DestinationPath "artifacts/release/$zipName" -Force
+          New-Item -ItemType Directory -Force -Path "artifacts/release/packages" | Out-Null
+
+          $singleFileZip = "artifacts/release/packages/ThreadPilot_$version`_singlefile_win-x64.zip"
+          $readyToRunZip = "artifacts/release/packages/ThreadPilot_$version`_readytorun_win-x64.zip"
+
+          Compress-Archive -Path "artifacts/release/singlefile/*" -DestinationPath $singleFileZip -Force
+          Compress-Archive -Path "artifacts/release/readytorun/*" -DestinationPath $readyToRunZip -Force
 
       - name: Generate checksums
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
           $hashFile = "artifacts/release/SHA256SUMS.txt"
-          Get-ChildItem "artifacts/release" -File | ForEach-Object {
+
+          $releaseFiles = @()
+          $releaseFiles += Get-ChildItem "artifacts/release/packages" -File -ErrorAction SilentlyContinue
+          $releaseFiles += Get-ChildItem "artifacts/release/msix" -Recurse -File -Include *.msix,*.appx,*.msixbundle,*.appxbundle -ErrorAction SilentlyContinue
+
+          $releaseFiles | ForEach-Object {
             $hash = Get-FileHash $_.FullName -Algorithm SHA256
             "$($hash.Hash)  $($_.Name)" | Out-File -FilePath $hashFile -Append -Encoding utf8
           }
@@ -53,6 +125,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/release/*.zip
+            artifacts/release/packages/*.zip
+            artifacts/release/msix/**/*.msix
+            artifacts/release/msix/**/*.appx
+            artifacts/release/msix/**/*.msixbundle
+            artifacts/release/msix/**/*.appxbundle
             artifacts/release/SHA256SUMS.txt
           generate_release_notes: true

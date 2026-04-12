@@ -14,13 +14,13 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using CommunityToolkit.Mvvm.ComponentModel;
-
 namespace ThreadPilot.Models
 {
+    using System;
+    using CommunityToolkit.Mvvm.ComponentModel;
+
     /// <summary>
-    /// Model representing a notification
+    /// Model representing a notification.
     /// </summary>
     public partial class NotificationModel : ObservableObject
     {
@@ -67,46 +67,49 @@ namespace ThreadPilot.Models
         private string? sourceService;
 
         /// <summary>
-        /// Creates a new notification
+        /// Initializes a new instance of the <see cref="NotificationModel"/> class.
+        /// Creates a new notification.
         /// </summary>
         public NotificationModel()
         {
         }
 
         /// <summary>
-        /// Creates a new notification with basic information
+        /// Initializes a new instance of the <see cref="NotificationModel"/> class.
+        /// Creates a new notification with basic information.
         /// </summary>
         public NotificationModel(string title, string message, NotificationType type = NotificationType.Information)
         {
-            Title = title;
-            Message = message;
-            Type = type;
+            this.Title = title;
+            this.Message = message;
+            this.Type = type;
         }
 
         /// <summary>
-        /// Creates a new notification with full information
+        /// Initializes a new instance of the <see cref="NotificationModel"/> class.
+        /// Creates a new notification with full information.
         /// </summary>
         public NotificationModel(string title, string message, NotificationType type, int durationMs, bool isPersistent = false)
         {
-            Title = title;
-            Message = message;
-            Type = type;
-            DurationMs = durationMs;
-            IsPersistent = isPersistent;
+            this.Title = title;
+            this.Message = message;
+            this.Type = type;
+            this.DurationMs = durationMs;
+            this.IsPersistent = isPersistent;
         }
 
         /// <summary>
-        /// Marks the notification as read
+        /// Marks the notification as read.
         /// </summary>
         public void MarkAsRead()
         {
-            IsRead = true;
+            this.IsRead = true;
         }
 
         /// <summary>
-        /// Gets the display text for the notification type
+        /// Gets the display text for the notification type.
         /// </summary>
-        public string TypeDisplayText => Type switch
+        public string TypeDisplayText => this.Type switch
         {
             NotificationType.Information => "Info",
             NotificationType.Success => "Success",
@@ -115,22 +118,22 @@ namespace ThreadPilot.Models
             NotificationType.PowerPlanChange => "Power Plan",
             NotificationType.ProcessMonitoring => "Process Monitor",
             NotificationType.CpuAffinity => "CPU Affinity",
-            _ => "Unknown"
+            _ => "Unknown",
         };
 
         /// <summary>
-        /// Gets the formatted timestamp
+        /// Gets the formatted timestamp.
         /// </summary>
-        public string FormattedTimestamp => Timestamp.ToString("HH:mm:ss");
+        public string FormattedTimestamp => this.Timestamp.ToString("HH:mm:ss");
 
         /// <summary>
-        /// Gets the formatted date and time
+        /// Gets the formatted date and time.
         /// </summary>
-        public string FormattedDateTime => Timestamp.ToString("yyyy-MM-dd HH:mm:ss");
+        public string FormattedDateTime => this.Timestamp.ToString("yyyy-MM-dd HH:mm:ss");
     }
 
     /// <summary>
-    /// Types of notifications
+    /// Types of notifications.
     /// </summary>
     public enum NotificationType
     {
@@ -140,18 +143,18 @@ namespace ThreadPilot.Models
         Error,
         PowerPlanChange,
         ProcessMonitoring,
-        CpuAffinity
+        CpuAffinity,
     }
 
     /// <summary>
-    /// Notification priority levels
+    /// Notification priority levels.
     /// </summary>
     public enum NotificationPriority
     {
         Low,
         Normal,
         High,
-        Critical
+        Critical,
     }
 }
 

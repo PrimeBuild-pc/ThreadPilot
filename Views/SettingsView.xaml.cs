@@ -14,32 +14,33 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System.Windows;
-using System.Windows.Controls;
-using ThreadPilot.Services;
-using ThreadPilot.ViewModels;
-
 namespace ThreadPilot.Views
 {
+    using System.Windows;
+    using System.Windows.Controls;
+    using ThreadPilot.Services;
+    using ThreadPilot.ViewModels;
+
     /// <summary>
-    /// Interaction logic for SettingsView.xaml
+    /// Interaction logic for SettingsView.xaml.
     /// </summary>
     public partial class SettingsView : System.Windows.Controls.UserControl
     {
         public SettingsView()
         {
-            InitializeComponent();
-            Loaded += SettingsView_Loaded;
+            this.InitializeComponent();
+            this.Loaded += this.SettingsView_Loaded;
         }
 
-        public SettingsView(SettingsViewModel viewModel) : this()
+        public SettingsView(SettingsViewModel viewModel)
+            : this()
         {
-            DataContext = viewModel;
+            this.DataContext = viewModel;
         }
 
         private void SettingsView_Loaded(object sender, RoutedEventArgs e)
         {
-            TaskSafety.FireAndForget(SettingsView_LoadedAsync(), _ =>
+            TaskSafety.FireAndForget(this.SettingsView_LoadedAsync(), _ =>
             {
                 // Non-critical load refresh failures are handled by the view model.
             });
@@ -47,7 +48,7 @@ namespace ThreadPilot.Views
 
         private async Task SettingsView_LoadedAsync()
         {
-            if (DataContext is SettingsViewModel viewModel)
+            if (this.DataContext is SettingsViewModel viewModel)
             {
                 await viewModel.RefreshSettingsAsync();
             }

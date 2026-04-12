@@ -14,124 +14,132 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using ThreadPilot.Models;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Threading.Tasks;
+    using ThreadPilot.Models;
+
     /// <summary>
-    /// Event arguments for profile application events
+    /// Event arguments for profile application events.
     /// </summary>
     public class ProfileApplicationEventArgs : EventArgs
     {
         public ConditionalProcessProfile Profile { get; set; } = new();
+
         public ProcessModel Process { get; set; } = new();
+
         public SystemState SystemState { get; set; } = new();
+
         public bool WasApplied { get; set; }
+
         public string Reason { get; set; } = string.Empty;
+
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     }
 
     /// <summary>
-    /// Event arguments for profile conflict events
+    /// Event arguments for profile conflict events.
     /// </summary>
     public class ProfileConflictEventArgs : EventArgs
     {
         public List<ConditionalProcessProfile> ConflictingProfiles { get; set; } = new();
+
         public ProcessModel Process { get; set; } = new();
+
         public ConditionalProcessProfile SelectedProfile { get; set; } = new();
+
         public string Resolution { get; set; } = string.Empty;
     }
 
     /// <summary>
-    /// Service for managing conditional process profiles
+    /// Service for managing conditional process profiles.
     /// </summary>
     public interface IConditionalProfileService
     {
         /// <summary>
-        /// Initialize the conditional profile service
+        /// Initialize the conditional profile service.
         /// </summary>
         Task InitializeAsync();
 
         /// <summary>
-        /// Add a conditional profile
+        /// Add a conditional profile.
         /// </summary>
         Task AddProfileAsync(ConditionalProcessProfile profile);
 
         /// <summary>
-        /// Remove a conditional profile
+        /// Remove a conditional profile.
         /// </summary>
         Task RemoveProfileAsync(string profileId);
 
         /// <summary>
-        /// Update an existing conditional profile
+        /// Update an existing conditional profile.
         /// </summary>
         Task UpdateProfileAsync(ConditionalProcessProfile profile);
 
         /// <summary>
-        /// Get all conditional profiles
+        /// Get all conditional profiles.
         /// </summary>
         Task<List<ConditionalProcessProfile>> GetAllProfilesAsync();
 
         /// <summary>
-        /// Get profiles for a specific process
+        /// Get profiles for a specific process.
         /// </summary>
         Task<List<ConditionalProcessProfile>> GetProfilesForProcessAsync(string processName);
 
         /// <summary>
-        /// Evaluate all profiles for a process and return applicable ones
+        /// Evaluate all profiles for a process and return applicable ones.
         /// </summary>
         Task<List<ConditionalProcessProfile>> EvaluateProfilesAsync(ProcessModel process);
 
         /// <summary>
-        /// Apply the best matching profile for a process
+        /// Apply the best matching profile for a process.
         /// </summary>
         Task<bool> ApplyBestProfileAsync(ProcessModel process);
 
         /// <summary>
-        /// Get current system state for condition evaluation
+        /// Get current system state for condition evaluation.
         /// </summary>
         Task<SystemState> GetSystemStateAsync();
 
         /// <summary>
-        /// Start automatic profile monitoring and application
+        /// Start automatic profile monitoring and application.
         /// </summary>
         Task StartMonitoringAsync();
 
         /// <summary>
-        /// Stop automatic profile monitoring
+        /// Stop automatic profile monitoring.
         /// </summary>
         Task StopMonitoringAsync();
 
         /// <summary>
-        /// Check if monitoring is active
+        /// Gets a value indicating whether check if monitoring is active.
         /// </summary>
         bool IsMonitoring { get; }
 
         /// <summary>
-        /// Resolve conflicts when multiple profiles match
+        /// Resolve conflicts when multiple profiles match.
         /// </summary>
         ConditionalProcessProfile ResolveProfileConflict(List<ConditionalProcessProfile> conflictingProfiles, ProcessModel process);
 
         /// <summary>
-        /// Create a default conditional profile template
+        /// Create a default conditional profile template.
         /// </summary>
         ConditionalProcessProfile CreateDefaultProfile(string processName);
 
         /// <summary>
-        /// Validate a conditional profile
+        /// Validate a conditional profile.
         /// </summary>
         Task<(bool IsValid, List<string> Errors)> ValidateProfileAsync(ConditionalProcessProfile profile);
 
         /// <summary>
-        /// Export profiles to JSON
+        /// Export profiles to JSON.
         /// </summary>
         Task<string> ExportProfilesToJsonAsync();
 
         /// <summary>
-        /// Import profiles from JSON
+        /// Import profiles from JSON.
         /// </summary>
         Task<int> ImportProfilesFromJsonAsync(string json);
 

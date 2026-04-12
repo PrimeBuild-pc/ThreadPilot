@@ -14,14 +14,14 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Globalization;
-using System.Windows.Data;
-
 namespace ThreadPilot.Converters
 {
+    using System;
+    using System.Globalization;
+    using System.Windows.Data;
+
     /// <summary>
-    /// Converts byte values to human-readable string format
+    /// Converts byte values to human-readable string format.
     /// </summary>
     public class BytesToStringConverter : IValueConverter
     {
@@ -31,12 +31,12 @@ namespace ThreadPilot.Converters
             {
                 return FormatBytes(bytes);
             }
-            
+
             if (value is int intBytes)
             {
                 return FormatBytes(intBytes);
             }
-            
+
             return "0 B";
         }
 
@@ -50,13 +50,13 @@ namespace ThreadPilot.Converters
             string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
             int counter = 0;
             decimal number = bytes;
-            
+
             while (Math.Round(number / 1024) >= 1)
             {
                 number /= 1024;
                 counter++;
             }
-            
+
             return $"{number:n1} {suffixes[counter]}";
         }
     }

@@ -14,15 +14,15 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Windows.Input;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Threading.Tasks;
+    using System.Windows.Input;
+
     /// <summary>
-    /// Service for managing global keyboard shortcuts
+    /// Service for managing global keyboard shortcuts.
     /// </summary>
     public interface IKeyboardShortcutService
     {
@@ -32,101 +32,119 @@ namespace ThreadPilot.Services
         event EventHandler<ShortcutActivatedEventArgs>? ShortcutActivated;
 
         /// <summary>
-        /// Register a global keyboard shortcut
+        /// Register a global keyboard shortcut.
         /// </summary>
         Task<bool> RegisterShortcutAsync(string actionName, Key key, ModifierKeys modifiers);
 
         /// <summary>
-        /// Unregister a keyboard shortcut
+        /// Unregister a keyboard shortcut.
         /// </summary>
         Task<bool> UnregisterShortcutAsync(string actionName);
 
         /// <summary>
-        /// Update an existing shortcut with new key combination
+        /// Update an existing shortcut with new key combination.
         /// </summary>
         Task<bool> UpdateShortcutAsync(string actionName, Key key, ModifierKeys modifiers);
 
         /// <summary>
-        /// Get all registered shortcuts
+        /// Get all registered shortcuts.
         /// </summary>
         Task<Dictionary<string, KeyboardShortcut>> GetRegisteredShortcutsAsync();
 
         /// <summary>
-        /// Check if a key combination is already registered
+        /// Check if a key combination is already registered.
         /// </summary>
         Task<bool> IsShortcutRegisteredAsync(Key key, ModifierKeys modifiers);
 
         /// <summary>
-        /// Load shortcuts from settings
+        /// Load shortcuts from settings.
         /// </summary>
         Task LoadShortcutsFromSettingsAsync();
 
         /// <summary>
-        /// Save shortcuts to settings
+        /// Save shortcuts to settings.
         /// </summary>
         Task SaveShortcutsToSettingsAsync();
 
         /// <summary>
-        /// Clear all registered shortcuts
+        /// Clear all registered shortcuts.
         /// </summary>
         Task ClearAllShortcutsAsync();
 
         /// <summary>
-        /// Get the default shortcuts for the application
+        /// Get the default shortcuts for the application.
         /// </summary>
         Dictionary<string, KeyboardShortcut> GetDefaultShortcuts();
     }
 
     /// <summary>
-    /// Represents a keyboard shortcut
+    /// Represents a keyboard shortcut.
     /// </summary>
     public class KeyboardShortcut
     {
         public string ActionName { get; set; } = string.Empty;
+
         public Key Key { get; set; }
+
         public ModifierKeys Modifiers { get; set; }
+
         public string Description { get; set; } = string.Empty;
+
         public bool IsEnabled { get; set; } = true;
+
         public bool IsGlobal { get; set; } = true;
 
         public override string ToString()
         {
             var parts = new List<string>();
-            
-            if (Modifiers.HasFlag(ModifierKeys.Control))
+
+            if (this.Modifiers.HasFlag(ModifierKeys.Control))
+            {
                 parts.Add("Ctrl");
-            if (Modifiers.HasFlag(ModifierKeys.Alt))
+            }
+
+            if (this.Modifiers.HasFlag(ModifierKeys.Alt))
+            {
                 parts.Add("Alt");
-            if (Modifiers.HasFlag(ModifierKeys.Shift))
+            }
+
+            if (this.Modifiers.HasFlag(ModifierKeys.Shift))
+            {
                 parts.Add("Shift");
-            if (Modifiers.HasFlag(ModifierKeys.Windows))
+            }
+
+            if (this.Modifiers.HasFlag(ModifierKeys.Windows))
+            {
                 parts.Add("Win");
-                
-            parts.Add(Key.ToString());
-            
+            }
+
+            parts.Add(this.Key.ToString());
+
             return string.Join(" + ", parts);
         }
     }
 
     /// <summary>
-    /// Event args for shortcut activation
+    /// Event args for shortcut activation.
     /// </summary>
     public class ShortcutActivatedEventArgs : EventArgs
     {
         public string ActionName { get; }
+
         public KeyboardShortcut Shortcut { get; }
+
         public DateTime ActivationTime { get; }
 
         public ShortcutActivatedEventArgs(string actionName, KeyboardShortcut shortcut)
         {
-            ActionName = actionName;
-            Shortcut = shortcut;
-            ActivationTime = DateTime.UtcNow;
+            this.ActionName = actionName;
+            this.Shortcut = shortcut;
+            this.ActivationTime = DateTime.UtcNow;
         }
     }
 
     /// <summary>
-    /// Predefined shortcut actions
+    /// Predefined shortcut actions.
     /// </summary>
     public static class ShortcutActions
     {

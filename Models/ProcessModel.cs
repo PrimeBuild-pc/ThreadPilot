@@ -14,34 +14,35 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Diagnostics;
-using CommunityToolkit.Mvvm.ComponentModel;
-
 namespace ThreadPilot.Models
 {
+    using System;
+    using System.Diagnostics;
+    using CommunityToolkit.Mvvm.ComponentModel;
+
     public partial class ProcessModel : ObservableObject
     {
-        private Process? _process;
+        private Process? process;
+
         public Process? Process
         {
-            get => _process;
+            get => this.process;
             set
             {
-                _process = value;
+                this.process = value;
                 if (value != null)
                 {
-                    ProcessId = value.Id;
-                    Name = value.ProcessName;
+                    this.ProcessId = value.Id;
+                    this.Name = value.ProcessName;
                     try
                     {
-                        ProcessorAffinity = (long)value.ProcessorAffinity;
-                        Priority = value.PriorityClass;
-                        MemoryUsage = value.PrivateMemorySize64;
-                        ExecutablePath = value.MainModule?.FileName ?? string.Empty;
-                        MainWindowHandle = value.MainWindowHandle;
-                        MainWindowTitle = value.MainWindowTitle ?? string.Empty;
-                        HasVisibleWindow = MainWindowHandle != IntPtr.Zero && !string.IsNullOrWhiteSpace(MainWindowTitle);
+                        this.ProcessorAffinity = (long)value.ProcessorAffinity;
+                        this.Priority = value.PriorityClass;
+                        this.MemoryUsage = value.PrivateMemorySize64;
+                        this.ExecutablePath = value.MainModule?.FileName ?? string.Empty;
+                        this.MainWindowHandle = value.MainWindowHandle;
+                        this.MainWindowTitle = value.MainWindowTitle ?? string.Empty;
+                        this.HasVisibleWindow = this.MainWindowHandle != IntPtr.Zero && !string.IsNullOrWhiteSpace(this.MainWindowTitle);
                     }
                     catch (Exception)
                     {
@@ -93,7 +94,7 @@ namespace ThreadPilot.Models
         /// </summary>
         public void ForceNotifyProcessorAffinityChanged()
         {
-            OnPropertyChanged(nameof(ProcessorAffinity));
+            this.OnPropertyChanged(nameof(this.ProcessorAffinity));
         }
     }
 }

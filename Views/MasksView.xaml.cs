@@ -14,21 +14,21 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using ThreadPilot.Helpers;
-using ThreadPilot.ViewModels;
-
 namespace ThreadPilot.Views
 {
+    using ThreadPilot.Helpers;
+    using ThreadPilot.ViewModels;
+
     /// <summary>
     /// Interaction logic for MasksView.xaml
-    /// Based on CPUSetSetter's data-binding pattern
+    /// Based on CPUSetSetter's data-binding pattern.
     /// </summary>
     public partial class MasksView : System.Windows.Controls.UserControl
     {
         public MasksView()
         {
-            InitializeComponent();
-            DataContext = ServiceProviderExtensions.GetService<MasksViewModel>();
+            this.InitializeComponent();
+            this.DataContext = ServiceProviderExtensions.GetService<MasksViewModel>();
         }
     }
 }

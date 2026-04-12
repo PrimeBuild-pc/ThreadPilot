@@ -14,15 +14,15 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
-using CommunityToolkit.Mvvm.ComponentModel;
-using ThreadPilot.Models.Core;
-
 namespace ThreadPilot.Models
 {
+    using System;
+    using System.Collections.Generic;
+    using System.ComponentModel;
+    using System.Diagnostics;
+    using CommunityToolkit.Mvvm.ComponentModel;
+    using ThreadPilot.Models.Core;
+
     public partial class ProfileModel : ObservableObject, IModel
     {
         [ObservableProperty]
@@ -58,11 +58,15 @@ namespace ThreadPilot.Models
         {
             var errors = new List<string>();
 
-            if (string.IsNullOrWhiteSpace(Name))
+            if (string.IsNullOrWhiteSpace(this.Name))
+            {
                 errors.Add("Profile name is required");
+            }
 
-            if (string.IsNullOrWhiteSpace(ProcessName))
+            if (string.IsNullOrWhiteSpace(this.ProcessName))
+            {
                 errors.Add("Process name is required");
+            }
 
             return errors.Count == 0 ? ValidationResult.Success() : ValidationResult.Failure(errors.ToArray());
         }
@@ -79,7 +83,7 @@ namespace ThreadPilot.Models
                 Description = this.Description,
                 IsEnabled = this.IsEnabled,
                 createdAt = DateTime.UtcNow,
-                updatedAt = DateTime.UtcNow
+                updatedAt = DateTime.UtcNow,
             };
         }
 

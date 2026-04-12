@@ -14,44 +14,45 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using ThreadPilot.Models;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Collections.ObjectModel;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Linq;
+    using System.Text.RegularExpressions;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
+    using ThreadPilot.Models;
+
     public class PowerPlanService : IPowerPlanService
     {
-        private static readonly Lazy<string> _powerPlansPath = new(GetPowerPlansPath);
-        private static readonly string _powerCfgExecutablePath = Path.Combine(Environment.SystemDirectory, "powercfg.exe");
-        private static readonly Regex _powerSchemeRegex = new(@"Power Scheme GUID: (.*?)  \((.*?)\)", RegexOptions.Multiline | RegexOptions.Compiled);
-        private static readonly Regex _pathTraversalRegex = new(@"(^|[\\/])\.\.([\\/]|$)", RegexOptions.Compiled);
-        private static string PowerPlansPath => _powerPlansPath.Value;
+        private static readonly Lazy<string> powerPlansPath = new(GetPowerPlansPath);
+        private static readonly string powerCfgExecutablePath = Path.Combine(Environment.SystemDirectory, "powercfg.exe");
+        private static readonly Regex powerSchemeRegex = new(@"Power Scheme GUID: (.*?)  \((.*?)\)", RegexOptions.Multiline | RegexOptions.Compiled);
+        private static readonly Regex pathTraversalRegex = new(@"(^|[\\/])\.\.([\\/]|$)", RegexOptions.Compiled);
 
-        private readonly object _lockObject = new();
-        private readonly ILogger<PowerPlanService> _logger;
-        private readonly IEnhancedLoggingService _enhancedLogger;
-        private string? _lastActivePowerPlanGuid;
+        private static string PowerPlansPath => powerPlansPath.Value;
+
+        private readonly object lockObject = new();
+        private readonly ILogger<PowerPlanService> logger;
+        private readonly IEnhancedLoggingService enhancedLogger;
+        private string? lastActivePowerPlanGuid;
 
         public event EventHandler<PowerPlanChangedEventArgs>? PowerPlanChanged;
 
         public PowerPlanService(ILogger<PowerPlanService> logger, IEnhancedLoggingService enhancedLogger)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _enhancedLogger = enhancedLogger ?? throw new ArgumentNullException(nameof(enhancedLogger));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.enhancedLogger = enhancedLogger ?? throw new ArgumentNullException(nameof(enhancedLogger));
         }
 
         /// <summary>
         /// Gets the power plans path using smart detection:
         /// - Portable mode: Powerplans folder next to EXE
-        /// - Installed mode: %AppData%\ThreadPilot\Powerplans
+        /// - Installed mode: %AppData%\ThreadPilot\Powerplans.
         /// </summary>
         private static string GetPowerPlansPath()
         {
@@ -101,14 +102,14 @@ namespace ThreadPilot.Services
         public async Task<ObservableCollection<PowerPlanModel>> GetPowerPlansAsync()
         {
             var powerPlans = new ObservableCollection<PowerPlanModel>();
-            var activePlan = await GetActivePowerPlan();
+            var activePlan = await this.GetActivePowerPlan();
 
             using var process = CreatePowerCfgProcess("/list");
             process.Start();
             string output = await process.StandardOutput.ReadToEndAsync();
             await process.WaitForExitAsync();
 
-            var matches = _powerSchemeRegex.Matches(output);
+            var matches = powerSchemeRegex.Matches(output);
 
             foreach (Match match in matches)
             {
@@ -120,7 +121,7 @@ namespace ThreadPilot.Services
                     Guid = guid,
                     Name = name,
                     IsActive = guid == activePlan?.Guid,
-                    IsCustomPlan = false
+                    IsCustomPlan = false,
                 };
 
                 powerPlans.Add(plan);
@@ -143,7 +144,7 @@ namespace ThreadPilot.Services
                 {
                     Name = Path.GetFileNameWithoutExtension(file),
                     FilePath = file,
-                    IsCustomPlan = true
+                    IsCustomPlan = true,
                 });
             }
 
@@ -152,14 +153,14 @@ namespace ThreadPilot.Services
 
         public async Task<bool> SetActivePowerPlan(PowerPlanModel powerPlan)
         {
-            return await SetActivePowerPlanByGuidAsync(powerPlan.Guid, false);
+            return await this.SetActivePowerPlanByGuidAsync(powerPlan.Guid, false);
         }
 
         public async Task<bool> SetActivePowerPlanByGuidAsync(string powerPlanGuid, bool preventDuplicateChanges = true)
         {
             if (!Guid.TryParse(powerPlanGuid, out _))
             {
-                _logger.LogWarning("Rejected invalid power plan GUID: {PowerPlanGuid}", powerPlanGuid);
+                this.logger.LogWarning("Rejected invalid power plan GUID: {PowerPlanGuid}", powerPlanGuid);
                 return false;
             }
 
@@ -168,21 +169,22 @@ namespace ThreadPilot.Services
                 // Check if change is needed when duplicate prevention is enabled
                 if (preventDuplicateChanges)
                 {
-                    var isChangeNeeded = await IsPowerPlanChangeNeededAsync(powerPlanGuid);
+                    var isChangeNeeded = await this.IsPowerPlanChangeNeededAsync(powerPlanGuid);
                     if (!isChangeNeeded)
                     {
-                        _logger.LogDebug("Power plan change skipped - already active: {PowerPlanGuid}", powerPlanGuid);
+                        this.logger.LogDebug("Power plan change skipped - already active: {PowerPlanGuid}", powerPlanGuid);
                         return true; // No change needed, consider it successful
                     }
                 }
 
-                var previousPowerPlan = await GetActivePowerPlan();
-                var targetPowerPlan = await GetPowerPlanByGuidAsync(powerPlanGuid);
+                var previousPowerPlan = await this.GetActivePowerPlan();
+                var targetPowerPlan = await this.GetPowerPlanByGuidAsync(powerPlanGuid);
 
-                _logger.LogInformation("Attempting to change power plan from '{FromPlan}' to '{ToPlan}'",
+                this.logger.LogInformation(
+                    "Attempting to change power plan from '{FromPlan}' to '{ToPlan}'",
                     previousPowerPlan?.Name ?? "Unknown", targetPowerPlan?.Name ?? "Unknown");
 
-                await _enhancedLogger.LogPowerPlanChangeAsync(
+                await this.enhancedLogger.LogPowerPlanChangeAsync(
                     previousPowerPlan?.Name ?? "Unknown",
                     targetPowerPlan?.Name ?? "Unknown",
                     "Manual power plan change requested");
@@ -196,32 +198,33 @@ namespace ThreadPilot.Services
 
                 if (success)
                 {
-                    lock (_lockObject)
+                    lock (this.lockObject)
                     {
-                        _lastActivePowerPlanGuid = powerPlanGuid;
+                        this.lastActivePowerPlanGuid = powerPlanGuid;
                     }
 
-                    var newPowerPlan = await GetPowerPlanByGuidAsync(powerPlanGuid);
+                    var newPowerPlan = await this.GetPowerPlanByGuidAsync(powerPlanGuid);
 
-                    _logger.LogInformation("Power plan successfully changed to '{PowerPlan}'", newPowerPlan?.Name ?? "Unknown");
+                    this.logger.LogInformation("Power plan successfully changed to '{PowerPlan}'", newPowerPlan?.Name ?? "Unknown");
 
-                    await _enhancedLogger.LogPowerPlanChangeAsync(
+                    await this.enhancedLogger.LogPowerPlanChangeAsync(
                         previousPowerPlan?.Name ?? "Unknown",
                         newPowerPlan?.Name ?? "Unknown",
                         "Manual power plan change completed");
 
-                    PowerPlanChanged?.Invoke(this, new PowerPlanChangedEventArgs(
+                    this.PowerPlanChanged?.Invoke(this, new PowerPlanChangedEventArgs(
                         previousPowerPlan, newPowerPlan, "Manual power plan change"));
                 }
                 else
                 {
-                    _logger.LogWarning(
+                    this.logger.LogWarning(
                         "Failed to change power plan to '{PowerPlanGuid}' - powercfg exit code: {ExitCode}, stderr: {StdErr}",
                         powerPlanGuid,
                         process.ExitCode,
                         stdError);
 
-                    await _enhancedLogger.LogSystemEventAsync(LogEventTypes.PowerPlan.ChangeFailed,
+                    await this.enhancedLogger.LogSystemEventAsync(
+                        LogEventTypes.PowerPlan.ChangeFailed,
                         $"Failed to change power plan to '{targetPowerPlan?.Name ?? powerPlanGuid}' - Exit code: {process.ExitCode}",
                         Microsoft.Extensions.Logging.LogLevel.Warning);
                 }
@@ -230,13 +233,13 @@ namespace ThreadPilot.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Exception occurred while changing power plan to '{PowerPlanGuid}'", powerPlanGuid);
+                this.logger.LogError(ex, "Exception occurred while changing power plan to '{PowerPlanGuid}'", powerPlanGuid);
 
-                await _enhancedLogger.LogErrorAsync(ex, "PowerPlanService.SetActivePowerPlanByGuidAsync",
+                await this.enhancedLogger.LogErrorAsync(ex, "PowerPlanService.SetActivePowerPlanByGuidAsync",
                     new Dictionary<string, object>
                     {
                         ["PowerPlanGuid"] = powerPlanGuid,
-                        ["PreventDuplicateChanges"] = preventDuplicateChanges
+                        ["PreventDuplicateChanges"] = preventDuplicateChanges,
                     });
 
                 return false;
@@ -252,7 +255,7 @@ namespace ThreadPilot.Services
                 string output = await process.StandardOutput.ReadToEndAsync();
                 await process.WaitForExitAsync();
 
-                var match = _powerSchemeRegex.Match(output);
+                var match = powerSchemeRegex.Match(output);
 
                 if (match.Success)
                 {
@@ -260,25 +263,25 @@ namespace ThreadPilot.Services
                     {
                         Guid = match.Groups[1].Value.Trim(),
                         Name = match.Groups[2].Value.Trim(),
-                        IsActive = true
+                        IsActive = true,
                     };
                 }
 
-                _logger.LogWarning("Could not parse active power plan from powercfg output.");
+                this.logger.LogWarning("Could not parse active power plan from powercfg output.");
                 return null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to read active power plan.");
+                this.logger.LogError(ex, "Failed to read active power plan.");
                 return null;
             }
         }
 
         public async Task<bool> ImportCustomPowerPlan(string filePath)
         {
-            if (!TryNormalizePowerPlanPath(filePath, out var normalizedPath, out var validationError))
+            if (!this.TryNormalizePowerPlanPath(filePath, out var normalizedPath, out var validationError))
             {
-                _logger.LogWarning("Rejected power plan import path '{FilePath}': {ValidationError}", filePath, validationError);
+                this.logger.LogWarning("Rejected power plan import path '{FilePath}': {ValidationError}", filePath, validationError);
                 return false;
             }
 
@@ -291,7 +294,7 @@ namespace ThreadPilot.Services
 
                 if (process.ExitCode != 0)
                 {
-                    _logger.LogWarning(
+                    this.logger.LogWarning(
                         "Power plan import failed for '{Path}' with exit code {ExitCode}. stderr: {StdErr}",
                         normalizedPath,
                         process.ExitCode,
@@ -300,13 +303,13 @@ namespace ThreadPilot.Services
                     return false;
                 }
 
-                _logger.LogInformation("Imported custom power plan from '{Path}'", normalizedPath);
+                this.logger.LogInformation("Imported custom power plan from '{Path}'", normalizedPath);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Exception occurred while importing custom power plan from '{Path}'", normalizedPath);
-                await _enhancedLogger.LogErrorAsync(ex, "PowerPlanService.ImportCustomPowerPlan",
+                this.logger.LogError(ex, "Exception occurred while importing custom power plan from '{Path}'", normalizedPath);
+                await this.enhancedLogger.LogErrorAsync(ex, "PowerPlanService.ImportCustomPowerPlan",
                     new Dictionary<string, object> { ["Path"] = normalizedPath });
                 return false;
             }
@@ -314,7 +317,7 @@ namespace ThreadPilot.Services
 
         public async Task<string?> GetActivePowerPlanGuidAsync()
         {
-            var activePlan = await GetActivePowerPlan();
+            var activePlan = await this.GetActivePowerPlan();
             return activePlan?.Guid;
         }
 
@@ -325,7 +328,7 @@ namespace ThreadPilot.Services
                 return false;
             }
 
-            var powerPlans = await GetPowerPlansAsync();
+            var powerPlans = await this.GetPowerPlansAsync();
             return powerPlans.Any(p => string.Equals(p.Guid, powerPlanGuid, StringComparison.OrdinalIgnoreCase));
         }
 
@@ -336,7 +339,7 @@ namespace ThreadPilot.Services
                 return null;
             }
 
-            var powerPlans = await GetPowerPlansAsync();
+            var powerPlans = await this.GetPowerPlansAsync();
             return powerPlans.FirstOrDefault(p => string.Equals(p.Guid, powerPlanGuid, StringComparison.OrdinalIgnoreCase));
         }
 
@@ -344,7 +347,7 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var currentGuid = await GetActivePowerPlanGuidAsync();
+                var currentGuid = await this.GetActivePowerPlanGuidAsync();
 
                 // Check if the target power plan is already active
                 if (string.Equals(currentGuid, targetPowerPlanGuid, StringComparison.OrdinalIgnoreCase))
@@ -353,9 +356,9 @@ namespace ThreadPilot.Services
                 }
 
                 // Check if we recently set this power plan (to prevent rapid switching)
-                lock (_lockObject)
+                lock (this.lockObject)
                 {
-                    if (string.Equals(_lastActivePowerPlanGuid, targetPowerPlanGuid, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(this.lastActivePowerPlanGuid, targetPowerPlanGuid, StringComparison.OrdinalIgnoreCase))
                     {
                         return false; // We recently set this plan
                     }
@@ -365,7 +368,7 @@ namespace ThreadPilot.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Could not determine if power plan change is needed for '{PowerPlanGuid}'", targetPowerPlanGuid);
+                this.logger.LogWarning(ex, "Could not determine if power plan change is needed for '{PowerPlanGuid}'", targetPowerPlanGuid);
                 return true; // If we can't determine, assume change is needed
             }
         }
@@ -382,7 +385,7 @@ namespace ThreadPilot.Services
                 return false;
             }
 
-            if (_pathTraversalRegex.IsMatch(filePath))
+            if (pathTraversalRegex.IsMatch(filePath))
             {
                 error = "Path traversal segments are not allowed.";
                 return false;
@@ -433,13 +436,13 @@ namespace ThreadPilot.Services
             {
                 StartInfo = new ProcessStartInfo
                 {
-                    FileName = _powerCfgExecutablePath,
+                    FileName = powerCfgExecutablePath,
                     Arguments = arguments,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     CreateNoWindow = true
-                }
+                },
             };
         }
     }

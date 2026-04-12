@@ -35,6 +35,30 @@ The project targets users who need Process Lasso style capabilities in a modern 
 2. Extract the archive.
 3. Start ThreadPilot as Administrator for full functionality.
 
+## Download and Installation
+
+Latest artifacts are published on each tagged release in [GitHub Releases](https://github.com/PrimeBuild-pc/ThreadPilot/releases).
+
+| Artifact | File pattern | Recommended use |
+|---|---|---|
+| Single-file portable | `ThreadPilot_<version>_singlefile_win-x64.zip` | Fast portable deployment with one main executable |
+| ReadyToRun package | `ThreadPilot_<version>_readytorun_win-x64.zip` | Folder-based deployment with faster startup |
+| MSIX package | `ThreadPilot_<version>_win-x64.msix` | Managed Windows installation and clean uninstall |
+| Checksum manifest | `SHA256SUMS.txt` | Verify release integrity before installation |
+
+Verification example:
+
+```powershell
+Get-FileHash .\ThreadPilot_1.1.0_singlefile_win-x64.zip -Algorithm SHA256
+```
+
+Install flow summary:
+
+1. Download the artifact matching your deployment model.
+2. Verify the SHA-256 hash against `SHA256SUMS.txt`.
+3. For ZIP artifacts, extract and run `ThreadPilot.exe`.
+4. For MSIX/AppX artifacts, install with `Add-AppxPackage` or by double-clicking.
+
 ### Build from Source
 
 ```powershell

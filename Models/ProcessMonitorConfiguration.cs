@@ -14,14 +14,14 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using CommunityToolkit.Mvvm.ComponentModel;
-
 namespace ThreadPilot.Models
 {
+    using System;
+    using System.Collections.Generic;
+    using CommunityToolkit.Mvvm.ComponentModel;
+
     /// <summary>
-    /// Configuration model for process monitoring and power plan associations
+    /// Configuration model for process monitoring and power plan associations.
     /// </summary>
     public partial class ProcessMonitorConfiguration : ObservableObject
     {
@@ -60,86 +60,90 @@ namespace ThreadPilot.Models
 
         public ProcessMonitorConfiguration()
         {
-            Associations = new List<ProcessPowerPlanAssociation>();
+            this.Associations = new List<ProcessPowerPlanAssociation>();
         }
 
         /// <summary>
-        /// Gets all enabled associations sorted by priority (descending)
+        /// Gets all enabled associations sorted by priority (descending).
         /// </summary>
         public IEnumerable<ProcessPowerPlanAssociation> GetEnabledAssociations()
         {
-            return Associations
+            return this.Associations
                 .Where(a => a.IsEnabled)
                 .OrderByDescending(a => a.Priority)
                 .ThenBy(a => a.ExecutableName);
         }
 
         /// <summary>
-        /// Finds the best matching association for a process
+        /// Finds the best matching association for a process.
         /// </summary>
         public ProcessPowerPlanAssociation? FindMatchingAssociation(ProcessModel process)
         {
-            return GetEnabledAssociations()
+            return this.GetEnabledAssociations()
                 .FirstOrDefault(a => a.MatchesProcess(process));
         }
 
         /// <summary>
-        /// Finds association by executable name
+        /// Finds association by executable name.
         /// </summary>
         public ProcessPowerPlanAssociation? FindAssociationByExecutable(string executableName)
         {
-            return Associations
+            return this.Associations
                 .FirstOrDefault(a => a.MatchesExecutable(executableName));
         }
 
         /// <summary>
-        /// Adds or updates an association
+        /// Adds or updates an association.
         /// </summary>
         public void AddOrUpdateAssociation(ProcessPowerPlanAssociation association)
         {
-            var existing = Associations.FirstOrDefault(a => a.Id == association.Id);
+            var existing = this.Associations.FirstOrDefault(a => a.Id == association.Id);
             if (existing != null)
             {
-                var index = Associations.IndexOf(existing);
-                Associations[index] = association;
+                var index = this.Associations.IndexOf(existing);
+                this.Associations[index] = association;
             }
             else
             {
-                Associations.Add(association);
+                this.Associations.Add(association);
             }
-            LastSavedDate = DateTime.Now;
+            this.LastSavedDate = DateTime.Now;
         }
 
         /// <summary>
-        /// Removes an association
+        /// Removes an association.
         /// </summary>
         public bool RemoveAssociation(string associationId)
         {
-            var association = Associations.FirstOrDefault(a => a.Id == associationId);
+            var association = this.Associations.FirstOrDefault(a => a.Id == associationId);
             if (association != null)
             {
-                Associations.Remove(association);
-                LastSavedDate = DateTime.Now;
+                this.Associations.Remove(association);
+                this.LastSavedDate = DateTime.Now;
                 return true;
             }
             return false;
         }
 
         /// <summary>
-        /// Validates the configuration
+        /// Validates the configuration.
         /// </summary>
         public List<string> Validate()
         {
             var errors = new List<string>();
 
-            if (PollingIntervalSeconds < 1)
+            if (this.PollingIntervalSeconds < 1)
+            {
                 errors.Add("Polling interval must be at least 1 second");
+            }
 
-            if (PowerPlanChangeDelayMs < 0)
+            if (this.PowerPlanChangeDelayMs < 0)
+            {
                 errors.Add("Power plan change delay cannot be negative");
+            }
 
             // Check for duplicate associations
-            var duplicates = Associations
+            var duplicates = this.Associations
                 .GroupBy(a => new { a.ExecutableName, a.MatchByPath })
                 .Where(g => g.Count() > 1)
                 .Select(g => g.Key.ExecutableName);

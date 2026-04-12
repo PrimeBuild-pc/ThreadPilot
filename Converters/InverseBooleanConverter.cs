@@ -14,14 +14,14 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Globalization;
-using System.Windows.Data;
-
 namespace ThreadPilot.Converters
 {
+    using System;
+    using System.Globalization;
+    using System.Windows.Data;
+
     /// <summary>
-    /// Converter to invert boolean values
+    /// Converter to invert boolean values.
     /// </summary>
     public class InverseBooleanConverter : IValueConverter
     {

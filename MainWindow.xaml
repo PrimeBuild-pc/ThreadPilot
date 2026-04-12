@@ -13,7 +13,11 @@
         Title="ThreadPilot - Process &amp; Power Plan Manager"
         Height="864"
         Width="1280"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        KeyboardNavigation.TabNavigation="Cycle"
+        KeyboardNavigation.ControlTabNavigation="Cycle">
 
     <ui:FluentWindow.Resources>
         <!-- Loading Spinner Animation -->
@@ -68,7 +72,8 @@
                                IsBackButtonVisible="Collapsed"
                                IsPaneOpen="False"
                                OpenPaneLength="180"
-                               CompactPaneLength="52">
+                               CompactPaneLength="52"
+                               AutomationProperties.Name="Primary navigation">
                 <ui:NavigationView.Resources>
                     <Style TargetType="ui:NavigationViewItem">
                         <Setter Property="BorderThickness" Value="1"/>
@@ -199,7 +204,9 @@
               Grid.RowSpan="3"
               Background="#99000000"
               Visibility="Visible"
-              Panel.ZIndex="1000">
+              Panel.ZIndex="1000"
+              AutomationProperties.Name="Application startup loading overlay"
+              AutomationProperties.LiveSetting="Polite">
             <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                     BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                     BorderThickness="1"

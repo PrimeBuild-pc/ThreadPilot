@@ -14,83 +14,88 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Collections.Concurrent;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
+    using System.Text.Json;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
+
     /// <summary>
-    /// Enhanced logging service with file persistence and structured logging
+    /// Enhanced logging service with file persistence and structured logging.
     /// </summary>
     public class EnhancedLoggingService : IEnhancedLoggingService, IDisposable
     {
-        private readonly ILogger<EnhancedLoggingService> _logger;
-        private readonly IApplicationSettingsService _settingsService;
-        private readonly SemaphoreSlim _fileLock = new(1, 1);
-        private readonly ConcurrentQueue<LogEntry> _logQueue = new();
-        private readonly System.Threading.Timer _flushTimer;
-        private readonly string _logDirectory;
-        private string _currentLogFilePath;
-        private bool _isInitialized;
-        private bool _disposed;
+        private readonly ILogger<EnhancedLoggingService> logger;
+        private readonly IApplicationSettingsService settingsService;
+        private readonly SemaphoreSlim fileLock = new(1, 1);
+        private readonly ConcurrentQueue<LogEntry> logQueue = new();
+        private readonly System.Threading.Timer flushTimer;
+        private readonly string logDirectory;
+        private string currentLogFilePath;
+        private bool isInitialized;
+        private bool disposed;
 
         // PERFORMANCE IMPROVEMENT: Correlation tracking for better debugging
-        internal readonly AsyncLocal<string?> _correlationId = new();
-        internal readonly ConcurrentDictionary<string, DateTime> _operationStartTimes = new();
+        internal readonly AsyncLocal<string?> CorrelationId = new();
+        internal readonly ConcurrentDictionary<string, DateTime> OperationStartTimes = new();
 
-        public string CurrentLogFilePath => _currentLogFilePath;
-        public string LogDirectoryPath => _logDirectory;
-        public bool IsDebugLoggingEnabled => _settingsService.Settings.EnableDebugLogging;
+        public string CurrentLogFilePath => this.currentLogFilePath;
+
+        public string LogDirectoryPath => this.logDirectory;
+
+        public bool IsDebugLoggingEnabled => this.settingsService.Settings.EnableDebugLogging;
 
         public event EventHandler<CriticalErrorEventArgs>? CriticalErrorOccurred;
 
         public EnhancedLoggingService(ILogger<EnhancedLoggingService> logger, IApplicationSettingsService settingsService)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
 
             // Set up log directory
-            _logDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ThreadPilot", "Logs");
-            _currentLogFilePath = GetCurrentLogFilePath();
+            this.logDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ThreadPilot", "Logs");
+            this.currentLogFilePath = this.GetCurrentLogFilePath();
 
             // Create flush timer (flush every 5 seconds)
-            _flushTimer = new System.Threading.Timer(FlushLogs, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+            this.flushTimer = new System.Threading.Timer(this.FlushLogs, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
         }
 
         public async Task InitializeAsync()
         {
-            if (_isInitialized) return;
+            if (this.isInitialized)
+            {
+                return;
+            }
 
             try
             {
                 // Ensure log directory exists
-                Directory.CreateDirectory(_logDirectory);
+                Directory.CreateDirectory(this.logDirectory);
 
                 // Create initial log file if it doesn't exist
-                if (!File.Exists(_currentLogFilePath))
+                if (!File.Exists(this.currentLogFilePath))
                 {
-                    await CreateNewLogFileAsync();
+                    await this.CreateNewLogFileAsync();
                 }
 
                 // Log initialization
-                await LogSystemEventAsync("LoggingService", "Enhanced logging service initialized", LogLevel.Information);
+                await this.LogSystemEventAsync("LoggingService", "Enhanced logging service initialized", LogLevel.Information);
 
                 // Clean up old logs
-                await CleanupOldLogsAsync();
+                await this.CleanupOldLogsAsync();
 
-                _isInitialized = true;
-                _logger.LogInformation("Enhanced logging service initialized. Log directory: {LogDirectory}", _logDirectory);
+                this.isInitialized = true;
+                this.logger.LogInformation("Enhanced logging service initialized. Log directory: {LogDirectory}", this.logDirectory);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to initialize enhanced logging service");
+                this.logger.LogError(ex, "Failed to initialize enhanced logging service");
                 throw;
             }
         }
@@ -102,14 +107,14 @@ namespace ThreadPilot.Services
                 ["FromPlan"] = fromPlan,
                 ["ToPlan"] = toPlan,
                 ["Reason"] = reason,
-                ["ProcessName"] = processName ?? "N/A"
+                ["ProcessName"] = processName ?? "N/A",
             };
 
-            var message = processName != null 
+            var message = processName != null
                 ? $"Power plan changed from '{fromPlan}' to '{toPlan}' due to process '{processName}' ({reason})"
                 : $"Power plan changed from '{fromPlan}' to '{toPlan}' ({reason})";
 
-            await LogStructuredEventAsync("PowerPlan", message, LogLevel.Information, properties);
+            await this.LogStructuredEventAsync("PowerPlan", message, LogLevel.Information, properties);
         }
 
         public async Task LogProcessMonitoringEventAsync(string eventType, string processName, int processId, string details)
@@ -119,11 +124,11 @@ namespace ThreadPilot.Services
                 ["EventType"] = eventType,
                 ["ProcessName"] = processName,
                 ["ProcessId"] = processId,
-                ["Details"] = details
+                ["Details"] = details,
             };
 
             var message = $"Process monitoring event: {eventType} - {processName} (PID: {processId}) - {details}";
-            await LogStructuredEventAsync("ProcessMonitoring", message, LogLevel.Information, properties);
+            await this.LogStructuredEventAsync("ProcessMonitoring", message, LogLevel.Information, properties);
         }
 
         public async Task LogUserActionAsync(string action, string details, string? context = null)
@@ -132,7 +137,7 @@ namespace ThreadPilot.Services
             {
                 ["Action"] = action,
                 ["Details"] = details,
-                ["Context"] = context ?? "N/A"
+                ["Context"] = context ?? "N/A",
             };
 
             var message = $"User action: {action} - {details}";
@@ -141,17 +146,17 @@ namespace ThreadPilot.Services
                 message += $" (Context: {context})";
             }
 
-            await LogStructuredEventAsync("UserAction", message, LogLevel.Information, properties);
+            await this.LogStructuredEventAsync("UserAction", message, LogLevel.Information, properties);
         }
 
         public async Task LogSystemEventAsync(string eventType, string message, LogLevel level = LogLevel.Information)
         {
             var properties = new Dictionary<string, object>
             {
-                ["EventType"] = eventType
+                ["EventType"] = eventType,
             };
 
-            await LogStructuredEventAsync("System", message, level, properties);
+            await this.LogStructuredEventAsync("System", message, level, properties);
         }
 
         public async Task LogErrorAsync(Exception exception, string context, Dictionary<string, object>? additionalData = null)
@@ -160,7 +165,7 @@ namespace ThreadPilot.Services
             {
                 ["Context"] = context,
                 ["ExceptionType"] = exception.GetType().Name,
-                ["StackTrace"] = exception.StackTrace ?? "N/A"
+                ["StackTrace"] = exception.StackTrace ?? "N/A",
             };
 
             if (additionalData != null)
@@ -172,12 +177,12 @@ namespace ThreadPilot.Services
             }
 
             var message = $"Error in {context}: {exception.Message}";
-            await LogStructuredEventAsync("Error", message, LogLevel.Error, properties, exception);
+            await this.LogStructuredEventAsync("Error", message, LogLevel.Error, properties, exception);
 
             // Raise critical error event for severe exceptions
             if (exception is OutOfMemoryException or StackOverflowException or AccessViolationException)
             {
-                CriticalErrorOccurred?.Invoke(this, new CriticalErrorEventArgs(exception, context, additionalData));
+                this.CriticalErrorOccurred?.Invoke(this, new CriticalErrorEventArgs(exception, context, additionalData));
             }
         }
 
@@ -187,24 +192,25 @@ namespace ThreadPilot.Services
             {
                 ["EventType"] = eventType,
                 ["Details"] = details,
-                ["Version"] = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown"
+                ["Version"] = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown",
             };
 
             var message = $"Application {eventType}: {details}";
-            await LogStructuredEventAsync("Lifecycle", message, LogLevel.Information, properties);
+            await this.LogStructuredEventAsync("Lifecycle", message, LogLevel.Information, properties);
         }
 
         public IDisposable BeginScope(string operationName, object? parameters = null)
         {
             var correlationId = Guid.NewGuid().ToString("N")[..8];
-            _correlationId.Value = correlationId;
-            _operationStartTimes[correlationId] = DateTime.UtcNow;
+            this.CorrelationId.Value = correlationId;
+            this.OperationStartTimes[correlationId] = DateTime.UtcNow;
 
             var parametersDict = parameters != null
                 ? JsonSerializer.Serialize(parameters)
                 : "{}";
 
-            _logger.LogInformation("Operation {OperationName} started with correlation {CorrelationId} and parameters {Parameters}",
+            this.logger.LogInformation(
+                "Operation {OperationName} started with correlation {CorrelationId} and parameters {Parameters}",
                 operationName, correlationId, parametersDict);
 
             return new OperationScope(this, operationName, correlationId);
@@ -212,15 +218,21 @@ namespace ThreadPilot.Services
 
         public string? GetCurrentCorrelationId()
         {
-            return _correlationId.Value;
+            return this.CorrelationId.Value;
         }
 
         private async Task LogStructuredEventAsync(string category, string message, LogLevel level, Dictionary<string, object> properties, Exception? exception = null)
         {
-            if (!_isInitialized && category != "System") return;
+            if (!this.isInitialized && category != "System")
+            {
+                return;
+            }
 
             // Skip debug messages if debug logging is disabled
-            if (level == LogLevel.Debug && !IsDebugLoggingEnabled) return;
+            if (level == LogLevel.Debug && !this.IsDebugLoggingEnabled)
+            {
+                return;
+            }
 
             var logEntry = new LogEntry
             {
@@ -230,61 +242,67 @@ namespace ThreadPilot.Services
                 Message = message,
                 Exception = exception?.ToString(),
                 Properties = properties,
-                CorrelationId = Thread.CurrentThread.ManagedThreadId.ToString()
+                CorrelationId = Thread.CurrentThread.ManagedThreadId.ToString(),
             };
 
-            _logQueue.Enqueue(logEntry);
+            this.logQueue.Enqueue(logEntry);
 
             // Force immediate flush for errors and critical events
             if (level >= LogLevel.Error)
             {
-                await FlushLogsAsync();
+                await this.FlushLogsAsync();
             }
         }
 
         private void FlushLogs(object? state)
         {
-            TaskSafety.FireAndForget(FlushLogsAsync(), ex =>
+            TaskSafety.FireAndForget(this.FlushLogsAsync(), ex =>
             {
-                _logger.LogWarning(ex, "Periodic log flush failed");
+                this.logger.LogWarning(ex, "Periodic log flush failed");
             });
         }
 
         private async Task FlushLogsAsync()
         {
-            if (_logQueue.IsEmpty) return;
+            if (this.logQueue.IsEmpty)
+            {
+                return;
+            }
 
-            await _fileLock.WaitAsync();
+            await this.fileLock.WaitAsync();
             try
             {
                 // Check if we need to rotate the log file
-                await CheckLogRotationAsync();
+                await this.CheckLogRotationAsync();
 
                 var logEntries = new List<LogEntry>();
-                while (_logQueue.TryDequeue(out var entry))
+                while (this.logQueue.TryDequeue(out var entry))
                 {
                     logEntries.Add(entry);
                 }
 
-                if (logEntries.Count == 0) return;
+                if (logEntries.Count == 0)
+                {
+                    return;
+                }
 
                 // Write entries to file
-                await WriteLogEntriesToFileAsync(logEntries);
+                await this.WriteLogEntriesToFileAsync(logEntries);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to flush logs to file");
+                this.logger.LogError(ex, "Failed to flush logs to file");
             }
             finally
             {
-                _fileLock.Release();
+                this.fileLock.Release();
             }
         }
 
         private async Task WriteLogEntriesToFileAsync(List<LogEntry> entries)
         {
-            var logLines = entries.Select(FormatLogEntry);
-            await File.AppendAllLinesAsync(_currentLogFilePath, logLines);
+            var logLines = entries.Select(this.FormatLogEntry);
+            await File.AppendAllLinesAsync(this.currentLogFilePath, logLines);
         }
 
         private string FormatLogEntry(LogEntry entry)
@@ -297,7 +315,7 @@ namespace ThreadPilot.Services
                 message = entry.Message,
                 exception = entry.Exception,
                 properties = entry.Properties,
-                correlationId = entry.CorrelationId
+                correlationId = entry.CorrelationId,
             };
 
             return JsonSerializer.Serialize(logData, new JsonSerializerOptions { WriteIndented = false });
@@ -305,47 +323,47 @@ namespace ThreadPilot.Services
 
         private async Task CheckLogRotationAsync()
         {
-            var fileInfo = new FileInfo(_currentLogFilePath);
-            var maxSizeBytes = _settingsService.Settings.MaxLogFileSizeMb * 1024 * 1024;
+            var fileInfo = new FileInfo(this.currentLogFilePath);
+            var maxSizeBytes = this.settingsService.Settings.MaxLogFileSizeMb * 1024 * 1024;
 
             if (fileInfo.Exists && fileInfo.Length > maxSizeBytes)
             {
                 // Rotate log file
-                var rotatedPath = Path.Combine(_logDirectory, $"ThreadPilot_{DateTime.UtcNow:yyyyMMdd_HHmmss}.log");
-                File.Move(_currentLogFilePath, rotatedPath);
-                await CreateNewLogFileAsync();
+                var rotatedPath = Path.Combine(this.logDirectory, $"ThreadPilot_{DateTime.UtcNow:yyyyMMdd_HHmmss}.log");
+                File.Move(this.currentLogFilePath, rotatedPath);
+                await this.CreateNewLogFileAsync();
             }
         }
 
         private async Task CreateNewLogFileAsync()
         {
-            _currentLogFilePath = GetCurrentLogFilePath();
-            await File.WriteAllTextAsync(_currentLogFilePath, $"# ThreadPilot Log File - Created {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC{Environment.NewLine}");
+            this.currentLogFilePath = this.GetCurrentLogFilePath();
+            await File.WriteAllTextAsync(this.currentLogFilePath, $"# ThreadPilot Log File - Created {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC{Environment.NewLine}");
         }
 
         private string GetCurrentLogFilePath()
         {
-            return Path.Combine(_logDirectory, "ThreadPilot.log");
+            return Path.Combine(this.logDirectory, "ThreadPilot.log");
         }
 
         public async Task<List<LogEntry>> GetRecentLogEntriesAsync(int count = 100)
         {
-            return await GetLogEntriesAsync(DateTime.UtcNow.AddDays(-1), DateTime.UtcNow);
+            return await this.GetLogEntriesAsync(DateTime.UtcNow.AddDays(-1), DateTime.UtcNow);
         }
 
         public async Task<List<LogEntry>> GetLogEntriesAsync(DateTime fromDate, DateTime toDate)
         {
             var entries = new List<LogEntry>();
 
-            await _fileLock.WaitAsync();
+            await this.fileLock.WaitAsync();
             try
             {
-                var logFiles = Directory.GetFiles(_logDirectory, "*.log")
+                var logFiles = Directory.GetFiles(this.logDirectory, "*.log")
                     .OrderByDescending(f => new FileInfo(f).CreationTime);
 
                 foreach (var logFile in logFiles)
                 {
-                    var fileEntries = await ReadLogEntriesFromFileAsync(logFile, fromDate, toDate);
+                    var fileEntries = await this.ReadLogEntriesFromFileAsync(logFile, fromDate, toDate);
                     entries.AddRange(fileEntries);
                 }
 
@@ -353,7 +371,7 @@ namespace ThreadPilot.Services
             }
             finally
             {
-                _fileLock.Release();
+                this.fileLock.Release();
             }
         }
 
@@ -366,7 +384,10 @@ namespace ThreadPilot.Services
                 var lines = await File.ReadAllLinesAsync(filePath);
                 foreach (var line in lines)
                 {
-                    if (line.StartsWith("#") || string.IsNullOrWhiteSpace(line)) continue;
+                    if (line.StartsWith("#") || string.IsNullOrWhiteSpace(line))
+                    {
+                        continue;
+                    }
 
                     try
                     {
@@ -382,7 +403,7 @@ namespace ThreadPilot.Services
                                 Category = logData.GetProperty("category").GetString()!,
                                 Message = logData.GetProperty("message").GetString()!,
                                 Exception = logData.TryGetProperty("exception", out var ex) ? ex.GetString() : null,
-                                CorrelationId = logData.TryGetProperty("correlationId", out var cid) ? cid.GetString() : null
+                                CorrelationId = logData.TryGetProperty("correlationId", out var cid) ? cid.GetString() : null,
                             };
 
                             if (logData.TryGetProperty("properties", out var props))
@@ -401,7 +422,7 @@ namespace ThreadPilot.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to read log entries from file: {FilePath}", filePath);
+                this.logger.LogWarning(ex, "Failed to read log entries from file: {FilePath}", filePath);
             }
 
             return entries;
@@ -409,11 +430,11 @@ namespace ThreadPilot.Services
 
         public async Task CleanupOldLogsAsync()
         {
-            await _fileLock.WaitAsync();
+            await this.fileLock.WaitAsync();
             try
             {
-                var retentionDate = DateTime.UtcNow.AddDays(-_settingsService.Settings.LogRetentionDays);
-                var logFiles = Directory.GetFiles(_logDirectory, "*.log");
+                var retentionDate = DateTime.UtcNow.AddDays(-this.settingsService.Settings.LogRetentionDays);
+                var logFiles = Directory.GetFiles(this.logDirectory, "*.log");
 
                 foreach (var logFile in logFiles)
                 {
@@ -423,28 +444,28 @@ namespace ThreadPilot.Services
                         try
                         {
                             File.Delete(logFile);
-                            _logger.LogDebug("Deleted old log file: {LogFile}", logFile);
+                            this.logger.LogDebug("Deleted old log file: {LogFile}", logFile);
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogWarning(ex, "Failed to delete old log file: {LogFile}", logFile);
+                            this.logger.LogWarning(ex, "Failed to delete old log file: {LogFile}", logFile);
                         }
                     }
                 }
             }
             finally
             {
-                _fileLock.Release();
+                this.fileLock.Release();
             }
         }
 
         public async Task<LogFileStatistics> GetLogStatisticsAsync()
         {
-            await _fileLock.WaitAsync();
+            await this.fileLock.WaitAsync();
             try
             {
                 var stats = new LogFileStatistics();
-                var logFiles = Directory.GetFiles(_logDirectory, "*.log");
+                var logFiles = Directory.GetFiles(this.logDirectory, "*.log");
 
                 stats.TotalLogFiles = logFiles.Length;
 
@@ -473,16 +494,17 @@ namespace ThreadPilot.Services
             }
             finally
             {
-                _fileLock.Release();
+                this.fileLock.Release();
             }
         }
 
         public async Task<string> ExportLogsAsync(DateTime fromDate, DateTime toDate, string? exportPath = null)
         {
-            exportPath ??= Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), 
+            exportPath ??= Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
                 $"ThreadPilot_Logs_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
 
-            var entries = await GetLogEntriesAsync(fromDate, toDate);
+            var entries = await this.GetLogEntriesAsync(fromDate, toDate);
             var exportLines = entries.Select(e => $"{e.Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{e.Level}] {e.Category}: {e.Message}");
 
             await File.WriteAllLinesAsync(exportPath, exportLines);
@@ -491,58 +513,65 @@ namespace ThreadPilot.Services
 
         public async Task UpdateConfigurationAsync(bool enableDebugLogging, int maxFileSizeMb, int retentionDays)
         {
-            var updatedSettings = _settingsService.Settings;
+            var updatedSettings = this.settingsService.Settings;
             updatedSettings.EnableDebugLogging = enableDebugLogging;
             updatedSettings.MaxLogFileSizeMb = maxFileSizeMb;
             updatedSettings.LogRetentionDays = retentionDays;
 
-            await _settingsService.UpdateSettingsAsync(updatedSettings);
-            await LogSystemEventAsync("Configuration", $"Logging configuration updated: Debug={enableDebugLogging}, MaxSize={maxFileSizeMb}MB, Retention={retentionDays}days");
+            await this.settingsService.UpdateSettingsAsync(updatedSettings);
+            await this.LogSystemEventAsync("Configuration", $"Logging configuration updated: Debug={enableDebugLogging}, MaxSize={maxFileSizeMb}MB, Retention={retentionDays}days");
         }
 
         public void Dispose()
         {
-            if (_disposed) return;
+            if (this.disposed)
+            {
+                return;
+            }
 
-            _flushTimer?.Dispose();
-            FlushLogsAsync().Wait(TimeSpan.FromSeconds(5));
-            _fileLock?.Dispose();
-            _disposed = true;
+            this.flushTimer?.Dispose();
+            this.FlushLogsAsync().Wait(TimeSpan.FromSeconds(5));
+            this.fileLock?.Dispose();
+            this.disposed = true;
         }
     }
 
     /// <summary>
-    /// Operation scope for correlation tracking
+    /// Operation scope for correlation tracking.
     /// </summary>
     internal class OperationScope : IDisposable
     {
-        private readonly EnhancedLoggingService _loggingService;
-        private readonly string _operationName;
-        private readonly string _correlationId;
-        private readonly DateTime _startTime;
-        private bool _disposed;
+        private readonly EnhancedLoggingService loggingService;
+        private readonly string operationName;
+        private readonly string correlationId;
+        private readonly DateTime startTime;
+        private bool disposed;
 
         public OperationScope(EnhancedLoggingService loggingService, string operationName, string correlationId)
         {
-            _loggingService = loggingService;
-            _operationName = operationName;
-            _correlationId = correlationId;
-            _startTime = DateTime.UtcNow;
+            this.loggingService = loggingService;
+            this.operationName = operationName;
+            this.correlationId = correlationId;
+            this.startTime = DateTime.UtcNow;
         }
 
         public void Dispose()
         {
-            if (_disposed) return;
+            if (this.disposed)
+            {
+                return;
+            }
 
-            var duration = DateTime.UtcNow - _startTime;
-            _loggingService._operationStartTimes.TryRemove(_correlationId, out _);
-            _loggingService._correlationId.Value = null;
+            var duration = DateTime.UtcNow - this.startTime;
+            this.loggingService.OperationStartTimes.TryRemove(this.correlationId, out _);
+            this.loggingService.CorrelationId.Value = null;
 
             // Use the public logging method instead of accessing private _logger
-            _ = _loggingService.LogSystemEventAsync("OperationCompleted",
-                $"Operation {_operationName} completed with correlation {_correlationId} in {duration.TotalMilliseconds}ms");
+            _ = this.loggingService.LogSystemEventAsync(
+                "OperationCompleted",
+                $"Operation {this.operationName} completed with correlation {this.correlationId} in {duration.TotalMilliseconds}ms");
 
-            _disposed = true;
+            this.disposed = true;
         }
     }
 }

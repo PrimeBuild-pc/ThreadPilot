@@ -14,81 +14,89 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using Microsoft.Extensions.Logging;
-using Microsoft.Win32.SafeHandles;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Runtime.InteropServices;
-
 namespace ThreadPilot.Platforms.Windows
 {
+    using System;
+    using System.Collections.Generic;
+    using System.ComponentModel;
+    using System.Runtime.InteropServices;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Win32.SafeHandles;
+
     /// <summary>
     /// Handles CPU Set operations for a specific process using Windows APIs
-    /// Based on CPUSetSetter's ProcessHandlerWindows implementation
+    /// Based on CPUSetSetter's ProcessHandlerWindows implementation.
     /// </summary>
     public class ProcessCpuSetHandler : IProcessCpuSetHandler
     {
-        private static readonly Dictionary<int, uint> _cpuSetIdPerLogicalProcessor;
-        private static readonly object _staticInitLock = new object();
-        private static bool _staticInitialized = false;
+        private static readonly Dictionary<int, uint> cpuSetIdPerLogicalProcessor;
+        private static readonly object staticInitLock = new object();
+        private static bool staticInitialized = false;
 
-        private readonly Queue<CpuTimeTimestamp> _cpuTimeMovingAverageBuffer = new();
-        private readonly string _executableName;
-        private readonly uint _pid;
-        private readonly ILogger? _logger;
+        private readonly Queue<CpuTimeTimestamp> cpuTimeMovingAverageBuffer = new();
+        private readonly string executableName;
+        private readonly uint pid;
+        private readonly ILogger? logger;
 
-        private SafeProcessHandle? _queryLimitedInfoHandle;
-        private SafeProcessHandle? _setLimitedInfoHandle;
-        private bool _disposed = false;
+        private SafeProcessHandle? queryLimitedInfoHandle;
+        private SafeProcessHandle? setLimitedInfoHandle;
+        private bool disposed = false;
 
         static ProcessCpuSetHandler()
         {
-            _cpuSetIdPerLogicalProcessor = new Dictionary<int, uint>();
+            cpuSetIdPerLogicalProcessor = new Dictionary<int, uint>();
         }
 
         public ProcessCpuSetHandler(uint processId, string executableName, ILogger? logger = null)
         {
-            _pid = processId;
-            _executableName = executableName ?? $"PID_{processId}";
-            _logger = logger;
+            this.pid = processId;
+            this.executableName = executableName ?? $"PID_{processId}";
+            this.logger = logger;
 
             // Initialize CPU Set mapping on first use
             EnsureStaticInitialization();
 
             // Open handle for querying process information
-            _queryLimitedInfoHandle = CpuSetNativeMethods.OpenProcess(
+            this.queryLimitedInfoHandle = CpuSetNativeMethods.OpenProcess(
                 ProcessAccessFlags.PROCESS_QUERY_LIMITED_INFORMATION,
                 false,
                 processId);
 
-            if (_queryLimitedInfoHandle == null || _queryLimitedInfoHandle.IsInvalid)
+            if (this.queryLimitedInfoHandle == null || this.queryLimitedInfoHandle.IsInvalid)
             {
                 var error = Marshal.GetLastWin32Error();
-                _logger?.LogWarning("Failed to open process {ProcessId} for querying: {Error}", processId, new Win32Exception(error).Message);
+                this.logger?.LogWarning("Failed to open process {ProcessId} for querying: {Error}", processId, new Win32Exception(error).Message);
             }
         }
 
-        public uint ProcessId => _pid;
-        public string ExecutableName => _executableName;
-        public bool IsValid => _queryLimitedInfoHandle != null && !_queryLimitedInfoHandle.IsInvalid;
+        public uint ProcessId => this.pid;
+
+        public string ExecutableName => this.executableName;
+
+        public bool IsValid => this.queryLimitedInfoHandle != null && !this.queryLimitedInfoHandle.IsInvalid;
 
         private static void EnsureStaticInitialization()
         {
-            if (_staticInitialized) return;
-
-            lock (_staticInitLock)
+            if (staticInitialized)
             {
-                if (_staticInitialized) return;
+                return;
+            }
+
+            lock (staticInitLock)
+            {
+                if (staticInitialized)
+                {
+                    return;
+                }
 
                 try
                 {
                     var mapping = GetCpuSetIdPerLogicalProcessor();
                     foreach (var kvp in mapping)
                     {
-                        _cpuSetIdPerLogicalProcessor[kvp.Key] = kvp.Value;
+                        cpuSetIdPerLogicalProcessor[kvp.Key] = kvp.Value;
                     }
-                    _staticInitialized = true;
+                    staticInitialized = true;
                 }
                 catch (Exception)
                 {
@@ -100,7 +108,7 @@ namespace ThreadPilot.Platforms.Windows
 
         public double GetAverageCpuUsage()
         {
-            if (_queryLimitedInfoHandle == null || _queryLimitedInfoHandle.IsInvalid)
+            if (this.queryLimitedInfoHandle == null || this.queryLimitedInfoHandle.IsInvalid)
             {
                 return -1;
             }
@@ -110,12 +118,12 @@ namespace ThreadPilot.Platforms.Windows
                 DateTime now = DateTime.Now;
 
                 // Remove datapoints older than 30 seconds from the moving average buffer
-                while (_cpuTimeMovingAverageBuffer.Count > 0)
+                while (this.cpuTimeMovingAverageBuffer.Count > 0)
                 {
-                    TimeSpan datapointAge = now - _cpuTimeMovingAverageBuffer.Peek().Timestamp;
+                    TimeSpan datapointAge = now - this.cpuTimeMovingAverageBuffer.Peek().Timestamp;
                     if (datapointAge.TotalSeconds > 30)
                     {
-                        _cpuTimeMovingAverageBuffer.Dequeue();
+                        this.cpuTimeMovingAverageBuffer.Dequeue();
                     }
                     else
                     {
@@ -125,7 +133,7 @@ namespace ThreadPilot.Platforms.Windows
 
                 // Get the current total CPU time of the process
                 bool success = CpuSetNativeMethods.GetProcessTimes(
-                    _queryLimitedInfoHandle,
+                    this.queryLimitedInfoHandle,
                     out _,
                     out _,
                     out FILETIME kernelTime,
@@ -137,20 +145,20 @@ namespace ThreadPilot.Platforms.Windows
                 }
 
                 TimeSpan totalCpuTime = TimeSpan.FromTicks((long)(kernelTime.ULong + userTime.ULong));
-                _cpuTimeMovingAverageBuffer.Enqueue(new CpuTimeTimestamp
+                this.cpuTimeMovingAverageBuffer.Enqueue(new CpuTimeTimestamp
                 {
                     Timestamp = now,
-                    TotalCpuTime = totalCpuTime
+                    TotalCpuTime = totalCpuTime,
                 });
 
                 // Need at least 2 samples to calculate usage
-                if (_cpuTimeMovingAverageBuffer.Count < 2)
+                if (this.cpuTimeMovingAverageBuffer.Count < 2)
                 {
                     return 0;
                 }
 
                 // Take the CPU time from now and (up to) a minute ago, and get the average usage %
-                CpuTimeTimestamp startDatapoint = _cpuTimeMovingAverageBuffer.Peek();
+                CpuTimeTimestamp startDatapoint = this.cpuTimeMovingAverageBuffer.Peek();
                 TimeSpan deltaTime = now - startDatapoint.Timestamp;
                 TimeSpan deltaCpuTime = totalCpuTime - startDatapoint.TotalCpuTime;
 
@@ -169,36 +177,37 @@ namespace ThreadPilot.Platforms.Windows
 
         public bool ApplyCpuSetMask(long affinityMask, bool clearMask = false)
         {
-            if (_disposed)
+            if (this.disposed)
             {
                 throw new ObjectDisposedException(nameof(ProcessCpuSetHandler));
             }
 
             // Ensure we have CPU Set mapping
-            if (_cpuSetIdPerLogicalProcessor.Count == 0)
+            if (cpuSetIdPerLogicalProcessor.Count == 0)
             {
-                _logger?.LogWarning("CPU Set mapping not available. Cannot apply CPU Sets to process {ProcessId}", _pid);
+                this.logger?.LogWarning("CPU Set mapping not available. Cannot apply CPU Sets to process {ProcessId}", this.pid);
                 return false;
             }
 
             // Open handle for setting process information if not already open
-            if (_setLimitedInfoHandle == null)
+            if (this.setLimitedInfoHandle == null)
             {
-                _setLimitedInfoHandle = CpuSetNativeMethods.OpenProcess(
+                this.setLimitedInfoHandle = CpuSetNativeMethods.OpenProcess(
                     ProcessAccessFlags.PROCESS_SET_LIMITED_INFORMATION,
                     false,
-                    _pid);
+                    this.pid);
 
-                if (_setLimitedInfoHandle == null || _setLimitedInfoHandle.IsInvalid)
+                if (this.setLimitedInfoHandle == null || this.setLimitedInfoHandle.IsInvalid)
                 {
                     int openError = Marshal.GetLastWin32Error();
-                    string extraHelpString = (openError == 5) ? " Try restarting as Administrator" : "";
-                    _logger?.LogWarning("Could not open process '{ExecutableName}' (PID: {ProcessId}) for setting affinity: {Error}{Help}",
-                        _executableName, _pid, new Win32Exception(openError).Message, extraHelpString);
+                    string extraHelpString = (openError == 5) ? " Try restarting as Administrator" : string.Empty;
+                    this.logger?.LogWarning(
+                        "Could not open process '{ExecutableName}' (PID: {ProcessId}) for setting affinity: {Error}{Help}",
+                        this.executableName, this.pid, new Win32Exception(openError).Message, extraHelpString);
                     return false;
                 }
             }
-            else if (_setLimitedInfoHandle.IsInvalid)
+            else if (this.setLimitedInfoHandle.IsInvalid)
             {
                 // The handle was already made previously and failed, don't bother trying again
                 return false;
@@ -210,16 +219,17 @@ namespace ThreadPilot.Platforms.Windows
             if (clearMask)
             {
                 // Clear the CPU Set (allow process to run on all cores)
-                success = CpuSetNativeMethods.SetProcessDefaultCpuSets(_setLimitedInfoHandle, null, 0);
+                success = CpuSetNativeMethods.SetProcessDefaultCpuSets(this.setLimitedInfoHandle, null, 0);
                 if (success)
                 {
-                    _logger?.LogInformation("Cleared CPU Set of '{ExecutableName}' (PID: {ProcessId})", _executableName, _pid);
+                    this.logger?.LogInformation("Cleared CPU Set of '{ExecutableName}' (PID: {ProcessId})", this.executableName, this.pid);
                     return true;
                 }
 
                 error = Marshal.GetLastWin32Error();
-                _logger?.LogWarning("Could not clear CPU Set of '{ExecutableName}' (PID: {ProcessId}): {Error}",
-                    _executableName, _pid, new Win32Exception(error).Message);
+                this.logger?.LogWarning(
+                    "Could not clear CPU Set of '{ExecutableName}' (PID: {ProcessId}): {Error}",
+                    this.executableName, this.pid, new Win32Exception(error).Message);
                 return false;
             }
 
@@ -232,47 +242,50 @@ namespace ThreadPilot.Platforms.Windows
                 long coreBit = 1L << i;
                 if ((affinityMask & coreBit) != 0)
                 {
-                    if (_cpuSetIdPerLogicalProcessor.TryGetValue(i, out uint cpuSetId))
+                    if (cpuSetIdPerLogicalProcessor.TryGetValue(i, out uint cpuSetId))
                     {
                         cpuSetIds.Add(cpuSetId);
                     }
                     else
                     {
-                        _logger?.LogWarning("Unable to include core {CoreIndex} in CPU Set for '{ExecutableName}'. It does not have a CPU Set ID",
-                            i, _executableName);
+                        this.logger?.LogWarning(
+                            "Unable to include core {CoreIndex} in CPU Set for '{ExecutableName}'. It does not have a CPU Set ID",
+                            i, this.executableName);
                     }
                 }
             }
 
             if (cpuSetIds.Count == 0)
             {
-                _logger?.LogWarning("No valid CPU Set IDs found for affinity mask 0x{AffinityMask:X} on process '{ExecutableName}'",
-                    affinityMask, _executableName);
+                this.logger?.LogWarning(
+                    "No valid CPU Set IDs found for affinity mask 0x{AffinityMask:X} on process '{ExecutableName}'",
+                    affinityMask, this.executableName);
                 return false;
             }
 
             uint[] cpuSetIdsArray = cpuSetIds.ToArray();
-            success = CpuSetNativeMethods.SetProcessDefaultCpuSets(_setLimitedInfoHandle, cpuSetIdsArray, (uint)cpuSetIdsArray.Length);
+            success = CpuSetNativeMethods.SetProcessDefaultCpuSets(this.setLimitedInfoHandle, cpuSetIdsArray, (uint)cpuSetIdsArray.Length);
 
             if (success)
             {
-                _logger?.LogInformation("Applied CPU Set (affinity mask 0x{AffinityMask:X}) to '{ExecutableName}' (PID: {ProcessId})",
-                    affinityMask, _executableName, _pid);
+                this.logger?.LogInformation(
+                    "Applied CPU Set (affinity mask 0x{AffinityMask:X}) to '{ExecutableName}' (PID: {ProcessId})",
+                    affinityMask, this.executableName, this.pid);
                 return true;
             }
 
             error = Marshal.GetLastWin32Error();
-            string errorMessage = $"Could not apply CPU Set to '{_executableName}' (PID: {_pid}): {new Win32Exception(error).Message}";
+            string errorMessage = $"Could not apply CPU Set to '{this.executableName}' (PID: {this.pid}): {new Win32Exception(error).Message}";
             if (error == 5)
             {
                 errorMessage += " (Likely due to anti-cheat or insufficient privileges)";
             }
-            _logger?.LogWarning(errorMessage);
+            this.logger?.LogWarning(errorMessage);
             return false;
         }
 
         /// <summary>
-        /// Get the CPU Set Id of each logical processor
+        /// Get the CPU Set Id of each logical processor.
         /// </summary>
         private static Dictionary<int, uint> GetCpuSetIdPerLogicalProcessor()
         {
@@ -326,19 +339,23 @@ namespace ThreadPilot.Platforms.Windows
 
         public void Dispose()
         {
-            if (_disposed) return;
+            if (this.disposed)
+            {
+                return;
+            }
 
-            _queryLimitedInfoHandle?.Dispose();
-            _setLimitedInfoHandle?.Dispose();
-            _cpuTimeMovingAverageBuffer.Clear();
+            this.queryLimitedInfoHandle?.Dispose();
+            this.setLimitedInfoHandle?.Dispose();
+            this.cpuTimeMovingAverageBuffer.Clear();
 
-            _disposed = true;
+            this.disposed = true;
             GC.SuppressFinalize(this);
         }
 
         private class CpuTimeTimestamp
         {
             public DateTime Timestamp { get; init; }
+
             public TimeSpan TotalCpuTime { get; init; }
         }
     }

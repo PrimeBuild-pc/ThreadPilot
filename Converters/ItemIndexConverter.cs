@@ -14,16 +14,16 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Globalization;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-
 namespace ThreadPilot.Converters
 {
+    using System;
+    using System.Globalization;
+    using System.Windows;
+    using System.Windows.Controls;
+    using System.Windows.Data;
+
     /// <summary>
-    /// Converter to get the index of an item in an ItemsControl
+    /// Converter to get the index of an item in an ItemsControl.
     /// </summary>
     public class ItemIndexConverter : IValueConverter
     {

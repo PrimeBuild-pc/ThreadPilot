@@ -14,114 +14,115 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
+
     /// <summary>
-    /// Manages log file operations including rotation, cleanup, and concurrent access
+    /// Manages log file operations including rotation, cleanup, and concurrent access.
     /// </summary>
     public class LogFileManager : IDisposable
     {
-        private readonly ILogger<LogFileManager> _logger;
-        private readonly string _logDirectory;
-        private readonly SemaphoreSlim _fileLock = new(1, 1);
-        private readonly ReaderWriterLockSlim _configLock = new();
-        private bool _disposed;
+        private readonly ILogger<LogFileManager> logger;
+        private readonly string logDirectory;
+        private readonly SemaphoreSlim fileLock = new(1, 1);
+        private readonly ReaderWriterLockSlim configLock = new();
+        private bool disposed;
 
         // Configuration
-        private int _maxFileSizeMb = 10;
-        private int _retentionDays = 7;
-        private int _maxLogFiles = 50;
+        private int maxFileSizeMb = 10;
+        private int retentionDays = 7;
+        private int maxLogFiles = 50;
 
-        public string LogDirectory => _logDirectory;
+        public string LogDirectory => this.logDirectory;
+
         public string CurrentLogFilePath { get; private set; }
 
         public LogFileManager(ILogger<LogFileManager> logger, string? logDirectory = null)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            
-            _logDirectory = logDirectory ?? Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), 
-                "ThreadPilot", 
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+            this.logDirectory = logDirectory ?? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "ThreadPilot",
                 "Logs");
 
-            CurrentLogFilePath = Path.Combine(_logDirectory, "ThreadPilot.log");
+            this.CurrentLogFilePath = Path.Combine(this.logDirectory, "ThreadPilot.log");
         }
 
         /// <summary>
-        /// Initialize the log file manager
+        /// Initialize the log file manager.
         /// </summary>
         public async Task InitializeAsync()
         {
-            await _fileLock.WaitAsync();
+            await this.fileLock.WaitAsync();
             try
             {
                 // Ensure log directory exists
-                Directory.CreateDirectory(_logDirectory);
+                Directory.CreateDirectory(this.logDirectory);
 
                 // Create current log file if it doesn't exist
-                if (!File.Exists(CurrentLogFilePath))
+                if (!File.Exists(this.CurrentLogFilePath))
                 {
-                    await CreateNewLogFileAsync();
+                    await this.CreateNewLogFileAsync();
                 }
 
-                _logger.LogInformation("Log file manager initialized. Directory: {LogDirectory}", _logDirectory);
+                this.logger.LogInformation("Log file manager initialized. Directory: {LogDirectory}", this.logDirectory);
             }
             finally
             {
-                _fileLock.Release();
+                this.fileLock.Release();
             }
         }
 
         /// <summary>
-        /// Write log entries to the current log file with automatic rotation
+        /// Write log entries to the current log file with automatic rotation.
         /// </summary>
         public async Task WriteLogEntriesAsync(IEnumerable<string> logLines)
         {
-            await _fileLock.WaitAsync();
+            await this.fileLock.WaitAsync();
             try
             {
                 // Check if rotation is needed
-                await CheckAndRotateLogFileAsync();
+                await this.CheckAndRotateLogFileAsync();
 
                 // Write entries
-                await File.AppendAllLinesAsync(CurrentLogFilePath, logLines);
+                await File.AppendAllLinesAsync(this.CurrentLogFilePath, logLines);
             }
             finally
             {
-                _fileLock.Release();
+                this.fileLock.Release();
             }
         }
 
         /// <summary>
-        /// Write a single log entry
+        /// Write a single log entry.
         /// </summary>
         public async Task WriteLogEntryAsync(string logLine)
         {
-            await WriteLogEntriesAsync(new[] { logLine });
+            await this.WriteLogEntriesAsync(new[] { logLine });
         }
 
         /// <summary>
-        /// Read log entries from all log files within date range
+        /// Read log entries from all log files within date range.
         /// </summary>
         public async Task<List<string>> ReadLogEntriesAsync(DateTime fromDate, DateTime toDate, int maxEntries = 1000)
         {
-            await _fileLock.WaitAsync();
+            await this.fileLock.WaitAsync();
             try
             {
                 var allEntries = new List<(DateTime timestamp, string line)>();
-                var logFiles = GetLogFiles();
+                var logFiles = this.GetLogFiles();
 
                 foreach (var logFile in logFiles)
                 {
-                    var entries = await ReadLogEntriesFromFileAsync(logFile, fromDate, toDate);
+                    var entries = await this.ReadLogEntriesFromFileAsync(logFile, fromDate, toDate);
                     allEntries.AddRange(entries);
                 }
 
@@ -133,20 +134,20 @@ namespace ThreadPilot.Services
             }
             finally
             {
-                _fileLock.Release();
+                this.fileLock.Release();
             }
         }
 
         /// <summary>
-        /// Get log file statistics
+        /// Get log file statistics.
         /// </summary>
         public async Task<LogFileStatistics> GetStatisticsAsync()
         {
-            await _fileLock.WaitAsync();
+            await this.fileLock.WaitAsync();
             try
             {
                 var stats = new LogFileStatistics();
-                var logFiles = GetLogFiles();
+                var logFiles = this.GetLogFiles();
 
                 stats.TotalLogFiles = logFiles.Count;
 
@@ -172,30 +173,30 @@ namespace ThreadPilot.Services
                 }
 
                 // Count log levels by reading recent entries
-                await CountLogLevelsAsync(stats);
+                await this.CountLogLevelsAsync(stats);
 
                 return stats;
             }
             finally
             {
-                _fileLock.Release();
+                this.fileLock.Release();
             }
         }
 
         /// <summary>
-        /// Clean up old log files based on retention policy
+        /// Clean up old log files based on retention policy.
         /// </summary>
         public async Task CleanupOldLogsAsync()
         {
-            await _fileLock.WaitAsync();
+            await this.fileLock.WaitAsync();
             try
             {
-                _configLock.EnterReadLock();
-                var retentionDate = DateTime.UtcNow.AddDays(-_retentionDays);
-                var maxFiles = _maxLogFiles;
-                _configLock.ExitReadLock();
+                this.configLock.EnterReadLock();
+                var retentionDate = DateTime.UtcNow.AddDays(-this.retentionDays);
+                var maxFiles = this.maxLogFiles;
+                this.configLock.ExitReadLock();
 
-                var logFiles = GetLogFiles()
+                var logFiles = this.GetLogFiles()
                     .Where(f => Path.GetFileName(f) != "ThreadPilot.log") // Don't delete current log
                     .OrderBy(f => new FileInfo(f).CreationTime)
                     .ToList();
@@ -213,11 +214,11 @@ namespace ThreadPilot.Services
                             File.Delete(logFile);
                             logFiles.Remove(logFile);
                             deletedCount++;
-                            _logger.LogDebug("Deleted old log file: {LogFile}", logFile);
+                            this.logger.LogDebug("Deleted old log file: {LogFile}", logFile);
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogWarning(ex, "Failed to delete old log file: {LogFile}", logFile);
+                            this.logger.LogWarning(ex, "Failed to delete old log file: {LogFile}", logFile);
                         }
                     }
                 }
@@ -232,28 +233,28 @@ namespace ThreadPilot.Services
                         {
                             File.Delete(logFile);
                             deletedCount++;
-                            _logger.LogDebug("Deleted excess log file: {LogFile}", logFile);
+                            this.logger.LogDebug("Deleted excess log file: {LogFile}", logFile);
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogWarning(ex, "Failed to delete excess log file: {LogFile}", logFile);
+                            this.logger.LogWarning(ex, "Failed to delete excess log file: {LogFile}", logFile);
                         }
                     }
                 }
 
                 if (deletedCount > 0)
                 {
-                    _logger.LogInformation("Cleaned up {DeletedCount} old log files", deletedCount);
+                    this.logger.LogInformation("Cleaned up {DeletedCount} old log files", deletedCount);
                 }
             }
             finally
             {
-                _fileLock.Release();
+                this.fileLock.Release();
             }
         }
 
         /// <summary>
-        /// Export logs to a specified file
+        /// Export logs to a specified file.
         /// </summary>
         public async Task<string> ExportLogsAsync(DateTime fromDate, DateTime toDate, string? exportPath = null)
         {
@@ -261,15 +262,15 @@ namespace ThreadPilot.Services
                 Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
                 $"ThreadPilot_Logs_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
 
-            var logEntries = await ReadLogEntriesAsync(fromDate, toDate, int.MaxValue);
-            
+            var logEntries = await this.ReadLogEntriesAsync(fromDate, toDate, int.MaxValue);
+
             var exportContent = new List<string>
             {
                 $"# ThreadPilot Log Export",
                 $"# Export Date: {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
                 $"# Date Range: {fromDate:yyyy-MM-dd} to {toDate:yyyy-MM-dd}",
                 $"# Total Entries: {logEntries.Count}",
-                ""
+                string.Empty,
             };
 
             exportContent.AddRange(logEntries);
@@ -279,55 +280,55 @@ namespace ThreadPilot.Services
         }
 
         /// <summary>
-        /// Update configuration
+        /// Update configuration.
         /// </summary>
         public void UpdateConfiguration(int maxFileSizeMb, int retentionDays, int maxLogFiles = 50)
         {
-            _configLock.EnterWriteLock();
+            this.configLock.EnterWriteLock();
             try
             {
-                _maxFileSizeMb = maxFileSizeMb;
-                _retentionDays = retentionDays;
-                _maxLogFiles = maxLogFiles;
+                this.maxFileSizeMb = maxFileSizeMb;
+                this.retentionDays = retentionDays;
+                this.maxLogFiles = maxLogFiles;
             }
             finally
             {
-                _configLock.ExitWriteLock();
+                this.configLock.ExitWriteLock();
             }
         }
 
         private async Task CheckAndRotateLogFileAsync()
         {
-            var fileInfo = new FileInfo(CurrentLogFilePath);
-            
-            _configLock.EnterReadLock();
-            var maxSizeBytes = _maxFileSizeMb * 1024 * 1024;
-            _configLock.ExitReadLock();
+            var fileInfo = new FileInfo(this.CurrentLogFilePath);
+
+            this.configLock.EnterReadLock();
+            var maxSizeBytes = this.maxFileSizeMb * 1024 * 1024;
+            this.configLock.ExitReadLock();
 
             if (fileInfo.Exists && fileInfo.Length > maxSizeBytes)
             {
-                await RotateLogFileAsync();
+                await this.RotateLogFileAsync();
             }
         }
 
         private async Task RotateLogFileAsync()
         {
             var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
-            var rotatedPath = Path.Combine(_logDirectory, $"ThreadPilot_{timestamp}.log");
+            var rotatedPath = Path.Combine(this.logDirectory, $"ThreadPilot_{timestamp}.log");
 
             try
             {
                 // Move current log to rotated name
-                File.Move(CurrentLogFilePath, rotatedPath);
-                
-                // Create new current log file
-                await CreateNewLogFileAsync();
+                File.Move(this.CurrentLogFilePath, rotatedPath);
 
-                _logger.LogInformation("Log file rotated: {RotatedPath}", rotatedPath);
+                // Create new current log file
+                await this.CreateNewLogFileAsync();
+
+                this.logger.LogInformation("Log file rotated: {RotatedPath}", rotatedPath);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to rotate log file");
+                this.logger.LogError(ex, "Failed to rotate log file");
                 throw;
             }
         }
@@ -340,15 +341,15 @@ namespace ThreadPilot.Services
                 $"# Created: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC",
                 $"# Version: {System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}",
                 $"# Machine: {Environment.MachineName}",
-                ""
+                string.Empty,
             };
 
-            await File.WriteAllLinesAsync(CurrentLogFilePath, header);
+            await File.WriteAllLinesAsync(this.CurrentLogFilePath, header);
         }
 
         private List<string> GetLogFiles()
         {
-            return Directory.GetFiles(_logDirectory, "*.log")
+            return Directory.GetFiles(this.logDirectory, "*.log")
                 .OrderByDescending(f => new FileInfo(f).CreationTime)
                 .ToList();
         }
@@ -362,10 +363,13 @@ namespace ThreadPilot.Services
                 var lines = await File.ReadAllLinesAsync(filePath);
                 foreach (var line in lines)
                 {
-                    if (line.StartsWith("#") || string.IsNullOrWhiteSpace(line)) continue;
+                    if (line.StartsWith("#") || string.IsNullOrWhiteSpace(line))
+                    {
+                        continue;
+                    }
 
                     // Try to extract timestamp from JSON log entry
-                    if (TryExtractTimestamp(line, out var timestamp))
+                    if (this.TryExtractTimestamp(line, out var timestamp))
                     {
                         if (timestamp >= fromDate && timestamp <= toDate)
                         {
@@ -376,7 +380,7 @@ namespace ThreadPilot.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to read log entries from file: {FilePath}", filePath);
+                this.logger.LogWarning(ex, "Failed to read log entries from file: {FilePath}", filePath);
             }
 
             return entries;
@@ -414,28 +418,40 @@ namespace ThreadPilot.Services
             try
             {
                 // Read recent entries to count log levels
-                var recentEntries = await ReadLogEntriesAsync(DateTime.UtcNow.AddDays(-1), DateTime.UtcNow, 1000);
-                
+                var recentEntries = await this.ReadLogEntriesAsync(DateTime.UtcNow.AddDays(-1), DateTime.UtcNow, 1000);
+
                 foreach (var entry in recentEntries)
                 {
-                    if (entry.Contains("\"level\":\"Error\"")) stats.ErrorCount++;
-                    else if (entry.Contains("\"level\":\"Warning\"")) stats.WarningCount++;
-                    else if (entry.Contains("\"level\":\"Information\"")) stats.InfoCount++;
+                    if (entry.Contains("\"level\":\"Error\""))
+                    {
+                        stats.ErrorCount++;
+                    }
+                    else if (entry.Contains("\"level\":\"Warning\""))
+                    {
+                        stats.WarningCount++;
+                    }
+                    else if (entry.Contains("\"level\":\"Information\""))
+                    {
+                        stats.InfoCount++;
+                    }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to count log levels");
+                this.logger.LogWarning(ex, "Failed to count log levels");
             }
         }
 
         public void Dispose()
         {
-            if (_disposed) return;
+            if (this.disposed)
+            {
+                return;
+            }
 
-            _fileLock?.Dispose();
-            _configLock?.Dispose();
-            _disposed = true;
+            this.fileLock?.Dispose();
+            this.configLock?.Dispose();
+            this.disposed = true;
         }
     }
 }

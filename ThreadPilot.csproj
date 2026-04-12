@@ -7,6 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
+    <EnableMsixTooling>true</EnableMsixTooling>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>ico.ico</ApplicationIcon>
     <PublishSingleFile>true</PublishSingleFile>
@@ -73,5 +74,11 @@
     <!-- Remove Game Boost-specific integration test from build -->
     <Compile Remove="Tests\GameBoostIntegrationTest.cs" />
   </ItemGroup>
+
+  <Target Name="GenerateMsixFromPublishOutput" AfterTargets="Publish" Condition="'$(GenerateMsixFromPublish)' == 'true'">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\build-msix.ps1&quot; -ProjectDir &quot;$(MSBuildProjectDirectory)&quot; -PublishDir &quot;$(PublishDir).&quot; -OutputDir &quot;$(MsixOutputDir).&quot; -Version &quot;$(Version)&quot;" />
+  </Target>
+
+  <Import Project="Directory.Publish.props" Condition="Exists('Directory.Publish.props')" />
 
 </Project>

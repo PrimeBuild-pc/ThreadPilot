@@ -14,15 +14,15 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using ThreadPilot.Models;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Threading.Tasks;
+    using ThreadPilot.Models;
+
     /// <summary>
-    /// Main orchestration service for process monitoring and power plan management
+    /// Main orchestration service for process monitoring and power plan management.
     /// </summary>
     public interface IProcessMonitorManagerService : IDisposable
     {
@@ -37,47 +37,47 @@ namespace ThreadPilot.Services
         event EventHandler<ServiceStatusEventArgs>? ServiceStatusChanged;
 
         /// <summary>
-        /// Gets whether the service is currently running
+        /// Gets a value indicating whether gets whether the service is currently running.
         /// </summary>
         bool IsRunning { get; }
 
         /// <summary>
-        /// Gets the current service status
+        /// Gets the current service status.
         /// </summary>
         string Status { get; }
 
         /// <summary>
-        /// Gets currently running associated processes
+        /// Gets currently running associated processes.
         /// </summary>
         IEnumerable<ProcessModel> RunningAssociatedProcesses { get; }
 
         /// <summary>
-        /// Starts the process monitoring and power plan management service
+        /// Starts the process monitoring and power plan management service.
         /// </summary>
         Task StartAsync();
 
         /// <summary>
-        /// Stops the service
+        /// Stops the service.
         /// </summary>
         Task StopAsync();
 
         /// <summary>
-        /// Manually triggers a power plan evaluation for all running processes
+        /// Manually triggers a power plan evaluation for all running processes.
         /// </summary>
         Task EvaluateCurrentProcessesAsync();
 
         /// <summary>
-        /// Forces a return to the default power plan
+        /// Forces a return to the default power plan.
         /// </summary>
         Task ForceDefaultPowerPlanAsync();
 
         /// <summary>
-        /// Gets the current active power plan information
+        /// Gets the current active power plan information.
         /// </summary>
         Task<PowerPlanModel?> GetCurrentActivePowerPlanAsync();
 
         /// <summary>
-        /// Refreshes the configuration from the association service
+        /// Refreshes the configuration from the association service.
         /// </summary>
         Task RefreshConfigurationAsync();
 
@@ -88,51 +88,60 @@ namespace ThreadPilot.Services
     }
 
     /// <summary>
-    /// Event arguments for process-triggered power plan changes
+    /// Event arguments for process-triggered power plan changes.
     /// </summary>
     public class ProcessPowerPlanChangeEventArgs : EventArgs
     {
         public ProcessModel Process { get; }
+
         public ProcessPowerPlanAssociation Association { get; }
+
         public PowerPlanModel? PreviousPowerPlan { get; }
+
         public PowerPlanModel? NewPowerPlan { get; }
+
         public string Action { get; } // "ProcessStarted", "ProcessStopped", "DefaultRestored"
+
         public DateTime Timestamp { get; }
 
         public ProcessPowerPlanChangeEventArgs(
-            ProcessModel process, 
-            ProcessPowerPlanAssociation association, 
-            PowerPlanModel? previousPowerPlan, 
-            PowerPlanModel? newPowerPlan, 
+            ProcessModel process,
+            ProcessPowerPlanAssociation association,
+            PowerPlanModel? previousPowerPlan,
+            PowerPlanModel? newPowerPlan,
             string action)
         {
-            Process = process;
-            Association = association;
-            PreviousPowerPlan = previousPowerPlan;
-            NewPowerPlan = newPowerPlan;
-            Action = action;
-            Timestamp = DateTime.Now;
+            this.Process = process;
+            this.Association = association;
+            this.PreviousPowerPlan = previousPowerPlan;
+            this.NewPowerPlan = newPowerPlan;
+            this.Action = action;
+            this.Timestamp = DateTime.Now;
         }
     }
 
     /// <summary>
-    /// Event arguments for service status changes
+    /// Event arguments for service status changes.
     /// </summary>
     public class ServiceStatusEventArgs : EventArgs
     {
         public bool IsRunning { get; }
+
         public string Status { get; }
+
         public string? Details { get; }
+
         public Exception? Error { get; }
+
         public DateTime Timestamp { get; }
 
         public ServiceStatusEventArgs(bool isRunning, string status, string? details = null, Exception? error = null)
         {
-            IsRunning = isRunning;
-            Status = status;
-            Details = details;
-            Error = error;
-            Timestamp = DateTime.Now;
+            this.IsRunning = isRunning;
+            this.Status = status;
+            this.Details = details;
+            this.Error = error;
+            this.Timestamp = DateTime.Now;
         }
     }
 }

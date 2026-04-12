@@ -14,18 +14,18 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using WpfUserControl = System.Windows.Controls.UserControl;
-
 namespace ThreadPilot.Views
 {
+    using WpfUserControl = System.Windows.Controls.UserControl;
+
     /// <summary>
-    /// Interaction logic for ProcessPowerPlanAssociationView.xaml
+    /// Interaction logic for ProcessPowerPlanAssociationView.xaml.
     /// </summary>
     public partial class ProcessPowerPlanAssociationView : WpfUserControl
     {
         public ProcessPowerPlanAssociationView()
         {
-            InitializeComponent();
+            this.InitializeComponent();
         }
     }
 }

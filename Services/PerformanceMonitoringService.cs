@@ -14,33 +14,33 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Management;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using ThreadPilot.Models;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Linq;
+    using System.Management;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
+    using ThreadPilot.Models;
+
     /// <summary>
-    /// Service for real-time performance monitoring
+    /// Service for real-time performance monitoring.
     /// </summary>
     public class PerformanceMonitoringService : IPerformanceMonitoringService, IDisposable
     {
-        private readonly ILogger<PerformanceMonitoringService> _logger;
-        private readonly IProcessService _processService;
-        private readonly ICpuTopologyService _cpuTopologyService;
-        private readonly List<SystemPerformanceMetrics> _historicalData;
-        private readonly PerformanceCounter _totalCpuCounter;
-        private readonly PerformanceCounter _memoryCounter;
-        private readonly List<PerformanceCounter> _cpuCoreCounters;
-        private System.Threading.Timer? _monitoringTimer;
-        private bool _isMonitoring;
-        private bool _disposed;
+        private readonly ILogger<PerformanceMonitoringService> logger;
+        private readonly IProcessService processService;
+        private readonly ICpuTopologyService cpuTopologyService;
+        private readonly List<SystemPerformanceMetrics> historicalData;
+        private readonly PerformanceCounter totalCpuCounter;
+        private readonly PerformanceCounter memoryCounter;
+        private readonly List<PerformanceCounter> cpuCoreCounters;
+        private System.Threading.Timer? monitoringTimer;
+        private bool isMonitoring;
+        private bool disposed;
 
         public event EventHandler<PerformanceMetricsUpdatedEventArgs>? MetricsUpdated;
 
@@ -49,17 +49,17 @@ namespace ThreadPilot.Services
             IProcessService processService,
             ICpuTopologyService cpuTopologyService)
         {
-            _logger = logger;
-            _processService = processService;
-            _cpuTopologyService = cpuTopologyService;
-            _historicalData = new List<SystemPerformanceMetrics>();
-            
-            // Initialize performance counters
-            _totalCpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
-            _memoryCounter = new PerformanceCounter("Memory", "Available MBytes");
-            _cpuCoreCounters = new List<PerformanceCounter>();
+            this.logger = logger;
+            this.processService = processService;
+            this.cpuTopologyService = cpuTopologyService;
+            this.historicalData = new List<SystemPerformanceMetrics>();
 
-            InitializeCpuCoreCounters();
+            // Initialize performance counters
+            this.totalCpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+            this.memoryCounter = new PerformanceCounter("Memory", "Available MBytes");
+            this.cpuCoreCounters = new List<PerformanceCounter>();
+
+            this.InitializeCpuCoreCounters();
         }
 
         public async Task<SystemPerformanceMetrics> GetSystemMetricsAsync()
@@ -69,40 +69,40 @@ namespace ThreadPilot.Services
                 var metrics = new SystemPerformanceMetrics
                 {
                     Timestamp = DateTime.UtcNow,
-                    TotalCpuUsage = await GetTotalCpuUsageAsync(),
-                    CpuCoreUsages = await GetCpuCoreUsageAsync(),
-                    TotalMemoryUsage = await GetTotalMemoryUsageAsync(),
-                    AvailableMemory = await GetAvailableMemoryAsync(),
-                    ActiveProcessCount = Process.GetProcesses().Length
+                    TotalCpuUsage = await this.GetTotalCpuUsageAsync(),
+                    CpuCoreUsages = await this.GetCpuCoreUsageAsync(),
+                    TotalMemoryUsage = await this.GetTotalMemoryUsageAsync(),
+                    AvailableMemory = await this.GetAvailableMemoryAsync(),
+                    ActiveProcessCount = Process.GetProcesses().Length,
                 };
 
                 // Calculate memory percentage
-                metrics.TotalMemory = await GetTotalPhysicalMemoryAsync();
-                metrics.MemoryUsagePercentage = metrics.TotalMemory > 0 
-                    ? ((double)(metrics.TotalMemory - metrics.AvailableMemory) / metrics.TotalMemory) * 100 
+                metrics.TotalMemory = await this.GetTotalPhysicalMemoryAsync();
+                metrics.MemoryUsagePercentage = metrics.TotalMemory > 0
+                    ? ((double)(metrics.TotalMemory - metrics.AvailableMemory) / metrics.TotalMemory) * 100
                     : 0;
 
                 // Get top processes
-                var topCpuProcesses = await GetTopCpuProcessesAsync(1);
+                var topCpuProcesses = await this.GetTopCpuProcessesAsync(1);
                 metrics.TopCpuProcess = topCpuProcesses.FirstOrDefault();
 
-                var topMemoryProcesses = await GetTopMemoryProcessesAsync(1);
+                var topMemoryProcesses = await this.GetTopMemoryProcessesAsync(1);
                 metrics.TopMemoryProcess = topMemoryProcesses.FirstOrDefault();
 
                 // Store in historical data
-                _historicalData.Add(metrics);
-                
+                this.historicalData.Add(metrics);
+
                 // Keep only last 1000 entries (about 16 minutes at 1-second intervals)
-                if (_historicalData.Count > 1000)
+                if (this.historicalData.Count > 1000)
                 {
-                    _historicalData.RemoveAt(0);
+                    this.historicalData.RemoveAt(0);
                 }
 
                 return metrics;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting system metrics");
+                this.logger.LogError(ex, "Error getting system metrics");
                 return new SystemPerformanceMetrics();
             }
         }
@@ -113,11 +113,11 @@ namespace ThreadPilot.Services
 
             try
             {
-                var topology = await _cpuTopologyService.DetectTopologyAsync();
-                
-                for (int i = 0; i < _cpuCoreCounters.Count; i++)
+                var topology = await this.cpuTopologyService.DetectTopologyAsync();
+
+                for (int i = 0; i < this.cpuCoreCounters.Count; i++)
                 {
-                    var counter = _cpuCoreCounters[i];
+                    var counter = this.cpuCoreCounters[i];
                     var usage = counter.NextValue();
 
                     var coreUsage = new CpuCoreUsage
@@ -127,7 +127,7 @@ namespace ThreadPilot.Services
                         Usage = usage,
                         CoreType = DetermineCoreType(i, topology),
                         IsHyperThreaded = IsHyperThreadedCore(i, topology),
-                        PhysicalCoreId = GetPhysicalCoreId(i, topology)
+                        PhysicalCoreId = GetPhysicalCoreId(i, topology),
                     };
 
                     coreUsages.Add(coreUsage);
@@ -135,7 +135,7 @@ namespace ThreadPilot.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting CPU core usage");
+                this.logger.LogError(ex, "Error getting CPU core usage");
             }
 
             return coreUsages;
@@ -155,7 +155,7 @@ namespace ThreadPilot.Services
                 }
 
                 // Get available memory
-                memoryInfo.AvailablePhysicalMemory = (long)_memoryCounter.NextValue() * 1024 * 1024; // Convert MB to bytes
+                memoryInfo.AvailablePhysicalMemory = (long)this.memoryCounter.NextValue() * 1024 * 1024; // Convert MB to bytes
                 memoryInfo.UsedPhysicalMemory = memoryInfo.TotalPhysicalMemory - memoryInfo.AvailablePhysicalMemory;
                 memoryInfo.PhysicalMemoryUsagePercentage = memoryInfo.TotalPhysicalMemory > 0
                     ? ((double)memoryInfo.UsedPhysicalMemory / memoryInfo.TotalPhysicalMemory) * 100
@@ -178,7 +178,7 @@ namespace ThreadPilot.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting memory usage");
+                this.logger.LogError(ex, "Error getting memory usage");
                 return new MemoryUsageInfo();
             }
         }
@@ -187,7 +187,7 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var processes = await _processService.GetProcessesAsync();
+                var processes = await this.processService.GetProcessesAsync();
                 return processes
                     .OrderByDescending(p => p.CpuUsage)
                     .Take(count)
@@ -199,14 +199,14 @@ namespace ThreadPilot.Services
                         CpuUsage = p.CpuUsage,
                         MemoryUsage = p.MemoryUsage,
                         ThreadCount = p.Process?.Threads?.Count ?? 0,
-                        ExecutablePath = p.ExecutablePath ?? "",
-                        Priority = p.Priority.ToString()
+                        ExecutablePath = p.ExecutablePath ?? string.Empty,
+                        Priority = p.Priority.ToString(),
                     })
                     .ToList();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting top CPU processes");
+                this.logger.LogError(ex, "Error getting top CPU processes");
                 return new List<ProcessPerformanceInfo>();
             }
         }
@@ -215,7 +215,7 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var processes = await _processService.GetProcessesAsync();
+                var processes = await this.processService.GetProcessesAsync();
                 return processes
                     .OrderByDescending(p => p.MemoryUsage)
                     .Take(count)
@@ -227,61 +227,68 @@ namespace ThreadPilot.Services
                         CpuUsage = p.CpuUsage,
                         MemoryUsage = p.MemoryUsage,
                         ThreadCount = p.Process?.Threads?.Count ?? 0,
-                        ExecutablePath = p.ExecutablePath ?? "",
-                        Priority = p.Priority.ToString()
+                        ExecutablePath = p.ExecutablePath ?? string.Empty,
+                        Priority = p.Priority.ToString(),
                     })
                     .ToList();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting top memory processes");
+                this.logger.LogError(ex, "Error getting top memory processes");
                 return new List<ProcessPerformanceInfo>();
             }
         }
 
         public async Task StartMonitoringAsync()
         {
-            if (_isMonitoring) return;
+            if (this.isMonitoring)
+            {
+                return;
+            }
 
-            _logger.LogInformation("Starting performance monitoring");
-            _isMonitoring = true;
+            this.logger.LogInformation("Starting performance monitoring");
+            this.isMonitoring = true;
 
             // PERFORMANCE OPTIMIZATION: Increased interval from 1s to 2s for better performance
-            _monitoringTimer = new System.Threading.Timer(async _ =>
+            this.monitoringTimer = new System.Threading.Timer(
+                async _ =>
             {
                 try
                 {
-                    var metrics = await GetSystemMetricsAsync();
-                    MetricsUpdated?.Invoke(this, new PerformanceMetricsUpdatedEventArgs(metrics));
+                    var metrics = await this.GetSystemMetricsAsync();
+                    this.MetricsUpdated?.Invoke(this, new PerformanceMetricsUpdatedEventArgs(metrics));
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error during performance monitoring update");
+                    this.logger.LogError(ex, "Error during performance monitoring update");
                 }
             }, null, TimeSpan.Zero, TimeSpan.FromSeconds(2));
         }
 
         public async Task StopMonitoringAsync()
         {
-            if (!_isMonitoring) return;
+            if (!this.isMonitoring)
+            {
+                return;
+            }
 
-            _logger.LogInformation("Stopping performance monitoring");
-            _isMonitoring = false;
+            this.logger.LogInformation("Stopping performance monitoring");
+            this.isMonitoring = false;
 
-            _monitoringTimer?.Dispose();
-            _monitoringTimer = null;
+            this.monitoringTimer?.Dispose();
+            this.monitoringTimer = null;
         }
 
         public async Task<List<SystemPerformanceMetrics>> GetHistoricalDataAsync(TimeSpan duration)
         {
             var cutoffTime = DateTime.UtcNow - duration;
-            return _historicalData.Where(m => m.Timestamp >= cutoffTime).ToList();
+            return this.historicalData.Where(m => m.Timestamp >= cutoffTime).ToList();
         }
 
         public async Task ClearHistoricalDataAsync()
         {
-            _historicalData.Clear();
-            _logger.LogInformation("Historical performance data cleared");
+            this.historicalData.Clear();
+            this.logger.LogInformation("Historical performance data cleared");
         }
 
         private void InitializeCpuCoreCounters()
@@ -292,14 +299,14 @@ namespace ThreadPilot.Services
                 for (int i = 0; i < coreCount; i++)
                 {
                     var counter = new PerformanceCounter("Processor", "% Processor Time", i.ToString());
-                    _cpuCoreCounters.Add(counter);
+                    this.cpuCoreCounters.Add(counter);
                 }
 
-                _logger.LogInformation("Initialized {CoreCount} CPU core performance counters", coreCount);
+                this.logger.LogInformation("Initialized {CoreCount} CPU core performance counters", coreCount);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error initializing CPU core counters");
+                this.logger.LogError(ex, "Error initializing CPU core counters");
             }
         }
 
@@ -307,11 +314,11 @@ namespace ThreadPilot.Services
         {
             try
             {
-                return _totalCpuCounter.NextValue();
+                return this.totalCpuCounter.NextValue();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting total CPU usage");
+                this.logger.LogError(ex, "Error getting total CPU usage");
                 return 0;
             }
         }
@@ -320,13 +327,13 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var totalMemory = await GetTotalPhysicalMemoryAsync();
-                var availableMemory = await GetAvailableMemoryAsync();
+                var totalMemory = await this.GetTotalPhysicalMemoryAsync();
+                var availableMemory = await this.GetAvailableMemoryAsync();
                 return totalMemory - availableMemory;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting total memory usage");
+                this.logger.LogError(ex, "Error getting total memory usage");
                 return 0;
             }
         }
@@ -335,11 +342,11 @@ namespace ThreadPilot.Services
         {
             try
             {
-                return (long)_memoryCounter.NextValue() * 1024 * 1024; // Convert MB to bytes
+                return (long)this.memoryCounter.NextValue() * 1024 * 1024; // Convert MB to bytes
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting available memory");
+                this.logger.LogError(ex, "Error getting available memory");
                 return 0;
             }
         }
@@ -357,7 +364,7 @@ namespace ThreadPilot.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting total physical memory");
+                this.logger.LogError(ex, "Error getting total physical memory");
                 return 0;
             }
         }
@@ -368,9 +375,13 @@ namespace ThreadPilot.Services
             {
                 // Intel hybrid architecture
                 if (coreId < topology.PerformanceCores.Count())
+                {
                     return "P-Core";
+                }
                 else
+                {
                     return "E-Core";
+                }
             }
 
             return "Standard";
@@ -378,7 +389,10 @@ namespace ThreadPilot.Services
 
         private static bool IsHyperThreadedCore(int coreId, CpuTopologyModel? topology)
         {
-            if (topology?.HasHyperThreading != true) return false;
+            if (topology?.HasHyperThreading != true)
+            {
+                return false;
+            }
 
             // Simplified logic - in reality this would be more complex
             return coreId >= topology.TotalPhysicalCores;
@@ -396,19 +410,22 @@ namespace ThreadPilot.Services
 
         public void Dispose()
         {
-            if (_disposed) return;
+            if (this.disposed)
+            {
+                return;
+            }
 
-            _monitoringTimer?.Dispose();
-            _totalCpuCounter?.Dispose();
-            _memoryCounter?.Dispose();
+            this.monitoringTimer?.Dispose();
+            this.totalCpuCounter?.Dispose();
+            this.memoryCounter?.Dispose();
 
-            foreach (var counter in _cpuCoreCounters)
+            foreach (var counter in this.cpuCoreCounters)
             {
                 counter?.Dispose();
             }
 
-            _cpuCoreCounters.Clear();
-            _disposed = true;
+            this.cpuCoreCounters.Clear();
+            this.disposed = true;
         }
     }
 }

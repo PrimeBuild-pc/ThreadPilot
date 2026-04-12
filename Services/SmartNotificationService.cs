@@ -14,67 +14,70 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using ThreadPilot.Models;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Collections.Concurrent;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
+    using ThreadPilot.Models;
+
     /// <summary>
-    /// Implementation of smart notification service with throttling and priority queuing
+    /// Implementation of smart notification service with throttling and priority queuing.
     /// </summary>
     public class SmartNotificationService : ISmartNotificationService, IDisposable
     {
-        private readonly ILogger<SmartNotificationService> _logger;
-        private readonly INotificationService _baseNotificationService;
-        private readonly ConcurrentQueue<SmartNotification> _notificationQueue = new();
-        private readonly ConcurrentDictionary<string, SmartNotification> _scheduledNotifications = new();
-        private readonly ConcurrentDictionary<string, DateTime> _lastNotificationTimes = new();
-        private readonly ConcurrentDictionary<string, List<DateTime>> _notificationHistory = new();
-        private readonly List<SmartNotification> _sentNotifications = new();
-        private readonly System.Threading.Timer _processingTimer;
-        private readonly System.Threading.Timer _cleanupTimer;
-        private readonly SemaphoreSlim _processingLock = new(1, 1);
-        
-        private NotificationPreferences _preferences = new();
-        private DateTime? _doNotDisturbUntil;
-        private bool _disposed;
+        private readonly ILogger<SmartNotificationService> logger;
+        private readonly INotificationService baseNotificationService;
+        private readonly ConcurrentQueue<SmartNotification> notificationQueue = new();
+        private readonly ConcurrentDictionary<string, SmartNotification> scheduledNotifications = new();
+        private readonly ConcurrentDictionary<string, DateTime> lastNotificationTimes = new();
+        private readonly ConcurrentDictionary<string, List<DateTime>> notificationHistory = new();
+        private readonly List<SmartNotification> sentNotifications = new();
+        private readonly System.Threading.Timer processingTimer;
+        private readonly System.Threading.Timer cleanupTimer;
+        private readonly SemaphoreSlim processingLock = new(1, 1);
+
+        private NotificationPreferences preferences = new();
+        private DateTime? doNotDisturbUntil;
+        private bool disposed;
 
         public event EventHandler<SmartNotificationEventArgs>? NotificationSent;
+
         public event EventHandler<SmartNotificationEventArgs>? NotificationThrottled;
+
         public event EventHandler<SmartNotificationEventArgs>? NotificationDeduplicated;
+
         public event EventHandler<bool>? DoNotDisturbChanged;
 
         public SmartNotificationService(
             ILogger<SmartNotificationService> logger,
             INotificationService baseNotificationService)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _baseNotificationService = baseNotificationService ?? throw new ArgumentNullException(nameof(baseNotificationService));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.baseNotificationService = baseNotificationService ?? throw new ArgumentNullException(nameof(baseNotificationService));
 
             // Set up processing timer (process queue every 2 seconds)
-            _processingTimer = new System.Threading.Timer(ProcessQueueCallback, null, 
+            this.processingTimer = new System.Threading.Timer(this.ProcessQueueCallback, null,
                 TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
 
             // Set up cleanup timer (clean history every hour)
-            _cleanupTimer = new System.Threading.Timer(CleanupCallback, null, 
+            this.cleanupTimer = new System.Threading.Timer(this.CleanupCallback, null,
                 TimeSpan.FromHours(1), TimeSpan.FromHours(1));
         }
 
         public async Task InitializeAsync()
         {
-            _logger.LogInformation("Initializing SmartNotificationService");
-            
+            this.logger.LogInformation("Initializing SmartNotificationService");
+
             // Initialize default preferences
-            _preferences = CreateDefaultPreferences();
-            
+            this.preferences = this.CreateDefaultPreferences();
+
             // Load preferences from storage (simplified)
-            await LoadPreferencesAsync();
+            await this.LoadPreferencesAsync();
         }
 
         public async Task<bool> SendNotificationAsync(SmartNotification notification)
@@ -84,77 +87,80 @@ namespace ThreadPilot.Services
                 // Validate notification
                 if (string.IsNullOrWhiteSpace(notification.Title) && string.IsNullOrWhiteSpace(notification.Message))
                 {
-                    _logger.LogWarning("Attempted to send notification with empty title and message");
+                    this.logger.LogWarning("Attempted to send notification with empty title and message");
                     return false;
                 }
 
                 // Check if notifications are enabled
-                if (!_preferences.IsEnabled)
+                if (!this.preferences.IsEnabled)
                 {
-                    _logger.LogDebug("Notifications are disabled, skipping notification: {Title}", notification.Title);
+                    this.logger.LogDebug("Notifications are disabled, skipping notification: {Title}", notification.Title);
                     return false;
                 }
 
                 // Check category preferences
-                if (_preferences.CategoryEnabled.TryGetValue(notification.Category, out var categoryEnabled) && !categoryEnabled)
+                if (this.preferences.CategoryEnabled.TryGetValue(notification.Category, out var categoryEnabled) && !categoryEnabled)
                 {
-                    _logger.LogDebug("Category {Category} is disabled, skipping notification: {Title}", 
+                    this.logger.LogDebug(
+                        "Category {Category} is disabled, skipping notification: {Title}",
                         notification.Category, notification.Title);
                     return false;
                 }
 
                 // Check minimum priority
-                if (notification.Priority < _preferences.MinimumPriority)
+                if (notification.Priority < this.preferences.MinimumPriority)
                 {
-                    _logger.LogDebug("Notification priority {Priority} below minimum {MinPriority}, skipping: {Title}", 
-                        notification.Priority, _preferences.MinimumPriority, notification.Title);
+                    this.logger.LogDebug(
+                        "Notification priority {Priority} below minimum {MinPriority}, skipping: {Title}",
+                        notification.Priority, this.preferences.MinimumPriority, notification.Title);
                     return false;
                 }
 
                 // Check Do Not Disturb mode
-                if (IsDoNotDisturbActive() && notification.Priority < NotificationPriority.Critical)
+                if (this.IsDoNotDisturbActive() && notification.Priority < NotificationPriority.Critical)
                 {
-                    _logger.LogDebug("Do Not Disturb is active, skipping non-critical notification: {Title}", notification.Title);
+                    this.logger.LogDebug("Do Not Disturb is active, skipping non-critical notification: {Title}", notification.Title);
                     return false;
                 }
 
                 // Check throttling
-                if (IsThrottled(notification))
+                if (this.IsThrottled(notification))
                 {
-                    NotificationThrottled?.Invoke(this, new SmartNotificationEventArgs
+                    this.NotificationThrottled?.Invoke(this, new SmartNotificationEventArgs
                     {
                         Notification = notification,
-                        Reason = "Throttled due to rate limiting"
+                        Reason = "Throttled due to rate limiting",
                     });
                     return false;
                 }
 
                 // Check deduplication
-                if (IsDuplicate(notification))
+                if (this.IsDuplicate(notification))
                 {
-                    NotificationDeduplicated?.Invoke(this, new SmartNotificationEventArgs
+                    this.NotificationDeduplicated?.Invoke(this, new SmartNotificationEventArgs
                     {
                         Notification = notification,
-                        Reason = "Deduplicated - similar notification recently sent"
+                        Reason = "Deduplicated - similar notification recently sent",
                     });
                     return false;
                 }
 
                 // Add to queue for processing
-                _notificationQueue.Enqueue(notification);
-                _logger.LogDebug("Queued notification: {Title} (Priority: {Priority}, Category: {Category})", 
+                this.notificationQueue.Enqueue(notification);
+                this.logger.LogDebug(
+                    "Queued notification: {Title} (Priority: {Priority}, Category: {Category})",
                     notification.Title, notification.Priority, notification.Category);
 
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error sending notification: {Title}", notification.Title);
+                this.logger.LogError(ex, "Error sending notification: {Title}", notification.Title);
                 return false;
             }
         }
 
-        public async Task<bool> SendNotificationAsync(string title, string message, 
+        public async Task<bool> SendNotificationAsync(string title, string message,
             NotificationPriority priority = NotificationPriority.Normal,
             NotificationCategory category = NotificationCategory.Information)
         {
@@ -164,29 +170,30 @@ namespace ThreadPilot.Services
                 Message = message,
                 Priority = priority,
                 Category = category,
-                DeduplicationKey = $"{category}:{title}:{message}".GetHashCode().ToString()
+                DeduplicationKey = $"{category}:{title}:{message}".GetHashCode().ToString(),
             };
 
-            return await SendNotificationAsync(notification);
+            return await this.SendNotificationAsync(notification);
         }
 
         public async Task<bool> ScheduleNotificationAsync(SmartNotification notification, DateTime deliveryTime)
         {
             notification.ScheduledFor = deliveryTime;
-            _scheduledNotifications.TryAdd(notification.Id, notification);
-            
-            _logger.LogDebug("Scheduled notification {Id} for delivery at {DeliveryTime}", 
+            this.scheduledNotifications.TryAdd(notification.Id, notification);
+
+            this.logger.LogDebug(
+                "Scheduled notification {Id} for delivery at {DeliveryTime}",
                 notification.Id, deliveryTime);
-            
+
             return true;
         }
 
         public async Task<bool> CancelNotificationAsync(string notificationId)
         {
-            var removed = _scheduledNotifications.TryRemove(notificationId, out var notification);
+            var removed = this.scheduledNotifications.TryRemove(notificationId, out var notification);
             if (removed)
             {
-                _logger.LogDebug("Cancelled scheduled notification: {Id}", notificationId);
+                this.logger.LogDebug("Cancelled scheduled notification: {Id}", notificationId);
             }
             return removed;
         }
@@ -194,12 +201,12 @@ namespace ThreadPilot.Services
         public async Task<List<SmartNotification>> GetPendingNotificationsAsync()
         {
             var pending = new List<SmartNotification>();
-            
+
             // Add queued notifications
-            pending.AddRange(_notificationQueue.ToArray());
+            pending.AddRange(this.notificationQueue.ToArray());
 
             // Add scheduled notifications
-            pending.AddRange(_scheduledNotifications.Values);
+            pending.AddRange(this.scheduledNotifications.Values);
 
             return pending.OrderByDescending(n => n.Priority).ThenBy(n => n.CreatedAt).ToList();
         }
@@ -207,10 +214,10 @@ namespace ThreadPilot.Services
         public async Task<List<SmartNotification>> GetNotificationHistoryAsync(TimeSpan? period = null)
         {
             var cutoff = period.HasValue ? DateTime.UtcNow - period.Value : DateTime.MinValue;
-            
-            lock (_sentNotifications)
+
+            lock (this.sentNotifications)
             {
-                return _sentNotifications
+                return this.sentNotifications
                     .Where(n => n.CreatedAt >= cutoff)
                     .OrderByDescending(n => n.CreatedAt)
                     .ToList();
@@ -219,105 +226,108 @@ namespace ThreadPilot.Services
 
         public async Task ClearHistoryAsync()
         {
-            lock (_sentNotifications)
+            lock (this.sentNotifications)
             {
-                _sentNotifications.Clear();
+                this.sentNotifications.Clear();
             }
-            
-            _notificationHistory.Clear();
-            _logger.LogInformation("Cleared notification history");
+
+            this.notificationHistory.Clear();
+            this.logger.LogInformation("Cleared notification history");
         }
 
         public async Task UpdatePreferencesAsync(NotificationPreferences preferences)
         {
-            _preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));
-            await SavePreferencesAsync();
-            _logger.LogInformation("Updated notification preferences");
+            this.preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));
+            await this.SavePreferencesAsync();
+            this.logger.LogInformation("Updated notification preferences");
         }
 
         public async Task<NotificationPreferences> GetPreferencesAsync()
         {
-            return _preferences;
+            return this.preferences;
         }
 
         public async Task SetDoNotDisturbAsync(bool enabled, TimeSpan? duration = null)
         {
-            var wasActive = IsDoNotDisturbActive();
-            
+            var wasActive = this.IsDoNotDisturbActive();
+
             if (enabled)
             {
-                _doNotDisturbUntil = duration.HasValue 
-                    ? DateTime.UtcNow + duration.Value 
+                this.doNotDisturbUntil = duration.HasValue
+                    ? DateTime.UtcNow + duration.Value
                     : DateTime.MaxValue;
-                _preferences.DoNotDisturbMode = true;
+                this.preferences.DoNotDisturbMode = true;
             }
             else
             {
-                _doNotDisturbUntil = null;
-                _preferences.DoNotDisturbMode = false;
+                this.doNotDisturbUntil = null;
+                this.preferences.DoNotDisturbMode = false;
             }
 
-            var isActive = IsDoNotDisturbActive();
+            var isActive = this.IsDoNotDisturbActive();
             if (wasActive != isActive)
             {
-                DoNotDisturbChanged?.Invoke(this, isActive);
-                _logger.LogInformation("Do Not Disturb mode {Status}", isActive ? "enabled" : "disabled");
+                this.DoNotDisturbChanged?.Invoke(this, isActive);
+                this.logger.LogInformation("Do Not Disturb mode {Status}", isActive ? "enabled" : "disabled");
             }
         }
 
         public bool IsDoNotDisturbActive()
         {
-            if (!_preferences.DoNotDisturbMode) return false;
-            
-            if (_doNotDisturbUntil.HasValue && DateTime.UtcNow > _doNotDisturbUntil.Value)
+            if (!this.preferences.DoNotDisturbMode)
             {
-                _preferences.DoNotDisturbMode = false;
-                _doNotDisturbUntil = null;
+                return false;
+            }
+
+            if (this.doNotDisturbUntil.HasValue && DateTime.UtcNow > this.doNotDisturbUntil.Value)
+            {
+                this.preferences.DoNotDisturbMode = false;
+                this.doNotDisturbUntil = null;
                 return false;
             }
 
             // Check time-based DND
             var now = DateTime.Now.TimeOfDay;
-            if (_preferences.DoNotDisturbStart < _preferences.DoNotDisturbEnd)
+            if (this.preferences.DoNotDisturbStart < this.preferences.DoNotDisturbEnd)
             {
                 // Same day range (e.g., 10 PM to 8 AM next day)
-                return now >= _preferences.DoNotDisturbStart || now <= _preferences.DoNotDisturbEnd;
+                return now >= this.preferences.DoNotDisturbStart || now <= this.preferences.DoNotDisturbEnd;
             }
             else
             {
                 // Cross-midnight range (e.g., 10 PM to 8 AM)
-                return now >= _preferences.DoNotDisturbStart && now <= _preferences.DoNotDisturbEnd;
+                return now >= this.preferences.DoNotDisturbStart && now <= this.preferences.DoNotDisturbEnd;
             }
         }
 
         public async Task<Dictionary<string, object>> GetStatisticsAsync()
         {
             var stats = new Dictionary<string, object>();
-            
-            lock (_sentNotifications)
+
+            lock (this.sentNotifications)
             {
-                var last24Hours = _sentNotifications.Where(n => n.CreatedAt >= DateTime.UtcNow.AddDays(-1)).ToList();
-                var lastWeek = _sentNotifications.Where(n => n.CreatedAt >= DateTime.UtcNow.AddDays(-7)).ToList();
-                
-                stats["TotalSent"] = _sentNotifications.Count;
+                var last24Hours = this.sentNotifications.Where(n => n.CreatedAt >= DateTime.UtcNow.AddDays(-1)).ToList();
+                var lastWeek = this.sentNotifications.Where(n => n.CreatedAt >= DateTime.UtcNow.AddDays(-7)).ToList();
+
+                stats["TotalSent"] = this.sentNotifications.Count;
                 stats["SentLast24Hours"] = last24Hours.Count;
                 stats["SentLastWeek"] = lastWeek.Count;
-                stats["PendingCount"] = _notificationQueue.Count;
-                stats["ScheduledCount"] = _scheduledNotifications.Count;
-                
+                stats["PendingCount"] = this.notificationQueue.Count;
+                stats["ScheduledCount"] = this.scheduledNotifications.Count;
+
                 // Category breakdown
-                var categoryStats = _sentNotifications
+                var categoryStats = this.sentNotifications
                     .GroupBy(n => n.Category)
                     .ToDictionary(g => g.Key.ToString(), g => g.Count());
                 stats["ByCategory"] = categoryStats;
-                
+
                 // Priority breakdown
-                var priorityStats = _sentNotifications
+                var priorityStats = this.sentNotifications
                     .GroupBy(n => n.Priority)
                     .ToDictionary(g => g.Key.ToString(), g => g.Count());
                 stats["ByPriority"] = priorityStats;
             }
-            
+
             return stats;
         }
 
@@ -328,51 +338,54 @@ namespace ThreadPilot.Services
                 Title = "Test Notification",
                 Message = "This is a test notification from ThreadPilot Smart Notification System",
                 Priority = NotificationPriority.Normal,
-                Category = NotificationCategory.System
+                Category = NotificationCategory.System,
             };
 
-            return await SendNotificationAsync(testNotification);
+            return await this.SendNotificationAsync(testNotification);
         }
 
         private void ProcessQueueCallback(object? state)
         {
-            TaskSafety.FireAndForget(ProcessQueueCallbackAsync(), ex =>
+            TaskSafety.FireAndForget(this.ProcessQueueCallbackAsync(), ex =>
             {
-                _logger.LogWarning(ex, "Error during notification queue processing");
+                this.logger.LogWarning(ex, "Error during notification queue processing");
             });
         }
 
         private async Task ProcessQueueCallbackAsync()
         {
-            if (_disposed) return;
+            if (this.disposed)
+            {
+                return;
+            }
 
-            await _processingLock.WaitAsync();
+            await this.processingLock.WaitAsync();
             try
             {
                 var processedCount = 0;
                 var maxProcessPerCycle = 10;
 
-                while (_notificationQueue.TryDequeue(out var notification) && processedCount < maxProcessPerCycle)
+                while (this.notificationQueue.TryDequeue(out var notification) && processedCount < maxProcessPerCycle)
                 {
-                    await ProcessNotificationAsync(notification);
+                    await this.ProcessNotificationAsync(notification);
                     processedCount++;
                 }
 
                 // Process scheduled notifications
                 var now = DateTime.UtcNow;
-                var dueNotifications = _scheduledNotifications.Values
+                var dueNotifications = this.scheduledNotifications.Values
                     .Where(n => n.ScheduledFor <= now)
                     .ToList();
 
                 foreach (var notification in dueNotifications)
                 {
-                    _scheduledNotifications.TryRemove(notification.Id, out _);
-                    await ProcessNotificationAsync(notification);
+                    this.scheduledNotifications.TryRemove(notification.Id, out _);
+                    await this.ProcessNotificationAsync(notification);
                 }
             }
             finally
             {
-                _processingLock.Release();
+                this.processingLock.Release();
             }
         }
 
@@ -384,15 +397,15 @@ namespace ThreadPilot.Services
                 if (notification.ExpiresAfter.HasValue &&
                     DateTime.UtcNow - notification.CreatedAt > notification.ExpiresAfter.Value)
                 {
-                    _logger.LogDebug("Notification expired: {Title}", notification.Title);
+                    this.logger.LogDebug("Notification expired: {Title}", notification.Title);
                     return;
                 }
 
                 // Send through base notification service
-                await _baseNotificationService.ShowNotificationAsync(
+                await this.baseNotificationService.ShowNotificationAsync(
                     notification.Title,
                     notification.Message,
-                    ConvertToNotificationType(notification.Priority));
+                    this.ConvertToNotificationType(notification.Priority));
 
                 // Assume success since no exception was thrown
                 var success = true;
@@ -400,39 +413,41 @@ namespace ThreadPilot.Services
                 if (success)
                 {
                     // Record successful delivery
-                    RecordNotificationSent(notification);
+                    this.RecordNotificationSent(notification);
 
-                    NotificationSent?.Invoke(this, new SmartNotificationEventArgs
+                    this.NotificationSent?.Invoke(this, new SmartNotificationEventArgs
                     {
                         Notification = notification,
-                        Reason = "Successfully delivered"
+                        Reason = "Successfully delivered",
                     });
 
-                    _logger.LogDebug("Successfully sent notification: {Title}", notification.Title);
+                    this.logger.LogDebug("Successfully sent notification: {Title}", notification.Title);
                 }
                 else if (notification.RetryCount < notification.MaxRetries)
                 {
                     // Retry failed notification
                     notification.RetryCount++;
-                    _notificationQueue.Enqueue(notification);
-                    _logger.LogDebug("Retrying notification: {Title} (Attempt {Retry}/{Max})",
+                    this.notificationQueue.Enqueue(notification);
+                    this.logger.LogDebug(
+                        "Retrying notification: {Title} (Attempt {Retry}/{Max})",
                         notification.Title, notification.RetryCount, notification.MaxRetries);
                 }
                 else
                 {
-                    _logger.LogWarning("Failed to send notification after {MaxRetries} attempts: {Title}",
+                    this.logger.LogWarning(
+                        "Failed to send notification after {MaxRetries} attempts: {Title}",
                         notification.MaxRetries, notification.Title);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing notification: {Title}", notification.Title);
+                this.logger.LogError(ex, "Error processing notification: {Title}", notification.Title);
             }
         }
 
         private bool IsThrottled(SmartNotification notification)
         {
-            if (!_preferences.ThrottleConfigs.TryGetValue(notification.Category, out var config))
+            if (!this.preferences.ThrottleConfigs.TryGetValue(notification.Category, out var config))
             {
                 return false; // No throttling configured for this category
             }
@@ -441,7 +456,7 @@ namespace ThreadPilot.Services
             var now = DateTime.UtcNow;
 
             // Check minimum interval
-            if (_lastNotificationTimes.TryGetValue(key, out var lastTime))
+            if (this.lastNotificationTimes.TryGetValue(key, out var lastTime))
             {
                 if (now - lastTime < config.MinInterval)
                 {
@@ -450,10 +465,10 @@ namespace ThreadPilot.Services
             }
 
             // Check hourly and daily limits
-            if (!_notificationHistory.TryGetValue(key, out var history))
+            if (!this.notificationHistory.TryGetValue(key, out var history))
             {
                 history = new List<DateTime>();
-                _notificationHistory[key] = history;
+                this.notificationHistory[key] = history;
             }
 
             // Clean old entries
@@ -469,16 +484,19 @@ namespace ThreadPilot.Services
 
         private bool IsDuplicate(SmartNotification notification)
         {
-            if (string.IsNullOrEmpty(notification.DeduplicationKey)) return false;
+            if (string.IsNullOrEmpty(notification.DeduplicationKey))
+            {
+                return false;
+            }
 
-            if (!_preferences.ThrottleConfigs.TryGetValue(notification.Category, out var config) ||
+            if (!this.preferences.ThrottleConfigs.TryGetValue(notification.Category, out var config) ||
                 !config.EnableDeduplication)
             {
                 return false;
             }
 
             var key = $"{notification.Category}:{notification.DeduplicationKey}";
-            if (_lastNotificationTimes.TryGetValue(key, out var lastTime))
+            if (this.lastNotificationTimes.TryGetValue(key, out var lastTime))
             {
                 return DateTime.UtcNow - lastTime < config.DeduplicationWindow;
             }
@@ -491,23 +509,23 @@ namespace ThreadPilot.Services
             var key = $"{notification.Category}:{notification.DeduplicationKey}";
             var now = DateTime.UtcNow;
 
-            _lastNotificationTimes[key] = now;
+            this.lastNotificationTimes[key] = now;
 
-            if (!_notificationHistory.TryGetValue(key, out var history))
+            if (!this.notificationHistory.TryGetValue(key, out var history))
             {
                 history = new List<DateTime>();
-                _notificationHistory[key] = history;
+                this.notificationHistory[key] = history;
             }
             history.Add(now);
 
-            lock (_sentNotifications)
+            lock (this.sentNotifications)
             {
-                _sentNotifications.Add(notification);
+                this.sentNotifications.Add(notification);
 
                 // Keep only last 1000 notifications in memory
-                if (_sentNotifications.Count > 1000)
+                if (this.sentNotifications.Count > 1000)
                 {
-                    _sentNotifications.RemoveRange(0, _sentNotifications.Count - 1000);
+                    this.sentNotifications.RemoveRange(0, this.sentNotifications.Count - 1000);
                 }
             }
         }
@@ -520,7 +538,7 @@ namespace ThreadPilot.Services
                 NotificationPriority.High => NotificationType.Warning,
                 NotificationPriority.Normal => NotificationType.Information,
                 NotificationPriority.Low => NotificationType.Information,
-                _ => NotificationType.Information
+                _ => NotificationType.Information,
             };
         }
 
@@ -537,7 +555,7 @@ namespace ThreadPilot.Services
                     Category = category,
                     MinInterval = TimeSpan.FromSeconds(30),
                     MaxPerHour = category == NotificationCategory.Error ? 20 : 10,
-                    MaxPerDay = category == NotificationCategory.Error ? 100 : 50
+                    MaxPerDay = category == NotificationCategory.Error ? 100 : 50,
                 };
             }
 
@@ -547,22 +565,22 @@ namespace ThreadPilot.Services
         private Task LoadPreferencesAsync()
         {
             // Simplified - would load from actual storage
-            _logger.LogDebug("Loaded notification preferences");
+            this.logger.LogDebug("Loaded notification preferences");
             return Task.CompletedTask;
         }
 
         private Task SavePreferencesAsync()
         {
             // Simplified - would save to actual storage
-            _logger.LogDebug("Saved notification preferences");
+            this.logger.LogDebug("Saved notification preferences");
             return Task.CompletedTask;
         }
 
         private void CleanupCallback(object? state)
         {
-            TaskSafety.FireAndForget(CleanupCallbackAsync(), ex =>
+            TaskSafety.FireAndForget(this.CleanupCallbackAsync(), ex =>
             {
-                _logger.LogWarning(ex, "Error during notification cleanup");
+                this.logger.LogWarning(ex, "Error during notification cleanup");
             });
         }
 
@@ -574,7 +592,7 @@ namespace ThreadPilot.Services
 
                 // Clean notification history
                 var keysToRemove = new List<string>();
-                foreach (var kvp in _notificationHistory)
+                foreach (var kvp in this.notificationHistory)
                 {
                     kvp.Value.RemoveAll(t => t < cutoff);
                     if (!kvp.Value.Any())
@@ -585,35 +603,35 @@ namespace ThreadPilot.Services
 
                 foreach (var key in keysToRemove)
                 {
-                    _notificationHistory.TryRemove(key, out _);
+                    this.notificationHistory.TryRemove(key, out _);
                 }
 
-                _logger.LogDebug("Cleaned up notification history, removed {Count} empty entries", keysToRemove.Count);
+                this.logger.LogDebug("Cleaned up notification history, removed {Count} empty entries", keysToRemove.Count);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Error during notification cleanup");
+                this.logger.LogWarning(ex, "Error during notification cleanup");
             }
         }
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!_disposed)
+            if (!this.disposed)
             {
                 if (disposing)
                 {
-                    _processingTimer?.Dispose();
-                    _cleanupTimer?.Dispose();
-                    _processingLock?.Dispose();
-                    _logger.LogInformation("SmartNotificationService disposed");
+                    this.processingTimer?.Dispose();
+                    this.cleanupTimer?.Dispose();
+                    this.processingLock?.Dispose();
+                    this.logger.LogInformation("SmartNotificationService disposed");
                 }
-                _disposed = true;
+                this.disposed = true;
             }
         }
 
         public void Dispose()
         {
-            Dispose(disposing: true);
+            this.Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
     }

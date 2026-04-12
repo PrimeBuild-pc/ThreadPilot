@@ -14,14 +14,14 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Threading.Tasks;
-using ThreadPilot.Models;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Threading.Tasks;
+    using ThreadPilot.Models;
+
     /// <summary>
-    /// Service for managing system tray functionality
+    /// Service for managing system tray functionality.
     /// </summary>
     public interface ISystemTrayService : IDisposable
     {
@@ -71,52 +71,52 @@ namespace ThreadPilot.Services
         event EventHandler? DashboardRequested;
 
         /// <summary>
-        /// Initializes the system tray icon
+        /// Initializes the system tray icon.
         /// </summary>
         void Initialize();
 
         /// <summary>
-        /// Shows the system tray icon
+        /// Shows the system tray icon.
         /// </summary>
         void Show();
 
         /// <summary>
-        /// Hides the system tray icon
+        /// Hides the system tray icon.
         /// </summary>
         void Hide();
 
         /// <summary>
-        /// Updates the tray icon tooltip
+        /// Updates the tray icon tooltip.
         /// </summary>
         void UpdateTooltip(string tooltip);
 
         /// <summary>
-        /// Shows a balloon tip notification
+        /// Shows a balloon tip notification.
         /// </summary>
         void ShowBalloonTip(string title, string text, int timeoutMs = 3000);
 
         /// <summary>
-        /// Updates the context menu with current process information
+        /// Updates the context menu with current process information.
         /// </summary>
         void UpdateContextMenu(string? selectedProcessName = null, bool hasSelection = false);
 
         /// <summary>
-        /// Updates the monitoring status in the context menu
+        /// Updates the monitoring status in the context menu.
         /// </summary>
         void UpdateMonitoringStatus(bool isMonitoring, bool isWmiAvailable = true);
 
         /// <summary>
-        /// Updates the tray icon based on application state
+        /// Updates the tray icon based on application state.
         /// </summary>
         void UpdateTrayIcon(TrayIconState state);
 
         /// <summary>
-        /// Shows a notification through the tray icon
+        /// Shows a notification through the tray icon.
         /// </summary>
         void ShowTrayNotification(string title, string message, NotificationType type = NotificationType.Information, int timeoutMs = 3000);
 
         /// <summary>
-        /// Updates settings for the tray service
+        /// Updates settings for the tray service.
         /// </summary>
         void UpdateSettings(ApplicationSettingsModel settings);
 
@@ -126,23 +126,23 @@ namespace ThreadPilot.Services
         void ApplyTheme(bool useDarkTheme);
 
         /// <summary>
-        /// Updates the available power plans in the context menu
+        /// Updates the available power plans in the context menu.
         /// </summary>
         void UpdatePowerPlans(IEnumerable<PowerPlanModel> powerPlans, PowerPlanModel? activePlan);
 
         /// <summary>
-        /// Updates the available profiles in the context menu
+        /// Updates the available profiles in the context menu.
         /// </summary>
         void UpdateProfiles(IEnumerable<string> profileNames);
 
         /// <summary>
-        /// Updates the current system status in the tray
+        /// Updates the current system status in the tray.
         /// </summary>
         void UpdateSystemStatus(string currentPowerPlan, double cpuUsage, double memoryUsage);
     }
 
     /// <summary>
-    /// Event args for monitoring toggle events
+    /// Event args for monitoring toggle events.
     /// </summary>
     public class MonitoringToggleEventArgs : EventArgs
     {
@@ -150,27 +150,28 @@ namespace ThreadPilot.Services
 
         public MonitoringToggleEventArgs(bool enableMonitoring)
         {
-            EnableMonitoring = enableMonitoring;
+            this.EnableMonitoring = enableMonitoring;
         }
     }
 
     /// <summary>
-    /// Event args for power plan change requests
+    /// Event args for power plan change requests.
     /// </summary>
     public class PowerPlanChangeRequestedEventArgs : EventArgs
     {
         public string PowerPlanGuid { get; }
+
         public string PowerPlanName { get; }
 
         public PowerPlanChangeRequestedEventArgs(string powerPlanGuid, string powerPlanName)
         {
-            PowerPlanGuid = powerPlanGuid;
-            PowerPlanName = powerPlanName;
+            this.PowerPlanGuid = powerPlanGuid;
+            this.PowerPlanName = powerPlanName;
         }
     }
 
     /// <summary>
-    /// Event args for profile application requests
+    /// Event args for profile application requests.
     /// </summary>
     public class ProfileApplicationRequestedEventArgs : EventArgs
     {
@@ -178,19 +179,19 @@ namespace ThreadPilot.Services
 
         public ProfileApplicationRequestedEventArgs(string profileName)
         {
-            ProfileName = profileName;
+            this.ProfileName = profileName;
         }
     }
 
     /// <summary>
-    /// Tray icon states
+    /// Tray icon states.
     /// </summary>
     public enum TrayIconState
     {
         Normal,
         Monitoring,
         Error,
-        Disabled
+        Disabled,
     }
 }
 

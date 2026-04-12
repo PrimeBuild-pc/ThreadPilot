@@ -14,19 +14,19 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Linq;
-using Microsoft.Extensions.Logging;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Linq;
+    using Microsoft.Extensions.Logging;
+
     /// <summary>
-    /// Service for security validation and auditing of elevated operations
+    /// Service for security validation and auditing of elevated operations.
     /// </summary>
     public class SecurityService : ISecurityService
     {
-        private readonly ILogger<SecurityService> _logger;
-        private readonly IEnhancedLoggingService _enhancedLogger;
+        private readonly ILogger<SecurityService> logger;
+        private readonly IEnhancedLoggingService enhancedLogger;
 
         // List of operations that are allowed to be performed with elevated privileges
         private static readonly string[] AllowedElevatedOperations = new[]
@@ -41,7 +41,7 @@ namespace ThreadPilot.Services
             "ApplicationRestart",
             "CreateScheduledTask",
             "DeleteScheduledTask",
-            "ModifyRegistryAutostart"
+            "ModifyRegistryAutostart",
         };
 
         // List of critical system processes that should not be modified
@@ -56,32 +56,32 @@ namespace ThreadPilot.Services
             "dwm",
             "explorer",
             "wininit",
-            "smss"
+            "smss",
         };
 
         public SecurityService(ILogger<SecurityService> logger, IEnhancedLoggingService enhancedLogger)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _enhancedLogger = enhancedLogger ?? throw new ArgumentNullException(nameof(enhancedLogger));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.enhancedLogger = enhancedLogger ?? throw new ArgumentNullException(nameof(enhancedLogger));
         }
 
         public bool ValidateElevatedOperation(string operation)
         {
             if (string.IsNullOrWhiteSpace(operation))
             {
-                _logger.LogWarning("Attempted to validate null or empty operation");
+                this.logger.LogWarning("Attempted to validate null or empty operation");
                 return false;
             }
 
             var isAllowed = AllowedElevatedOperations.Contains(operation, StringComparer.OrdinalIgnoreCase);
-            
+
             if (!isAllowed)
             {
-                _logger.LogWarning("Attempted to perform unauthorized elevated operation: {Operation}", operation);
+                this.logger.LogWarning("Attempted to perform unauthorized elevated operation: {Operation}", operation);
             }
             else
             {
-                _logger.LogDebug("Validated elevated operation: {Operation}", operation);
+                this.logger.LogDebug("Validated elevated operation: {Operation}", operation);
             }
 
             return isAllowed;
@@ -91,31 +91,31 @@ namespace ThreadPilot.Services
         {
             var logLevel = success ? LogLevel.Information : LogLevel.Warning;
             var message = $"Elevated action performed: {action} on {target} - Success: {success}";
-            
-            _logger.Log(logLevel, message);
-            
+
+            this.logger.Log(logLevel, message);
+
             // Use enhanced logging for structured audit trail
-            await _enhancedLogger.LogSystemEventAsync(
+            await this.enhancedLogger.LogSystemEventAsync(
                 success ? "ElevatedActionSuccess" : "ElevatedActionFailure",
                 $"Security audit: {action} on {target} - Success: {success}",
-                logLevel
-            );
+                logLevel);
         }
 
         public bool ValidateProcessOperation(string processName, string operation)
         {
             if (string.IsNullOrWhiteSpace(processName) || string.IsNullOrWhiteSpace(operation))
             {
-                _logger.LogWarning("Attempted to validate process operation with null or empty parameters");
+                this.logger.LogWarning("Attempted to validate process operation with null or empty parameters");
                 return false;
             }
 
             // Check if the process is in the protected list
             var isProtected = ProtectedProcesses.Contains(processName, StringComparer.OrdinalIgnoreCase);
-            
+
             if (isProtected)
             {
-                _logger.LogWarning("Attempted to perform operation '{Operation}' on protected process '{ProcessName}'", 
+                this.logger.LogWarning(
+                    "Attempted to perform operation '{Operation}' on protected process '{ProcessName}'",
                     operation, processName);
                 return false;
             }
@@ -126,12 +126,13 @@ namespace ThreadPilot.Services
                 "SetProcessAffinity" => true,
                 "SetProcessPriority" => true,
                 "TerminateProcess" => false, // We don't allow process termination
-                _ => false
+                _ => false,
             };
 
             if (!isValidOperation)
             {
-                _logger.LogWarning("Attempted to perform invalid process operation '{Operation}' on '{ProcessName}'", 
+                this.logger.LogWarning(
+                    "Attempted to perform invalid process operation '{Operation}' on '{ProcessName}'",
                     operation, processName);
             }
 
@@ -142,7 +143,7 @@ namespace ThreadPilot.Services
         {
             if (string.IsNullOrWhiteSpace(powerPlanId) || string.IsNullOrWhiteSpace(operation))
             {
-                _logger.LogWarning("Attempted to validate power plan operation with null or empty parameters");
+                this.logger.LogWarning("Attempted to validate power plan operation with null or empty parameters");
                 return false;
             }
 
@@ -154,12 +155,13 @@ namespace ThreadPilot.Services
                 "CreatePowerPlan" => true,
                 "DeletePowerPlan" => !IsSystemPowerPlan(powerPlanId), // Don't allow deletion of system power plans
                 "ModifyPowerPlanSettings" => true,
-                _ => false
+                _ => false,
             };
 
             if (!isValidOperation)
             {
-                _logger.LogWarning("Attempted to perform invalid power plan operation '{Operation}' on '{PowerPlanId}'", 
+                this.logger.LogWarning(
+                    "Attempted to perform invalid power plan operation '{Operation}' on '{PowerPlanId}'",
                     operation, powerPlanId);
             }
 
@@ -178,7 +180,7 @@ namespace ThreadPilot.Services
             {
                 "381b4222-f694-41f0-9685-ff5bb260df2e", // Balanced
                 "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c", // High performance
-                "a1841308-3541-4fab-bc81-f71556f20b4a"  // Power saver
+                "a1841308-3541-4fab-bc81-f71556f20b4a",  // Power saver
             };
 
             return systemPowerPlans.Contains(powerPlanId, StringComparer.OrdinalIgnoreCase);

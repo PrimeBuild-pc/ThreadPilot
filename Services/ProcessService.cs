@@ -14,48 +14,51 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Concurrent;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.IO;
-using System.Text;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using ThreadPilot.Models;
-using ThreadPilot.Platforms.Windows;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Collections.Concurrent;
+    using System.Collections.ObjectModel;
+    using System.ComponentModel;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Linq;
+    using System.Text;
+    using System.Text.Json;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
+    using ThreadPilot.Models;
+    using ThreadPilot.Platforms.Windows;
+
     public class ProcessService : IProcessService
     {
         private static string LegacyProfilesDirectory => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Profiles");
-        private readonly ConcurrentDictionary<int, CpuSample> _cpuSamples = new();
-        private readonly ConcurrentDictionary<int, IProcessCpuSetHandler> _cpuSetHandlers = new();
-        private readonly ILogger<ProcessService>? _logger;
+
+        private readonly ConcurrentDictionary<int, CpuSample> cpuSamples = new();
+        private readonly ConcurrentDictionary<int, IProcessCpuSetHandler> cpuSetHandlers = new();
+        private readonly ILogger<ProcessService>? logger;
+
         private string ProfilesDirectory => StoragePaths.ProfilesDirectory;
-        private bool _useCpuSets = true; // Enable CPU Sets by default
+
+        private bool useCpuSets = true; // Enable CPU Sets by default
 
         // Tracking for cleanup on exit
-        private readonly ConcurrentDictionary<int, string> _appliedMasks = new(); // ProcessId -> MaskId
-        private readonly ConcurrentDictionary<int, ProcessPriorityClass> _originalPriorities = new(); // ProcessId -> OriginalPriority
+        private readonly ConcurrentDictionary<int, string> appliedMasks = new(); // ProcessId -> MaskId
+        private readonly ConcurrentDictionary<int, ProcessPriorityClass> originalPriorities = new(); // ProcessId -> OriginalPriority
 
         public ProcessService(ILogger<ProcessService>? logger = null)
         {
-            _logger = logger;
+            this.logger = logger;
 
             StoragePaths.EnsureAppDataDirectories();
-            MigrateLegacyProfilesIfNeeded();
+            this.MigrateLegacyProfilesIfNeeded();
 
-            if (!Directory.Exists(ProfilesDirectory))
+            if (!Directory.Exists(this.ProfilesDirectory))
             {
-                Directory.CreateDirectory(ProfilesDirectory);
+                Directory.CreateDirectory(this.ProfilesDirectory);
             }
 
-            _logger?.LogInformation("ProcessService initialized with CPU Sets support enabled");
+            this.logger?.LogInformation("ProcessService initialized with CPU Sets support enabled");
         }
 
         public async Task<ObservableCollection<ProcessModel>> GetProcessesAsync()
@@ -63,7 +66,7 @@ namespace ThreadPilot.Services
             return await Task.Run(() =>
             {
                 var processes = Process.GetProcesses()
-                    .Select(CreateProcessModel)
+                    .Select(this.CreateProcessModel)
                     .Where(p => p != null)
                     .OrderBy(p => p.Name);
 
@@ -75,18 +78,21 @@ namespace ThreadPilot.Services
         {
             public CpuSample(TimeSpan totalProcessorTime, DateTime timestamp)
             {
-                TotalProcessorTime = totalProcessorTime;
-                Timestamp = timestamp;
+                this.TotalProcessorTime = totalProcessorTime;
+                this.Timestamp = timestamp;
             }
 
             public TimeSpan TotalProcessorTime { get; set; }
+
             public DateTime Timestamp { get; set; }
         }
 
         private sealed class ProcessProfileSnapshot
         {
             public string ProcessName { get; set; } = string.Empty;
+
             public ProcessPriorityClass Priority { get; set; }
+
             public long ProcessorAffinity { get; set; }
         }
 
@@ -97,7 +103,7 @@ namespace ThreadPilot.Services
                 var now = DateTime.UtcNow;
                 var totalProcessorTime = process.TotalProcessorTime;
 
-                if (_cpuSamples.TryGetValue(process.Id, out var previous))
+                if (this.cpuSamples.TryGetValue(process.Id, out var previous))
                 {
                     var cpuDeltaMs = (totalProcessorTime - previous.TotalProcessorTime).TotalMilliseconds;
                     var timeDeltaMs = (now - previous.Timestamp).TotalMilliseconds;
@@ -105,18 +111,18 @@ namespace ThreadPilot.Services
                     // Ignore extremely small deltas to avoid noisy values
                     if (timeDeltaMs <= 0 || cpuDeltaMs < 0)
                     {
-                        _cpuSamples[process.Id] = new CpuSample(totalProcessorTime, now);
+                        this.cpuSamples[process.Id] = new CpuSample(totalProcessorTime, now);
                         return 0;
                     }
 
                     var usage = (cpuDeltaMs / (timeDeltaMs * Environment.ProcessorCount)) * 100.0;
                     usage = Math.Clamp(usage, 0, 100);
 
-                    _cpuSamples[process.Id] = new CpuSample(totalProcessorTime, now);
+                    this.cpuSamples[process.Id] = new CpuSample(totalProcessorTime, now);
                     return usage;
                 }
 
-                _cpuSamples[process.Id] = new CpuSample(totalProcessorTime, now);
+                this.cpuSamples[process.Id] = new CpuSample(totalProcessorTime, now);
                 return 0; // First sample cannot produce a rate
             }
             catch
@@ -136,7 +142,7 @@ namespace ThreadPilot.Services
                 model.MemoryUsage = process.PrivateMemorySize64;
                 model.Priority = process.PriorityClass;
                 model.ProcessorAffinity = (long)process.ProcessorAffinity;
-                model.CpuUsage = CalculateCpuUsage(process);
+                model.CpuUsage = this.CalculateCpuUsage(process);
 
                 // Capture window information
                 model.MainWindowHandle = process.MainWindowHandle;
@@ -176,12 +182,13 @@ namespace ThreadPilot.Services
                     }
 
                     // Try using CPU Sets first (Windows 10+)
-                    if (_useCpuSets)
+                    if (this.useCpuSets)
                     {
-                        bool cpuSetSuccess = TrySetAffinityViaCpuSets(process, affinityMask);
+                        bool cpuSetSuccess = this.TrySetAffinityViaCpuSets(process, affinityMask);
                         if (cpuSetSuccess)
                         {
-                            _logger?.LogInformation("Successfully applied CPU Sets affinity 0x{AffinityMask:X} to process {ProcessName} (PID: {ProcessId})",
+                            this.logger?.LogInformation(
+                                "Successfully applied CPU Sets affinity 0x{AffinityMask:X} to process {ProcessName} (PID: {ProcessId})",
                                 affinityMask, process.Name, process.ProcessId);
 
                             // Update the model with the new affinity
@@ -190,7 +197,8 @@ namespace ThreadPilot.Services
                         }
                         else
                         {
-                            _logger?.LogDebug("CPU Sets failed for process {ProcessName} (PID: {ProcessId}), falling back to classic ProcessorAffinity",
+                            this.logger?.LogDebug(
+                                "CPU Sets failed for process {ProcessName} (PID: {ProcessId}), falling back to classic ProcessorAffinity",
                                 process.Name, process.ProcessId);
                         }
                     }
@@ -206,7 +214,8 @@ namespace ThreadPilot.Services
                     process.Process = targetProcess;
                     process.ProcessorAffinity = (long)targetProcess.ProcessorAffinity;
 
-                    _logger?.LogInformation("Successfully applied classic ProcessorAffinity 0x{AffinityMask:X} to process {ProcessName} (PID: {ProcessId})",
+                    this.logger?.LogInformation(
+                        "Successfully applied classic ProcessorAffinity 0x{AffinityMask:X} to process {ProcessName} (PID: {ProcessId})",
                         affinityMask, process.Name, process.ProcessId);
                 }
                 catch (Win32Exception ex) when (ex.NativeErrorCode == 87)
@@ -225,26 +234,27 @@ namespace ThreadPilot.Services
         }
 
         /// <summary>
-        /// Attempts to set process affinity using CPU Sets (Windows 10+ feature)
+        /// Attempts to set process affinity using CPU Sets (Windows 10+ feature).
         /// </summary>
         private bool TrySetAffinityViaCpuSets(ProcessModel process, long affinityMask)
         {
             try
             {
                 // Get or create CPU Set handler for this process
-                var handler = _cpuSetHandlers.GetOrAdd(process.ProcessId, pid =>
+                var handler = this.cpuSetHandlers.GetOrAdd(process.ProcessId, pid =>
                 {
-                    return new ProcessCpuSetHandler((uint)pid, process.Name, _logger);
+                    return new ProcessCpuSetHandler((uint)pid, process.Name, this.logger);
                 });
 
                 // Check if handler is valid
                 if (!handler.IsValid)
                 {
-                    _logger?.LogDebug("CPU Set handler for process {ProcessName} (PID: {ProcessId}) is invalid",
+                    this.logger?.LogDebug(
+                        "CPU Set handler for process {ProcessName} (PID: {ProcessId}) is invalid",
                         process.Name, process.ProcessId);
 
                     // Remove invalid handler
-                    _cpuSetHandlers.TryRemove(process.ProcessId, out _);
+                    this.cpuSetHandlers.TryRemove(process.ProcessId, out _);
                     return false;
                 }
 
@@ -254,18 +264,18 @@ namespace ThreadPilot.Services
                 if (!success)
                 {
                     // Remove failed handler so we can try again later if needed
-                    _cpuSetHandlers.TryRemove(process.ProcessId, out _);
+                    this.cpuSetHandlers.TryRemove(process.ProcessId, out _);
                 }
 
                 return success;
             }
             catch (Exception ex)
             {
-                _logger?.LogWarning(ex, "Exception while applying CPU Sets to process {ProcessName} (PID: {ProcessId})",
+                this.logger?.LogWarning(ex, "Exception while applying CPU Sets to process {ProcessName} (PID: {ProcessId})",
                     process.Name, process.ProcessId);
 
                 // Remove handler on exception
-                _cpuSetHandlers.TryRemove(process.ProcessId, out _);
+                this.cpuSetHandlers.TryRemove(process.ProcessId, out _);
                 return false;
             }
         }
@@ -307,10 +317,10 @@ namespace ThreadPilot.Services
             {
                 ProcessName = process.Name,
                 Priority = process.Priority,
-                ProcessorAffinity = process.ProcessorAffinity
+                ProcessorAffinity = process.ProcessorAffinity,
             };
 
-            var filePath = Path.Combine(ProfilesDirectory, $"{profileName}.json");
+            var filePath = Path.Combine(this.ProfilesDirectory, $"{profileName}.json");
             var json = JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true });
             await AtomicFileWriter.WriteAllTextAsync(filePath, json, Encoding.UTF8);
             return true;
@@ -318,16 +328,18 @@ namespace ThreadPilot.Services
 
         public async Task<bool> LoadProcessProfile(string profileName, ProcessModel process)
         {
-            var filePath = Path.Combine(ProfilesDirectory, $"{profileName}.json");
+            var filePath = Path.Combine(this.ProfilesDirectory, $"{profileName}.json");
             if (!File.Exists(filePath))
+            {
                 return false;
+            }
 
             var content = await File.ReadAllTextAsync(filePath);
             var profile = JsonSerializer.Deserialize<ProcessProfileSnapshot>(content, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
                 ReadCommentHandling = JsonCommentHandling.Skip,
-                AllowTrailingCommas = true
+                AllowTrailingCommas = true,
             });
 
             if (profile == null)
@@ -335,8 +347,8 @@ namespace ThreadPilot.Services
                 return false;
             }
 
-            await SetProcessPriority(process, profile.Priority);
-            await SetProcessorAffinity(process, profile.ProcessorAffinity);
+            await this.SetProcessPriority(process, profile.Priority);
+            await this.SetProcessorAffinity(process, profile.ProcessorAffinity);
             return true;
         }
 
@@ -357,7 +369,7 @@ namespace ThreadPilot.Services
                     process.MemoryUsage = p.PrivateMemorySize64;
                     process.Priority = p.PriorityClass;
                     process.ProcessorAffinity = (long)p.ProcessorAffinity;
-                    process.CpuUsage = CalculateCpuUsage(p);
+                    process.CpuUsage = this.CalculateCpuUsage(p);
                     process.Process = p;
 
                     // Update window information
@@ -368,60 +380,60 @@ namespace ThreadPilot.Services
                 catch (ArgumentException)
                 {
                     // Process with the specified ID does not exist
-                    CleanupProcessResources(process.ProcessId);
+                    this.CleanupProcessResources(process.ProcessId);
                     throw new InvalidOperationException("Process no longer exists");
                 }
                 catch (Exception ex) when (ex.Message.Contains("exited") || ex.Message.Contains("terminated"))
                 {
                     // Process has terminated
-                    CleanupProcessResources(process.ProcessId);
+                    this.CleanupProcessResources(process.ProcessId);
                     throw new InvalidOperationException("Process has terminated");
                 }
             });
         }
 
         /// <summary>
-        /// Cleanup resources associated with a process
+        /// Cleanup resources associated with a process.
         /// </summary>
         private void CleanupProcessResources(int processId)
         {
             // Remove CPU samples
-            _cpuSamples.TryRemove(processId, out _);
+            this.cpuSamples.TryRemove(processId, out _);
 
             // Dispose and remove CPU Set handler
-            if (_cpuSetHandlers.TryRemove(processId, out var handler))
+            if (this.cpuSetHandlers.TryRemove(processId, out var handler))
             {
                 try
                 {
                     handler.Dispose();
-                    _logger?.LogDebug("Cleaned up CPU Set handler for process ID {ProcessId}", processId);
+                    this.logger?.LogDebug("Cleaned up CPU Set handler for process ID {ProcessId}", processId);
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogWarning(ex, "Error disposing CPU Set handler for process ID {ProcessId}", processId);
+                    this.logger?.LogWarning(ex, "Error disposing CPU Set handler for process ID {ProcessId}", processId);
                 }
             }
         }
 
         /// <summary>
-        /// Enables or disables the use of Windows CPU Sets for affinity management
+        /// Enables or disables the use of Windows CPU Sets for affinity management.
         /// </summary>
         public void SetUseCpuSets(bool useCpuSets)
         {
-            _useCpuSets = useCpuSets;
-            _logger?.LogInformation("CPU Sets usage {Status}", useCpuSets ? "enabled" : "disabled");
+            this.useCpuSets = useCpuSets;
+            this.logger?.LogInformation("CPU Sets usage {Status}", useCpuSets ? "enabled" : "disabled");
         }
 
         /// <summary>
-        /// Gets whether CPU Sets are currently enabled for affinity management
+        /// Gets whether CPU Sets are currently enabled for affinity management.
         /// </summary>
         public bool GetUseCpuSets()
         {
-            return _useCpuSets;
+            return this.useCpuSets;
         }
 
         /// <summary>
-        /// Clears the CPU Set for a process (allows it to run on all cores)
+        /// Clears the CPU Set for a process (allows it to run on all cores).
         /// </summary>
         public async Task<bool> ClearProcessCpuSetAsync(ProcessModel process)
         {
@@ -429,23 +441,24 @@ namespace ThreadPilot.Services
             {
                 try
                 {
-                    if (!_useCpuSets)
+                    if (!this.useCpuSets)
                     {
-                        _logger?.LogDebug("CPU Sets are disabled, cannot clear CPU Set for process {ProcessName}", process.Name);
+                        this.logger?.LogDebug("CPU Sets are disabled, cannot clear CPU Set for process {ProcessName}", process.Name);
                         return false;
                     }
 
                     // Get or create CPU Set handler for this process
-                    var handler = _cpuSetHandlers.GetOrAdd(process.ProcessId, pid =>
+                    var handler = this.cpuSetHandlers.GetOrAdd(process.ProcessId, pid =>
                     {
-                        return new ProcessCpuSetHandler((uint)pid, process.Name, _logger);
+                        return new ProcessCpuSetHandler((uint)pid, process.Name, this.logger);
                     });
 
                     if (!handler.IsValid)
                     {
-                        _logger?.LogDebug("CPU Set handler for process {ProcessName} (PID: {ProcessId}) is invalid",
+                        this.logger?.LogDebug(
+                            "CPU Set handler for process {ProcessName} (PID: {ProcessId}) is invalid",
                             process.Name, process.ProcessId);
-                        _cpuSetHandlers.TryRemove(process.ProcessId, out _);
+                        this.cpuSetHandlers.TryRemove(process.ProcessId, out _);
                         return false;
                     }
 
@@ -454,21 +467,22 @@ namespace ThreadPilot.Services
 
                     if (success)
                     {
-                        _logger?.LogInformation("Successfully cleared CPU Set for process {ProcessName} (PID: {ProcessId})",
+                        this.logger?.LogInformation(
+                            "Successfully cleared CPU Set for process {ProcessName} (PID: {ProcessId})",
                             process.Name, process.ProcessId);
                     }
                     else
                     {
-                        _cpuSetHandlers.TryRemove(process.ProcessId, out _);
+                        this.cpuSetHandlers.TryRemove(process.ProcessId, out _);
                     }
 
                     return success;
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogWarning(ex, "Exception while clearing CPU Set for process {ProcessName} (PID: {ProcessId})",
+                    this.logger?.LogWarning(ex, "Exception while clearing CPU Set for process {ProcessName} (PID: {ProcessId})",
                         process.Name, process.ProcessId);
-                    _cpuSetHandlers.TryRemove(process.ProcessId, out _);
+                    this.cpuSetHandlers.TryRemove(process.ProcessId, out _);
                     return false;
                 }
             });
@@ -481,7 +495,7 @@ namespace ThreadPilot.Services
                 try
                 {
                     var process = Process.GetProcessById(processId);
-                    return CreateProcessModel(process);
+                    return this.CreateProcessModel(process);
                 }
                 catch
                 {
@@ -497,7 +511,7 @@ namespace ThreadPilot.Services
                 try
                 {
                     var processes = Process.GetProcessesByName(executableName)
-                        .Select(CreateProcessModel)
+                        .Select(this.CreateProcessModel)
                         .Where(p => p != null);
 
                     return processes;
@@ -511,7 +525,7 @@ namespace ThreadPilot.Services
 
         public async Task<bool> IsProcessRunningAsync(string executableName)
         {
-            var processes = await GetProcessesByNameAsync(executableName);
+            var processes = await this.GetProcessesByNameAsync(executableName);
             return processes.Any();
         }
 
@@ -520,7 +534,7 @@ namespace ThreadPilot.Services
             return await Task.Run(() =>
             {
                 var processes = Process.GetProcesses()
-                    .Select(CreateProcessModel)
+                    .Select(this.CreateProcessModel)
                     .Where(p => p != null && !string.IsNullOrEmpty(p.ExecutablePath))
                     .OrderBy(p => p.Name);
 
@@ -533,7 +547,7 @@ namespace ThreadPilot.Services
             return await Task.Run(() =>
             {
                 var processes = Process.GetProcesses()
-                    .Select(CreateProcessModel)
+                    .Select(this.CreateProcessModel)
                     .Where(p => p != null && p.HasVisibleWindow)
                     .OrderBy(p => p.Name);
 
@@ -621,7 +635,7 @@ namespace ThreadPilot.Services
                             ProcessPriorityClass.AboveNormal => 10,
                             ProcessPriorityClass.High => 13,
                             ProcessPriorityClass.RealTime => 24,
-                            _ => 8 // Default to Normal
+                            _ => 8, // Default to Normal
                         };
 
                         key.SetValue("PriorityClass", priorityValue, Microsoft.Win32.RegistryValueKind.DWord);
@@ -642,47 +656,47 @@ namespace ThreadPilot.Services
         }
 
         /// <summary>
-        /// Registers that a mask has been applied to a process (for tracking cleanup on exit)
+        /// Registers that a mask has been applied to a process (for tracking cleanup on exit).
         /// </summary>
         public void TrackAppliedMask(int processId, string maskId)
         {
-            _appliedMasks[processId] = maskId;
-            _logger?.LogDebug("Tracking mask {MaskId} applied to process {ProcessId}", maskId, processId);
+            this.appliedMasks[processId] = maskId;
+            this.logger?.LogDebug("Tracking mask {MaskId} applied to process {ProcessId}", maskId, processId);
         }
 
         /// <summary>
-        /// Registers that a priority has been changed for a process (for tracking cleanup on exit)
+        /// Registers that a priority has been changed for a process (for tracking cleanup on exit).
         /// </summary>
         public void TrackPriorityChange(int processId, ProcessPriorityClass originalPriority)
         {
             // Only track if not already tracked (keep the original priority)
-            if (!_originalPriorities.ContainsKey(processId))
+            if (!this.originalPriorities.ContainsKey(processId))
             {
-                _originalPriorities[processId] = originalPriority;
-                _logger?.LogDebug("Tracking original priority {Priority} for process {ProcessId}", originalPriority, processId);
+                this.originalPriorities[processId] = originalPriority;
+                this.logger?.LogDebug("Tracking original priority {Priority} for process {ProcessId}", originalPriority, processId);
             }
         }
 
         /// <summary>
-        /// Unregisters tracking when a process exits
+        /// Unregisters tracking when a process exits.
         /// </summary>
         public void UntrackProcess(int processId)
         {
-            _appliedMasks.TryRemove(processId, out _);
-            _originalPriorities.TryRemove(processId, out _);
-            CleanupProcessResources(processId);
-            _logger?.LogDebug("Untracked process {ProcessId}", processId);
+            this.appliedMasks.TryRemove(processId, out _);
+            this.originalPriorities.TryRemove(processId, out _);
+            this.CleanupProcessResources(processId);
+            this.logger?.LogDebug("Untracked process {ProcessId}", processId);
         }
 
         /// <summary>
         /// Clears all applied CPU masks/affinities from all tracked processes
-        /// Processes return to using all cores (used on application exit)
+        /// Processes return to using all cores (used on application exit).
         /// </summary>
         public async Task ClearAllAppliedMasksAsync()
         {
-            _logger?.LogInformation("Clearing all applied CPU masks from {Count} tracked processes", _appliedMasks.Count);
+            this.logger?.LogInformation("Clearing all applied CPU masks from {Count} tracked processes", this.appliedMasks.Count);
 
-            var processIds = _appliedMasks.Keys.ToList();
+            var processIds = this.appliedMasks.Keys.ToList();
             var clearedCount = 0;
             var failedCount = 0;
 
@@ -697,60 +711,62 @@ namespace ThreadPilot.Services
                         process = Process.GetProcessById(processId);
                         if (process.HasExited)
                         {
-                            _appliedMasks.TryRemove(processId, out _);
+                            this.appliedMasks.TryRemove(processId, out _);
                             continue;
                         }
                     }
                     catch (ArgumentException)
                     {
                         // Process no longer exists
-                        _appliedMasks.TryRemove(processId, out _);
+                        this.appliedMasks.TryRemove(processId, out _);
                         continue;
                     }
 
                     // Clear CPU Set if we have a handler
-                    if (_cpuSetHandlers.TryGetValue(processId, out var handler) && handler.IsValid)
+                    if (this.cpuSetHandlers.TryGetValue(processId, out var handler) && handler.IsValid)
                     {
                         handler.ApplyCpuSetMask(0, clearMask: true);
-                        _logger?.LogDebug("Cleared CPU Set for process {ProcessName} (PID: {ProcessId})", 
+                        this.logger?.LogDebug(
+                            "Cleared CPU Set for process {ProcessName} (PID: {ProcessId})",
                             process.ProcessName, processId);
                     }
 
                     // Reset processor affinity to all cores
                     try
                     {
-                        long allCoresMask = GetAllCoresAffinityMask();
+                        long allCoresMask = this.GetAllCoresAffinityMask();
                         process.ProcessorAffinity = new IntPtr(allCoresMask);
-                        _logger?.LogDebug("Reset ProcessorAffinity for process {ProcessName} (PID: {ProcessId})", 
+                        this.logger?.LogDebug(
+                            "Reset ProcessorAffinity for process {ProcessName} (PID: {ProcessId})",
                             process.ProcessName, processId);
                     }
                     catch (Exception ex)
                     {
-                        _logger?.LogWarning(ex, "Failed to reset ProcessorAffinity for process PID {ProcessId}", processId);
+                        this.logger?.LogWarning(ex, "Failed to reset ProcessorAffinity for process PID {ProcessId}", processId);
                     }
 
-                    _appliedMasks.TryRemove(processId, out _);
+                    this.appliedMasks.TryRemove(processId, out _);
                     clearedCount++;
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogWarning(ex, "Failed to clear mask for process PID {ProcessId}", processId);
+                    this.logger?.LogWarning(ex, "Failed to clear mask for process PID {ProcessId}", processId);
                     failedCount++;
                 }
             }
 
-            _logger?.LogInformation("Cleared CPU masks: {Cleared} succeeded, {Failed} failed", clearedCount, failedCount);
+            this.logger?.LogInformation("Cleared CPU masks: {Cleared} succeeded, {Failed} failed", clearedCount, failedCount);
             await Task.CompletedTask;
         }
 
         /// <summary>
-        /// Resets all modified process priorities to Normal (or their original priority)
+        /// Resets all modified process priorities to Normal (or their original priority).
         /// </summary>
         public async Task ResetAllProcessPrioritiesAsync()
         {
-            _logger?.LogInformation("Resetting priorities for {Count} tracked processes", _originalPriorities.Count);
+            this.logger?.LogInformation("Resetting priorities for {Count} tracked processes", this.originalPriorities.Count);
 
-            var processIds = _originalPriorities.Keys.ToList();
+            var processIds = this.originalPriorities.Keys.ToList();
             var resetCount = 0;
             var failedCount = 0;
 
@@ -765,41 +781,42 @@ namespace ThreadPilot.Services
                         process = Process.GetProcessById(processId);
                         if (process.HasExited)
                         {
-                            _originalPriorities.TryRemove(processId, out _);
+                            this.originalPriorities.TryRemove(processId, out _);
                             continue;
                         }
                     }
                     catch (ArgumentException)
                     {
                         // Process no longer exists
-                        _originalPriorities.TryRemove(processId, out _);
+                        this.originalPriorities.TryRemove(processId, out _);
                         continue;
                     }
 
                     // Get original priority
-                    if (_originalPriorities.TryGetValue(processId, out var originalPriority))
+                    if (this.originalPriorities.TryGetValue(processId, out var originalPriority))
                     {
                         process.PriorityClass = originalPriority;
-                        _logger?.LogDebug("Reset priority for process {ProcessName} (PID: {ProcessId}) to {Priority}", 
+                        this.logger?.LogDebug(
+                            "Reset priority for process {ProcessName} (PID: {ProcessId}) to {Priority}",
                             process.ProcessName, processId, originalPriority);
                     }
 
-                    _originalPriorities.TryRemove(processId, out _);
+                    this.originalPriorities.TryRemove(processId, out _);
                     resetCount++;
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogWarning(ex, "Failed to reset priority for process PID {ProcessId}", processId);
+                    this.logger?.LogWarning(ex, "Failed to reset priority for process PID {ProcessId}", processId);
                     failedCount++;
                 }
             }
 
-            _logger?.LogInformation("Reset priorities: {Reset} succeeded, {Failed} failed", resetCount, failedCount);
+            this.logger?.LogInformation("Reset priorities: {Reset} succeeded, {Failed} failed", resetCount, failedCount);
             await Task.CompletedTask;
         }
 
         /// <summary>
-        /// Gets an affinity mask with all cores enabled
+        /// Gets an affinity mask with all cores enabled.
         /// </summary>
         private long GetAllCoresAffinityMask()
         {
@@ -816,11 +833,11 @@ namespace ThreadPilot.Services
                     return;
                 }
 
-                Directory.CreateDirectory(ProfilesDirectory);
+                Directory.CreateDirectory(this.ProfilesDirectory);
                 var legacyFiles = Directory.GetFiles(LegacyProfilesDirectory, "*.json");
                 foreach (var legacyFile in legacyFiles)
                 {
-                    var destinationFile = Path.Combine(ProfilesDirectory, Path.GetFileName(legacyFile));
+                    var destinationFile = Path.Combine(this.ProfilesDirectory, Path.GetFileName(legacyFile));
                     if (!File.Exists(destinationFile))
                     {
                         File.Copy(legacyFile, destinationFile);
@@ -829,18 +846,18 @@ namespace ThreadPilot.Services
 
                 if (legacyFiles.Length > 0)
                 {
-                    _logger?.LogInformation("Migrated {Count} legacy profile files to AppData storage", legacyFiles.Length);
+                    this.logger?.LogInformation("Migrated {Count} legacy profile files to AppData storage", legacyFiles.Length);
                 }
             }
             catch (Exception ex)
             {
-                _logger?.LogWarning(ex, "Failed to migrate legacy profile files");
+                this.logger?.LogWarning(ex, "Failed to migrate legacy profile files");
             }
         }
     }
 
     /// <summary>
-    /// Native methods for Windows API calls
+    /// Native methods for Windows API calls.
     /// </summary>
     internal static class NativeMethods
     {
@@ -853,7 +870,7 @@ namespace ThreadPilot.Services
             ES_AWAYMODE_REQUIRED = 0x00000040,
             ES_CONTINUOUS = 0x80000000,
             ES_DISPLAY_REQUIRED = 0x00000002,
-            ES_SYSTEM_REQUIRED = 0x00000001
+            ES_SYSTEM_REQUIRED = 0x00000001,
         }
     }
 }

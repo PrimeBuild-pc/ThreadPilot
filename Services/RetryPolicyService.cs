@@ -14,31 +14,31 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using Microsoft.Extensions.Logging;
-using System;
-using System.ComponentModel;
-using System.IO;
-using System.Management;
-using System.Threading.Tasks;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.ComponentModel;
+    using System.IO;
+    using System.Management;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
+
     /// <summary>
-    /// Implementation of retry policy service with exponential backoff
+    /// Implementation of retry policy service with exponential backoff.
     /// </summary>
     public class RetryPolicyService : IRetryPolicyService
     {
-        private readonly ILogger<RetryPolicyService> _logger;
+        private readonly ILogger<RetryPolicyService> logger;
 
         public RetryPolicyService(ILogger<RetryPolicyService> logger)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, RetryPolicy? policy = null)
         {
             policy ??= CreateDefaultPolicy();
-            
+
             Exception? lastException = null;
             var delay = policy.InitialDelay;
 
@@ -49,21 +49,21 @@ namespace ThreadPilot.Services
                     var result = await operation();
                     if (attempt > 1)
                     {
-                        _logger.LogInformation("Operation succeeded on attempt {Attempt}", attempt);
+                        this.logger.LogInformation("Operation succeeded on attempt {Attempt}", attempt);
                     }
                     return result;
                 }
                 catch (Exception ex)
                 {
                     lastException = ex;
-                    
+
                     if (attempt == policy.MaxAttempts || (policy.ShouldRetry != null && !policy.ShouldRetry(ex)))
                     {
-                        _logger.LogError(ex, "Operation failed after {Attempts} attempts", attempt);
+                        this.logger.LogError(ex, "Operation failed after {Attempts} attempts", attempt);
                         throw;
                     }
 
-                    _logger.LogWarning(ex, "Operation failed on attempt {Attempt}, retrying in {Delay}ms", 
+                    this.logger.LogWarning(ex, "Operation failed on attempt {Attempt}, retrying in {Delay}ms",
                         attempt, delay.TotalMilliseconds);
 
                     await Task.Delay(delay);
@@ -78,7 +78,8 @@ namespace ThreadPilot.Services
 
         public async Task ExecuteAsync(Func<Task> operation, RetryPolicy? policy = null)
         {
-            await ExecuteAsync(async () =>
+            await this.ExecuteAsync(
+                async () =>
             {
                 await operation();
                 return true; // Dummy return value
@@ -99,7 +100,7 @@ namespace ThreadPilot.Services
                     InvalidOperationException invalidOp when invalidOp.Message.Contains("terminated") => false, // Process terminated
                     UnauthorizedAccessException => false, // Permission issue - don't retry
                     _ => true // Retry other exceptions
-                }
+                },
             };
         }
 
@@ -116,7 +117,7 @@ namespace ThreadPilot.Services
                     ManagementException mgmtEx when mgmtEx.ErrorCode == ManagementStatus.AccessDenied => false,
                     ManagementException mgmtEx when mgmtEx.ErrorCode == ManagementStatus.NotFound => false,
                     _ => true
-                }
+                },
             };
         }
 
@@ -135,7 +136,7 @@ namespace ThreadPilot.Services
                     UnauthorizedAccessException => false, // Permission issue - don't retry
                     IOException ioEx when ioEx.Message.Contains("being used by another process") => true, // File in use - retry
                     _ => true
-                }
+                },
             };
         }
 
@@ -146,7 +147,7 @@ namespace ThreadPilot.Services
                 MaxAttempts = 3,
                 InitialDelay = TimeSpan.FromMilliseconds(100),
                 MaxDelay = TimeSpan.FromSeconds(2),
-                BackoffMultiplier = 2.0
+                BackoffMultiplier = 2.0,
             };
         }
     }

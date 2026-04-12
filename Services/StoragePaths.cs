@@ -14,11 +14,11 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.IO;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.IO;
+
     internal static class StoragePaths
     {
         public static string AppDataRoot { get; } = Path.Combine(
@@ -26,9 +26,13 @@ namespace ThreadPilot.Services
             "ThreadPilot");
 
         public static string SettingsFilePath => Path.Combine(AppDataRoot, "settings.json");
+
         public static string ProfilesDirectory => Path.Combine(AppDataRoot, "Profiles");
+
         public static string ConfigurationDirectory => Path.Combine(AppDataRoot, "Configuration");
+
         public static string CoreMasksFilePath => Path.Combine(AppDataRoot, "core_masks.json");
+
         public static string PowerPlansDirectory => Path.Combine(AppDataRoot, "Powerplans");
 
         public static void EnsureAppDataDirectories()

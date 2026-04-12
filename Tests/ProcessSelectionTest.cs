@@ -14,59 +14,59 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using System.Linq;
-using ThreadPilot.Services;
-using ThreadPilot.Models;
-using Microsoft.Extensions.Logging;
-
 namespace ThreadPilot.Tests
 {
+    using System;
+    using System.Diagnostics;
+    using System.Linq;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
+    using ThreadPilot.Models;
+    using ThreadPilot.Services;
+
     /// <summary>
-    /// Test class to validate the improved process selection and real-time data sync functionality
+    /// Test class to validate the improved process selection and real-time data sync functionality.
     /// </summary>
     public class ProcessSelectionTest
     {
-        private readonly ProcessService _processService;
-        private readonly CpuTopologyService _cpuTopologyService;
+        private readonly ProcessService processService;
+        private readonly CpuTopologyService cpuTopologyService;
 
         public ProcessSelectionTest()
         {
-            _processService = new ProcessService();
+            this.processService = new ProcessService();
 
             // Create a simple logger for the CPU topology service
             var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
             var logger = loggerFactory.CreateLogger<CpuTopologyService>();
-            _cpuTopologyService = new CpuTopologyService(logger);
+            this.cpuTopologyService = new CpuTopologyService(logger);
         }
 
         /// <summary>
-        /// Test that process information is correctly refreshed and reflects actual OS state
+        /// Test that process information is correctly refreshed and reflects actual OS state.
         /// </summary>
         public async Task<bool> TestProcessInfoRefresh()
         {
             try
             {
                 Console.WriteLine("Testing process info refresh...");
-                
+
                 // Get current process as test subject
                 var currentProcess = Process.GetCurrentProcess();
-                var processModel = _processService.CreateProcessModel(currentProcess);
-                
+                var processModel = this.processService.CreateProcessModel(currentProcess);
+
                 Console.WriteLine($"Initial process info - PID: {processModel.ProcessId}, Priority: {processModel.Priority}, Affinity: 0x{processModel.ProcessorAffinity:X}");
-                
+
                 // Refresh the process info
-                await _processService.RefreshProcessInfo(processModel);
-                
+                await this.processService.RefreshProcessInfo(processModel);
+
                 Console.WriteLine($"After refresh - PID: {processModel.ProcessId}, Priority: {processModel.Priority}, Affinity: 0x{processModel.ProcessorAffinity:X}");
-                
+
                 // Verify the data is consistent
                 bool isValid = processModel.ProcessId == currentProcess.Id &&
                               processModel.Priority == currentProcess.PriorityClass &&
                               processModel.ProcessorAffinity == (long)currentProcess.ProcessorAffinity;
-                
+
                 Console.WriteLine($"Process info refresh test: {(isValid ? "PASSED" : "FAILED")}");
                 return isValid;
             }
@@ -78,14 +78,14 @@ namespace ThreadPilot.Tests
         }
 
         /// <summary>
-        /// Test that process termination is properly detected
+        /// Test that process termination is properly detected.
         /// </summary>
         public async Task<bool> TestProcessTerminationDetection()
         {
             try
             {
                 Console.WriteLine("Testing process termination detection...");
-                
+
                 // Start a short-lived process
                 var notepadProcess = Process.Start("notepad.exe");
                 if (notepadProcess == null)
@@ -93,25 +93,25 @@ namespace ThreadPilot.Tests
                     Console.WriteLine("Could not start test process");
                     return false;
                 }
-                
-                var processModel = _processService.CreateProcessModel(notepadProcess);
+
+                var processModel = this.processService.CreateProcessModel(notepadProcess);
                 Console.WriteLine($"Started test process - PID: {processModel.ProcessId}");
-                
+
                 // Verify process is running
-                bool isRunning = await _processService.IsProcessStillRunning(processModel);
+                bool isRunning = await this.processService.IsProcessStillRunning(processModel);
                 Console.WriteLine($"Process running check: {isRunning}");
-                
+
                 // Terminate the process
                 notepadProcess.Kill();
                 await Task.Delay(1000); // Wait for termination
-                
+
                 // Check if termination is detected
-                bool isStillRunning = await _processService.IsProcessStillRunning(processModel);
+                bool isStillRunning = await this.processService.IsProcessStillRunning(processModel);
                 Console.WriteLine($"Process running after termination: {isStillRunning}");
-                
+
                 bool testPassed = isRunning && !isStillRunning;
                 Console.WriteLine($"Process termination detection test: {(testPassed ? "PASSED" : "FAILED")}");
-                
+
                 return testPassed;
             }
             catch (Exception ex)
@@ -122,23 +122,23 @@ namespace ThreadPilot.Tests
         }
 
         /// <summary>
-        /// Test active applications filtering
+        /// Test active applications filtering.
         /// </summary>
         public async Task<bool> TestActiveApplicationsFiltering()
         {
             try
             {
                 Console.WriteLine("Testing active applications filtering...");
-                
-                var allProcesses = await _processService.GetProcessesAsync();
-                var activeApps = await _processService.GetActiveApplicationsAsync();
-                
+
+                var allProcesses = await this.processService.GetProcessesAsync();
+                var activeApps = await this.processService.GetActiveApplicationsAsync();
+
                 Console.WriteLine($"Total processes: {allProcesses.Count}");
                 Console.WriteLine($"Active applications: {activeApps.Count}");
-                
+
                 // Verify that active apps is a subset of all processes
                 bool isSubset = activeApps.Count <= allProcesses.Count;
-                
+
                 // Verify that all active apps have visible windows
                 bool allHaveWindows = true;
                 foreach (var app in activeApps)
@@ -150,10 +150,10 @@ namespace ThreadPilot.Tests
                         break;
                     }
                 }
-                
+
                 bool testPassed = isSubset && allHaveWindows;
                 Console.WriteLine($"Active applications filtering test: {(testPassed ? "PASSED" : "FAILED")}");
-                
+
                 return testPassed;
             }
             catch (Exception ex)
@@ -164,7 +164,7 @@ namespace ThreadPilot.Tests
         }
 
         /// <summary>
-        /// Test CPU affinity mask conversion and core selection
+        /// Test CPU affinity mask conversion and core selection.
         /// </summary>
         public async Task<bool> TestCpuAffinityMaskConversion()
         {
@@ -174,7 +174,7 @@ namespace ThreadPilot.Tests
 
                 // Get current process as test subject
                 var currentProcess = Process.GetCurrentProcess();
-                var processModel = _processService.CreateProcessModel(currentProcess);
+                var processModel = this.processService.CreateProcessModel(currentProcess);
 
                 Console.WriteLine($"Process affinity mask: 0x{processModel.ProcessorAffinity:X} ({Convert.ToString(processModel.ProcessorAffinity, 2).PadLeft(Environment.ProcessorCount, '0')})");
 
@@ -223,7 +223,7 @@ namespace ThreadPilot.Tests
         }
 
         /// <summary>
-        /// Test hyperthreading/SMT status detection and display
+        /// Test hyperthreading/SMT status detection and display.
         /// </summary>
         public async Task<bool> TestHyperThreadingStatusDetection()
         {
@@ -232,8 +232,8 @@ namespace ThreadPilot.Tests
                 Console.WriteLine("Testing hyperthreading/SMT status detection...");
 
                 // Get CPU topology information
-                await _cpuTopologyService.DetectTopologyAsync();
-                var topology = _cpuTopologyService.CurrentTopology;
+                await this.cpuTopologyService.DetectTopologyAsync();
+                var topology = this.cpuTopologyService.CurrentTopology;
 
                 if (topology == null)
                 {
@@ -288,26 +288,26 @@ namespace ThreadPilot.Tests
         }
 
         /// <summary>
-        /// Run all tests
+        /// Run all tests.
         /// </summary>
         public async Task<bool> RunAllTests()
         {
             Console.WriteLine("=== Process Selection and Real-time Data Sync Tests ===");
             Console.WriteLine();
 
-            bool test1 = await TestProcessInfoRefresh();
+            bool test1 = await this.TestProcessInfoRefresh();
             Console.WriteLine();
 
-            bool test2 = await TestProcessTerminationDetection();
+            bool test2 = await this.TestProcessTerminationDetection();
             Console.WriteLine();
 
-            bool test3 = await TestActiveApplicationsFiltering();
+            bool test3 = await this.TestActiveApplicationsFiltering();
             Console.WriteLine();
 
-            bool test4 = await TestCpuAffinityMaskConversion();
+            bool test4 = await this.TestCpuAffinityMaskConversion();
             Console.WriteLine();
 
-            bool test5 = await TestHyperThreadingStatusDetection();
+            bool test5 = await this.TestHyperThreadingStatusDetection();
             Console.WriteLine();
 
             bool allPassed = test1 && test2 && test3 && test4 && test5;

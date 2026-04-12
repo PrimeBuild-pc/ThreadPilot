@@ -14,28 +14,29 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Windows;
-using Microsoft.Extensions.Logging;
-using Microsoft.Win32;
-using Wpf.Ui.Appearance;
-using Wpf.Ui.Controls;
-
 namespace ThreadPilot.Services
 {
-    public class ThemeService : IThemeService
+    using System;
+    using System.Windows;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Win32;
+    using Wpf.Ui.Appearance;
+    using Wpf.Ui.Controls;
+
+    public class ThemeService : IThemeService, IDisposable
     {
         private const string LightThemeDictionaryPath = "Themes/FluentLight.xaml";
         private const string DarkThemeDictionaryPath = "Themes/FluentDark.xaml";
 
-        private readonly ILogger<ThemeService> _logger;
-        private ResourceDictionary? _activeThemeDictionary;
+        private readonly ILogger<ThemeService> logger;
+        private ResourceDictionary? activeThemeDictionary;
 
         public bool IsDarkTheme { get; private set; }
 
         public ThemeService(ILogger<ThemeService> logger)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            SystemEvents.UserPreferenceChanged += this.OnUserPreferenceChanged;
         }
 
         public void ApplyTheme(bool useDarkTheme)
@@ -61,21 +62,21 @@ namespace ThreadPilot.Services
                     }
                 }
 
-                _activeThemeDictionary = null;
+                this.activeThemeDictionary = null;
 
                 var nextDictionary = new ResourceDictionary { Source = targetUri };
                 appResources.MergedDictionaries.Insert(0, nextDictionary);
-                _activeThemeDictionary = nextDictionary;
+                this.activeThemeDictionary = nextDictionary;
 
                 // Keep Wpf.Ui controls aligned with app theme (NavigationView, TitleBar, etc.).
                 var applicationTheme = useDarkTheme ? ApplicationTheme.Dark : ApplicationTheme.Light;
                 ApplicationThemeManager.Apply(applicationTheme, WindowBackdropType.Mica, updateAccent: true);
 
-                IsDarkTheme = useDarkTheme;
+                this.IsDarkTheme = useDarkTheme;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to apply theme {ThemeUri}", targetUri);
+                this.logger.LogError(ex, "Failed to apply theme {ThemeUri}", targetUri);
             }
         }
 
@@ -100,10 +101,34 @@ namespace ThreadPilot.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to read system theme preference, falling back to light theme");
+                this.logger.LogWarning(ex, "Failed to read system theme preference, falling back to light theme");
             }
 
             return false;
+        }
+
+        private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
+        {
+            if (e.Category != UserPreferenceCategory.Color &&
+                e.Category != UserPreferenceCategory.General &&
+                e.Category != UserPreferenceCategory.VisualStyle)
+            {
+                return;
+            }
+
+            try
+            {
+                this.ApplyTheme(this.GetSystemUsesDarkTheme());
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogDebug(ex, "Failed to apply theme after system preference change");
+            }
+        }
+
+        public void Dispose()
+        {
+            SystemEvents.UserPreferenceChanged -= this.OnUserPreferenceChanged;
         }
     }
 }

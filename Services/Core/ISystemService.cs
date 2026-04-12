@@ -14,17 +14,17 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-
 namespace ThreadPilot.Services.Core
 {
+    using System;
+
     /// <summary>
-    /// Base interface for core system services that interact directly with the operating system
+    /// Base interface for core system services that interact directly with the operating system.
     /// </summary>
     public interface ISystemService
     {
         /// <summary>
-        /// Gets whether the service is currently available and functional
+        /// Gets a value indicating whether gets whether the service is currently available and functional.
         /// </summary>
         bool IsAvailable { get; }
 
@@ -34,28 +34,29 @@ namespace ThreadPilot.Services.Core
         event EventHandler<ServiceAvailabilityChangedEventArgs>? AvailabilityChanged;
 
         /// <summary>
-        /// Initialize the service
+        /// Initialize the service.
         /// </summary>
         Task InitializeAsync();
 
         /// <summary>
-        /// Cleanup and dispose of service resources
+        /// Cleanup and dispose of service resources.
         /// </summary>
         Task DisposeAsync();
     }
 
     /// <summary>
-    /// Event args for service availability changes
+    /// Event args for service availability changes.
     /// </summary>
     public class ServiceAvailabilityChangedEventArgs : EventArgs
     {
         public bool IsAvailable { get; }
+
         public string? Reason { get; }
 
         public ServiceAvailabilityChangedEventArgs(bool isAvailable, string? reason = null)
         {
-            IsAvailable = isAvailable;
-            Reason = reason;
+            this.IsAvailable = isAvailable;
+            this.Reason = reason;
         }
     }
 }

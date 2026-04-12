@@ -14,64 +14,64 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.IO;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using ThreadPilot.Models;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.IO;
+    using System.Text;
+    using System.Text.Json;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
+    using ThreadPilot.Models;
+
     /// <summary>
-    /// Service for managing application settings with JSON persistence
+    /// Service for managing application settings with JSON persistence.
     /// </summary>
     public class ApplicationSettingsService : IApplicationSettingsService
     {
-        private readonly ILogger<ApplicationSettingsService> _logger;
-        private readonly string _settingsFilePath;
-        private ApplicationSettingsModel _settings;
+        private readonly ILogger<ApplicationSettingsService> logger;
+        private readonly string settingsFilePath;
+        private ApplicationSettingsModel settings;
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
             WriteIndented = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             PropertyNameCaseInsensitive = true,
             ReadCommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = true
+            AllowTrailingCommas = true,
         };
 
         public event EventHandler<ApplicationSettingsChangedEventArgs>? SettingsChanged;
 
-        public ApplicationSettingsModel Settings => (ApplicationSettingsModel)_settings.Clone();
+        public ApplicationSettingsModel Settings => (ApplicationSettingsModel)this.settings.Clone();
 
         public ApplicationSettingsService(ILogger<ApplicationSettingsService> logger)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             StoragePaths.EnsureAppDataDirectories();
-            _settingsFilePath = StoragePaths.SettingsFilePath;
+            this.settingsFilePath = StoragePaths.SettingsFilePath;
 
-            MigrateLegacySettingsIfNeeded();
+            this.MigrateLegacySettingsIfNeeded();
 
-            _settings = new ApplicationSettingsModel();
+            this.settings = new ApplicationSettingsModel();
         }
 
         public async Task LoadSettingsAsync()
         {
             try
             {
-                _logger.LogInformation("Loading application settings from {FilePath}", _settingsFilePath);
+                this.logger.LogInformation("Loading application settings from {FilePath}", this.settingsFilePath);
 
-                if (!File.Exists(_settingsFilePath))
+                if (!File.Exists(this.settingsFilePath))
                 {
-                    _logger.LogInformation("Settings file not found, using defaults");
-                    _settings = new ApplicationSettingsModel();
-                    await SaveSettingsAsync();
+                    this.logger.LogInformation("Settings file not found, using defaults");
+                    this.settings = new ApplicationSettingsModel();
+                    await this.SaveSettingsAsync();
                     return;
                 }
 
-                var json = await File.ReadAllTextAsync(_settingsFilePath);
+                var json = await File.ReadAllTextAsync(this.settingsFilePath);
                 var legacyThemePreferenceDetected = false;
 
                 try
@@ -86,7 +86,7 @@ namespace ThreadPilot.Services
                 }
                 catch (JsonException ex)
                 {
-                    _logger.LogWarning(ex, "Unable to parse settings JSON metadata, continuing with standard deserialization");
+                    this.logger.LogWarning(ex, "Unable to parse settings JSON metadata, continuing with standard deserialization");
                 }
 
                 var loadedSettings = JsonSerializer.Deserialize<ApplicationSettingsModel>(json, JsonOptions);
@@ -98,23 +98,23 @@ namespace ThreadPilot.Services
                         loadedSettings.HasUserThemePreference = true;
                     }
 
-                    var oldSettings = (ApplicationSettingsModel)_settings.Clone();
-                    _settings.CopyFrom(loadedSettings);
-                    ValidateAndFixSettings();
+                    var oldSettings = (ApplicationSettingsModel)this.settings.Clone();
+                    this.settings.CopyFrom(loadedSettings);
+                    this.ValidateAndFixSettings();
 
-                    _logger.LogInformation("Settings loaded successfully");
-                    OnSettingsChanged(oldSettings, _settings);
+                    this.logger.LogInformation("Settings loaded successfully");
+                    this.OnSettingsChanged(oldSettings, this.settings);
                 }
                 else
                 {
-                    _logger.LogWarning("Failed to deserialize settings, using defaults");
-                    _settings = new ApplicationSettingsModel();
+                    this.logger.LogWarning("Failed to deserialize settings, using defaults");
+                    this.settings = new ApplicationSettingsModel();
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading settings, using defaults");
-                _settings = new ApplicationSettingsModel();
+                this.logger.LogError(ex, "Error loading settings, using defaults");
+                this.settings = new ApplicationSettingsModel();
             }
         }
 
@@ -122,18 +122,18 @@ namespace ThreadPilot.Services
         {
             try
             {
-                _logger.LogDebug("Saving application settings to {FilePath}", _settingsFilePath);
+                this.logger.LogDebug("Saving application settings to {FilePath}", this.settingsFilePath);
 
-                ValidateAndFixSettings();
+                this.ValidateAndFixSettings();
 
-                var json = JsonSerializer.Serialize(_settings, JsonOptions);
-                await AtomicFileWriter.WriteAllTextAsync(_settingsFilePath, json, Encoding.UTF8);
+                var json = JsonSerializer.Serialize(this.settings, JsonOptions);
+                await AtomicFileWriter.WriteAllTextAsync(this.settingsFilePath, json, Encoding.UTF8);
 
-                _logger.LogDebug("Settings saved successfully");
+                this.logger.LogDebug("Settings saved successfully");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error saving settings");
+                this.logger.LogError(ex, "Error saving settings");
                 throw;
             }
         }
@@ -141,21 +141,23 @@ namespace ThreadPilot.Services
         public async Task UpdateSettingsAsync(ApplicationSettingsModel newSettings)
         {
             if (newSettings == null)
+            {
                 throw new ArgumentNullException(nameof(newSettings));
+            }
 
             try
             {
-                var oldSettings = (ApplicationSettingsModel)_settings.Clone();
-                _settings.CopyFrom(newSettings);
-                
-                await SaveSettingsAsync();
-                
-                OnSettingsChanged(oldSettings, _settings);
-                _logger.LogInformation("Settings updated successfully");
+                var oldSettings = (ApplicationSettingsModel)this.settings.Clone();
+                this.settings.CopyFrom(newSettings);
+
+                await this.SaveSettingsAsync();
+
+                this.OnSettingsChanged(oldSettings, this.settings);
+                this.logger.LogInformation("Settings updated successfully");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating settings");
+                this.logger.LogError(ex, "Error updating settings");
                 throw;
             }
         }
@@ -164,54 +166,69 @@ namespace ThreadPilot.Services
         {
             try
             {
-                _logger.LogInformation("Resetting settings to defaults");
-                
-                var oldSettings = (ApplicationSettingsModel)_settings.Clone();
-                _settings = new ApplicationSettingsModel();
-                
-                await SaveSettingsAsync();
-                
-                OnSettingsChanged(oldSettings, _settings);
-                _logger.LogInformation("Settings reset to defaults");
+                this.logger.LogInformation("Resetting settings to defaults");
+
+                var oldSettings = (ApplicationSettingsModel)this.settings.Clone();
+                this.settings = new ApplicationSettingsModel();
+
+                await this.SaveSettingsAsync();
+
+                this.OnSettingsChanged(oldSettings, this.settings);
+                this.logger.LogInformation("Settings reset to defaults");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error resetting settings to defaults");
+                this.logger.LogError(ex, "Error resetting settings to defaults");
                 throw;
             }
         }
 
         public string GetSettingsFilePath()
         {
-            return _settingsFilePath;
+            return this.settingsFilePath;
         }
 
         public void ValidateAndFixSettings()
         {
             // Validate and fix notification durations
-            if (_settings.NotificationDisplayDurationMs < 1000)
-                _settings.NotificationDisplayDurationMs = 1000;
-            if (_settings.NotificationDisplayDurationMs > 30000)
-                _settings.NotificationDisplayDurationMs = 30000;
+            if (this.settings.NotificationDisplayDurationMs < 1000)
+            {
+                this.settings.NotificationDisplayDurationMs = 1000;
+            }
 
-            if (_settings.BalloonNotificationTimeoutMs < 1000)
-                _settings.BalloonNotificationTimeoutMs = 1000;
-            if (_settings.BalloonNotificationTimeoutMs > 60000)
-                _settings.BalloonNotificationTimeoutMs = 60000;
+            if (this.settings.NotificationDisplayDurationMs > 30000)
+            {
+                this.settings.NotificationDisplayDurationMs = 30000;
+            }
+
+            if (this.settings.BalloonNotificationTimeoutMs < 1000)
+            {
+                this.settings.BalloonNotificationTimeoutMs = 1000;
+            }
+
+            if (this.settings.BalloonNotificationTimeoutMs > 60000)
+            {
+                this.settings.BalloonNotificationTimeoutMs = 60000;
+            }
 
             // Validate notification history
-            if (_settings.MaxNotificationHistoryItems < 10)
-                _settings.MaxNotificationHistoryItems = 10;
-            if (_settings.MaxNotificationHistoryItems > 1000)
-                _settings.MaxNotificationHistoryItems = 1000;
+            if (this.settings.MaxNotificationHistoryItems < 10)
+            {
+                this.settings.MaxNotificationHistoryItems = 10;
+            }
+
+            if (this.settings.MaxNotificationHistoryItems > 1000)
+            {
+                this.settings.MaxNotificationHistoryItems = 1000;
+            }
 
             // Validate custom icon path
-            if (_settings.UseCustomTrayIcon && !string.IsNullOrEmpty(_settings.CustomTrayIconPath))
+            if (this.settings.UseCustomTrayIcon && !string.IsNullOrEmpty(this.settings.CustomTrayIconPath))
             {
-                if (!File.Exists(_settings.CustomTrayIconPath))
+                if (!File.Exists(this.settings.CustomTrayIconPath))
                 {
-                    _logger.LogWarning("Custom tray icon file not found: {Path}", _settings.CustomTrayIconPath);
-                    _settings.UseCustomTrayIcon = false;
+                    this.logger.LogWarning("Custom tray icon file not found: {Path}", this.settings.CustomTrayIconPath);
+                    this.settings.UseCustomTrayIcon = false;
                 }
             }
         }
@@ -220,16 +237,16 @@ namespace ThreadPilot.Services
         {
             try
             {
-                _logger.LogInformation("Exporting settings to {FilePath}", filePath);
+                this.logger.LogInformation("Exporting settings to {FilePath}", filePath);
 
-                var json = JsonSerializer.Serialize(_settings, JsonOptions);
+                var json = JsonSerializer.Serialize(this.settings, JsonOptions);
                 await AtomicFileWriter.WriteAllTextAsync(filePath, json, Encoding.UTF8);
 
-                _logger.LogInformation("Settings exported successfully");
+                this.logger.LogInformation("Settings exported successfully");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error exporting settings");
+                this.logger.LogError(ex, "Error exporting settings");
                 throw;
             }
         }
@@ -238,23 +255,27 @@ namespace ThreadPilot.Services
         {
             try
             {
-                _logger.LogInformation("Importing settings from {FilePath}", filePath);
+                this.logger.LogInformation("Importing settings from {FilePath}", filePath);
 
                 if (!File.Exists(filePath))
+                {
                     throw new FileNotFoundException($"Settings file not found: {filePath}");
+                }
 
                 var json = await File.ReadAllTextAsync(filePath);
                 var importedSettings = JsonSerializer.Deserialize<ApplicationSettingsModel>(json, JsonOptions);
 
                 if (importedSettings == null)
+                {
                     throw new InvalidOperationException("Failed to deserialize imported settings");
+                }
 
-                await UpdateSettingsAsync(importedSettings);
-                _logger.LogInformation("Settings imported successfully");
+                await this.UpdateSettingsAsync(importedSettings);
+                this.logger.LogInformation("Settings imported successfully");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error importing settings");
+                this.logger.LogError(ex, "Error importing settings");
                 throw;
             }
         }
@@ -269,13 +290,13 @@ namespace ThreadPilot.Services
 
                 var oldSnapshot = (ApplicationSettingsModel)oldSettings.Clone();
                 var newSnapshot = (ApplicationSettingsModel)newSettings.Clone();
-                
-                SettingsChanged?.Invoke(this, new ApplicationSettingsChangedEventArgs(
+
+                this.SettingsChanged?.Invoke(this, new ApplicationSettingsChangedEventArgs(
                     oldSnapshot, newSnapshot, changedProperties));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error firing settings changed event");
+                this.logger.LogError(ex, "Error firing settings changed event");
             }
         }
 
@@ -284,16 +305,16 @@ namespace ThreadPilot.Services
             try
             {
                 var legacySettingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
-                if (File.Exists(legacySettingsPath) && !File.Exists(_settingsFilePath))
+                if (File.Exists(legacySettingsPath) && !File.Exists(this.settingsFilePath))
                 {
-                    Directory.CreateDirectory(Path.GetDirectoryName(_settingsFilePath)!);
-                    File.Copy(legacySettingsPath, _settingsFilePath);
-                    _logger.LogInformation("Migrated legacy settings file to AppData storage");
+                    Directory.CreateDirectory(Path.GetDirectoryName(this.settingsFilePath)!);
+                    File.Copy(legacySettingsPath, this.settingsFilePath);
+                    this.logger.LogInformation("Migrated legacy settings file to AppData storage");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to migrate legacy settings file");
+                this.logger.LogWarning(ex, "Failed to migrate legacy settings file");
             }
         }
     }

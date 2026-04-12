@@ -14,23 +14,23 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.IO;
-using System.Text;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using ThreadPilot.Models;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Collections.ObjectModel;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Linq;
+    using System.Text;
+    using System.Text.Json;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
+    using ThreadPilot.Models;
+
     /// <summary>
     /// Service for managing CPU core affinity masks
-    /// Based on CPUSetSetter's AppConfig and LogicalProcessorMask system
+    /// Based on CPUSetSetter's AppConfig and LogicalProcessorMask system.
     /// </summary>
     public class CoreMaskService : ICoreMaskService
     {
@@ -39,56 +39,60 @@ namespace ThreadPilot.Services
             WriteIndented = true,
             PropertyNameCaseInsensitive = true,
             ReadCommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = true
+            AllowTrailingCommas = true,
         };
-        private readonly ILogger<CoreMaskService> _logger;
-        private readonly ICpuTopologyService _cpuTopologyService;
-        private readonly IServiceProvider _serviceProvider;
-        private readonly string _masksFilePath;
-        private bool _initialized = false;
-        
+
+        private readonly ILogger<CoreMaskService> logger;
+        private readonly ICpuTopologyService cpuTopologyService;
+        private readonly IServiceProvider serviceProvider;
+        private readonly string masksFilePath;
+        private bool initialized = false;
+
         // Tracks which masks are actively applied to processes
-        private readonly Dictionary<int, string> _activeProcessMasks = new(); // ProcessId -> MaskId
+        private readonly Dictionary<int, string> activeProcessMasks = new(); // ProcessId -> MaskId
 
         public ObservableCollection<CoreMask> AvailableMasks { get; private set; } = new();
-        public CoreMask? DefaultMask => AvailableMasks.FirstOrDefault(m => m.IsDefault);
-        
+
+        public CoreMask? DefaultMask => this.AvailableMasks.FirstOrDefault(m => m.IsDefault);
+
         /// <summary>
-        /// The "All Cores" baseline mask - cannot be deleted
+        /// The "All Cores" baseline mask - cannot be deleted.
         /// </summary>
-        private const string ALL_CORES_MASK_NAME = "All Cores";
+        private const string ALLCORESMASKNAME = "All Cores";
 
         public CoreMaskService(
             ILogger<CoreMaskService> logger,
             ICpuTopologyService cpuTopologyService,
             IServiceProvider serviceProvider)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _cpuTopologyService = cpuTopologyService ?? throw new ArgumentNullException(nameof(cpuTopologyService));
-            _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.cpuTopologyService = cpuTopologyService ?? throw new ArgumentNullException(nameof(cpuTopologyService));
+            this.serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 
             StoragePaths.EnsureAppDataDirectories();
-            _masksFilePath = StoragePaths.CoreMasksFilePath;
+            this.masksFilePath = StoragePaths.CoreMasksFilePath;
         }
 
         public async Task InitializeAsync()
         {
-            if (_initialized)
-                return;
-
-            _logger.LogInformation("Initializing CoreMaskService...");
-
-            await LoadMasksAsync();
-
-            // If no masks exist, create defaults
-            if (AvailableMasks.Count == 0)
+            if (this.initialized)
             {
-                _logger.LogInformation("No masks found, creating defaults...");
-                await CreateDefaultMasksAsync();
+                return;
             }
 
-            _initialized = true;
-            _logger.LogInformation("CoreMaskService initialized with {Count} masks", AvailableMasks.Count);
+            this.logger.LogInformation("Initializing CoreMaskService...");
+
+            await this.LoadMasksAsync();
+
+            // If no masks exist, create defaults
+            if (this.AvailableMasks.Count == 0)
+            {
+                this.logger.LogInformation("No masks found, creating defaults...");
+                await this.CreateDefaultMasksAsync();
+            }
+
+            this.initialized = true;
+            this.logger.LogInformation("CoreMaskService initialized with {Count} masks", this.AvailableMasks.Count);
         }
 
         public async Task<CoreMask> CreateMaskAsync(string name, string description, IEnumerable<bool> boolMask)
@@ -98,16 +102,19 @@ namespace ThreadPilot.Services
                 Name = name,
                 Description = description,
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
             };
 
             foreach (var bit in boolMask)
+            {
                 mask.BoolMask.Add(bit);
+            }
 
-            AvailableMasks.Add(mask);
-            await SaveMasksAsync();
+            this.AvailableMasks.Add(mask);
+            await this.SaveMasksAsync();
 
-            _logger.LogInformation("Created new mask '{Name}' with {Count} cores selected",
+            this.logger.LogInformation(
+                "Created new mask '{Name}' with {Count} cores selected",
                 name, mask.SelectedCoreCount);
 
             return mask;
@@ -116,58 +123,60 @@ namespace ThreadPilot.Services
         public async Task UpdateMaskAsync(CoreMask mask)
         {
             if (mask == null)
+            {
                 throw new ArgumentNullException(nameof(mask));
+            }
 
-            var existing = GetMaskById(mask.Id);
+            var existing = this.GetMaskById(mask.Id);
             if (existing == null)
             {
-                _logger.LogWarning("Cannot update mask {Id}: not found", mask.Id);
+                this.logger.LogWarning("Cannot update mask {Id}: not found", mask.Id);
                 return;
             }
 
             mask.UpdatedAt = DateTime.UtcNow;
-            await SaveMasksAsync();
+            await this.SaveMasksAsync();
 
-            _logger.LogInformation("Updated mask '{Name}'", mask.Name);
+            this.logger.LogInformation("Updated mask '{Name}'", mask.Name);
         }
 
         public async Task DeleteMaskAsync(string maskId)
         {
-            var mask = GetMaskById(maskId);
+            var mask = this.GetMaskById(maskId);
             if (mask == null)
             {
-                _logger.LogWarning("Cannot delete mask {Id}: not found", maskId);
+                this.logger.LogWarning("Cannot delete mask {Id}: not found", maskId);
                 return;
             }
 
             // Cannot delete the "All Cores" baseline mask
-            if (mask.Name == ALL_CORES_MASK_NAME)
+            if (mask.Name == ALLCORESMASKNAME)
             {
-                _logger.LogWarning("Cannot delete 'All Cores' baseline mask");
+                this.logger.LogWarning("Cannot delete 'All Cores' baseline mask");
                 throw new InvalidOperationException("Cannot delete the 'All Cores' baseline mask - it is required as the default fallback");
             }
 
             // Check if mask is actively applied to running processes
-            if (await IsMaskActivelyAppliedAsync(maskId))
+            if (await this.IsMaskActivelyAppliedAsync(maskId))
             {
-                _logger.LogWarning("Cannot delete mask '{Name}': it is actively applied to running processes", mask.Name);
+                this.logger.LogWarning("Cannot delete mask '{Name}': it is actively applied to running processes", mask.Name);
                 throw new InvalidOperationException($"Cannot delete mask '{mask.Name}' - it is currently applied to running processes. Please change the mask on those processes first.");
             }
 
-            AvailableMasks.Remove(mask);
-            await SaveMasksAsync();
+            this.AvailableMasks.Remove(mask);
+            await this.SaveMasksAsync();
 
-            _logger.LogInformation("Deleted mask '{Name}'", mask.Name);
+            this.logger.LogInformation("Deleted mask '{Name}'", mask.Name);
         }
 
         public CoreMask? GetMaskById(string maskId)
         {
-            return AvailableMasks.FirstOrDefault(m => m.Id == maskId);
+            return this.AvailableMasks.FirstOrDefault(m => m.Id == maskId);
         }
 
         public CoreMask? GetMaskByName(string name)
         {
-            return AvailableMasks.FirstOrDefault(m =>
+            return this.AvailableMasks.FirstOrDefault(m =>
                 m.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         }
 
@@ -175,7 +184,7 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var data = AvailableMasks.Select(m => new
+                var data = this.AvailableMasks.Select(m => new
                 {
                     id = m.Id,
                     name = m.Name,
@@ -184,17 +193,17 @@ namespace ThreadPilot.Services
                     isDefault = m.IsDefault,
                     isEnabled = m.IsEnabled,
                     createdAt = m.CreatedAt,
-                    updatedAt = m.UpdatedAt
+                    updatedAt = m.UpdatedAt,
                 }).ToList();
 
                 var json = JsonSerializer.Serialize(data, JsonOptions);
 
-                await AtomicFileWriter.WriteAllTextAsync(_masksFilePath, json, Encoding.UTF8);
-                _logger.LogDebug("Saved {Count} masks to {Path}", AvailableMasks.Count, _masksFilePath);
+                await AtomicFileWriter.WriteAllTextAsync(this.masksFilePath, json, Encoding.UTF8);
+                this.logger.LogDebug("Saved {Count} masks to {Path}", this.AvailableMasks.Count, this.masksFilePath);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to save masks to {Path}", _masksFilePath);
+                this.logger.LogError(ex, "Failed to save masks to {Path}", this.masksFilePath);
                 throw;
             }
         }
@@ -203,22 +212,22 @@ namespace ThreadPilot.Services
         {
             try
             {
-                if (!File.Exists(_masksFilePath))
+                if (!File.Exists(this.masksFilePath))
                 {
-                    _logger.LogInformation("Masks file not found at {Path}, will create defaults", _masksFilePath);
+                    this.logger.LogInformation("Masks file not found at {Path}, will create defaults", this.masksFilePath);
                     return;
                 }
 
-                var json = await File.ReadAllTextAsync(_masksFilePath);
+                var json = await File.ReadAllTextAsync(this.masksFilePath);
                 var data = JsonSerializer.Deserialize<List<JsonElement>>(json, JsonOptions);
 
                 if (data == null)
                 {
-                    _logger.LogWarning("Failed to deserialize masks from {Path}", _masksFilePath);
+                    this.logger.LogWarning("Failed to deserialize masks from {Path}", this.masksFilePath);
                     return;
                 }
 
-                AvailableMasks.Clear();
+                this.AvailableMasks.Clear();
 
                 foreach (var item in data)
                 {
@@ -228,11 +237,11 @@ namespace ThreadPilot.Services
                         {
                             Id = item.GetProperty("id").GetString() ?? Guid.NewGuid().ToString(),
                             Name = item.GetProperty("name").GetString() ?? "Unnamed",
-                            Description = item.GetProperty("description").GetString() ?? "",
+                            Description = item.GetProperty("description").GetString() ?? string.Empty,
                             IsDefault = item.GetProperty("isDefault").GetBoolean(),
                             IsEnabled = item.GetProperty("isEnabled").GetBoolean(),
                             CreatedAt = item.GetProperty("createdAt").GetDateTime(),
-                            UpdatedAt = item.GetProperty("updatedAt").GetDateTime()
+                            UpdatedAt = item.GetProperty("updatedAt").GetDateTime(),
                         };
 
                         var boolMask = item.GetProperty("boolMask");
@@ -241,19 +250,19 @@ namespace ThreadPilot.Services
                             mask.BoolMask.Add(bit.GetBoolean());
                         }
 
-                        AvailableMasks.Add(mask);
+                        this.AvailableMasks.Add(mask);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Failed to load individual mask, skipping");
+                        this.logger.LogWarning(ex, "Failed to load individual mask, skipping");
                     }
                 }
 
-                _logger.LogInformation("Loaded {Count} masks from {Path}", AvailableMasks.Count, _masksFilePath);
+                this.logger.LogInformation("Loaded {Count} masks from {Path}", this.AvailableMasks.Count, this.masksFilePath);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to load masks from {Path}", _masksFilePath);
+                this.logger.LogError(ex, "Failed to load masks from {Path}", this.masksFilePath);
             }
         }
 
@@ -261,12 +270,12 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var profileNames = await GetProfilesReferencingMaskAsync(maskId);
+                var profileNames = await this.GetProfilesReferencingMaskAsync(maskId);
                 return profileNames.Any();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to check if mask {MaskId} is referenced by profiles", maskId);
+                this.logger.LogError(ex, "Failed to check if mask {MaskId} is referenced by profiles", maskId);
                 return false;
             }
         }
@@ -276,13 +285,13 @@ namespace ThreadPilot.Services
             try
             {
                 // Check our tracking dictionary for active process masks
-                var isActive = _activeProcessMasks.ContainsValue(maskId);
-                
+                var isActive = this.activeProcessMasks.ContainsValue(maskId);
+
                 if (isActive)
                 {
                     // Verify processes are still running
                     var deadProcesses = new List<int>();
-                    foreach (var kvp in _activeProcessMasks.Where(x => x.Value == maskId))
+                    foreach (var kvp in this.activeProcessMasks.Where(x => x.Value == maskId))
                     {
                         try
                         {
@@ -294,23 +303,23 @@ namespace ThreadPilot.Services
                             deadProcesses.Add(kvp.Key);
                         }
                     }
-                    
+
                     // Clean up dead processes
                     foreach (var pid in deadProcesses)
                     {
-                        _activeProcessMasks.Remove(pid);
+                        this.activeProcessMasks.Remove(pid);
                     }
-                    
+
                     // Re-check after cleanup
-                    isActive = _activeProcessMasks.ContainsValue(maskId);
+                    isActive = this.activeProcessMasks.ContainsValue(maskId);
                 }
-                
+
                 await Task.CompletedTask;
                 return isActive;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to check if mask {MaskId} is actively applied", maskId);
+                this.logger.LogError(ex, "Failed to check if mask {MaskId} is actively applied", maskId);
                 return false;
             }
         }
@@ -318,11 +327,11 @@ namespace ThreadPilot.Services
         public async Task<IEnumerable<string>> GetProfilesReferencingMaskAsync(string maskId)
         {
             var referencingProfiles = new List<string>();
-            
+
             try
             {
                 // Get the association service to check profiles
-                var associationService = _serviceProvider.GetService(typeof(IProcessPowerPlanAssociationService)) as IProcessPowerPlanAssociationService;
+                var associationService = this.serviceProvider.GetService(typeof(IProcessPowerPlanAssociationService)) as IProcessPowerPlanAssociationService;
                 if (associationService != null)
                 {
                     var associations = await associationService.GetAssociationsAsync();
@@ -330,8 +339,8 @@ namespace ThreadPilot.Services
                     {
                         if (association.CoreMaskId == maskId)
                         {
-                            var profileName = !string.IsNullOrEmpty(association.Description) 
-                                ? association.Description 
+                            var profileName = !string.IsNullOrEmpty(association.Description)
+                                ? association.Description
                                 : association.ExecutableName;
                             referencingProfiles.Add(profileName);
                         }
@@ -340,9 +349,9 @@ namespace ThreadPilot.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to get profiles referencing mask {MaskId}", maskId);
+                this.logger.LogError(ex, "Failed to get profiles referencing mask {MaskId}", maskId);
             }
-            
+
             return referencingProfiles;
         }
 
@@ -350,14 +359,14 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var allCoresMask = GetAllCoresMask();
+                var allCoresMask = this.GetAllCoresMask();
                 if (allCoresMask == null)
                 {
-                    _logger.LogError("Cannot update profiles: 'All Cores' mask not found");
+                    this.logger.LogError("Cannot update profiles: 'All Cores' mask not found");
                     return;
                 }
 
-                var associationService = _serviceProvider.GetService(typeof(IProcessPowerPlanAssociationService)) as IProcessPowerPlanAssociationService;
+                var associationService = this.serviceProvider.GetService(typeof(IProcessPowerPlanAssociationService)) as IProcessPowerPlanAssociationService;
                 if (associationService != null)
                 {
                     var associations = await associationService.GetAssociationsAsync();
@@ -368,61 +377,61 @@ namespace ThreadPilot.Services
                             association.CoreMaskId = allCoresMask.Id;
                             association.CoreMaskName = allCoresMask.Name;
                             await associationService.UpdateAssociationAsync(association);
-                            _logger.LogInformation("Updated association '{Name}' to use 'All Cores' mask", association.ExecutableName);
+                            this.logger.LogInformation("Updated association '{Name}' to use 'All Cores' mask", association.ExecutableName);
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to update profiles to default mask");
+                this.logger.LogError(ex, "Failed to update profiles to default mask");
             }
         }
 
         public CoreMask? GetAllCoresMask()
         {
-            return AvailableMasks.FirstOrDefault(m => m.Name == ALL_CORES_MASK_NAME);
+            return this.AvailableMasks.FirstOrDefault(m => m.Name == ALLCORESMASKNAME);
         }
 
         /// <summary>
-        /// Registers that a mask is being applied to a process
+        /// Registers that a mask is being applied to a process.
         /// </summary>
         public void RegisterMaskApplication(int processId, string maskId)
         {
-            _activeProcessMasks[processId] = maskId;
-            _logger.LogDebug("Registered mask {MaskId} for process {ProcessId}", maskId, processId);
+            this.activeProcessMasks[processId] = maskId;
+            this.logger.LogDebug("Registered mask {MaskId} for process {ProcessId}", maskId, processId);
         }
 
         /// <summary>
-        /// Unregisters a mask application when a process exits or mask is removed
+        /// Unregisters a mask application when a process exits or mask is removed.
         /// </summary>
         public void UnregisterMaskApplication(int processId)
         {
-            if (_activeProcessMasks.Remove(processId))
+            if (this.activeProcessMasks.Remove(processId))
             {
-                _logger.LogDebug("Unregistered mask for process {ProcessId}", processId);
+                this.logger.LogDebug("Unregistered mask for process {ProcessId}", processId);
             }
         }
 
         /// <summary>
-        /// Gets all processes that have a specific mask applied
+        /// Gets all processes that have a specific mask applied.
         /// </summary>
         public IEnumerable<int> GetProcessesWithMask(string maskId)
         {
-            return _activeProcessMasks.Where(x => x.Value == maskId).Select(x => x.Key);
+            return this.activeProcessMasks.Where(x => x.Value == maskId).Select(x => x.Key);
         }
 
         public async Task CreateDefaultMasksAsync()
         {
             int coreCount = Environment.ProcessorCount;
-            var topology = _cpuTopologyService.CurrentTopology;
+            var topology = this.cpuTopologyService.CurrentTopology;
             bool topologyConfident = topology?.TopologyDetectionSuccessful == true;
             bool hasHyperThreading = topology?.HasHyperThreading == true;
             bool canCreateNoSmtVariants = topologyConfident && hasHyperThreading;
-            
+
             // Collect all default masks with their "no SMT" variants
             var defaultMasks = new List<(string name, List<bool> boolMask, string description)>();
-            
+
             // Determine CPU manufacturer for naming convention
             bool isIntel = topology?.CpuBrand?.Contains("Intel", StringComparison.OrdinalIgnoreCase) == true;
             bool isAmd = topology?.CpuBrand?.Contains("AMD", StringComparison.OrdinalIgnoreCase) == true;
@@ -431,24 +440,27 @@ namespace ThreadPilot.Services
             // 1. Always add "All Cores" baseline mask (IsDefault = true, cannot be deleted)
             var allCoresMask = new CoreMask
             {
-                Name = ALL_CORES_MASK_NAME,
+                Name = ALLCORESMASKNAME,
                 Description = "Use all available CPU cores - baseline mask",
-                IsDefault = true
+                IsDefault = true,
             };
             for (int i = 0; i < coreCount; i++)
+            {
                 allCoresMask.BoolMask.Add(true);
-            AvailableMasks.Add(allCoresMask);
+            }
+
+            this.AvailableMasks.Add(allCoresMask);
 
             // 2. Intel Hybrid Architecture: P-Cores, E-Cores, LPE-Cores (Arrow Lake+)
             if (topology != null && topology.HasIntelHybrid)
             {
                 // Detect efficiency class distribution for LPE support
                 var efficiencyClasses = topology.LogicalCores
-                    .Select(c => GetEfficiencyClass(c))
+                    .Select(c => this.GetEfficiencyClass(c))
                     .Distinct()
                     .OrderByDescending(x => x)
                     .ToList();
-                
+
                 bool hasLpeCores = efficiencyClasses.Count >= 3; // P, E, LPE
                 int pClass = hasLpeCores ? 2 : 1;
                 int eClass = hasLpeCores ? 1 : 0;
@@ -459,20 +471,24 @@ namespace ThreadPilot.Services
                 for (int i = 0; i < coreCount; i++)
                 {
                     var core = topology.LogicalCores.FirstOrDefault(c => c.LogicalCoreId == i);
-                    pCoresBoolMask.Add(GetEfficiencyClass(core) == pClass);
+                    pCoresBoolMask.Add(this.GetEfficiencyClass(core) == pClass);
                 }
                 if (pCoresBoolMask.Any(b => b))
+                {
                     defaultMasks.Add(("P-Cores", pCoresBoolMask, "Intel Performance cores (highest performance)"));
+                }
 
                 // E-Cores mask
                 var eCoresBoolMask = new List<bool>();
                 for (int i = 0; i < coreCount; i++)
                 {
                     var core = topology.LogicalCores.FirstOrDefault(c => c.LogicalCoreId == i);
-                    eCoresBoolMask.Add(GetEfficiencyClass(core) == eClass);
+                    eCoresBoolMask.Add(this.GetEfficiencyClass(core) == eClass);
                 }
                 if (eCoresBoolMask.Any(b => b))
+                {
                     defaultMasks.Add(("E-Cores", eCoresBoolMask, "Intel Efficiency cores (power efficient)"));
+                }
 
                 // LPE-Cores mask (Arrow Lake and beyond)
                 if (hasLpeCores)
@@ -481,19 +497,21 @@ namespace ThreadPilot.Services
                     for (int i = 0; i < coreCount; i++)
                     {
                         var core = topology.LogicalCores.FirstOrDefault(c => c.LogicalCoreId == i);
-                        lpeCoresBoolMask.Add(GetEfficiencyClass(core) == lpeClass);
+                        lpeCoresBoolMask.Add(this.GetEfficiencyClass(core) == lpeClass);
                     }
                     if (lpeCoresBoolMask.Any(b => b))
+                    {
                         defaultMasks.Add(("LPE-Cores", lpeCoresBoolMask, "Intel Low-Power Efficiency cores (ultra power efficient)"));
+                    }
                 }
 
-                _logger.LogInformation("Created Intel Hybrid masks (P/E{0})", hasLpeCores ? "/LPE" : "");
+                this.logger.LogInformation("Created Intel Hybrid masks (P/E{0})", hasLpeCores ? "/LPE" : string.Empty);
             }
 
             // 3. AMD CCD Masks with Cache/Freq differentiation (like CPU Set Setter)
             if (topology != null && topology.HasAmdCcd)
             {
-                await CreateAmdCcdMasksAsync(topology, defaultMasks, coreCount);
+                await this.CreateAmdCcdMasksAsync(topology, defaultMasks, coreCount);
             }
 
             // 4. Generate "no SMT/HT" variants for each mask
@@ -501,7 +519,7 @@ namespace ThreadPilot.Services
             foreach (var (name, boolMask, description) in defaultMasks)
             {
                 // Original mask
-                resultMasks.Add(CreateCoreMaskFromBoolList(name, boolMask, description));
+                resultMasks.Add(this.CreateCoreMaskFromBoolList(name, boolMask, description));
 
                 // Skip "no HT" variants for E-Cores and LPE-Cores since they don't have HyperThreading
                 // Only P-Cores on Intel hybrid architectures have HT
@@ -513,10 +531,10 @@ namespace ThreadPilot.Services
                 // No SMT variant
                 if (canCreateNoSmtVariants)
                 {
-                    var noSmtMask = StripSMT(boolMask, topology, out bool wasStripped);
+                    var noSmtMask = this.StripSMT(boolMask, topology, out bool wasStripped);
                     if (wasStripped)
                     {
-                        resultMasks.Add(CreateCoreMaskFromBoolList(
+                        resultMasks.Add(this.CreateCoreMaskFromBoolList(
                             name + noSmtSuffix,
                             noSmtMask,
                             description + " (no HyperThreading/SMT)"));
@@ -528,12 +546,12 @@ namespace ThreadPilot.Services
             if (canCreateNoSmtVariants)
             {
                 var allCoresBoolMask = Enumerable.Repeat(true, coreCount).ToList();
-                var allNoSmtMask = StripSMT(allCoresBoolMask, topology, out bool hasStripped);
+                var allNoSmtMask = this.StripSMT(allCoresBoolMask, topology, out bool hasStripped);
                 if (hasStripped)
                 {
-                    resultMasks.Add(CreateCoreMaskFromBoolList(
-                        "All" + noSmtSuffix, 
-                        allNoSmtMask, 
+                    resultMasks.Add(this.CreateCoreMaskFromBoolList(
+                        "All" + noSmtSuffix,
+                        allNoSmtMask,
                         "All physical cores without HyperThreading/SMT"));
                 }
             }
@@ -541,26 +559,28 @@ namespace ThreadPilot.Services
             // Add all generated masks to AvailableMasks
             foreach (var mask in resultMasks)
             {
-                AvailableMasks.Add(mask);
+                this.AvailableMasks.Add(mask);
             }
 
-            await SaveMasksAsync();
-            _logger.LogInformation("Created {Count} default masks with topology-aware presets (including no SMT variants)", 
-                AvailableMasks.Count);
+            await this.SaveMasksAsync();
+            this.logger.LogInformation(
+                "Created {Count} default masks with topology-aware presets (including no SMT variants)",
+                this.AvailableMasks.Count);
         }
 
         /// <summary>
         /// Creates AMD CCD masks with Cache/Freq differentiation (X3D support)
-        /// Based on CPU Set Setter's GetDefaultLogicalProcessorMasks
+        /// Based on CPU Set Setter's GetDefaultLogicalProcessorMasks.
         /// </summary>
-        private async Task CreateAmdCcdMasksAsync(CpuTopologyModel topology, 
-            List<(string name, List<bool> boolMask, string description)> defaultMasks, 
+        private async Task CreateAmdCcdMasksAsync(
+            CpuTopologyModel topology,
+            List<(string name, List<bool> boolMask, string description)> defaultMasks,
             int coreCount)
         {
             try
             {
                 var ccdIds = topology.AvailableCcds.ToList();
-                
+
                 if (ccdIds.Count < 2)
                 {
                     // Single CCD - just create one CCD mask
@@ -581,7 +601,7 @@ namespace ThreadPilot.Services
                 // X3D chips have one CCD with significantly more L3 cache
                 // For simplicity, we'll create numbered CCD masks
                 // TODO: Implement L3 cache size detection for X3D differentiation
-                
+
                 foreach (var ccdId in ccdIds)
                 {
                     var ccdBoolMask = new List<bool>();
@@ -590,25 +610,26 @@ namespace ThreadPilot.Services
                         var core = topology.LogicalCores.FirstOrDefault(c => c.LogicalCoreId == i);
                         ccdBoolMask.Add(core?.CcdId == ccdId);
                     }
-                    
+
                     if (ccdBoolMask.Any(b => b))
                     {
                         defaultMasks.Add(($"CCD{ccdId}", ccdBoolMask, $"AMD Core Complex Die {ccdId}"));
                     }
                 }
 
-                _logger.LogInformation("Created {Count} AMD CCD masks for CCDs: {CCDs}",
+                this.logger.LogInformation(
+                    "Created {Count} AMD CCD masks for CCDs: {CCDs}",
                     ccdIds.Count, string.Join(", ", ccdIds));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to create AMD CCD masks");
+                this.logger.LogError(ex, "Failed to create AMD CCD masks");
             }
         }
 
         /// <summary>
         /// Strips SMT/HT threads from a bool mask, keeping only physical cores (T0)
-        /// Based on CPU Set Setter's StripSMT method
+        /// Based on CPU Set Setter's StripSMT method.
         /// </summary>
         private List<bool> StripSMT(List<bool> boolMask, CpuTopologyModel? topology, out bool hasStripped)
         {
@@ -661,7 +682,9 @@ namespace ThreadPilot.Services
                 }
 
                 if (keepBit && isSMTThread)
+                {
                     hasStripped = true;
+                }
 
                 result.Add(keepBit && !isSMTThread);
             }
@@ -670,22 +693,25 @@ namespace ThreadPilot.Services
         }
 
         /// <summary>
-        /// Gets the efficiency class of a core (for Intel Hybrid detection)
+        /// Gets the efficiency class of a core (for Intel Hybrid detection).
         /// </summary>
         private int GetEfficiencyClass(CpuCoreModel? core)
         {
-            if (core == null) return 0;
-            
+            if (core == null)
+            {
+                return 0;
+            }
+
             return core.CoreType switch
             {
                 CpuCoreType.PerformanceCore => 2, // Highest efficiency class
                 CpuCoreType.EfficiencyCore => 1,  // Middle efficiency class  
-                _ => 0                            // Lowest (or unknown/LPE)
+                _ => 0,                            // Lowest (or unknown/LPE)
             };
         }
 
         /// <summary>
-        /// Creates a CoreMask from a bool list
+        /// Creates a CoreMask from a bool list.
         /// </summary>
         private CoreMask CreateCoreMaskFromBoolList(string name, List<bool> boolMask, string description)
         {
@@ -694,11 +720,13 @@ namespace ThreadPilot.Services
                 Name = name,
                 Description = description,
                 IsDefault = false,
-                IsEnabled = true
+                IsEnabled = true,
             };
 
             foreach (var bit in boolMask)
+            {
                 mask.BoolMask.Add(bit);
+            }
 
             return mask;
         }

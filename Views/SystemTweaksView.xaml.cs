@@ -14,25 +14,25 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System.Windows.Controls;
-using ThreadPilot.Services;
-using ThreadPilot.ViewModels;
-
 namespace ThreadPilot.Views
 {
+    using System.Windows.Controls;
+    using ThreadPilot.Services;
+    using ThreadPilot.ViewModels;
+
     /// <summary>
-    /// Interaction logic for SystemTweaksView.xaml
+    /// Interaction logic for SystemTweaksView.xaml.
     /// </summary>
     public partial class SystemTweaksView : System.Windows.Controls.UserControl
     {
         public SystemTweaksView()
         {
-            InitializeComponent();
+            this.InitializeComponent();
         }
 
         private void UserControl_Loaded(object sender, System.Windows.RoutedEventArgs e)
         {
-            TaskSafety.FireAndForget(UserControl_LoadedAsync(), _ =>
+            TaskSafety.FireAndForget(this.UserControl_LoadedAsync(), _ =>
             {
                 // Ignore non-fatal loading errors to keep the view responsive.
             });
@@ -40,7 +40,7 @@ namespace ThreadPilot.Views
 
         private async Task UserControl_LoadedAsync()
         {
-            if (DataContext is SystemTweaksViewModel viewModel)
+            if (this.DataContext is SystemTweaksViewModel viewModel)
             {
                 await viewModel.LoadCommand.ExecuteAsync(null);
             }

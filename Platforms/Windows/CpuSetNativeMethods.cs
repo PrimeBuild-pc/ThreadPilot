@@ -14,14 +14,14 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using Microsoft.Win32.SafeHandles;
-using System;
-using System.Runtime.InteropServices;
-
 namespace ThreadPilot.Platforms.Windows
 {
+    using System;
+    using System.Runtime.InteropServices;
+    using Microsoft.Win32.SafeHandles;
+
     /// <summary>
-    /// P/Invoke declarations for Windows CPU Set APIs
+    /// P/Invoke declarations for Windows CPU Set APIs.
     /// </summary>
     internal static partial class CpuSetNativeMethods
     {
@@ -45,16 +45,16 @@ namespace ThreadPilot.Platforms.Windows
     public enum ProcessAccessFlags : uint
     {
         PROCESS_QUERY_LIMITED_INFORMATION = 0x00001000,
-        PROCESS_SET_LIMITED_INFORMATION = 0x00002000
+        PROCESS_SET_LIMITED_INFORMATION = 0x00002000,
     }
 
     [StructLayout(LayoutKind.Sequential)]
     public struct FILETIME
     {
-        public uint dwLowDateTime;
-        public uint dwHighDateTime;
+        public uint DwLowDateTime;
+        public uint DwHighDateTime;
 
-        public readonly ulong ULong => (((ulong)dwHighDateTime) << 32) + dwLowDateTime;
+        public readonly ulong ULong => (((ulong)this.DwHighDateTime) << 32) + this.DwLowDateTime;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -76,7 +76,7 @@ namespace ThreadPilot.Platforms.Windows
 
     public enum CPU_SET_INFORMATION_TYPE : int
     {
-        CpuSetInformation = 0
+        CpuSetInformation = 0,
     }
 }
 

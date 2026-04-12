@@ -14,21 +14,22 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System.Windows.Controls;
-using ThreadPilot.ViewModels;
-
 namespace ThreadPilot.Views
 {
+    using System.Windows.Controls;
+    using ThreadPilot.ViewModels;
+
     public partial class PowerPlanView : System.Windows.Controls.UserControl
     {
         public PowerPlanView()
         {
-            InitializeComponent();
+            this.InitializeComponent();
         }
 
-        public PowerPlanView(PowerPlanViewModel viewModel) : this()
+        public PowerPlanView(PowerPlanViewModel viewModel)
+            : this()
         {
-            DataContext = viewModel;
+            this.DataContext = viewModel;
         }
     }
 }

@@ -25,6 +25,66 @@ dotnet_style_collection_initializer = true:suggestion
 dotnet_style_predefined_type_for_locals_parameters_members = true:suggestion
 dotnet_style_predefined_type_for_member_access = true:suggestion
 
+# Keep high signal diagnostics as warnings and reduce legacy formatting/header noise.
+dotnet_diagnostic.CS1591.severity = none
+dotnet_diagnostic.SA1000.severity = none
+dotnet_diagnostic.SA1028.severity = suggestion
+dotnet_diagnostic.SA1402.severity = suggestion
+dotnet_diagnostic.SA1507.severity = suggestion
+dotnet_diagnostic.SA1512.severity = suggestion
+dotnet_diagnostic.SA1513.severity = suggestion
+dotnet_diagnostic.SA1515.severity = suggestion
+dotnet_diagnostic.SA1518.severity = suggestion
+dotnet_diagnostic.SA1600.severity = suggestion
+dotnet_diagnostic.SA1601.severity = suggestion
+dotnet_diagnostic.SA1602.severity = suggestion
+dotnet_diagnostic.SA1611.severity = suggestion
+dotnet_diagnostic.SA1615.severity = suggestion
+dotnet_diagnostic.SA1618.severity = suggestion
+dotnet_diagnostic.SA1633.severity = none
+dotnet_diagnostic.SA1649.severity = suggestion
+dotnet_diagnostic.CA1848.severity = suggestion
+dotnet_diagnostic.CA1873.severity = suggestion
+dotnet_diagnostic.CA1310.severity = suggestion
+dotnet_diagnostic.CA1822.severity = suggestion
+dotnet_diagnostic.CA1866.severity = suggestion
+dotnet_diagnostic.CA2253.severity = suggestion
+dotnet_diagnostic.CA2254.severity = suggestion
+dotnet_diagnostic.SA1117.severity = suggestion
+dotnet_diagnostic.SA1118.severity = suggestion
+dotnet_diagnostic.SA1108.severity = suggestion
+dotnet_diagnostic.SA1201.severity = suggestion
+dotnet_diagnostic.SA1202.severity = suggestion
+dotnet_diagnostic.SA1203.severity = suggestion
+dotnet_diagnostic.SA1204.severity = suggestion
+dotnet_diagnostic.SA1200.severity = suggestion
+dotnet_diagnostic.SA1214.severity = suggestion
+dotnet_diagnostic.SA1316.severity = suggestion
+dotnet_diagnostic.SA1311.severity = suggestion
+dotnet_diagnostic.SA1401.severity = suggestion
+dotnet_diagnostic.SA1413.severity = suggestion
+
+# Final release warning triage: keep security/behavior-focused diagnostics visible,
+# downgrade legacy refactor/design/perf backlog to suggestions.
+dotnet_diagnostic.CA1001.severity = suggestion
+dotnet_diagnostic.CA1051.severity = suggestion
+dotnet_diagnostic.CA1304.severity = suggestion
+dotnet_diagnostic.CA1305.severity = suggestion
+dotnet_diagnostic.CA1311.severity = suggestion
+dotnet_diagnostic.CA1510.severity = suggestion
+dotnet_diagnostic.CA1513.severity = suggestion
+dotnet_diagnostic.CA1707.severity = suggestion
+dotnet_diagnostic.CA1711.severity = suggestion
+dotnet_diagnostic.CA1720.severity = suggestion
+dotnet_diagnostic.CA1805.severity = suggestion
+dotnet_diagnostic.CA1816.severity = suggestion
+dotnet_diagnostic.CA1840.severity = suggestion
+dotnet_diagnostic.CA1845.severity = suggestion
+dotnet_diagnostic.CA1860.severity = suggestion
+dotnet_diagnostic.CA1861.severity = suggestion
+dotnet_diagnostic.CA1869.severity = suggestion
+dotnet_diagnostic.CA2263.severity = suggestion
+
 [*.xaml]
 indent_size = 2
 

@@ -14,39 +14,39 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Input;
-using System.Windows;
-using System.Reflection;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.Logging;
-using ThreadPilot.Models;
-using ThreadPilot.Services;
-
 namespace ThreadPilot.ViewModels
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Collections.ObjectModel;
+    using System.Diagnostics;
+    using System.Linq;
+    using System.Reflection;
+    using System.Threading.Tasks;
+    using System.Windows;
+    using System.Windows.Input;
+    using CommunityToolkit.Mvvm.ComponentModel;
+    using CommunityToolkit.Mvvm.Input;
+    using Microsoft.Extensions.Logging;
+    using ThreadPilot.Models;
+    using ThreadPilot.Services;
+
     /// <summary>
-    /// ViewModel for application settings
+    /// ViewModel for application settings.
     /// </summary>
     public partial class SettingsViewModel : BaseViewModel
     {
-        private readonly IApplicationSettingsService _settingsService;
-        private readonly INotificationService _notificationService;
-        private readonly IAutostartService _autostartService;
-        private readonly IPowerPlanService _powerPlanService;
-        private readonly IProcessPowerPlanAssociationService _associationService;
-        private readonly IProcessMonitorManagerService _processMonitorManagerService;
-        private readonly IThemeService _themeService;
-        private readonly ISystemTrayService _systemTrayService;
-        private bool _isSyncingFromService = false;
-        private string _cachedDefaultPowerPlanGuid = string.Empty;
-        private string _cachedDefaultPowerPlanName = string.Empty;
+        private readonly IApplicationSettingsService settingsService;
+        private readonly INotificationService notificationService;
+        private readonly IAutostartService autostartService;
+        private readonly IPowerPlanService powerPlanService;
+        private readonly IProcessPowerPlanAssociationService associationService;
+        private readonly IProcessMonitorManagerService processMonitorManagerService;
+        private readonly IThemeService themeService;
+        private readonly ISystemTrayService systemTrayService;
+        private bool isSyncingFromService = false;
+        private string cachedDefaultPowerPlanGuid = string.Empty;
+        private string cachedDefaultPowerPlanName = string.Empty;
 
         [ObservableProperty]
         private ApplicationSettingsModel settings;
@@ -57,9 +57,9 @@ namespace ThreadPilot.ViewModels
         [ObservableProperty]
         private bool isLoading = false;
 
-        public bool CanSaveSettings => HasUnsavedChanges && !IsLoading;
+        public bool CanSaveSettings => this.HasUnsavedChanges && !this.IsLoading;
 
-        public bool HasPendingChanges => HasUnsavedChanges;
+        public bool HasPendingChanges => this.HasUnsavedChanges;
 
         [ObservableProperty]
         private ObservableCollection<PowerPlanModel> availablePowerPlans = new();
@@ -67,11 +67,17 @@ namespace ThreadPilot.ViewModels
         public string ApplicationVersion { get; }
 
         public ICommand SaveSettingsCommand { get; }
+
         public ICommand ResetToDefaultsCommand { get; }
+
         public ICommand ExportSettingsCommand { get; }
+
         public ICommand ImportSettingsCommand { get; }
+
         public ICommand TestNotificationCommand { get; }
+
         public ICommand RefreshPowerPlansCommand { get; }
+
         public ICommand CheckUpdatesCommand { get; }
 
         public SettingsViewModel(
@@ -87,14 +93,14 @@ namespace ThreadPilot.ViewModels
             IEnhancedLoggingService? enhancedLoggingService = null)
             : base(logger, enhancedLoggingService)
         {
-            _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
-            _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
-            _autostartService = autostartService ?? throw new ArgumentNullException(nameof(autostartService));
-            _powerPlanService = powerPlanService ?? throw new ArgumentNullException(nameof(powerPlanService));
-            _associationService = associationService ?? throw new ArgumentNullException(nameof(associationService));
-            _processMonitorManagerService = processMonitorManagerService ?? throw new ArgumentNullException(nameof(processMonitorManagerService));
-            _themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
-            _systemTrayService = systemTrayService ?? throw new ArgumentNullException(nameof(systemTrayService));
+            this.settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+            this.notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+            this.autostartService = autostartService ?? throw new ArgumentNullException(nameof(autostartService));
+            this.powerPlanService = powerPlanService ?? throw new ArgumentNullException(nameof(powerPlanService));
+            this.associationService = associationService ?? throw new ArgumentNullException(nameof(associationService));
+            this.processMonitorManagerService = processMonitorManagerService ?? throw new ArgumentNullException(nameof(processMonitorManagerService));
+            this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
+            this.systemTrayService = systemTrayService ?? throw new ArgumentNullException(nameof(systemTrayService));
 
             // Get version and strip the git commit hash (everything after '+')
             var rawVersion = typeof(App).Assembly
@@ -105,53 +111,53 @@ namespace ThreadPilot.ViewModels
 
             // Remove commit hash suffix and add 'v' prefix
             var cleanVersion = rawVersion.Split('+')[0];
-            ApplicationVersion = $"v{cleanVersion}";
+            this.ApplicationVersion = $"v{cleanVersion}";
 
             // Initialize with current settings
-            settings = (ApplicationSettingsModel)_settingsService.Settings.Clone();
+            this.settings = (ApplicationSettingsModel)this.settingsService.Settings.Clone();
 
             // Initialize commands
-            SaveSettingsCommand = new AsyncRelayCommand(SaveSettingsAsync);
-            ResetToDefaultsCommand = new AsyncRelayCommand(ResetToDefaultsAsync);
-            ExportSettingsCommand = new AsyncRelayCommand(ExportSettingsAsync);
-            ImportSettingsCommand = new AsyncRelayCommand(ImportSettingsAsync);
-            TestNotificationCommand = new AsyncRelayCommand(TestNotificationAsync);
-            RefreshPowerPlansCommand = new AsyncRelayCommand(RefreshPowerPlansAsync);
-            CheckUpdatesCommand = new AsyncRelayCommand(CheckUpdatesAsync);
+            this.SaveSettingsCommand = new AsyncRelayCommand(this.SaveSettingsAsync);
+            this.ResetToDefaultsCommand = new AsyncRelayCommand(this.ResetToDefaultsAsync);
+            this.ExportSettingsCommand = new AsyncRelayCommand(this.ExportSettingsAsync);
+            this.ImportSettingsCommand = new AsyncRelayCommand(this.ImportSettingsAsync);
+            this.TestNotificationCommand = new AsyncRelayCommand(this.TestNotificationAsync);
+            this.RefreshPowerPlansCommand = new AsyncRelayCommand(this.RefreshPowerPlansAsync);
+            this.CheckUpdatesCommand = new AsyncRelayCommand(this.CheckUpdatesAsync);
 
             // Subscribe to property changes to track unsaved changes
-            Settings.PropertyChanged += OnSettingsPropertyChanged;
+            this.Settings.PropertyChanged += this.OnSettingsPropertyChanged;
 
             // Keep viewmodel in sync with persisted settings
-            _settingsService.SettingsChanged += OnSettingsServiceSettingsChanged;
+            this.settingsService.SettingsChanged += this.OnSettingsServiceSettingsChanged;
 
             // Ensure we load the latest persisted settings on startup
-            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () => await RefreshSettingsAsync());
+            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () => await this.RefreshSettingsAsync());
 
             // Initialize data - marshal to UI thread to prevent cross-thread access exceptions
-            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () => await RefreshPowerPlansAsync());
+            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () => await this.RefreshPowerPlansAsync());
 
-            Logger.LogInformation("Settings ViewModel initialized");
+            this.Logger.LogInformation("Settings ViewModel initialized");
         }
 
         private void OnSettingsPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if (_isSyncingFromService)
+            if (this.isSyncingFromService)
             {
                 return;
             }
 
             if (string.Equals(e.PropertyName, nameof(ApplicationSettingsModel.UseDarkTheme), StringComparison.Ordinal))
             {
-                Settings.HasUserThemePreference = true;
+                this.Settings.HasUserThemePreference = true;
 
-                var useDarkTheme = Settings.UseDarkTheme;
-                _themeService.ApplyTheme(useDarkTheme);
-                _systemTrayService.ApplyTheme(useDarkTheme);
+                var useDarkTheme = this.Settings.UseDarkTheme;
+                this.themeService.ApplyTheme(useDarkTheme);
+                this.systemTrayService.ApplyTheme(useDarkTheme);
             }
 
-            HasUnsavedChanges = true;
-            StatusMessage = "Settings have been modified";
+            this.HasUnsavedChanges = true;
+            this.StatusMessage = "Settings have been modified";
         }
 
         partial void OnHasUnsavedChangesChanged(bool value)
@@ -171,88 +177,88 @@ namespace ThreadPilot.ViewModels
 
             try
             {
-                IsLoading = true;
-                StatusMessage = "Saving settings...";
+                this.IsLoading = true;
+                this.StatusMessage = "Saving settings...";
                 var warnings = new List<string>();
 
-                previousDefaultPowerPlanGuid = Settings.DefaultPowerPlanId;
-                previousDefaultPowerPlanName = Settings.DefaultPowerPlanName;
+                previousDefaultPowerPlanGuid = this.Settings.DefaultPowerPlanId;
+                previousDefaultPowerPlanName = this.Settings.DefaultPowerPlanName;
 
                 // Handle autostart setting
-                var currentAutostartState = await _autostartService.CheckAutostartStatusAsync();
-                if (Settings.AutostartWithWindows != currentAutostartState)
+                var currentAutostartState = await this.autostartService.CheckAutostartStatusAsync();
+                if (this.Settings.AutostartWithWindows != currentAutostartState)
                 {
                     bool autostartUpdated;
-                    if (Settings.AutostartWithWindows)
+                    if (this.Settings.AutostartWithWindows)
                     {
-                        autostartUpdated = await _autostartService.EnableAutostartAsync(Settings.StartMinimized);
+                        autostartUpdated = await this.autostartService.EnableAutostartAsync(this.Settings.StartMinimized);
                     }
                     else
                     {
-                        autostartUpdated = await _autostartService.DisableAutostartAsync();
+                        autostartUpdated = await this.autostartService.DisableAutostartAsync();
                     }
 
                     if (!autostartUpdated)
                     {
                         warnings.Add("Failed to update Windows autostart. Keeping previous autostart state.");
-                        Settings.AutostartWithWindows = currentAutostartState;
+                        this.Settings.AutostartWithWindows = currentAutostartState;
                     }
                     else
                     {
-                        Settings.AutostartWithWindows = await _autostartService.CheckAutostartStatusAsync();
+                        this.Settings.AutostartWithWindows = await this.autostartService.CheckAutostartStatusAsync();
                     }
                 }
 
-                await _settingsService.UpdateSettingsAsync(Settings);
+                await this.settingsService.UpdateSettingsAsync(this.Settings);
 
-                var useDarkTheme = Settings.HasUserThemePreference
-                    ? Settings.UseDarkTheme
-                    : _themeService.GetSystemUsesDarkTheme();
+                var useDarkTheme = this.Settings.HasUserThemePreference
+                    ? this.Settings.UseDarkTheme
+                    : this.themeService.GetSystemUsesDarkTheme();
 
-                _isSyncingFromService = true;
-                Settings.UseDarkTheme = useDarkTheme;
-                _isSyncingFromService = false;
-                _themeService.ApplyTheme(useDarkTheme);
-                _systemTrayService.ApplyTheme(useDarkTheme);
+                this.isSyncingFromService = true;
+                this.Settings.UseDarkTheme = useDarkTheme;
+                this.isSyncingFromService = false;
+                this.themeService.ApplyTheme(useDarkTheme);
+                this.systemTrayService.ApplyTheme(useDarkTheme);
 
                 // Update monitoring services with new settings
-                _processMonitorManagerService.UpdateSettings();
+                this.processMonitorManagerService.UpdateSettings();
 
-                HasUnsavedChanges = false;
+                this.HasUnsavedChanges = false;
                 if (warnings.Count > 0)
                 {
-                    StatusMessage = $"Settings saved with warnings: {string.Join(" ", warnings)}";
-                    await _notificationService.ShowNotificationAsync(
+                    this.StatusMessage = $"Settings saved with warnings: {string.Join(" ", warnings)}";
+                    await this.notificationService.ShowNotificationAsync(
                         "Settings Saved with Warnings",
                         string.Join(" ", warnings),
                         NotificationType.Warning);
                 }
                 else
                 {
-                    StatusMessage = "Settings saved and applied successfully.";
-                    await _notificationService.ShowSuccessNotificationAsync(
+                    this.StatusMessage = "Settings saved and applied successfully.";
+                    await this.notificationService.ShowSuccessNotificationAsync(
                         "Settings Saved",
                         "Application settings have been saved successfully");
                 }
 
-                Logger.LogInformation("Settings saved successfully");
+                this.Logger.LogInformation("Settings saved successfully");
             }
             catch (Exception ex)
             {
-                Settings.DefaultPowerPlanId = previousDefaultPowerPlanGuid;
-                Settings.DefaultPowerPlanName = previousDefaultPowerPlanName;
+                this.Settings.DefaultPowerPlanId = previousDefaultPowerPlanGuid;
+                this.Settings.DefaultPowerPlanName = previousDefaultPowerPlanName;
 
-                StatusMessage = $"Error saving settings: {ex.Message}";
-                Logger.LogError(ex, "Error saving settings");
+                this.StatusMessage = $"Error saving settings: {ex.Message}";
+                this.Logger.LogError(ex, "Error saving settings");
 
-                await _notificationService.ShowErrorNotificationAsync(
-                    "Settings Error", 
-                    "Failed to save settings", 
+                await this.notificationService.ShowErrorNotificationAsync(
+                    "Settings Error",
+                    "Failed to save settings",
                     ex);
             }
             finally
             {
-                IsLoading = false;
+                this.IsLoading = false;
             }
         }
 
@@ -260,25 +266,25 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                IsLoading = true;
-                StatusMessage = "Resetting to defaults...";
+                this.IsLoading = true;
+                this.StatusMessage = "Resetting to defaults...";
 
                 var defaultSettings = new ApplicationSettingsModel();
-                Settings.CopyFrom(defaultSettings);
+                this.Settings.CopyFrom(defaultSettings);
 
-                HasUnsavedChanges = true;
-                StatusMessage = "Settings reset to defaults (not saved yet)";
+                this.HasUnsavedChanges = true;
+                this.StatusMessage = "Settings reset to defaults (not saved yet)";
 
-                Logger.LogInformation("Settings reset to defaults");
+                this.Logger.LogInformation("Settings reset to defaults");
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Error resetting settings: {ex.Message}";
-                Logger.LogError(ex, "Error resetting settings");
+                this.StatusMessage = $"Error resetting settings: {ex.Message}";
+                this.Logger.LogError(ex, "Error resetting settings");
             }
             finally
             {
-                IsLoading = false;
+                this.IsLoading = false;
             }
         }
 
@@ -286,37 +292,37 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                IsLoading = true;
-                StatusMessage = "Exporting settings...";
+                this.IsLoading = true;
+                this.StatusMessage = "Exporting settings...";
 
                 // In a real implementation, you would show a file dialog
                 var exportPath = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
                     $"ThreadPilot_Settings_{DateTime.Now:yyyyMMdd_HHmmss}.json");
 
-                await _settingsService.ExportSettingsAsync(exportPath);
+                await this.settingsService.ExportSettingsAsync(exportPath);
 
-                StatusMessage = $"Settings exported to: {exportPath}";
+                this.StatusMessage = $"Settings exported to: {exportPath}";
 
-                await _notificationService.ShowSuccessNotificationAsync(
-                    "Settings Exported", 
+                await this.notificationService.ShowSuccessNotificationAsync(
+                    "Settings Exported",
                     $"Settings exported to {System.IO.Path.GetFileName(exportPath)}");
 
-                Logger.LogInformation("Settings exported to {Path}", exportPath);
+                this.Logger.LogInformation("Settings exported to {Path}", exportPath);
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Error exporting settings: {ex.Message}";
-                Logger.LogError(ex, "Error exporting settings");
+                this.StatusMessage = $"Error exporting settings: {ex.Message}";
+                this.Logger.LogError(ex, "Error exporting settings");
 
-                await _notificationService.ShowErrorNotificationAsync(
-                    "Export Error", 
-                    "Failed to export settings", 
+                await this.notificationService.ShowErrorNotificationAsync(
+                    "Export Error",
+                    "Failed to export settings",
                     ex);
             }
             finally
             {
-                IsLoading = false;
+                this.IsLoading = false;
             }
         }
 
@@ -324,23 +330,23 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                IsLoading = true;
-                StatusMessage = "Importing settings...";
+                this.IsLoading = true;
+                this.StatusMessage = "Importing settings...";
 
                 // In a real implementation, you would show a file dialog
                 // For now, we'll just show a message
-                StatusMessage = "Import feature requires file dialog implementation";
+                this.StatusMessage = "Import feature requires file dialog implementation";
 
-                Logger.LogInformation("Import settings requested");
+                this.Logger.LogInformation("Import settings requested");
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Error importing settings: {ex.Message}";
-                Logger.LogError(ex, "Error importing settings");
+                this.StatusMessage = $"Error importing settings: {ex.Message}";
+                this.Logger.LogError(ex, "Error importing settings");
             }
             finally
             {
-                IsLoading = false;
+                this.IsLoading = false;
             }
         }
 
@@ -348,81 +354,81 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                await _notificationService.ShowNotificationAsync(
-                    "Test Notification", 
+                await this.notificationService.ShowNotificationAsync(
+                    "Test Notification",
                     "This is a test notification to verify your settings are working correctly.",
                     NotificationType.Information);
 
-                StatusMessage = "Test notification sent";
-                Logger.LogInformation("Test notification sent");
+                this.StatusMessage = "Test notification sent";
+                this.Logger.LogInformation("Test notification sent");
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Error sending test notification: {ex.Message}";
-                Logger.LogError(ex, "Error sending test notification");
+                this.StatusMessage = $"Error sending test notification: {ex.Message}";
+                this.Logger.LogError(ex, "Error sending test notification");
             }
         }
 
         /// <summary>
-        /// Refreshes settings from the service
+        /// Refreshes settings from the service.
         /// </summary>
         public async Task RefreshSettingsAsync()
         {
             try
             {
-                IsLoading = true;
-                StatusMessage = "Loading settings...";
+                this.IsLoading = true;
+                this.StatusMessage = "Loading settings...";
 
-                await _settingsService.LoadSettingsAsync();
-                await _associationService.LoadConfigurationAsync();
+                await this.settingsService.LoadSettingsAsync();
+                await this.associationService.LoadConfigurationAsync();
 
-                var settingsSnapshot = _settingsService.Settings;
-                var (defaultPowerPlanGuid, defaultPowerPlanName) = await _associationService.GetDefaultPowerPlanAsync();
-                _cachedDefaultPowerPlanGuid = defaultPowerPlanGuid;
-                _cachedDefaultPowerPlanName = defaultPowerPlanName;
+                var settingsSnapshot = this.settingsService.Settings;
+                var (defaultPowerPlanGuid, defaultPowerPlanName) = await this.associationService.GetDefaultPowerPlanAsync();
+                this.cachedDefaultPowerPlanGuid = defaultPowerPlanGuid;
+                this.cachedDefaultPowerPlanName = defaultPowerPlanName;
                 if (!string.IsNullOrWhiteSpace(defaultPowerPlanGuid))
                 {
                     settingsSnapshot.DefaultPowerPlanId = defaultPowerPlanGuid;
                     settingsSnapshot.DefaultPowerPlanName = defaultPowerPlanName;
                 }
 
-                _isSyncingFromService = true;
-                Settings.CopyFrom(settingsSnapshot);
-                _isSyncingFromService = false;
+                this.isSyncingFromService = true;
+                this.Settings.CopyFrom(settingsSnapshot);
+                this.isSyncingFromService = false;
 
-                var useDarkTheme = Settings.HasUserThemePreference
-                    ? Settings.UseDarkTheme
-                    : _themeService.GetSystemUsesDarkTheme();
+                var useDarkTheme = this.Settings.HasUserThemePreference
+                    ? this.Settings.UseDarkTheme
+                    : this.themeService.GetSystemUsesDarkTheme();
 
-                _isSyncingFromService = true;
-                Settings.UseDarkTheme = useDarkTheme;
-                _isSyncingFromService = false;
-                _themeService.ApplyTheme(useDarkTheme);
-                _systemTrayService.ApplyTheme(useDarkTheme);
+                this.isSyncingFromService = true;
+                this.Settings.UseDarkTheme = useDarkTheme;
+                this.isSyncingFromService = false;
+                this.themeService.ApplyTheme(useDarkTheme);
+                this.systemTrayService.ApplyTheme(useDarkTheme);
 
-                HasUnsavedChanges = false;
-                StatusMessage = "Settings loaded";
+                this.HasUnsavedChanges = false;
+                this.StatusMessage = "Settings loaded";
 
-                Logger.LogInformation("Settings refreshed");
+                this.Logger.LogInformation("Settings refreshed");
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Error loading settings: {ex.Message}";
-                Logger.LogError(ex, "Error loading settings");
+                this.StatusMessage = $"Error loading settings: {ex.Message}";
+                this.Logger.LogError(ex, "Error loading settings");
             }
             finally
             {
-                _isSyncingFromService = false;
-                IsLoading = false;
+                this.isSyncingFromService = false;
+                this.IsLoading = false;
             }
         }
 
         /// <summary>
-        /// Checks if there are unsaved changes
+        /// Checks if there are unsaved changes.
         /// </summary>
         public bool CanClose()
         {
-            return !HasUnsavedChanges;
+            return !this.HasUnsavedChanges;
         }
 
         private void OnSettingsServiceSettingsChanged(object? sender, ApplicationSettingsChangedEventArgs e)
@@ -430,21 +436,21 @@ namespace ThreadPilot.ViewModels
             // Marshal to UI thread to avoid cross-thread property change issues
             System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                _isSyncingFromService = true;
+                this.isSyncingFromService = true;
                 try
                 {
-                    Settings.CopyFrom(e.NewSettings);
-                    if (!string.IsNullOrWhiteSpace(_cachedDefaultPowerPlanGuid))
+                    this.Settings.CopyFrom(e.NewSettings);
+                    if (!string.IsNullOrWhiteSpace(this.cachedDefaultPowerPlanGuid))
                     {
-                        Settings.DefaultPowerPlanId = _cachedDefaultPowerPlanGuid;
-                        Settings.DefaultPowerPlanName = _cachedDefaultPowerPlanName;
+                        this.Settings.DefaultPowerPlanId = this.cachedDefaultPowerPlanGuid;
+                        this.Settings.DefaultPowerPlanName = this.cachedDefaultPowerPlanName;
                     }
-                    HasUnsavedChanges = false;
-                    StatusMessage = "Settings synchronized";
+                    this.HasUnsavedChanges = false;
+                    this.StatusMessage = "Settings synchronized";
                 }
                 finally
                 {
-                    _isSyncingFromService = false;
+                    this.isSyncingFromService = false;
                 }
             });
         }
@@ -453,19 +459,19 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                var powerPlans = await _powerPlanService.GetPowerPlansAsync();
+                var powerPlans = await this.powerPlanService.GetPowerPlansAsync();
 
-                AvailablePowerPlans.Clear();
+                this.AvailablePowerPlans.Clear();
                 foreach (var plan in powerPlans)
                 {
-                    AvailablePowerPlans.Add(plan);
+                    this.AvailablePowerPlans.Add(plan);
                 }
 
-                Logger.LogDebug("Refreshed {Count} power plans", AvailablePowerPlans.Count);
+                this.Logger.LogDebug("Refreshed {Count} power plans", this.AvailablePowerPlans.Count);
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Failed to refresh power plans");
+                this.Logger.LogError(ex, "Failed to refresh power plans");
             }
         }
 
@@ -473,16 +479,16 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                IsLoading = true;
-                StatusMessage = "Checking for updates...";
+                this.IsLoading = true;
+                this.StatusMessage = "Checking for updates...";
 
-                var currentVersion = ParseVersion(ApplicationVersion);
+                var currentVersion = ParseVersion(this.ApplicationVersion);
                 var (latest, releaseUrl) = await GitHubUpdateChecker.GetLatestVersionAsync("PrimeBuild-pc", "ThreadPilot");
 
                 if (latest is null)
                 {
-                    StatusMessage = "Unable to determine the latest version.";
-                    await _notificationService.ShowErrorNotificationAsync(
+                    this.StatusMessage = "Unable to determine the latest version.";
+                    await this.notificationService.ShowErrorNotificationAsync(
                         "Update Check",
                         "Unable to retrieve latest release information.");
                     return;
@@ -490,10 +496,10 @@ namespace ThreadPilot.ViewModels
 
                 if (latest > currentVersion)
                 {
-                    StatusMessage = $"New version available: {latest}";
+                    this.StatusMessage = $"New version available: {latest}";
 
                     var result = System.Windows.MessageBox.Show(
-                        $"Update available\nInstalled version: {ApplicationVersion}\nNew version: {latest}\n\nDo you want to open the download page?",
+                        $"Update available\nInstalled version: {this.ApplicationVersion}\nNew version: {latest}\n\nDo you want to open the download page?",
                         "Update available",
                         MessageBoxButton.YesNo,
                         MessageBoxImage.Information);
@@ -504,31 +510,31 @@ namespace ThreadPilot.ViewModels
                         Process.Start(new ProcessStartInfo
                         {
                             FileName = url,
-                            UseShellExecute = true
+                            UseShellExecute = true,
                         });
                     }
                 }
                 else
                 {
-                    StatusMessage = $"Application is up to date. Installed version: {ApplicationVersion}";
-                    await _notificationService.ShowSuccessNotificationAsync(
+                    this.StatusMessage = $"Application is up to date. Installed version: {this.ApplicationVersion}";
+                    await this.notificationService.ShowSuccessNotificationAsync(
                         "Application up to date",
-                        $"Installed version: {ApplicationVersion}");
+                        $"Installed version: {this.ApplicationVersion}");
                 }
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Error while checking updates: {ex.Message}";
-                Logger.LogError(ex, "Error checking for updates");
+                this.StatusMessage = $"Error while checking updates: {ex.Message}";
+                this.Logger.LogError(ex, "Error checking for updates");
 
-                await _notificationService.ShowErrorNotificationAsync(
+                await this.notificationService.ShowErrorNotificationAsync(
                     "Update check error",
                     "Unable to verify updates",
                     ex);
             }
             finally
             {
-                IsLoading = false;
+                this.IsLoading = false;
             }
         }
 
@@ -554,23 +560,23 @@ namespace ThreadPilot.ViewModels
 
         public async Task<bool> SaveIfDirtyAsync()
         {
-            if (!HasUnsavedChanges)
+            if (!this.HasUnsavedChanges)
             {
                 return true;
             }
 
-            await SaveSettingsAsync();
-            return !HasUnsavedChanges;
+            await this.SaveSettingsAsync();
+            return !this.HasUnsavedChanges;
         }
 
         public async Task DiscardPendingChangesAsync()
         {
-            if (!HasUnsavedChanges)
+            if (!this.HasUnsavedChanges)
             {
                 return;
             }
 
-            await RefreshSettingsAsync();
+            await this.RefreshSettingsAsync();
         }
     }
 }

@@ -14,135 +14,156 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Management;
-using System.Threading;
-using System.Threading.Tasks;
-using ThreadPilot.Models;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Collections.Concurrent;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Linq;
+    using System.Management;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using ThreadPilot.Models;
+
     /// <summary>
-    /// Process monitoring service using WMI events with fallback polling
+    /// Process monitoring service using WMI events with fallback polling.
     /// </summary>
     public class ProcessMonitorService : IProcessMonitorService
     {
-        private readonly IProcessService _processService;
-        private readonly IApplicationSettingsService _settingsService;
-        private readonly object _lockObject = new();
-        private readonly ConcurrentDictionary<int, ProcessModel> _runningProcesses = new();
-        private readonly SemaphoreSlim _wmiStartSemaphore = new(1, 1);
+        private readonly IProcessService processService;
+        private readonly IApplicationSettingsService settingsService;
+        private readonly object lockObject = new();
+        private readonly ConcurrentDictionary<int, ProcessModel> runningProcesses = new();
+        private readonly SemaphoreSlim wmiStartSemaphore = new(1, 1);
 
-        private ManagementEventWatcher? _processStartWatcher;
-        private ManagementEventWatcher? _processStopWatcher;
-        private System.Threading.Timer? _fallbackTimer;
-        private CancellationTokenSource? _cancellationTokenSource;
+        private ManagementEventWatcher? processStartWatcher;
+        private ManagementEventWatcher? processStopWatcher;
+        private System.Threading.Timer? fallbackTimer;
+        private CancellationTokenSource? cancellationTokenSource;
 
-        private bool _isMonitoring;
-        private bool _isWmiAvailable;
-        private bool _isFallbackPollingActive;
-        private bool _disposed;
+        private bool isMonitoring;
+        private bool isWmiAvailable;
+        private bool isFallbackPollingActive;
+        private bool disposed;
 
         // Configuration - will be updated from settings
-        private int _fallbackPollingIntervalMs = 5000; // Default 5 seconds
-        private readonly int _wmiRetryDelayMs = 10000; // 10 seconds
-        private bool _enableWmiMonitoring = true;
-        private bool _enableFallbackPolling = true;
-        private int _isFallbackPollingInProgress;
-        private int _isWmiRecoveryInProgress;
-        private DateTime _lastWmiRetryAttemptUtc = DateTime.MinValue;
+        private int fallbackPollingIntervalMs = 5000; // Default 5 seconds
+        private int currentFallbackPollingIntervalMs = 5000;
+        private int idlePollingMultiplier = 1;
+        private readonly int wmiRetryDelayMs = 10000; // 10 seconds
+        private const int MaxIdlePollingMultiplier = 6;
+        private bool enableWmiMonitoring = true;
+        private bool enableFallbackPolling = true;
+        private int isFallbackPollingInProgress;
+        private int isWmiRecoveryInProgress;
+        private DateTime lastWmiRetryAttemptUtc = DateTime.MinValue;
 
         public event EventHandler<ProcessEventArgs>? ProcessStarted;
+
         public event EventHandler<ProcessEventArgs>? ProcessStopped;
+
         public event EventHandler<MonitoringStatusEventArgs>? MonitoringStatusChanged;
 
-        public bool IsMonitoring => _isMonitoring;
-        public bool IsWmiAvailable => _isWmiAvailable;
-        public bool IsFallbackPollingActive => _isFallbackPollingActive;
+        public bool IsMonitoring => this.isMonitoring;
+
+        public bool IsWmiAvailable => this.isWmiAvailable;
+
+        public bool IsFallbackPollingActive => this.isFallbackPollingActive;
 
         public ProcessMonitorService(IProcessService processService, IApplicationSettingsService settingsService)
         {
-            _processService = processService ?? throw new ArgumentNullException(nameof(processService));
-            _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+            this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
+            this.settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
 
             // Initialize polling interval from settings
-            UpdateMonitoringSettings();
+            this.UpdateMonitoringSettings();
         }
 
         public async Task StartMonitoringAsync()
         {
-            if (_disposed) throw new ObjectDisposedException(nameof(ProcessMonitorService));
-            
-            lock (_lockObject)
+            if (this.disposed)
             {
-                if (_isMonitoring) return;
-                _isMonitoring = true;
+                throw new ObjectDisposedException(nameof(ProcessMonitorService));
             }
 
-            _cancellationTokenSource = new CancellationTokenSource();
-            _lastWmiRetryAttemptUtc = DateTime.MinValue;
-            Interlocked.Exchange(ref _isFallbackPollingInProgress, 0);
-            Interlocked.Exchange(ref _isWmiRecoveryInProgress, 0);
+            lock (this.lockObject)
+            {
+                if (this.isMonitoring)
+                {
+                    return;
+                }
 
-            UpdateMonitoringSettings();
+                this.isMonitoring = true;
+            }
+
+            this.cancellationTokenSource = new CancellationTokenSource();
+            this.lastWmiRetryAttemptUtc = DateTime.MinValue;
+            Interlocked.Exchange(ref this.isFallbackPollingInProgress, 0);
+            Interlocked.Exchange(ref this.isWmiRecoveryInProgress, 0);
+
+            this.UpdateMonitoringSettings();
 
             // Initialize current process list
-            await InitializeProcessListAsync();
+            await this.InitializeProcessListAsync();
 
             bool wmiStarted = false;
-            if (_enableWmiMonitoring)
+            if (this.enableWmiMonitoring)
             {
                 // Try to start WMI monitoring first
-                wmiStarted = await TryStartWmiMonitoringAsync();
+                wmiStarted = await this.TryStartWmiMonitoringAsync();
             }
 
-            if (!wmiStarted && _enableFallbackPolling)
+            if (!wmiStarted && this.enableFallbackPolling)
             {
                 // Fall back to polling if WMI is not available
-                StartFallbackPolling();
+                this.StartFallbackPolling();
             }
-            else if (!wmiStarted && !_enableFallbackPolling)
+            else if (!wmiStarted && !this.enableFallbackPolling)
             {
-                var reason = _enableWmiMonitoring
+                var reason = this.enableWmiMonitoring
                     ? "WMI monitoring unavailable and fallback polling is disabled"
                     : "Both WMI monitoring and fallback polling are disabled";
 
-                OnMonitoringStatusChanged(reason);
+                this.OnMonitoringStatusChanged(reason);
             }
 
-            OnMonitoringStatusChanged();
+            this.OnMonitoringStatusChanged();
         }
 
         public async Task StopMonitoringAsync()
         {
-            if (_disposed) return;
-
-            lock (_lockObject)
+            if (this.disposed)
             {
-                if (!_isMonitoring) return;
-                _isMonitoring = false;
+                return;
+            }
+
+            lock (this.lockObject)
+            {
+                if (!this.isMonitoring)
+                {
+                    return;
+                }
+
+                this.isMonitoring = false;
             }
 
             // Stop WMI watchers
-            StopWmiWatchers();
+            this.StopWmiWatchers();
 
             // Stop fallback polling
-            StopFallbackPolling();
+            this.StopFallbackPolling();
 
             // Cancel any ongoing operations
-            _cancellationTokenSource?.Cancel();
-            _cancellationTokenSource?.Dispose();
-            _cancellationTokenSource = null;
+            this.cancellationTokenSource?.Cancel();
+            this.cancellationTokenSource?.Dispose();
+            this.cancellationTokenSource = null;
 
-            _runningProcesses.Clear();
-            Interlocked.Exchange(ref _isFallbackPollingInProgress, 0);
-            Interlocked.Exchange(ref _isWmiRecoveryInProgress, 0);
-            OnMonitoringStatusChanged();
+            this.runningProcesses.Clear();
+            Interlocked.Exchange(ref this.isFallbackPollingInProgress, 0);
+            Interlocked.Exchange(ref this.isWmiRecoveryInProgress, 0);
+            this.OnMonitoringStatusChanged();
 
             await Task.CompletedTask;
         }
@@ -151,7 +172,7 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var processes = await _processService.GetProcessesAsync();
+                var processes = await this.processService.GetProcessesAsync();
                 return processes;
             }
             catch (Exception)
@@ -164,7 +185,7 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var processes = await GetRunningProcessesAsync();
+                var processes = await this.GetRunningProcessesAsync();
                 return processes.Any(p => string.Equals(p.Name, executableName, StringComparison.OrdinalIgnoreCase));
             }
             catch
@@ -177,36 +198,36 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var processes = await GetRunningProcessesAsync();
-                _runningProcesses.Clear();
-                
+                var processes = await this.GetRunningProcessesAsync();
+                this.runningProcesses.Clear();
+
                 foreach (var process in processes)
                 {
-                    _runningProcesses.TryAdd(process.ProcessId, process);
+                    this.runningProcesses.TryAdd(process.ProcessId, process);
                 }
             }
             catch (Exception ex)
             {
-                OnMonitoringStatusChanged($"Failed to initialize process list: {ex.Message}", ex);
+                this.OnMonitoringStatusChanged($"Failed to initialize process list: {ex.Message}", ex);
             }
         }
 
         private async Task<bool> TryStartWmiMonitoringAsync()
         {
-            if (_disposed || !_isMonitoring || !_enableWmiMonitoring)
+            if (this.disposed || !this.isMonitoring || !this.enableWmiMonitoring)
             {
                 return false;
             }
 
-            await _wmiStartSemaphore.WaitAsync();
+            await this.wmiStartSemaphore.WaitAsync();
             try
             {
-                if (_disposed || !_isMonitoring || !_enableWmiMonitoring)
+                if (this.disposed || !this.isMonitoring || !this.enableWmiMonitoring)
                 {
                     return false;
                 }
 
-                if (_isWmiAvailable && _processStartWatcher != null && _processStopWatcher != null)
+                if (this.isWmiAvailable && this.processStartWatcher != null && this.processStopWatcher != null)
                 {
                     return true;
                 }
@@ -214,85 +235,88 @@ namespace ThreadPilot.Services
                 await Task.Run(() =>
                 {
                     // Ensure any previous watchers are fully cleaned up before re-creating them
-                    StopWmiWatchers();
+                    this.StopWmiWatchers();
 
                     // Create WMI event watchers for process start and stop
                     var startQuery = new WqlEventQuery("SELECT * FROM Win32_ProcessStartTrace");
                     var stopQuery = new WqlEventQuery("SELECT * FROM Win32_ProcessStopTrace");
 
-                    _processStartWatcher = new ManagementEventWatcher(startQuery);
-                    _processStopWatcher = new ManagementEventWatcher(stopQuery);
+                    this.processStartWatcher = new ManagementEventWatcher(startQuery);
+                    this.processStopWatcher = new ManagementEventWatcher(stopQuery);
 
-                    _processStartWatcher.EventArrived += OnProcessStarted;
-                    _processStopWatcher.EventArrived += OnProcessStopped;
-                    _processStartWatcher.Stopped += OnWmiWatcherStopped;
-                    _processStopWatcher.Stopped += OnWmiWatcherStopped;
+                    this.processStartWatcher.EventArrived += this.OnProcessStarted;
+                    this.processStopWatcher.EventArrived += this.OnProcessStopped;
+                    this.processStartWatcher.Stopped += this.OnWmiWatcherStopped;
+                    this.processStopWatcher.Stopped += this.OnWmiWatcherStopped;
 
-                    _processStartWatcher.Start();
-                    _processStopWatcher.Start();
+                    this.processStartWatcher.Start();
+                    this.processStopWatcher.Start();
                 });
 
-                _isWmiAvailable = true;
+                this.isWmiAvailable = true;
 
                 // Prefer WMI when available to reduce polling overhead
-                if (_isFallbackPollingActive)
+                if (this.isFallbackPollingActive)
                 {
-                    StopFallbackPolling();
+                    this.StopFallbackPolling();
                 }
 
-                OnMonitoringStatusChanged("WMI monitoring started successfully");
+                this.OnMonitoringStatusChanged("WMI monitoring started successfully");
                 return true;
             }
             catch (Exception ex)
             {
-                _isWmiAvailable = false;
-                OnMonitoringStatusChanged($"WMI monitoring failed: {ex.Message}", ex);
-                
+                this.isWmiAvailable = false;
+                this.OnMonitoringStatusChanged($"WMI monitoring failed: {ex.Message}", ex);
+
                 // Clean up any partially created watchers
-                StopWmiWatchers();
-                
+                this.StopWmiWatchers();
+
                 return false;
             }
             finally
             {
-                _wmiStartSemaphore.Release();
+                this.wmiStartSemaphore.Release();
             }
         }
 
         private void StartFallbackPolling()
         {
-            if (_disposed || !_isMonitoring || !_enableFallbackPolling)
+            if (this.disposed || !this.isMonitoring || !this.enableFallbackPolling)
             {
                 return;
             }
 
             // Update polling interval from current settings
-            UpdateMonitoringSettings();
+            this.UpdateMonitoringSettings();
 
-            if (_isFallbackPollingActive)
+            if (this.isFallbackPollingActive)
             {
-                _fallbackTimer?.Change(0, _fallbackPollingIntervalMs);
+                this.currentFallbackPollingIntervalMs = this.fallbackPollingIntervalMs;
+                this.fallbackTimer?.Change(0, this.currentFallbackPollingIntervalMs);
                 return;
             }
 
-            _isFallbackPollingActive = true;
-            _fallbackTimer = new System.Threading.Timer(FallbackPollingCallback, null, 0, _fallbackPollingIntervalMs);
-            OnMonitoringStatusChanged($"Fallback polling started (interval: {_fallbackPollingIntervalMs}ms)");
+            this.isFallbackPollingActive = true;
+            this.idlePollingMultiplier = 1;
+            this.currentFallbackPollingIntervalMs = this.fallbackPollingIntervalMs;
+            this.fallbackTimer = new System.Threading.Timer(this.FallbackPollingCallback, null, 0, this.currentFallbackPollingIntervalMs);
+            this.OnMonitoringStatusChanged($"Fallback polling started (interval: {this.fallbackPollingIntervalMs}ms)");
         }
 
         private void OnWmiWatcherStopped(object sender, StoppedEventArgs e)
         {
-            if (!_isMonitoring || _disposed)
+            if (!this.isMonitoring || this.disposed)
             {
                 return;
             }
 
-            _isWmiAvailable = false;
-            OnMonitoringStatusChanged($"WMI watcher stopped ({e.Status})");
+            this.isWmiAvailable = false;
+            this.OnMonitoringStatusChanged($"WMI watcher stopped ({e.Status})");
 
-            if (_enableFallbackPolling && !_isFallbackPollingActive)
+            if (this.enableFallbackPolling && !this.isFallbackPollingActive)
             {
-                StartFallbackPolling();
+                this.StartFallbackPolling();
             }
         }
 
@@ -300,53 +324,53 @@ namespace ThreadPilot.Services
         {
             try
             {
-                if (_processStartWatcher != null)
+                if (this.processStartWatcher != null)
                 {
-                    _processStartWatcher.EventArrived -= OnProcessStarted;
-                    _processStartWatcher.Stopped -= OnWmiWatcherStopped;
+                    this.processStartWatcher.EventArrived -= this.OnProcessStarted;
+                    this.processStartWatcher.Stopped -= this.OnWmiWatcherStopped;
                 }
 
-                _processStartWatcher?.Stop();
-                _processStartWatcher?.Dispose();
-                _processStartWatcher = null;
+                this.processStartWatcher?.Stop();
+                this.processStartWatcher?.Dispose();
+                this.processStartWatcher = null;
 
-                if (_processStopWatcher != null)
+                if (this.processStopWatcher != null)
                 {
-                    _processStopWatcher.EventArrived -= OnProcessStopped;
-                    _processStopWatcher.Stopped -= OnWmiWatcherStopped;
+                    this.processStopWatcher.EventArrived -= this.OnProcessStopped;
+                    this.processStopWatcher.Stopped -= this.OnWmiWatcherStopped;
                 }
 
-                _processStopWatcher?.Stop();
-                _processStopWatcher?.Dispose();
-                _processStopWatcher = null;
+                this.processStopWatcher?.Stop();
+                this.processStopWatcher?.Dispose();
+                this.processStopWatcher = null;
 
-                _isWmiAvailable = false;
+                this.isWmiAvailable = false;
             }
             catch (Exception ex)
             {
-                OnMonitoringStatusChanged($"Error stopping WMI watchers: {ex.Message}", ex);
+                this.OnMonitoringStatusChanged($"Error stopping WMI watchers: {ex.Message}", ex);
             }
         }
 
         private void StopFallbackPolling()
         {
-            _fallbackTimer?.Dispose();
-            _fallbackTimer = null;
-            _isFallbackPollingActive = false;
-            Interlocked.Exchange(ref _isFallbackPollingInProgress, 0);
+            this.fallbackTimer?.Dispose();
+            this.fallbackTimer = null;
+            this.isFallbackPollingActive = false;
+            Interlocked.Exchange(ref this.isFallbackPollingInProgress, 0);
         }
 
         private void OnProcessStarted(object sender, EventArrivedEventArgs e)
         {
-            TaskSafety.FireAndForget(HandleProcessStartedAsync(e), ex =>
+            TaskSafety.FireAndForget(this.HandleProcessStartedAsync(e), ex =>
             {
-                OnMonitoringStatusChanged($"Error handling process start event: {ex.Message}", ex);
+                this.OnMonitoringStatusChanged($"Error handling process start event: {ex.Message}", ex);
             });
         }
 
         private async Task HandleProcessStartedAsync(EventArrivedEventArgs e)
         {
-            if (!_isMonitoring || _disposed)
+            if (!this.isMonitoring || this.disposed)
             {
                 return;
             }
@@ -357,26 +381,26 @@ namespace ThreadPilot.Services
                 var processName = e.NewEvent["ProcessName"]?.ToString() ?? string.Empty;
 
                 // Get detailed process information
-                var process = await CreateProcessModelFromId(processId, processName)
+                var process = await this.CreateProcessModelFromId(processId, processName)
                     ?? (!string.IsNullOrWhiteSpace(processName)
                         ? new ProcessModel { ProcessId = processId, Name = NormalizeProcessName(processName) }
                         : null);
 
                 if (process != null)
                 {
-                    _runningProcesses.TryAdd(processId, process);
-                    ProcessStarted?.Invoke(this, new ProcessEventArgs(process));
+                    this.runningProcesses.TryAdd(processId, process);
+                    this.ProcessStarted?.Invoke(this, new ProcessEventArgs(process));
                 }
             }
             catch (Exception ex)
             {
-                OnMonitoringStatusChanged($"Error handling process start event: {ex.Message}", ex);
+                this.OnMonitoringStatusChanged($"Error handling process start event: {ex.Message}", ex);
             }
         }
 
         private void OnProcessStopped(object sender, EventArrivedEventArgs e)
         {
-            if (!_isMonitoring || _disposed)
+            if (!this.isMonitoring || this.disposed)
             {
                 return;
             }
@@ -384,35 +408,35 @@ namespace ThreadPilot.Services
             try
             {
                 var processId = Convert.ToInt32(e.NewEvent["ProcessID"]);
-                
-                if (_runningProcesses.TryRemove(processId, out var process))
+
+                if (this.runningProcesses.TryRemove(processId, out var process))
                 {
-                    ProcessStopped?.Invoke(this, new ProcessEventArgs(process));
+                    this.ProcessStopped?.Invoke(this, new ProcessEventArgs(process));
                 }
             }
             catch (Exception ex)
             {
-                OnMonitoringStatusChanged($"Error handling process stop event: {ex.Message}", ex);
+                this.OnMonitoringStatusChanged($"Error handling process stop event: {ex.Message}", ex);
             }
         }
 
         private void FallbackPollingCallback(object? state)
         {
-            if (!_isMonitoring || _disposed || _cancellationTokenSource?.Token.IsCancellationRequested == true)
+            if (!this.isMonitoring || this.disposed || this.cancellationTokenSource?.Token.IsCancellationRequested == true)
             {
                 return;
             }
 
             // Prevent overlapping polling iterations when processing takes longer than interval
-            if (Interlocked.Exchange(ref _isFallbackPollingInProgress, 1) == 1)
+            if (Interlocked.Exchange(ref this.isFallbackPollingInProgress, 1) == 1)
             {
                 return;
             }
 
-            var cancellationToken = _cancellationTokenSource?.Token ?? CancellationToken.None;
-            TaskSafety.FireAndForget(RunFallbackPollingAsync(cancellationToken), ex =>
+            var cancellationToken = this.cancellationTokenSource?.Token ?? CancellationToken.None;
+            TaskSafety.FireAndForget(this.RunFallbackPollingAsync(cancellationToken), ex =>
             {
-                OnMonitoringStatusChanged($"Error in fallback polling: {ex.Message}", ex);
+                this.OnMonitoringStatusChanged($"Error in fallback polling: {ex.Message}", ex);
             });
         }
 
@@ -425,76 +449,122 @@ namespace ThreadPilot.Services
                     return;
                 }
 
-                var currentProcesses = await GetRunningProcessesAsync();
+                var currentProcesses = await this.GetRunningProcessesAsync();
                 var currentProcessDict = currentProcesses.ToDictionary(p => p.ProcessId, p => p);
+                var detectedChanges = 0;
 
                 // Check for new processes
                 foreach (var process in currentProcesses)
                 {
-                    if (!_runningProcesses.ContainsKey(process.ProcessId))
+                    if (cancellationToken.IsCancellationRequested)
                     {
-                        _runningProcesses.TryAdd(process.ProcessId, process);
-                        ProcessStarted?.Invoke(this, new ProcessEventArgs(process));
+                        return;
+                    }
+
+                    if (!this.runningProcesses.ContainsKey(process.ProcessId))
+                    {
+                        this.runningProcesses.TryAdd(process.ProcessId, process);
+                        this.ProcessStarted?.Invoke(this, new ProcessEventArgs(process));
+                        detectedChanges++;
                     }
                 }
 
                 // Check for stopped processes
-                var stoppedProcesses = _runningProcesses.Keys
+                var stoppedProcesses = this.runningProcesses.Keys
                     .Where(pid => !currentProcessDict.ContainsKey(pid))
                     .ToList();
 
                 foreach (var pid in stoppedProcesses)
                 {
-                    if (_runningProcesses.TryRemove(pid, out var stoppedProcess))
+                    if (cancellationToken.IsCancellationRequested)
                     {
-                        ProcessStopped?.Invoke(this, new ProcessEventArgs(stoppedProcess));
+                        return;
+                    }
+
+                    if (this.runningProcesses.TryRemove(pid, out var stoppedProcess))
+                    {
+                        this.ProcessStopped?.Invoke(this, new ProcessEventArgs(stoppedProcess));
+                        detectedChanges++;
                     }
                 }
 
                 // Periodically retry WMI monitoring recovery while polling is active
-                await TryRecoverWmiMonitoringAsync();
+                await this.TryRecoverWmiMonitoringAsync();
+
+                this.UpdateAdaptivePollingInterval(detectedChanges);
             }
             catch (Exception ex)
             {
-                OnMonitoringStatusChanged($"Error in fallback polling: {ex.Message}", ex);
+                this.OnMonitoringStatusChanged($"Error in fallback polling: {ex.Message}", ex);
             }
             finally
             {
-                Interlocked.Exchange(ref _isFallbackPollingInProgress, 0);
+                Interlocked.Exchange(ref this.isFallbackPollingInProgress, 0);
+            }
+        }
+
+        private void UpdateAdaptivePollingInterval(int detectedChanges)
+        {
+            if (!this.isFallbackPollingActive || this.fallbackTimer == null)
+            {
+                return;
+            }
+
+            var previousMultiplier = this.idlePollingMultiplier;
+            this.idlePollingMultiplier = detectedChanges > 0
+                ? 1
+                : Math.Min(MaxIdlePollingMultiplier, this.idlePollingMultiplier + 1);
+
+            var nextInterval = Math.Clamp(
+                this.fallbackPollingIntervalMs * this.idlePollingMultiplier,
+                this.fallbackPollingIntervalMs,
+                60000);
+
+            if (nextInterval == this.currentFallbackPollingIntervalMs)
+            {
+                return;
+            }
+
+            this.currentFallbackPollingIntervalMs = nextInterval;
+            this.fallbackTimer.Change(this.currentFallbackPollingIntervalMs, this.currentFallbackPollingIntervalMs);
+
+            if (previousMultiplier != this.idlePollingMultiplier)
+            {
+                this.OnMonitoringStatusChanged($"Adaptive polling interval changed to {this.currentFallbackPollingIntervalMs}ms");
             }
         }
 
         private async Task TryRecoverWmiMonitoringAsync()
         {
-            if (!_isMonitoring || _disposed || _isWmiAvailable || !_enableWmiMonitoring)
+            if (!this.isMonitoring || this.disposed || this.isWmiAvailable || !this.enableWmiMonitoring)
             {
                 return;
             }
 
             var now = DateTime.UtcNow;
-            if ((now - _lastWmiRetryAttemptUtc).TotalMilliseconds < _wmiRetryDelayMs)
+            if ((now - this.lastWmiRetryAttemptUtc).TotalMilliseconds < this.wmiRetryDelayMs)
             {
                 return;
             }
 
-            if (Interlocked.Exchange(ref _isWmiRecoveryInProgress, 1) == 1)
+            if (Interlocked.Exchange(ref this.isWmiRecoveryInProgress, 1) == 1)
             {
                 return;
             }
 
-            _lastWmiRetryAttemptUtc = now;
+            this.lastWmiRetryAttemptUtc = now;
 
             try
             {
-                var recovered = await TryStartWmiMonitoringAsync();
+                var recovered = await this.TryStartWmiMonitoringAsync();
                 if (recovered)
                 {
-                    OnMonitoringStatusChanged("WMI monitoring recovered successfully");
+                    this.OnMonitoringStatusChanged("WMI monitoring recovered successfully");
                 }
             }
             finally
             {
-                Interlocked.Exchange(ref _isWmiRecoveryInProgress, 0);
+                Interlocked.Exchange(ref this.isWmiRecoveryInProgress, 0);
             }
         }
 
@@ -515,59 +585,61 @@ namespace ThreadPilot.Services
 
         private void OnMonitoringStatusChanged(string? message = null, Exception? error = null)
         {
-            MonitoringStatusChanged?.Invoke(this, new MonitoringStatusEventArgs(
-                _isMonitoring, _isWmiAvailable, _isFallbackPollingActive, message, error));
+            this.MonitoringStatusChanged?.Invoke(this, new MonitoringStatusEventArgs(
+                this.isMonitoring, this.isWmiAvailable, this.isFallbackPollingActive, message, error));
         }
 
         private void UpdateMonitoringSettings()
         {
-            var settings = _settingsService.Settings;
-            _fallbackPollingIntervalMs = Math.Clamp(settings.FallbackPollingIntervalMs, 1000, 60000);
-            _enableWmiMonitoring = settings.EnableWmiMonitoring;
-            _enableFallbackPolling = settings.EnableFallbackPolling;
+            var settings = this.settingsService.Settings;
+            this.fallbackPollingIntervalMs = Math.Clamp(settings.FallbackPollingIntervalMs, 1000, 60000);
+            this.enableWmiMonitoring = settings.EnableWmiMonitoring;
+            this.enableFallbackPolling = settings.EnableFallbackPolling;
         }
 
         public void UpdateSettings()
         {
-            var previousInterval = _fallbackPollingIntervalMs;
-            var previousWmiEnabled = _enableWmiMonitoring;
-            var previousFallbackEnabled = _enableFallbackPolling;
+            var previousInterval = this.fallbackPollingIntervalMs;
+            var previousWmiEnabled = this.enableWmiMonitoring;
+            var previousFallbackEnabled = this.enableFallbackPolling;
 
-            UpdateMonitoringSettings();
+            this.UpdateMonitoringSettings();
 
-            if (!_isMonitoring)
+            if (!this.isMonitoring)
             {
                 return;
             }
 
-            if (!_enableWmiMonitoring && _isWmiAvailable)
+            if (!this.enableWmiMonitoring && this.isWmiAvailable)
             {
-                StopWmiWatchers();
-                OnMonitoringStatusChanged("WMI monitoring disabled by settings");
+                this.StopWmiWatchers();
+                this.OnMonitoringStatusChanged("WMI monitoring disabled by settings");
             }
-            else if (_enableWmiMonitoring && !previousWmiEnabled && !_isWmiAvailable)
+            else if (this.enableWmiMonitoring && !previousWmiEnabled && !this.isWmiAvailable)
             {
-                TaskSafety.FireAndForget(TryStartWmiMonitoringAsync(), ex =>
+                TaskSafety.FireAndForget(this.TryStartWmiMonitoringAsync(), ex =>
                 {
-                    OnMonitoringStatusChanged($"Error recovering WMI monitoring: {ex.Message}", ex);
+                    this.OnMonitoringStatusChanged($"Error recovering WMI monitoring: {ex.Message}", ex);
                 });
             }
 
-            if (!_enableFallbackPolling && _isFallbackPollingActive)
+            if (!this.enableFallbackPolling && this.isFallbackPollingActive)
             {
-                StopFallbackPolling();
-                OnMonitoringStatusChanged("Fallback polling disabled by settings");
+                this.StopFallbackPolling();
+                this.OnMonitoringStatusChanged("Fallback polling disabled by settings");
             }
-            else if (_enableFallbackPolling && !previousFallbackEnabled && (!_isWmiAvailable || !_enableWmiMonitoring))
+            else if (this.enableFallbackPolling && !previousFallbackEnabled && (!this.isWmiAvailable || !this.enableWmiMonitoring))
             {
-                StartFallbackPolling();
+                this.StartFallbackPolling();
             }
 
             // If fallback polling is active, restart it with new interval
-            if (_isFallbackPollingActive && _fallbackTimer != null && previousInterval != _fallbackPollingIntervalMs)
+            if (this.isFallbackPollingActive && this.fallbackTimer != null && previousInterval != this.fallbackPollingIntervalMs)
             {
-                _fallbackTimer.Change(0, _fallbackPollingIntervalMs);
-                OnMonitoringStatusChanged($"Polling interval updated to {_fallbackPollingIntervalMs}ms");
+                this.idlePollingMultiplier = 1;
+                this.currentFallbackPollingIntervalMs = this.fallbackPollingIntervalMs;
+                this.fallbackTimer.Change(0, this.currentFallbackPollingIntervalMs);
+                this.OnMonitoringStatusChanged($"Polling interval updated to {this.fallbackPollingIntervalMs}ms");
             }
         }
 
@@ -584,20 +656,23 @@ namespace ThreadPilot.Services
 
         public void Dispose()
         {
-            if (_disposed) return;
+            if (this.disposed)
+            {
+                return;
+            }
 
             try
             {
-                StopMonitoringAsync().GetAwaiter().GetResult();
+                this.StopMonitoringAsync().GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
-                OnMonitoringStatusChanged($"Error during process monitor disposal: {ex.Message}", ex);
+                this.OnMonitoringStatusChanged($"Error during process monitor disposal: {ex.Message}", ex);
             }
 
-            _wmiStartSemaphore.Dispose();
+            this.wmiStartSemaphore.Dispose();
 
-            _disposed = true;
+            this.disposed = true;
         }
     }
 }

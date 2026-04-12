@@ -14,24 +14,24 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Threading.Tasks;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.Logging;
-using ThreadPilot.Services;
-
 namespace ThreadPilot.ViewModels
 {
+    using System;
+    using System.Collections.ObjectModel;
+    using System.Linq;
+    using System.Threading.Tasks;
+    using CommunityToolkit.Mvvm.ComponentModel;
+    using CommunityToolkit.Mvvm.Input;
+    using Microsoft.Extensions.Logging;
+    using ThreadPilot.Services;
+
     /// <summary>
-    /// ViewModel for the System Tweaks tab
+    /// ViewModel for the System Tweaks tab.
     /// </summary>
     public partial class SystemTweaksViewModel : BaseViewModel
     {
-        private readonly ISystemTweaksService _systemTweaksService;
-        private readonly INotificationService _notificationService;
+        private readonly ISystemTweaksService systemTweaksService;
+        private readonly INotificationService notificationService;
 
         [ObservableProperty]
         private ObservableCollection<SystemTweakItem> tweakItems = new();
@@ -45,20 +45,21 @@ namespace ThreadPilot.ViewModels
         public SystemTweaksViewModel(
             ISystemTweaksService systemTweaksService,
             INotificationService notificationService,
-            ILogger<SystemTweaksViewModel> logger) : base(logger, null)
+            ILogger<SystemTweaksViewModel> logger)
+            : base(logger, null)
         {
-            _systemTweaksService = systemTweaksService;
-            _notificationService = notificationService;
+            this.systemTweaksService = systemTweaksService;
+            this.notificationService = notificationService;
 
             // Subscribe to tweak status changes
-            _systemTweaksService.TweakStatusChanged += OnTweakStatusChanged;
+            this.systemTweaksService.TweakStatusChanged += this.OnTweakStatusChanged;
 
-            InitializeTweakItems();
+            this.InitializeTweakItems();
         }
 
         private void InitializeTweakItems()
         {
-            TweakItems = new ObservableCollection<SystemTweakItem>
+            this.TweakItems = new ObservableCollection<SystemTweakItem>
             {
                 new SystemTweakItem
                 {
@@ -67,7 +68,7 @@ namespace ThreadPilot.ViewModels
                     TweakType = SystemTweak.CoreParking,
                     IsEnabled = false,
                     IsAvailable = true,
-                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(ToggleTweakAsync)
+                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(this.ToggleTweakAsync),
                 },
                 new SystemTweakItem
                 {
@@ -76,7 +77,7 @@ namespace ThreadPilot.ViewModels
                     TweakType = SystemTweak.CStates,
                     IsEnabled = false,
                     IsAvailable = true,
-                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(ToggleTweakAsync)
+                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(this.ToggleTweakAsync),
                 },
                 new SystemTweakItem
                 {
@@ -85,7 +86,7 @@ namespace ThreadPilot.ViewModels
                     TweakType = SystemTweak.SysMain,
                     IsEnabled = false,
                     IsAvailable = true,
-                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(ToggleTweakAsync)
+                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(this.ToggleTweakAsync),
                 },
                 new SystemTweakItem
                 {
@@ -94,7 +95,7 @@ namespace ThreadPilot.ViewModels
                     TweakType = SystemTweak.Prefetch,
                     IsEnabled = false,
                     IsAvailable = true,
-                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(ToggleTweakAsync)
+                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(this.ToggleTweakAsync),
                 },
                 new SystemTweakItem
                 {
@@ -103,7 +104,7 @@ namespace ThreadPilot.ViewModels
                     TweakType = SystemTweak.PowerThrottling,
                     IsEnabled = false,
                     IsAvailable = true,
-                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(ToggleTweakAsync)
+                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(this.ToggleTweakAsync),
                 },
                 new SystemTweakItem
                 {
@@ -112,7 +113,7 @@ namespace ThreadPilot.ViewModels
                     TweakType = SystemTweak.Hpet,
                     IsEnabled = false,
                     IsAvailable = true,
-                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(ToggleTweakAsync)
+                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(this.ToggleTweakAsync),
                 },
                 new SystemTweakItem
                 {
@@ -121,7 +122,7 @@ namespace ThreadPilot.ViewModels
                     TweakType = SystemTweak.HighSchedulingCategory,
                     IsEnabled = false,
                     IsAvailable = true,
-                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(ToggleTweakAsync)
+                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(this.ToggleTweakAsync),
                 },
                 new SystemTweakItem
                 {
@@ -130,17 +131,18 @@ namespace ThreadPilot.ViewModels
                     TweakType = SystemTweak.MenuShowDelay,
                     IsEnabled = false,
                     IsAvailable = true,
-                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(ToggleTweakAsync)
-                }
+                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(this.ToggleTweakAsync)
+                },
             };
         }
 
         [RelayCommand]
         public async Task LoadAsync()
         {
-            await ExecuteAsync(async () =>
+            await this.ExecuteAsync(
+                async () =>
             {
-                await RefreshAllTweaksAsync();
+                await this.RefreshAllTweaksAsync();
             }, "Loading system tweaks...", "System tweaks loaded successfully");
         }
 
@@ -152,30 +154,30 @@ namespace ThreadPilot.ViewModels
                 // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    IsRefreshing = true;
-                    RefreshStatusText = "Refreshing system tweaks...";
+                    this.IsRefreshing = true;
+                    this.RefreshStatusText = "Refreshing system tweaks...";
                 });
 
-                await _systemTweaksService.RefreshAllStatusesAsync();
+                await this.systemTweaksService.RefreshAllStatusesAsync();
 
                 // Update each tweak item with current status
-                foreach (var item in TweakItems)
+                foreach (var item in this.TweakItems)
                 {
-                    await UpdateTweakItemStatusAsync(item);
+                    await this.UpdateTweakItemStatusAsync(item);
                 }
 
                 // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    RefreshStatusText = $"Last refreshed: {DateTime.Now:HH:mm:ss}";
+                    this.RefreshStatusText = $"Last refreshed: {DateTime.Now:HH:mm:ss}";
                 });
             }
             catch (Exception ex)
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetError("Failed to refresh system tweaks", ex);
-                    RefreshStatusText = "Refresh failed";
+                    this.SetError("Failed to refresh system tweaks", ex);
+                    this.RefreshStatusText = "Refresh failed";
                 });
             }
             finally
@@ -183,7 +185,7 @@ namespace ThreadPilot.ViewModels
                 // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    IsRefreshing = false;
+                    this.IsRefreshing = false;
                 });
             }
         }
@@ -194,15 +196,15 @@ namespace ThreadPilot.ViewModels
             {
                 TweakStatus status = item.TweakType switch
                 {
-                    SystemTweak.CoreParking => await _systemTweaksService.GetCoreParkingStatusAsync(),
-                    SystemTweak.CStates => await _systemTweaksService.GetCStatesStatusAsync(),
-                    SystemTweak.SysMain => await _systemTweaksService.GetSysMainStatusAsync(),
-                    SystemTweak.Prefetch => await _systemTweaksService.GetPrefetchStatusAsync(),
-                    SystemTweak.PowerThrottling => await _systemTweaksService.GetPowerThrottlingStatusAsync(),
-                    SystemTweak.Hpet => await _systemTweaksService.GetHpetStatusAsync(),
-                    SystemTweak.HighSchedulingCategory => await _systemTweaksService.GetHighSchedulingCategoryStatusAsync(),
-                    SystemTweak.MenuShowDelay => await _systemTweaksService.GetMenuShowDelayStatusAsync(),
-                    _ => new TweakStatus { IsAvailable = false, ErrorMessage = "Unknown tweak type" }
+                    SystemTweak.CoreParking => await this.systemTweaksService.GetCoreParkingStatusAsync(),
+                    SystemTweak.CStates => await this.systemTweaksService.GetCStatesStatusAsync(),
+                    SystemTweak.SysMain => await this.systemTweaksService.GetSysMainStatusAsync(),
+                    SystemTweak.Prefetch => await this.systemTweaksService.GetPrefetchStatusAsync(),
+                    SystemTweak.PowerThrottling => await this.systemTweaksService.GetPowerThrottlingStatusAsync(),
+                    SystemTweak.Hpet => await this.systemTweaksService.GetHpetStatusAsync(),
+                    SystemTweak.HighSchedulingCategory => await this.systemTweaksService.GetHighSchedulingCategoryStatusAsync(),
+                    SystemTweak.MenuShowDelay => await this.systemTweaksService.GetMenuShowDelayStatusAsync(),
+                    _ => new TweakStatus { IsAvailable = false, ErrorMessage = "Unknown tweak type" },
                 };
 
                 item.IsEnabled = status.IsEnabled;
@@ -215,7 +217,7 @@ namespace ThreadPilot.ViewModels
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error updating status for tweak {TweakName}", item.Name);
+                this.Logger.LogError(ex, "Error updating status for tweak {TweakName}", item.Name);
                 item.IsAvailable = false;
                 item.ErrorMessage = ex.Message;
             }
@@ -223,38 +225,41 @@ namespace ThreadPilot.ViewModels
 
         private async Task ToggleTweakAsync(SystemTweakItem? item)
         {
-            if (item == null) return;
+            if (item == null)
+            {
+                return;
+            }
 
             try
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetStatus($"Toggling {item.Name}...");
+                    this.SetStatus($"Toggling {item.Name}...");
                 });
 
                 var newState = !item.IsEnabled;
                 bool success = item.TweakType switch
                 {
-                    SystemTweak.CoreParking => await _systemTweaksService.SetCoreParkingAsync(newState),
-                    SystemTweak.CStates => await _systemTweaksService.SetCStatesAsync(newState),
-                    SystemTweak.SysMain => await _systemTweaksService.SetSysMainAsync(newState),
-                    SystemTweak.Prefetch => await _systemTweaksService.SetPrefetchAsync(newState),
-                    SystemTweak.PowerThrottling => await _systemTweaksService.SetPowerThrottlingAsync(newState),
-                    SystemTweak.Hpet => await _systemTweaksService.SetHpetAsync(newState),
-                    SystemTweak.HighSchedulingCategory => await _systemTweaksService.SetHighSchedulingCategoryAsync(newState),
-                    SystemTweak.MenuShowDelay => await _systemTweaksService.SetMenuShowDelayAsync(newState),
-                    _ => false
+                    SystemTweak.CoreParking => await this.systemTweaksService.SetCoreParkingAsync(newState),
+                    SystemTweak.CStates => await this.systemTweaksService.SetCStatesAsync(newState),
+                    SystemTweak.SysMain => await this.systemTweaksService.SetSysMainAsync(newState),
+                    SystemTweak.Prefetch => await this.systemTweaksService.SetPrefetchAsync(newState),
+                    SystemTweak.PowerThrottling => await this.systemTweaksService.SetPowerThrottlingAsync(newState),
+                    SystemTweak.Hpet => await this.systemTweaksService.SetHpetAsync(newState),
+                    SystemTweak.HighSchedulingCategory => await this.systemTweaksService.SetHighSchedulingCategoryAsync(newState),
+                    SystemTweak.MenuShowDelay => await this.systemTweaksService.SetMenuShowDelayAsync(newState),
+                    _ => false,
                 };
 
                 if (success)
                 {
-                    await UpdateTweakItemStatusAsync(item);
+                    await this.UpdateTweakItemStatusAsync(item);
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        SetStatus($"{item.Name} {(newState ? "enabled" : "disabled")} successfully");
+                        this.SetStatus($"{item.Name} {(newState ? "enabled" : "disabled")} successfully");
                     });
 
-                    await _notificationService.ShowSuccessNotificationAsync(
+                    await this.notificationService.ShowSuccessNotificationAsync(
                         "System Tweak Updated",
                         $"{item.Name} has been {(newState ? "enabled" : "disabled")}");
                 }
@@ -262,10 +267,10 @@ namespace ThreadPilot.ViewModels
                 {
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        SetError($"Failed to toggle {item.Name}", null);
+                        this.SetError($"Failed to toggle {item.Name}", null);
                     });
 
-                    await _notificationService.ShowErrorNotificationAsync(
+                    await this.notificationService.ShowErrorNotificationAsync(
                         "System Tweak Failed",
                         $"Failed to {(newState ? "enable" : "disable")} {item.Name}");
                 }
@@ -274,9 +279,9 @@ namespace ThreadPilot.ViewModels
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetError($"Error toggling {item.Name}", ex);
+                    this.SetError($"Error toggling {item.Name}", ex);
                 });
-                Logger.LogError(ex, "Error toggling tweak {TweakName}", item.Name);
+                this.Logger.LogError(ex, "Error toggling tweak {TweakName}", item.Name);
             }
         }
 
@@ -284,7 +289,7 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                var item = TweakItems.FirstOrDefault(t => t.TweakType.ToString() == e.TweakName);
+                var item = this.TweakItems.FirstOrDefault(t => t.TweakType.ToString() == e.TweakName);
                 if (item != null)
                 {
                     item.IsEnabled = e.Status.IsEnabled;
@@ -294,19 +299,19 @@ namespace ThreadPilot.ViewModels
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error handling tweak status change for {TweakName}", e.TweakName);
+                this.Logger.LogError(ex, "Error handling tweak status change for {TweakName}", e.TweakName);
             }
         }
 
         protected override void OnDispose()
         {
-            _systemTweaksService.TweakStatusChanged -= OnTweakStatusChanged;
+            this.systemTweaksService.TweakStatusChanged -= this.OnTweakStatusChanged;
             base.OnDispose();
         }
     }
 
     /// <summary>
-    /// Represents a system tweak item in the UI
+    /// Represents a system tweak item in the UI.
     /// </summary>
     public partial class SystemTweakItem : ObservableObject
     {

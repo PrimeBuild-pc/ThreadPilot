@@ -14,17 +14,17 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System.Windows;
 using System.Runtime.CompilerServices;
+using System.Windows;
 
 [assembly: InternalsVisibleTo("ThreadPilot.Core.Tests")]
 
-[assembly:ThemeInfo(
-    ResourceDictionaryLocation.None,            //where theme specific resource dictionaries are located
-                                                //(used if a resource is not found in the page,
+[assembly: ThemeInfo(
+    ResourceDictionaryLocation.None,            // where theme specific resource dictionaries are located
+                                                // (used if a resource is not found in the page,
                                                 // or application resource dictionaries)
-    ResourceDictionaryLocation.SourceAssembly   //where the generic resource dictionary is located
-                                                //(used if a resource is not found in the page,
-                                                // app, or any theme specific resource dictionaries)
-)]
+    ResourceDictionaryLocation.SourceAssembly) // where the generic resource dictionary is located
+                                               // (used if a resource is not found in the page,
+                                               // app, or any theme specific resource dictionaries)
+]
 

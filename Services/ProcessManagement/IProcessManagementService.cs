@@ -14,16 +14,16 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using ThreadPilot.Models;
-
 namespace ThreadPilot.Services.ProcessManagement
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Threading.Tasks;
+    using ThreadPilot.Models;
+
     /// <summary>
-    /// Unified interface for process management operations
+    /// Unified interface for process management operations.
     /// </summary>
     public interface IProcessManagementService
     {
@@ -43,78 +43,80 @@ namespace ThreadPilot.Services.ProcessManagement
         event EventHandler<MonitoringStatusChangedEventArgs>? MonitoringStatusChanged;
 
         /// <summary>
-        /// Gets whether process monitoring is currently active
+        /// Gets a value indicating whether gets whether process monitoring is currently active.
         /// </summary>
         bool IsMonitoringActive { get; }
 
         /// <summary>
-        /// Gets all currently running processes
+        /// Gets all currently running processes.
         /// </summary>
         Task<IEnumerable<ProcessModel>> GetRunningProcessesAsync();
 
         /// <summary>
-        /// Gets a specific process by ID
+        /// Gets a specific process by ID.
         /// </summary>
         Task<ProcessModel?> GetProcessByIdAsync(int processId);
 
         /// <summary>
-        /// Gets processes by executable name
+        /// Gets processes by executable name.
         /// </summary>
         Task<IEnumerable<ProcessModel>> GetProcessesByNameAsync(string executableName);
 
         /// <summary>
-        /// Start monitoring for process events
+        /// Start monitoring for process events.
         /// </summary>
         Task StartMonitoringAsync();
 
         /// <summary>
-        /// Stop monitoring for process events
+        /// Stop monitoring for process events.
         /// </summary>
         Task StopMonitoringAsync();
 
         /// <summary>
-        /// Set processor affinity for a process
+        /// Set processor affinity for a process.
         /// </summary>
         Task SetProcessorAffinityAsync(ProcessModel process, long affinityMask);
 
         /// <summary>
-        /// Set priority for a process
+        /// Set priority for a process.
         /// </summary>
         Task SetProcessPriorityAsync(ProcessModel process, ProcessPriorityClass priority);
 
         /// <summary>
-        /// Refresh process information
+        /// Refresh process information.
         /// </summary>
         Task RefreshProcessInfoAsync(ProcessModel process);
     }
 
     /// <summary>
-    /// Event args for process events
+    /// Event args for process events.
     /// </summary>
     public class ProcessEventArgs : EventArgs
     {
         public ProcessModel Process { get; }
+
         public DateTime Timestamp { get; }
 
         public ProcessEventArgs(ProcessModel process)
         {
-            Process = process ?? throw new ArgumentNullException(nameof(process));
-            Timestamp = DateTime.Now;
+            this.Process = process ?? throw new ArgumentNullException(nameof(process));
+            this.Timestamp = DateTime.Now;
         }
     }
 
     /// <summary>
-    /// Event args for monitoring status changes
+    /// Event args for monitoring status changes.
     /// </summary>
     public class MonitoringStatusChangedEventArgs : EventArgs
     {
         public bool IsActive { get; }
+
         public string? Reason { get; }
 
         public MonitoringStatusChangedEventArgs(bool isActive, string? reason = null)
         {
-            IsActive = isActive;
-            Reason = reason;
+            this.IsActive = isActive;
+            this.Reason = reason;
         }
     }
 }

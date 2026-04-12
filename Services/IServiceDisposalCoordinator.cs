@@ -14,38 +14,38 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Threading.Tasks;
-
 namespace ThreadPilot.Services
 {
+    using System;
+    using System.Threading.Tasks;
+
     /// <summary>
-    /// Interface for coordinating proper disposal of services
+    /// Interface for coordinating proper disposal of services.
     /// </summary>
     public interface IServiceDisposalCoordinator : IDisposable
     {
         /// <summary>
-        /// Register a service for coordinated disposal
+        /// Register a service for coordinated disposal.
         /// </summary>
         void RegisterService(string serviceName, IDisposable service, int priority = 0);
 
         /// <summary>
-        /// Register an async disposable service
+        /// Register an async disposable service.
         /// </summary>
         void RegisterAsyncService(string serviceName, IAsyncDisposable service, int priority = 0);
 
         /// <summary>
-        /// Register a custom disposal action
+        /// Register a custom disposal action.
         /// </summary>
         void RegisterDisposalAction(string actionName, Func<Task> disposalAction, int priority = 0);
 
         /// <summary>
-        /// Dispose all registered services in priority order
+        /// Dispose all registered services in priority order.
         /// </summary>
         Task DisposeAllAsync();
 
         /// <summary>
-        /// Get disposal status
+        /// Gets a value indicating whether get disposal status.
         /// </summary>
         bool IsDisposed { get; }
     }

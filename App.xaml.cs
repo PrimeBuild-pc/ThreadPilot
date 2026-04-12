@@ -14,15 +14,6 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Linq;
-using System.Security.Principal;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Threading;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 #if DEBUG
 using ThreadPilot.Tests;
 #endif
@@ -31,11 +22,22 @@ using ThreadPilot.ViewModels;
 
 namespace ThreadPilot
 {
+    using System;
+    using System.Linq;
+    using System.Security.Principal;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using System.Windows;
+    using System.Windows.Threading;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Logging;
+
     public partial class App : System.Windows.Application
     {
-        private Mutex? _singleInstanceMutex;
-        private int _uiExceptionDialogOpen;
-        private DateTime _lastUiExceptionDialogUtc = DateTime.MinValue;
+        private Mutex? singleInstanceMutex;
+        private int uiExceptionDialogOpen;
+        private DateTime lastUiExceptionDialogUtc = DateTime.MinValue;
+
         public IServiceProvider ServiceProvider { get; private set; }
 
         public App()
@@ -45,10 +47,10 @@ namespace ThreadPilot
             // Use the new centralized service configuration
             services.ConfigureApplicationServices();
 
-            ServiceProvider = services.BuildServiceProvider();
+            this.ServiceProvider = services.BuildServiceProvider();
 
             // Validate service configuration
-            ServiceConfiguration.ValidateServiceConfiguration(ServiceProvider);
+            ServiceConfiguration.ValidateServiceConfiguration(this.ServiceProvider);
         }
 
 
@@ -57,7 +59,7 @@ namespace ThreadPilot
         {
             // Enforce single-instance: bail out if another instance is already running
             bool createdNew;
-            _singleInstanceMutex = new Mutex(initiallyOwned: true, name: "Global\\ThreadPilot_SingleInstance", createdNew: out createdNew);
+            this.singleInstanceMutex = new Mutex(initiallyOwned: true, name: "Global\\ThreadPilot_SingleInstance", createdNew: out createdNew);
             if (!createdNew)
             {
                 System.Windows.MessageBox.Show(
@@ -66,22 +68,22 @@ namespace ThreadPilot
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
 
-                Shutdown();
+                this.Shutdown();
                 return;
             }
 
             // Set up global exception handlers first
-            AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
-            DispatcherUnhandledException += OnDispatcherUnhandledException;
+            AppDomain.CurrentDomain.UnhandledException += this.OnUnhandledException;
+            this.DispatcherUnhandledException += this.OnDispatcherUnhandledException;
 
             // Check elevation status first
-            var elevationService = ServiceProvider.GetRequiredService<IElevationService>();
-            var logger = ServiceProvider.GetRequiredService<ILogger<App>>();
+            var elevationService = this.ServiceProvider.GetRequiredService<IElevationService>();
+            var logger = this.ServiceProvider.GetRequiredService<ILogger<App>>();
 
             if (!elevationService.IsRunningAsAdministrator())
             {
                 logger.LogWarning("Application is not running with administrator privileges");
-                ShowElevationRequiredMessage();
+                this.ShowElevationRequiredMessage();
 
                 // Allow the application to continue in read-only mode
                 // The UI will handle showing elevation prompts as needed
@@ -131,7 +133,7 @@ namespace ThreadPilot
                 _ = Task.Run(async () =>
                 {
                     await TestRunner.RunTests();
-                    Dispatcher.Invoke(() => Shutdown());
+                    this.Dispatcher.Invoke(() => this.Shutdown());
                 });
                 return;
             }
@@ -139,8 +141,8 @@ namespace ThreadPilot
 
             try
             {
-                var settingsService = ServiceProvider.GetRequiredService<IApplicationSettingsService>();
-                var themeService = ServiceProvider.GetRequiredService<IThemeService>();
+                var settingsService = this.ServiceProvider.GetRequiredService<IApplicationSettingsService>();
+                var themeService = this.ServiceProvider.GetRequiredService<IThemeService>();
 
                 Task.Run(async () => await settingsService.LoadSettingsAsync()).GetAwaiter().GetResult();
                 var settings = settingsService.Settings;
@@ -155,7 +157,7 @@ namespace ThreadPilot
                 logger.LogWarning(ex, "Failed to preload theme settings during startup");
             }
 
-            var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
+            var mainWindow = this.ServiceProvider.GetRequiredService<MainWindow>();
 
             // Handle startup behavior with comprehensive error handling
             try
@@ -203,25 +205,25 @@ namespace ThreadPilot
                     MessageBoxButton.OK, MessageBoxImage.Error);
 
                 // Exit the application
-                Shutdown(1);
+                this.Shutdown(1);
                 return;
             }
         }
 
         protected override void OnExit(ExitEventArgs e)
         {
-            if (_singleInstanceMutex != null)
+            if (this.singleInstanceMutex != null)
             {
                 try
                 {
-                    _singleInstanceMutex.ReleaseMutex();
+                    this.singleInstanceMutex.ReleaseMutex();
                 }
                 catch
                 {
                     // Ignore; we just want to clean up quietly
                 }
-                _singleInstanceMutex.Dispose();
-                _singleInstanceMutex = null;
+                this.singleInstanceMutex.Dispose();
+                this.singleInstanceMutex = null;
             }
 
             base.OnExit(e);
@@ -233,7 +235,7 @@ namespace ThreadPilot
 #endif
 
         /// <summary>
-        /// Shows a message to the user about elevation requirements
+        /// Shows a message to the user about elevation requirements.
         /// </summary>
         private void ShowElevationRequiredMessage()
         {
@@ -256,12 +258,12 @@ namespace ThreadPilot
         }
 
         /// <summary>
-        /// Handles unhandled exceptions in the application domain
+        /// Handles unhandled exceptions in the application domain.
         /// </summary>
         private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
             var exception = e.ExceptionObject as Exception;
-            var logger = ServiceProvider?.GetService<ILogger<App>>();
+            var logger = this.ServiceProvider?.GetService<ILogger<App>>();
 
             logger?.LogCritical(exception, "Unhandled exception occurred");
 
@@ -271,28 +273,28 @@ namespace ThreadPilot
         }
 
         /// <summary>
-        /// Handles unhandled exceptions on the UI thread
+        /// Handles unhandled exceptions on the UI thread.
         /// </summary>
         private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
-            var logger = ServiceProvider?.GetService<ILogger<App>>();
+            var logger = this.ServiceProvider?.GetService<ILogger<App>>();
 
             logger?.LogError(e.Exception, "Unhandled dispatcher exception occurred");
 
-            if (Interlocked.CompareExchange(ref _uiExceptionDialogOpen, 1, 0) != 0)
+            if (Interlocked.CompareExchange(ref this.uiExceptionDialogOpen, 1, 0) != 0)
             {
                 e.Handled = true;
                 return;
             }
 
-            if (DateTime.UtcNow - _lastUiExceptionDialogUtc < TimeSpan.FromSeconds(2))
+            if (DateTime.UtcNow - this.lastUiExceptionDialogUtc < TimeSpan.FromSeconds(2))
             {
                 e.Handled = true;
-                Interlocked.Exchange(ref _uiExceptionDialogOpen, 0);
+                Interlocked.Exchange(ref this.uiExceptionDialogOpen, 0);
                 return;
             }
 
-            _lastUiExceptionDialogUtc = DateTime.UtcNow;
+            this.lastUiExceptionDialogUtc = DateTime.UtcNow;
 
             var errorMessage = $"An error occurred in the user interface:\n\n{e.Exception.Message}\n\nDo you want to continue?";
             var result = System.Windows.MessageBox.Show(errorMessage, "UI Error",
@@ -307,7 +309,7 @@ namespace ThreadPilot
                 e.Handled = false; // Let the application crash
             }
 
-            Interlocked.Exchange(ref _uiExceptionDialogOpen, 0);
+            Interlocked.Exchange(ref this.uiExceptionDialogOpen, 0);
         }
     }
 }

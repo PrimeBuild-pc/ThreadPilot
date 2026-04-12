@@ -17,12 +17,12 @@
 namespace ThreadPilot.Models
 {
     /// <summary>
-    /// Defines structured log event types and categories for consistent logging
+    /// Defines structured log event types and categories for consistent logging.
     /// </summary>
     public static class LogEventTypes
     {
         /// <summary>
-        /// Power plan related events
+        /// Power plan related events.
         /// </summary>
         public static class PowerPlan
         {
@@ -35,7 +35,7 @@ namespace ThreadPilot.Models
         }
 
         /// <summary>
-        /// Process monitoring events
+        /// Process monitoring events.
         /// </summary>
         public static class ProcessMonitoring
         {
@@ -52,7 +52,7 @@ namespace ThreadPilot.Models
         }
 
         /// <summary>
-        /// User action events
+        /// User action events.
         /// </summary>
         public static class UserActions
         {
@@ -70,7 +70,7 @@ namespace ThreadPilot.Models
         }
 
         /// <summary>
-        /// System events
+        /// System events.
         /// </summary>
         public static class System
         {
@@ -88,7 +88,7 @@ namespace ThreadPilot.Models
         }
 
         /// <summary>
-        /// Error categories
+        /// Error categories.
         /// </summary>
         public static class Errors
         {
@@ -103,7 +103,7 @@ namespace ThreadPilot.Models
         }
 
         /// <summary>
-        /// Performance events
+        /// Performance events.
         /// </summary>
         public static class Performance
         {
@@ -116,7 +116,7 @@ namespace ThreadPilot.Models
     }
 
     /// <summary>
-    /// Log categories for organizing log entries
+    /// Log categories for organizing log entries.
     /// </summary>
     public static class LogCategories
     {
@@ -132,7 +132,7 @@ namespace ThreadPilot.Models
     }
 
     /// <summary>
-    /// Common log properties for structured logging
+    /// Common log properties for structured logging.
     /// </summary>
     public static class LogProperties
     {
@@ -155,7 +155,7 @@ namespace ThreadPilot.Models
     }
 
     /// <summary>
-    /// Helper class for creating structured log data
+    /// Helper class for creating structured log data.
     /// </summary>
     public static class LogDataBuilder
     {
@@ -164,7 +164,7 @@ namespace ThreadPilot.Models
             return new Dictionary<string, object>
             {
                 [LogProperties.ProcessName] = processName,
-                [LogProperties.ProcessId] = processId
+                [LogProperties.ProcessId] = processId,
             };
         }
 
@@ -173,7 +173,7 @@ namespace ThreadPilot.Models
             return new Dictionary<string, object>
             {
                 [LogProperties.PowerPlanId] = planId,
-                [LogProperties.PowerPlanName] = planName
+                [LogProperties.PowerPlanName] = planName,
             };
         }
 
@@ -181,7 +181,7 @@ namespace ThreadPilot.Models
         {
             return new Dictionary<string, object>
             {
-                [LogProperties.GameName] = gameName
+                [LogProperties.GameName] = gameName,
             };
         }
 
@@ -190,7 +190,7 @@ namespace ThreadPilot.Models
             return new Dictionary<string, object>
             {
                 [LogProperties.MemoryUsage] = memoryUsage,
-                [LogProperties.CpuUsage] = cpuUsage
+                [LogProperties.CpuUsage] = cpuUsage,
             };
         }
 
@@ -201,7 +201,7 @@ namespace ThreadPilot.Models
                 [LogProperties.ErrorCode] = exception.HResult,
                 [LogProperties.StackTrace] = exception.StackTrace ?? "N/A",
                 ["ExceptionType"] = exception.GetType().Name,
-                ["InnerException"] = exception.InnerException?.Message ?? "N/A"
+                ["InnerException"] = exception.InnerException?.Message ?? "N/A",
             };
         }
 
@@ -209,7 +209,7 @@ namespace ThreadPilot.Models
         {
             return new Dictionary<string, object>
             {
-                [LogProperties.Duration] = duration.TotalMilliseconds
+                [LogProperties.Duration] = duration.TotalMilliseconds,
             };
         }
 
@@ -221,7 +221,7 @@ namespace ThreadPilot.Models
                 [LogProperties.Environment] = Environment.OSVersion.ToString(),
                 [LogProperties.ThreadId] = Thread.CurrentThread.ManagedThreadId,
                 ["MachineName"] = Environment.MachineName,
-                ["UserName"] = Environment.UserName
+                ["UserName"] = Environment.UserName,
             };
         }
     }

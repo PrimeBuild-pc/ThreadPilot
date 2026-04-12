@@ -14,30 +14,30 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using Microsoft.Extensions.Logging;
-using System;
-using System.Threading.Tasks;
-
 namespace ThreadPilot.Services.Core
 {
+    using System;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
+
     /// <summary>
-    /// Base implementation for system services with common functionality
+    /// Base implementation for system services with common functionality.
     /// </summary>
     public abstract class BaseSystemService : ISystemService, IDisposable
     {
         protected readonly ILogger Logger;
-        private bool _isAvailable;
-        private bool _disposed;
+        private bool isAvailable;
+        private bool disposed;
 
         public bool IsAvailable
         {
-            get => _isAvailable;
+            get => this.isAvailable;
             protected set
             {
-                if (_isAvailable != value)
+                if (this.isAvailable != value)
                 {
-                    _isAvailable = value;
-                    OnAvailabilityChanged(value);
+                    this.isAvailable = value;
+                    this.OnAvailabilityChanged(value);
                 }
             }
         }
@@ -46,71 +46,77 @@ namespace ThreadPilot.Services.Core
 
         protected BaseSystemService(ILogger logger)
         {
-            Logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.Logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public virtual async Task InitializeAsync()
         {
             try
             {
-                Logger.LogInformation("Initializing {ServiceType}", GetType().Name);
-                await InitializeServiceAsync();
-                IsAvailable = true;
-                Logger.LogInformation("{ServiceType} initialized successfully", GetType().Name);
+                this.Logger.LogInformation("Initializing {ServiceType}", this.GetType().Name);
+                await this.InitializeServiceAsync();
+                this.IsAvailable = true;
+                this.Logger.LogInformation("{ServiceType} initialized successfully", this.GetType().Name);
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Failed to initialize {ServiceType}", GetType().Name);
-                IsAvailable = false;
+                this.Logger.LogError(ex, "Failed to initialize {ServiceType}", this.GetType().Name);
+                this.IsAvailable = false;
                 throw;
             }
         }
 
         public virtual async Task DisposeAsync()
         {
-            if (_disposed) return;
+            if (this.disposed)
+            {
+                return;
+            }
 
             try
             {
-                Logger.LogInformation("Disposing {ServiceType}", GetType().Name);
-                await DisposeServiceAsync();
-                IsAvailable = false;
+                this.Logger.LogInformation("Disposing {ServiceType}", this.GetType().Name);
+                await this.DisposeServiceAsync();
+                this.IsAvailable = false;
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error disposing {ServiceType}", GetType().Name);
+                this.Logger.LogError(ex, "Error disposing {ServiceType}", this.GetType().Name);
             }
             finally
             {
-                _disposed = true;
+                this.disposed = true;
             }
         }
 
         protected abstract Task InitializeServiceAsync();
+
         protected abstract Task DisposeServiceAsync();
 
         protected virtual void OnAvailabilityChanged(bool isAvailable, string? reason = null)
         {
-            AvailabilityChanged?.Invoke(this, new ServiceAvailabilityChangedEventArgs(isAvailable, reason));
+            this.AvailabilityChanged?.Invoke(this, new ServiceAvailabilityChangedEventArgs(isAvailable, reason));
         }
 
         protected void ThrowIfDisposed()
         {
-            if (_disposed)
-                throw new ObjectDisposedException(GetType().Name);
+            if (this.disposed)
+            {
+                throw new ObjectDisposedException(this.GetType().Name);
+            }
         }
 
         public void Dispose()
         {
-            Dispose(true);
+            this.Dispose(true);
             GC.SuppressFinalize(this);
         }
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!_disposed && disposing)
+            if (!this.disposed && disposing)
             {
-                _ = Task.Run(async () => await DisposeAsync());
+                _ = Task.Run(async () => await this.DisposeAsync());
             }
         }
     }

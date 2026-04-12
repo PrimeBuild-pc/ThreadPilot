@@ -14,15 +14,15 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using CommunityToolkit.Mvvm.ComponentModel;
-
 namespace ThreadPilot.Models
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using CommunityToolkit.Mvvm.ComponentModel;
+
     /// <summary>
-    /// Condition types for profile triggers
+    /// Condition types for profile triggers.
     /// </summary>
     public enum ProfileConditionType
     {
@@ -35,11 +35,11 @@ namespace ThreadPilot.Models
         BatteryLevel,
         NetworkActivity,
         UserIdle,
-        Custom
+        Custom,
     }
 
     /// <summary>
-    /// Comparison operators for conditions
+    /// Comparison operators for conditions.
     /// </summary>
     public enum ComparisonOperator
     {
@@ -52,39 +52,49 @@ namespace ThreadPilot.Models
         Contains,
         NotContains,
         Between,
-        NotBetween
+        NotBetween,
     }
 
     /// <summary>
-    /// Logical operators for combining conditions
+    /// Logical operators for combining conditions.
     /// </summary>
     public enum LogicalOperator
     {
         And,
         Or,
-        Not
+        Not,
     }
 
     /// <summary>
-    /// System state information for condition evaluation
+    /// System state information for condition evaluation.
     /// </summary>
     public class SystemState
     {
         public double CpuUsage { get; set; }
+
         public double MemoryUsage { get; set; }
+
         public int ProcessCount { get; set; }
+
         public DateTime CurrentTime { get; set; } = DateTime.Now;
+
         public bool IsOnBattery { get; set; }
+
         public int BatteryLevel { get; set; }
+
         public double CpuTemperature { get; set; }
+
         public bool IsUserIdle { get; set; }
+
         public TimeSpan UserIdleTime { get; set; }
+
         public double NetworkActivity { get; set; }
+
         public Dictionary<string, object> CustomProperties { get; set; } = new();
     }
 
     /// <summary>
-    /// Individual condition for profile evaluation
+    /// Individual condition for profile evaluation.
     /// </summary>
     public partial class ProfileCondition : ObservableObject
     {
@@ -110,16 +120,19 @@ namespace ThreadPilot.Models
         private string description = string.Empty;
 
         /// <summary>
-        /// Evaluate this condition against the current system state
+        /// Evaluate this condition against the current system state.
         /// </summary>
         public bool Evaluate(ProcessModel process, SystemState systemState)
         {
-            if (!IsEnabled) return true; // Disabled conditions are considered true
+            if (!this.IsEnabled)
+            {
+                return true; // Disabled conditions are considered true
+            }
 
             try
             {
-                var actualValue = GetActualValue(process, systemState);
-                return CompareValues(actualValue, Value, SecondaryValue, ComparisonOperator);
+                var actualValue = this.GetActualValue(process, systemState);
+                return CompareValues(actualValue, this.Value, this.SecondaryValue, this.ComparisonOperator);
             }
             catch (Exception)
             {
@@ -129,7 +142,7 @@ namespace ThreadPilot.Models
 
         private object? GetActualValue(ProcessModel process, SystemState systemState)
         {
-            return ConditionType switch
+            return this.ConditionType switch
             {
                 ProfileConditionType.SystemLoad => systemState.CpuUsage,
                 ProfileConditionType.TimeOfDay => systemState.CurrentTime.TimeOfDay.TotalHours,
@@ -140,14 +153,17 @@ namespace ThreadPilot.Models
                 ProfileConditionType.BatteryLevel => systemState.BatteryLevel,
                 ProfileConditionType.NetworkActivity => systemState.NetworkActivity,
                 ProfileConditionType.UserIdle => systemState.IsUserIdle,
-                ProfileConditionType.Custom => systemState.CustomProperties.GetValueOrDefault(Name),
-                _ => null
+                ProfileConditionType.Custom => systemState.CustomProperties.GetValueOrDefault(this.Name),
+                _ => null,
             };
         }
 
         private static bool CompareValues(object? actual, object? expected, object? secondary, ComparisonOperator op)
         {
-            if (actual == null || expected == null) return false;
+            if (actual == null || expected == null)
+            {
+                return false;
+            }
 
             return op switch
             {
@@ -159,19 +175,19 @@ namespace ThreadPilot.Models
                 ComparisonOperator.LessThanOrEqual => Comparer<object>.Default.Compare(actual, expected) <= 0,
                 ComparisonOperator.Contains => actual.ToString()?.Contains(expected.ToString() ?? string.Empty) ?? false,
                 ComparisonOperator.NotContains => !(actual.ToString()?.Contains(expected.ToString() ?? string.Empty) ?? false),
-                ComparisonOperator.Between => secondary != null && 
-                    Comparer<object>.Default.Compare(actual, expected) >= 0 && 
+                ComparisonOperator.Between => secondary != null &&
+                    Comparer<object>.Default.Compare(actual, expected) >= 0 &&
                     Comparer<object>.Default.Compare(actual, secondary) <= 0,
-                ComparisonOperator.NotBetween => secondary != null && 
-                    !(Comparer<object>.Default.Compare(actual, expected) >= 0 && 
+                ComparisonOperator.NotBetween => secondary != null &&
+                    !(Comparer<object>.Default.Compare(actual, expected) >= 0 &&
                       Comparer<object>.Default.Compare(actual, secondary) <= 0),
-                _ => false
+                _ => false,
             };
         }
     }
 
     /// <summary>
-    /// Group of conditions with logical operators
+    /// Group of conditions with logical operators.
     /// </summary>
     public partial class ConditionGroup : ObservableObject
     {
@@ -191,30 +207,36 @@ namespace ThreadPilot.Models
         private bool isEnabled = true;
 
         /// <summary>
-        /// Evaluate this condition group
+        /// Evaluate this condition group.
         /// </summary>
         public bool Evaluate(ProcessModel process, SystemState systemState)
         {
-            if (!IsEnabled) return true;
+            if (!this.IsEnabled)
+            {
+                return true;
+            }
 
-            var conditionResults = Conditions.Select(c => c.Evaluate(process, systemState)).ToList();
-            var subGroupResults = SubGroups.Select(g => g.Evaluate(process, systemState)).ToList();
+            var conditionResults = this.Conditions.Select(c => c.Evaluate(process, systemState)).ToList();
+            var subGroupResults = this.SubGroups.Select(g => g.Evaluate(process, systemState)).ToList();
             var allResults = conditionResults.Concat(subGroupResults).ToList();
 
-            if (!allResults.Any()) return true; // No conditions means always true
+            if (!allResults.Any())
+            {
+                return true; // No conditions means always true
+            }
 
-            return LogicalOperator switch
+            return this.LogicalOperator switch
             {
                 LogicalOperator.And => allResults.All(r => r),
                 LogicalOperator.Or => allResults.Any(r => r),
                 LogicalOperator.Not => !allResults.All(r => r),
-                _ => false
+                _ => false,
             };
         }
     }
 
     /// <summary>
-    /// Extended ProfileModel with conditional triggers
+    /// Extended ProfileModel with conditional triggers.
     /// </summary>
     public partial class ConditionalProcessProfile : ProfileModel
     {
@@ -243,57 +265,60 @@ namespace ThreadPilot.Models
         private string lastEvaluationReason = string.Empty;
 
         /// <summary>
-        /// Check if this profile should be applied based on conditions
+        /// Check if this profile should be applied based on conditions.
         /// </summary>
         public bool ShouldApply(ProcessModel process, SystemState systemState)
         {
-            if (!IsAutoApplyEnabled) return false;
+            if (!this.IsAutoApplyEnabled)
+            {
+                return false;
+            }
 
-            LastEvaluated = DateTime.UtcNow;
+            this.LastEvaluated = DateTime.UtcNow;
 
             try
             {
                 // If no condition groups, always apply (like regular profile)
-                if (!ConditionGroups.Any())
+                if (!this.ConditionGroups.Any())
                 {
-                    WasLastEvaluationTrue = true;
-                    LastEvaluationReason = "No conditions defined";
+                    this.WasLastEvaluationTrue = true;
+                    this.LastEvaluationReason = "No conditions defined";
                     return true;
                 }
 
                 // Evaluate all condition groups (AND logic between groups)
-                var results = ConditionGroups.Select(g => g.Evaluate(process, systemState)).ToList();
+                var results = this.ConditionGroups.Select(g => g.Evaluate(process, systemState)).ToList();
                 var shouldApply = results.All(r => r);
 
-                WasLastEvaluationTrue = shouldApply;
-                LastEvaluationReason = shouldApply 
-                    ? "All condition groups satisfied" 
-                    : $"Failed conditions: {string.Join(", ", ConditionGroups.Where((g, i) => !results[i]).Select(g => g.Name))}";
+                this.WasLastEvaluationTrue = shouldApply;
+                this.LastEvaluationReason = shouldApply
+                    ? "All condition groups satisfied"
+                    : $"Failed conditions: {string.Join(", ", this.ConditionGroups.Where((g, i) => !results[i]).Select(g => g.Name))}";
 
                 return shouldApply;
             }
             catch (Exception ex)
             {
-                WasLastEvaluationTrue = false;
-                LastEvaluationReason = $"Evaluation error: {ex.Message}";
+                this.WasLastEvaluationTrue = false;
+                this.LastEvaluationReason = $"Evaluation error: {ex.Message}";
                 return false;
             }
         }
 
         /// <summary>
-        /// Check if enough time has passed since last application
+        /// Check if enough time has passed since last application.
         /// </summary>
         public bool CanApplyNow()
         {
-            return DateTime.UtcNow - LastApplied >= AutoApplyDelay;
+            return DateTime.UtcNow - this.LastApplied >= this.AutoApplyDelay;
         }
 
         /// <summary>
-        /// Mark this profile as applied
+        /// Mark this profile as applied.
         /// </summary>
         public void MarkAsApplied()
         {
-            LastApplied = DateTime.UtcNow;
+            this.LastApplied = DateTime.UtcNow;
         }
     }
 }
