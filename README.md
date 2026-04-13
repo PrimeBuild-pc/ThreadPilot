@@ -92,8 +92,8 @@ Build release artifacts via script:
 ## Quality and Security
 
 - CI validates build, formatting, analyzers, vulnerability checks, and secret scanning.
-- Security disclosures are handled through private GitHub advisories. See SECURITY.md.
-- Change history is tracked in CHANGELOG.md.
+- Security disclosures are handled through private GitHub advisories. See docs/SECURITY.md.
+- Change history is tracked in docs/CHANGELOG.md.
 
 ## Repository Docs
 
@@ -108,7 +108,7 @@ Build release artifacts via script:
 
 ## Contributing
 
-See CONTRIBUTING.md and CODE_OF_CONDUCT.md before opening pull requests.
+See docs/CONTRIBUTING.md and docs/CODE_OF_CONDUCT.md before opening pull requests.
 
 ## 🛠️ Roadmap
 
