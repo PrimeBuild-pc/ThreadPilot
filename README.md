@@ -86,7 +86,7 @@ dotnet publish ThreadPilot.csproj --configuration Release --runtime win-x64 --se
 Build release artifacts via script:
 
 ```powershell
-./build-release.ps1
+./build/build-release.ps1
 ```
 
 ## Quality and Security

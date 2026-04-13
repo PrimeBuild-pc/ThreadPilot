@@ -13,7 +13,8 @@ function Remove-IfExists {
     }
 }
 
-$projectRoot = Split-Path -Parent $PSCommandPath
+$scriptRoot = Split-Path -Parent $PSCommandPath
+$projectRoot = Split-Path -Parent $scriptRoot
 Set-Location -LiteralPath $projectRoot
 
 $outputRoot = Join-Path $projectRoot ("Installer\Output\v" + $Version)

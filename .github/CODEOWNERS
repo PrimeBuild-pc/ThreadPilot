@@ -7,5 +7,5 @@
 
 # Build and release
 /.github/workflows/ @PrimeBuild-pc
-/build-release.ps1 @PrimeBuild-pc
-/setup.iss @PrimeBuild-pc
+/build/build-release.ps1 @PrimeBuild-pc
+/Installer/setup.iss @PrimeBuild-pc

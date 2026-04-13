@@ -1,3 +1,7 @@
+# ============================================================================
+# ThreadPilot .gitignore - C# WPF desktop app + packaging
+# ============================================================================
+
 # Build outputs
 bin/
 obj/
@@ -26,6 +30,7 @@ coverage*.xml
 coverage*.info
 *.coverage
 *.coveragexml
+*.trx
 
 # .NET / NuGet
 *.deps.json
@@ -40,7 +45,7 @@ packages/
 !packages/build/
 !packages/repositories.config
 
-# IDEs
+# IDE and editor files
 .vs/
 *.user
 *.suo
@@ -85,6 +90,7 @@ Installer/Output/
 *.cab
 *.msi
 *.msix
+*.msixbundle
 *.msm
 *.msp
 *.lnk
@@ -95,29 +101,35 @@ Installer/Output/
 *.publishproj
 PublishScripts/
 
+# Diagnostics / profiling
+*.dmp
+*.mdmp
+crashdumps/
+*.binlog
+*.etl
+*.etl.gz
+
 # Local app data / secrets
 appsettings.local.json
 appsettings.*.local.json
 secrets.json
 *.secrets.json
-/Configuration/UserSettings.json
-/Configuration/ProcessProfiles.json
-/Data/
-/AppData/
+Configuration/UserSettings.json
+Configuration/ProcessProfiles.json
+Configuration/*.local.json
+Data/
+AppData/
 %AppData%/ThreadPilot/
 
 # Project-specific extras
 .claude/
 .continue/
-/CPUSetSetter-main/
+CPUSetSetter-main/
 *.bak
 *.backup
 *_backup.*
 *_old.*
 *.orig
 *.rej
-*.dmp
-*.mdmp
-crashdumps/
-*.binlog
+*.xaml.bak
 nul

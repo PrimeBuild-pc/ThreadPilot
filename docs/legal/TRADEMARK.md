@@ -1,8 +1,5 @@
 # Trademark Policy
 
-The trademark policy has moved to [docs/legal/TRADEMARK.md](docs/legal/TRADEMARK.md).
-# Trademark Policy
-
 The name "ThreadPilot", the logo, and all branding elements associated with this project
 are NOT licensed under the GNU Affero General Public License v3.0.
 

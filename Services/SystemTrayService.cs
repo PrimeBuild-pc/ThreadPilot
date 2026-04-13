@@ -517,15 +517,28 @@ namespace ThreadPilot.Services
                 return this.settings.CustomTrayIconPath;
             }
 
-            var bundledIcon = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ico.ico");
-            return File.Exists(bundledIcon) ? bundledIcon : null;
+            var iconCandidates = new[]
+            {
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ico.ico"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets", "icons", "ico.ico"),
+            };
+
+            foreach (var candidate in iconCandidates)
+            {
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
         }
 
         private Icon? TryLoadEmbeddedIcon()
         {
             try
             {
-                var uri = new Uri("pack://application:,,,/ico.ico", UriKind.Absolute);
+                var uri = new Uri("pack://application:,,,/assets/icons/ico.ico", UriKind.Absolute);
                 var streamInfo = System.Windows.Application.GetResourceStream(uri);
                 if (streamInfo != null)
                 {

@@ -26,7 +26,7 @@ DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 PrivilegesRequiredOverridesAllowed=dialog
 OutputBaseFilename=ThreadPilot_Setup
-SetupIconFile=..\ico.ico
+SetupIconFile=..\assets\icons\ico.ico
 SolidCompression=yes
 WizardStyle=modern
 

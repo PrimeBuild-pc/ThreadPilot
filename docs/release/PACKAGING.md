@@ -53,7 +53,7 @@ Output:
 - `artifacts/release/msix/ThreadPilot_<version>_win-x64.msix`
 - `artifacts/release/msix/publish/` (packaging input folder used to create the MSIX)
 
-`WinX64-MSIX.pubxml` enables a post-publish packaging target that calls `build-msix.ps1` and creates the `.msix` using the Windows SDK `makeappx.exe` tool.
+`WinX64-MSIX.pubxml` enables a post-publish packaging target that calls `build/build-msix.ps1` and creates the `.msix` using the Windows SDK `makeappx.exe` tool.
 
 ## Code Signing
 
@@ -102,10 +102,10 @@ When secrets are missing, the release still builds and publishes unsigned artifa
 
 ## Classic Installer
 
-Use Inno Setup script (`setup.iss`) for legacy installer packaging.
+Use Inno Setup script (`Installer/setup.iss`) for legacy installer packaging.
 
 ```powershell
-iscc setup.iss
+iscc Installer/setup.iss
 ```
 
 ## Recommended Release Sequence

@@ -9,7 +9,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <EnableMsixTooling>true</EnableMsixTooling>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>ico.ico</ApplicationIcon>
+    <ApplicationIcon>assets\icons\ico.ico</ApplicationIcon>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -36,13 +36,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="ico.ico" />
+    <Resource Include="assets\icons\ico.ico" />
   </ItemGroup>
 
   <!-- Include bundled power plans in build output -->
   <ItemGroup>
-    <Content Include="Powerplans\**\*.pow">
+    <Content Include="assets\Powerplans\**\*.pow">
+      <TargetPath>Powerplans\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
   </ItemGroup>
 
@@ -76,7 +78,7 @@
   </ItemGroup>
 
   <Target Name="GenerateMsixFromPublishOutput" AfterTargets="Publish" Condition="'$(GenerateMsixFromPublish)' == 'true'">
-    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\build-msix.ps1&quot; -ProjectDir &quot;$(MSBuildProjectDirectory)&quot; -PublishDir &quot;$(PublishDir).&quot; -OutputDir &quot;$(MsixOutputDir).&quot; -Version &quot;$(Version)&quot;" />
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\build\build-msix.ps1&quot; -ProjectDir &quot;$(MSBuildProjectDirectory)&quot; -PublishDir &quot;$(PublishDir).&quot; -OutputDir &quot;$(MsixOutputDir).&quot; -Version &quot;$(Version)&quot;" />
   </Target>
 
   <Import Project="Directory.Publish.props" Condition="Exists('Directory.Publish.props')" />

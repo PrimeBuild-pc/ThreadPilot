@@ -17,6 +17,7 @@ This folder contains release and engineering documentation for ThreadPilot.
 - Contributing: ../CONTRIBUTING.md
 - Code of Conduct: ../CODE_OF_CONDUCT.md
 - Changelog: ../CHANGELOG.md
+- Trademark policy: legal/TRADEMARK.md
 - Compliance audit: audits/COMPLIANCE_AUDIT.md
 
 ## Migration Note

@@ -6,7 +6,7 @@
 #define MyAppPublisher "Prime Build"
 #define MyAppURL "https://github.com/PrimeBuild-pc/ThreadPilot"
 #define MyAppExeName "ThreadPilot.exe"
-#define MyAppSourceDir "bin\Publish"
+#define MyAppSourceDir "..\bin\Publish"
 
 [Setup]
 AppId={{E8F7A3B2-5C4D-4E6F-8A9B-1C2D3E4F5A6B}
@@ -20,11 +20,11 @@ AppUpdatesURL={#MyAppURL}/releases
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
-LicenseFile=LICENSE.md
+LicenseFile=..\LICENSE
 PrivilegesRequired=admin
-OutputDir=bin\Installer
+OutputDir=Output
 OutputBaseFilename=ThreadPilot_v{#MyAppVersion}_Setup
-SetupIconFile=ico.ico
+SetupIconFile=..\assets\icons\ico.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
