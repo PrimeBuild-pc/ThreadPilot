@@ -21,4 +21,4 @@ This folder contains release and engineering documentation for ThreadPilot.
 - Compliance audit: audits/COMPLIANCE_AUDIT.md
 
 ## Migration Note
-Repository documentation is being progressively consolidated under docs/ as part of the v1.1.0 enterprise hardening cycle.
+Repository documentation is being progressively consolidated under docs/ as part of the v1.1.1 enterprise hardening cycle.

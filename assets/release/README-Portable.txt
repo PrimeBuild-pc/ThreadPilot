@@ -1,4 +1,4 @@
-ThreadPilot Portable Package (v1.1.0)
+ThreadPilot Portable Package (v1.1.1)
 
 Contents:
 - ThreadPilot.exe

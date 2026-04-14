@@ -33,6 +33,7 @@
                 <Style TargetType="TabItem">
                     <Setter Property="Padding" Value="14,7"/>
                     <Setter Property="Margin" Value="0,0,8,0"/>
+                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="TabItem">
@@ -45,12 +46,14 @@
                                         Margin="{TemplateBinding Margin}">
                                     <ContentPresenter ContentSource="Header"
                                                       HorizontalAlignment="Center"
-                                                      VerticalAlignment="Center"/>
+                                                      VerticalAlignment="Center"
+                                                      TextElement.Foreground="{TemplateBinding Foreground}"/>
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsSelected" Value="True">
                                         <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource SoftSelectionBackgroundBrush}"/>
                                         <Setter TargetName="TabBorder" Property="BorderBrush" Value="{DynamicResource SoftSelectionBorderBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
                                         <Setter TargetName="TabBorder" Property="Effect">
                                             <Setter.Value>
                                                 <DropShadowEffect BlurRadius="10" ShadowDepth="1" Opacity="0.2"/>

@@ -199,10 +199,75 @@
         </Border>
         </Grid>
 
+        <!-- First-run Performance introduction modal -->
+        <Grid x:Name="PerformanceIntroOverlay"
+              Grid.RowSpan="3"
+              Background="{DynamicResource OverlayBrush}"
+              Visibility="Collapsed"
+              Panel.ZIndex="950"
+              AutomationProperties.Name="Performance introduction overlay">
+            <Border x:Name="PerformanceIntroCard"
+                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="26"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    MinWidth="360"
+                    MaxWidth="560">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity="0.35"/>
+                </Border.Effect>
+                <StackPanel>
+                    <TextBlock x:Name="PerformanceIntroTitle"
+                               Text="Performance Dashboard"
+                               FontSize="24"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                               Margin="0,0,0,10"/>
+
+                    <TextBlock x:Name="PerformanceIntroDescription"
+                               Text="This page gives you live CPU, memory and hotspot visibility so you can build precise optimization rules."
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,10"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+
+                    <TextBlock x:Name="PerformanceIntroTipsHeader"
+                               Text="Quick tips:"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                               Margin="0,0,0,6"/>
+
+                    <TextBlock x:Name="PerformanceIntroTip1"
+                               Text="1. Start monitoring to collect a live snapshot."
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="0,0,0,4"/>
+                    <TextBlock x:Name="PerformanceIntroTip2"
+                               Text="2. Review top processes and pick recurring workloads."
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="0,0,0,4"/>
+                    <TextBlock x:Name="PerformanceIntroTip3"
+                               Text="3. Create rules from hotspots to automate power plan and affinity behavior."
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="0,0,0,16"/>
+
+                    <Button x:Name="PerformanceIntroContinueButton"
+                            Content="Continue to Performance"
+                            Click="PerformanceIntroContinue_Click"
+                            HorizontalAlignment="Right"
+                            Background="{DynamicResource AccentFillColorDefaultBrush}"
+                            Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                            Padding="16,8"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
         <!-- Startup Loading Overlay -->
         <Grid x:Name="LoadingOverlay"
               Grid.RowSpan="3"
-              Background="#99000000"
+              Background="#FFF2F2F2"
               Visibility="Visible"
               Panel.ZIndex="1000"
               AutomationProperties.Name="Application startup loading overlay"
@@ -218,12 +283,18 @@
                     MaxWidth="400">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <!-- Application Icon -->
-                    <Image x:Name="LoadingIcon"
-                           Source="pack://application:,,,/assets/icons/ico.ico"
-                           Width="64"
-                           Height="64"
-                           Margin="0,0,0,20"
-                           HorizontalAlignment="Center"/>
+                    <Border x:Name="LoadingIconBackground"
+                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                            CornerRadius="10"
+                            Padding="10"
+                            Margin="0,0,0,20"
+                            HorizontalAlignment="Center">
+                        <Image x:Name="LoadingIcon"
+                               Source="pack://application:,,,/assets/icons/ico.ico"
+                               Width="64"
+                               Height="64"
+                               HorizontalAlignment="Center"/>
+                    </Border>
 
                     <!-- Loading Spinner -->
                     <ui:ProgressRing IsIndeterminate="True" Margin="0,0,0,15" />
@@ -243,6 +314,7 @@
                                TextAlignment="Center"/>
                 </StackPanel>
             </Border>
+
         </Grid>
     </Grid>
 </ui:FluentWindow>

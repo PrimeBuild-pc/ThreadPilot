@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "1.0.0",
+    [string]$Version = "1.1.1",
     [string]$Configuration = "Release",
     [string]$Runtime = "win-x64"
 )
@@ -24,7 +24,9 @@ $setupStage = Join-Path $outputRoot "setup_stage"
 
 $portableZip = Join-Path $outputRoot ("ThreadPilot_v" + $Version + "_Portable.zip")
 $setupZip = Join-Path $outputRoot ("ThreadPilot_v" + $Version + "_Setup.zip")
-$uninstallerPath = Join-Path $outputRoot "uninstaller.bat"
+$uninstallScriptPath = Join-Path $outputRoot "uninstall.bat"
+$licenseSource = Join-Path $projectRoot "LICENSE"
+$licenseMarkdownPath = Join-Path $outputRoot "LICENSE.md"
 
 Write-Host "Preparing output directories..."
 Remove-IfExists -Path $outputRoot
@@ -52,7 +54,7 @@ set "APP_DIR=%~dp0"
 if "%APP_DIR:~-1%"=="\" set "APP_DIR=%APP_DIR:~0,-1%"
 
 echo ======================================================
-echo ThreadPilot v1.0.0 Uninstaller
+echo ThreadPilot Uninstaller
 echo ======================================================
 echo.
 echo App directory: "%APP_DIR%"
@@ -88,18 +90,28 @@ endlocal
 exit /b 0
 '@
 
-Set-Content -LiteralPath $uninstallerPath -Value $uninstallerContent -Encoding Ascii
+Set-Content -LiteralPath $uninstallScriptPath -Value $uninstallerContent -Encoding Ascii
+
+if (Test-Path -LiteralPath $licenseSource) {
+    Copy-Item -LiteralPath $licenseSource -Destination $licenseMarkdownPath -Force
+}
+else {
+    throw "License file not found at $licenseSource"
+}
 
 Write-Host "Packaging portable archive..."
 New-Item -ItemType Directory -Path $portableStage -Force | Out-Null
 Copy-Item -Path (Join-Path $publishDir "*") -Destination $portableStage -Recurse -Force
+Copy-Item -LiteralPath $uninstallScriptPath -Destination (Join-Path $portableStage "uninstall.bat") -Force
+Copy-Item -LiteralPath $licenseMarkdownPath -Destination (Join-Path $portableStage "LICENSE.md") -Force
 Remove-IfExists -Path $portableZip
 Compress-Archive -Path (Join-Path $portableStage "*") -DestinationPath $portableZip -CompressionLevel Optimal
 
 Write-Host "Packaging setup archive..."
 New-Item -ItemType Directory -Path $setupStage -Force | Out-Null
 Copy-Item -Path (Join-Path $publishDir "*") -Destination $setupStage -Recurse -Force
-Copy-Item -LiteralPath $uninstallerPath -Destination (Join-Path $setupStage "uninstaller.bat") -Force
+Copy-Item -LiteralPath $uninstallScriptPath -Destination (Join-Path $setupStage "uninstall.bat") -Force
+Copy-Item -LiteralPath $licenseMarkdownPath -Destination (Join-Path $setupStage "LICENSE.md") -Force
 Remove-IfExists -Path $setupZip
 Compress-Archive -Path (Join-Path $setupStage "*") -DestinationPath $setupZip -CompressionLevel Optimal
 
@@ -110,4 +122,4 @@ Remove-IfExists -Path $setupStage
 Write-Host "Release packaging complete." -ForegroundColor Green
 Write-Host "Portable: $portableZip"
 Write-Host "Setup:    $setupZip"
-Write-Host "Uninstaller script source: $uninstallerPath"
+Write-Host "Uninstall script source: $uninstallScriptPath"

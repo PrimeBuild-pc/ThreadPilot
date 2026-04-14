@@ -1,12 +1,12 @@
-ThreadPilot Installer Package (v1.1.0)
+ThreadPilot Installer Package (v1.1.1)
 
 Contents:
-- ThreadPilot_1.1.0_win-x64.msix
+- ThreadPilot_1.1.1_win-x64.msix
 - uninstall.bat
 - LICENSE
 
 Installation:
-1. Install ThreadPilot_1.1.0_win-x64.msix (double-click or Add-AppxPackage).
+1. Install ThreadPilot_1.1.1_win-x64.msix (double-click or Add-AppxPackage).
 2. Launch ThreadPilot from the Start menu.
 
 Uninstallation:

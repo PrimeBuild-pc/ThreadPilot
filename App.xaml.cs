@@ -82,11 +82,25 @@ namespace ThreadPilot
 
             if (!elevationService.IsRunningAsAdministrator())
             {
-                logger.LogWarning("Application is not running with administrator privileges");
-                this.ShowElevationRequiredMessage();
+                logger.LogWarning("Application is not running with administrator privileges. Requesting elevation before startup.");
 
-                // Allow the application to continue in read-only mode
-                // The UI will handle showing elevation prompts as needed
+                var elevationRequested = elevationService.RequestElevationIfNeeded().GetAwaiter().GetResult();
+                if (!elevationRequested)
+                {
+                    logger.LogWarning("Elevation was declined or failed. Application startup will be terminated.");
+                    System.Windows.MessageBox.Show(
+                        "ThreadPilot requires administrator privileges to start.\n\n" +
+                        "The application will now close.",
+                        "Administrator Privileges Required",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    this.Shutdown(1);
+                    return;
+                }
+
+                // An elevated instance has been requested; terminate this non-elevated instance.
+                this.Shutdown();
+                return;
             }
             else
             {

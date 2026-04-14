@@ -1,4 +1,4 @@
-# ThreadPilot ✈️ v1.1.0
+# ThreadPilot ✈️ v1.1.1
 
 [![Windows CI](https://img.shields.io/badge/CI-Windows-success)](.github/workflows/ci-devsecops.yml)
 [![Windows](https://img.shields.io/badge/Windows-11%20official%20%7C%2010%20best--effort-blue?logo=windows)](https://www.microsoft.com/windows)
@@ -36,22 +36,29 @@ Latest artifacts are published on each tagged release in [GitHub Releases](https
 
 | Package | File name | Recommended use |
 |---|---|---|
-| Portable | `ThreadPilot_v1.1.0_Portable.zip` | Single-file executable package for fast portable deployment |
-| Installer | `ThreadPilot_v1.1.0_Installer.zip` | MSIX-first package with fallback manual uninstall assets |
+| Installer (Recommended) | `ThreadPilot_v1.1.1_Setup.exe` | Standard Windows installer (Inno Setup) for most users |
+| Portable | `ThreadPilot_v1.1.1_singlefile_win-x64.zip` | No-install deployment for power users |
+| MSIX (Secondary) | `ThreadPilot_1.1.1.0_win-x64.msix` | Advanced/enterprise sideload scenarios |
 
 Verification example:
 
 ```powershell
-Get-FileHash .\ThreadPilot_v1.1.0_Portable.zip -Algorithm SHA256
+Get-FileHash .\ThreadPilot_v1.1.1_Portable.zip -Algorithm SHA256
 ```
 
 Install flow summary:
 
 1. Download the package matching your deployment model.
-2. Extract the ZIP and open the `ThreadPilot` folder.
-3. Portable package: launch `ThreadPilot.exe`.
-4. Installer package: install `ThreadPilot_1.1.0_win-x64.msix` with `Add-AppxPackage` or by double-clicking.
-5. Use `uninstall.bat` for cleanup when needed.
+2. Installer package (recommended): run `ThreadPilot_vX.Y.Z_Setup.exe` and complete the wizard.
+3. Portable package: extract ZIP and launch `ThreadPilot.exe`.
+4. MSIX package (secondary): install only if your environment supports sideload trust requirements.
+
+Notes:
+
+- ThreadPilot executable is built with requireAdministrator manifest, so installer and portable builds always prompt UAC at launch and run elevated after consent.
+- If UAC elevation is declined, the application does not start.
+- In `Power Plans > Custom Power Plans`, use `Add .pow File` to add new custom plans directly from the app.
+- The first opening of Performance shows a blocking onboarding modal with blurred background for clarity.
 
 ### Build from Source
 

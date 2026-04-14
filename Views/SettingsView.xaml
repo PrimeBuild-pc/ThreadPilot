@@ -383,12 +383,12 @@
                         Margin="0,0,10,0" 
                         Padding="15,8"/>
                 
-                <Button Content="Export Settings" 
+                <Button Content="Export Configuration" 
                         Command="{Binding ExportSettingsCommand}"
                         Margin="0,0,10,0" 
                         Padding="15,8"/>
                 
-                <Button Content="Import Settings" 
+                <Button Content="Import Configuration" 
                         Command="{Binding ImportSettingsCommand}"
                         Margin="0,0,20,0" 
                         Padding="15,8"/>

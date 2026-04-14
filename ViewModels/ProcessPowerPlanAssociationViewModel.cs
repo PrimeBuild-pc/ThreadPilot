@@ -120,7 +120,7 @@ namespace ThreadPilot.ViewModels
         private bool preventDuplicatePowerPlanChanges = true;
 
         [ObservableProperty]
-        private int powerPlanChangeDelayMs = 1000;
+        private int powerPlanChangeDelayMs = 250;
 
         [ObservableProperty]
         private string serviceStatus = "Stopped";
@@ -587,7 +587,7 @@ namespace ThreadPilot.ViewModels
             System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 // Update status when power plan changes occur
-                this.SetStatus($"Power plan changed: {e.NewPowerPlan?.Name} for {e.Process.Name}");
+                this.SetStatus($"Power plan changed: {e.NewPowerPlan?.Name} for {e.Process.Name}", false);
             });
         }
 

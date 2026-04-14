@@ -315,6 +315,60 @@ namespace ThreadPilot.Services
             }
         }
 
+        public async Task<bool> AddCustomPowerPlanFileAsync(string filePath)
+        {
+            if (!this.TryNormalizePowerPlanPath(filePath, out var normalizedPath, out var validationError))
+            {
+                this.logger.LogWarning("Rejected custom power plan file '{FilePath}': {ValidationError}", filePath, validationError);
+                return false;
+            }
+
+            try
+            {
+                Directory.CreateDirectory(PowerPlansPath);
+
+                var fileName = Path.GetFileName(normalizedPath);
+                var destinationPath = Path.Combine(PowerPlansPath, fileName);
+
+                // If user selects a file already in the managed folder, treat as success.
+                if (string.Equals(normalizedPath, destinationPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                if (File.Exists(destinationPath))
+                {
+                    var baseName = Path.GetFileNameWithoutExtension(fileName);
+                    var extension = Path.GetExtension(fileName);
+                    var suffix = 1;
+
+                    do
+                    {
+                        destinationPath = Path.Combine(PowerPlansPath, $"{baseName}_{suffix}{extension}");
+                        suffix++;
+                    }
+                    while (File.Exists(destinationPath));
+                }
+
+                File.Copy(normalizedPath, destinationPath, false);
+
+                this.logger.LogInformation(
+                    "Added custom power plan file '{SourcePath}' as '{DestinationPath}'",
+                    normalizedPath,
+                    destinationPath);
+
+                await Task.CompletedTask;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogError(ex, "Failed to add custom power plan file '{Path}'", normalizedPath);
+                await this.enhancedLogger.LogErrorAsync(ex, "PowerPlanService.AddCustomPowerPlanFileAsync",
+                    new Dictionary<string, object> { ["Path"] = normalizedPath });
+                return false;
+            }
+        }
+
         public async Task<string?> GetActivePowerPlanGuidAsync()
         {
             var activePlan = await this.GetActivePowerPlan();

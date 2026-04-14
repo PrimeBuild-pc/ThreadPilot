@@ -24,6 +24,7 @@ namespace ThreadPilot.ViewModels
     using CommunityToolkit.Mvvm.ComponentModel;
     using CommunityToolkit.Mvvm.Input;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Win32;
     using ThreadPilot.Models;
     using ThreadPilot.Services;
     using ThreadPilot.ViewModels;
@@ -183,6 +184,45 @@ namespace ThreadPilot.ViewModels
             catch (Exception ex)
             {
                 this.SetStatus($"Error importing power plan: {ex.Message}", false);
+            }
+        }
+
+        [RelayCommand]
+        private async Task AddCustomPlanFile()
+        {
+            try
+            {
+                var dialog = new OpenFileDialog
+                {
+                    Title = "Select custom power plan",
+                    Filter = "Power Plan Files (*.pow)|*.pow|All Files (*.*)|*.*",
+                    FilterIndex = 1,
+                    CheckFileExists = true,
+                    CheckPathExists = true,
+                    Multiselect = false,
+                };
+
+                if (dialog.ShowDialog() != true)
+                {
+                    return;
+                }
+
+                this.SetStatus("Adding custom power plan file...");
+                var success = await this.powerPlanService.AddCustomPowerPlanFileAsync(dialog.FileName);
+
+                if (success)
+                {
+                    await this.RefreshPowerPlans();
+                    this.SetStatus("Custom power plan added to library.", false);
+                }
+                else
+                {
+                    this.SetStatus("Failed to add custom power plan file.", false);
+                }
+            }
+            catch (Exception ex)
+            {
+                this.SetStatus($"Error adding custom power plan file: {ex.Message}", false);
             }
         }
     }

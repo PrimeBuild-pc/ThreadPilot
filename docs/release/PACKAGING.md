@@ -1,6 +1,6 @@
 # Packaging and Distribution Guide
 
-This document describes production packaging for ThreadPilot v1.1.0.
+This document describes production packaging for ThreadPilot v1.1.1.
 
 ## Prerequisites
 
@@ -22,6 +22,12 @@ Shared packaging defaults are in `Directory.Publish.props`.
 
 ## Build Variants
 
+Release baseline requirements:
+
+- Executable manifest must use requireAdministrator.
+- Inno Setup compile warnings target: 0.
+- Build and test stages must pass before packaging.
+
 ### 1) Self-contained Single-file
 
 ```powershell
@@ -32,7 +38,17 @@ Output folder:
 
 - `artifacts/release/singlefile/`
 
-### 2) ReadyToRun (folder deployment)
+### 2) Inno Setup Installer (primary)
+
+```powershell
+iscc /DMyAppVersion=1.1.1 /DMyAppSourceDir="..\\artifacts\\release\\singlefile" Installer/setup.iss
+```
+
+Output folder:
+
+- `artifacts/release/installer/`
+
+### 3) ReadyToRun (folder deployment)
 
 ```powershell
 dotnet publish ThreadPilot.csproj -c Release -p:PublishProfile=WinX64-ReadyToRun
@@ -42,7 +58,7 @@ Output folder:
 
 - `artifacts/release/readytorun/`
 
-### 3) MSIX package
+### 4) MSIX package (secondary)
 
 ```powershell
 dotnet publish ThreadPilot.csproj -c Release -p:PublishProfile=WinX64-MSIX
@@ -102,7 +118,7 @@ When secrets are missing, the release still builds and publishes unsigned artifa
 
 ## Classic Installer
 
-Use Inno Setup script (`Installer/setup.iss`) for legacy installer packaging.
+Use Inno Setup script (`Installer/setup.iss`) for primary end-user installer packaging.
 
 ```powershell
 iscc Installer/setup.iss
@@ -113,18 +129,21 @@ iscc Installer/setup.iss
 1. `dotnet restore`
 2. `dotnet build ThreadPilot_1.sln --configuration Release`
 3. `dotnet test ThreadPilot_1.sln --configuration Release --no-build`
-4. Publish all profiles (Single-file, ReadyToRun, MSIX)
-5. Sign artifacts
-6. Generate SHA-256 checksums
-7. Upload release artifacts
+4. Publish Single-file and ReadyToRun profiles
+5. Build Inno Setup installer from Single-file output
+6. Publish MSIX as secondary artifact
+7. Sign artifacts
+8. Generate SHA-256 checksums
+9. Upload release artifacts
 
 ## CI/CD
 
 The release workflow (`.github/workflows/release.yml`) now builds:
 
+- Inno Setup installer (`.exe`) as primary installer artifact
 - Single-file package (ZIP)
 - ReadyToRun package (ZIP)
-- MSIX artifact
+- MSIX artifact (secondary)
 - SHA-256 checksum manifest
 - Optional signing of EXE/MSIX artifacts when signing secrets are configured
 - Explicit MSIX validation (workflow fails if no package artifact is generated)

@@ -87,16 +87,31 @@ namespace ThreadPilot.Services
                 const string personalizeKey = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
 
                 using var key = Registry.CurrentUser.OpenSubKey(personalizeKey, writable: false);
-                var value = key?.GetValue("AppsUseLightTheme");
-
-                if (value is int intValue)
+                if (key != null)
                 {
-                    return intValue == 0;
+                    var appsThemeValue = key.GetValue("AppsUseLightTheme");
+                    if (TryResolveDarkPreference(appsThemeValue, out var useDarkTheme))
+                    {
+                        return useDarkTheme;
+                    }
+
+                    // Fallback key used on some Windows configurations.
+                    var systemThemeValue = key.GetValue("SystemUsesLightTheme");
+                    if (TryResolveDarkPreference(systemThemeValue, out useDarkTheme))
+                    {
+                        return useDarkTheme;
+                    }
                 }
 
-                if (value is long longValue)
+                var detectedTheme = ApplicationThemeManager.GetSystemTheme();
+                if (detectedTheme == SystemTheme.Dark)
                 {
-                    return longValue == 0;
+                    return true;
+                }
+
+                if (detectedTheme == SystemTheme.Light)
+                {
+                    return false;
                 }
             }
             catch (Exception ex)
@@ -105,6 +120,26 @@ namespace ThreadPilot.Services
             }
 
             return false;
+        }
+
+        private static bool TryResolveDarkPreference(object? value, out bool useDarkTheme)
+        {
+            useDarkTheme = false;
+
+            switch (value)
+            {
+                case int intValue:
+                    useDarkTheme = intValue == 0;
+                    return true;
+                case long longValue:
+                    useDarkTheme = longValue == 0;
+                    return true;
+                case string stringValue when int.TryParse(stringValue, out var parsed):
+                    useDarkTheme = parsed == 0;
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)

@@ -20,14 +20,18 @@ namespace ThreadPilot.ViewModels
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.Diagnostics;
+    using System.IO;
     using System.Linq;
     using System.Reflection;
+    using System.Text;
+    using System.Text.Json;
     using System.Threading.Tasks;
     using System.Windows;
     using System.Windows.Input;
     using CommunityToolkit.Mvvm.ComponentModel;
     using CommunityToolkit.Mvvm.Input;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Win32;
     using ThreadPilot.Models;
     using ThreadPilot.Services;
 
@@ -47,6 +51,14 @@ namespace ThreadPilot.ViewModels
         private bool isSyncingFromService = false;
         private string cachedDefaultPowerPlanGuid = string.Empty;
         private string cachedDefaultPowerPlanName = string.Empty;
+        private static readonly JsonSerializerOptions ImportExportJsonOptions = new()
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            PropertyNameCaseInsensitive = true,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true,
+        };
 
         [ObservableProperty]
         private ApplicationSettingsModel settings;
@@ -293,22 +305,45 @@ namespace ThreadPilot.ViewModels
             try
             {
                 this.IsLoading = true;
-                this.StatusMessage = "Exporting settings...";
+                this.StatusMessage = "Exporting configuration bundle...";
 
-                // In a real implementation, you would show a file dialog
-                var exportPath = System.IO.Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-                    $"ThreadPilot_Settings_{DateTime.Now:yyyyMMdd_HHmmss}.json");
+                var saveDialog = new SaveFileDialog
+                {
+                    Title = "Export ThreadPilot Configuration",
+                    Filter = "ThreadPilot configuration (*.json)|*.json|All files (*.*)|*.*",
+                    DefaultExt = ".json",
+                    FileName = $"ThreadPilot_Configuration_{DateTime.Now:yyyyMMdd_HHmmss}.json",
+                    OverwritePrompt = true,
+                    AddExtension = true,
+                };
 
-                await this.settingsService.ExportSettingsAsync(exportPath);
+                if (saveDialog.ShowDialog() != true)
+                {
+                    this.StatusMessage = "Export canceled";
+                    return;
+                }
 
-                this.StatusMessage = $"Settings exported to: {exportPath}";
+                var settingsSnapshot = (ApplicationSettingsModel)this.Settings.Clone();
+                var rulesSnapshot = CloneConfiguration(this.associationService.Configuration);
+
+                var bundle = new ConfigurationBundle
+                {
+                    SchemaVersion = "2.0",
+                    ExportedAtUtc = DateTime.UtcNow,
+                    Settings = settingsSnapshot,
+                    ProcessMonitorConfiguration = rulesSnapshot,
+                };
+
+                var json = JsonSerializer.Serialize(bundle, ImportExportJsonOptions);
+                await AtomicFileWriter.WriteAllTextAsync(saveDialog.FileName, json, Encoding.UTF8);
+
+                this.StatusMessage = $"Configuration exported to: {saveDialog.FileName}";
 
                 await this.notificationService.ShowSuccessNotificationAsync(
-                    "Settings Exported",
-                    $"Settings exported to {System.IO.Path.GetFileName(exportPath)}");
+                    "Configuration Exported",
+                    $"Settings and rules exported to {Path.GetFileName(saveDialog.FileName)}");
 
-                this.Logger.LogInformation("Settings exported to {Path}", exportPath);
+                this.Logger.LogInformation("Configuration bundle exported to {Path}", saveDialog.FileName);
             }
             catch (Exception ex)
             {
@@ -331,18 +366,72 @@ namespace ThreadPilot.ViewModels
             try
             {
                 this.IsLoading = true;
-                this.StatusMessage = "Importing settings...";
+                this.StatusMessage = "Importing configuration...";
 
-                // In a real implementation, you would show a file dialog
-                // For now, we'll just show a message
-                this.StatusMessage = "Import feature requires file dialog implementation";
+                var openDialog = new OpenFileDialog
+                {
+                    Title = "Import ThreadPilot Configuration",
+                    Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
+                    Multiselect = false,
+                    CheckFileExists = true,
+                };
 
-                this.Logger.LogInformation("Import settings requested");
+                if (openDialog.ShowDialog() != true)
+                {
+                    this.StatusMessage = "Import canceled";
+                    return;
+                }
+
+                var importPath = openDialog.FileName;
+                var json = await File.ReadAllTextAsync(importPath);
+
+                if (TryParseBundle(json, out var bundle))
+                {
+                    await this.settingsService.UpdateSettingsAsync(bundle.Settings);
+
+                    var importedConfiguration = bundle.ProcessMonitorConfiguration ?? new ProcessMonitorConfiguration();
+                    var replaced = await this.associationService.ReplaceConfigurationAsync(importedConfiguration);
+                    if (!replaced)
+                    {
+                        throw new InvalidOperationException("Failed to apply imported rules configuration");
+                    }
+
+                    await this.processMonitorManagerService.RefreshConfigurationAsync();
+                    this.processMonitorManagerService.UpdateSettings();
+                    await this.RefreshSettingsAsync();
+                    this.HasUnsavedChanges = false;
+
+                    this.StatusMessage = "Configuration bundle imported and applied";
+                    await this.notificationService.ShowSuccessNotificationAsync(
+                        "Configuration Imported",
+                        $"Settings and rules imported from {Path.GetFileName(importPath)}");
+
+                    this.Logger.LogInformation("Configuration bundle imported from {Path}", importPath);
+                    return;
+                }
+
+                await this.settingsService.ImportSettingsAsync(importPath);
+                this.processMonitorManagerService.UpdateSettings();
+                await this.RefreshSettingsAsync();
+                this.HasUnsavedChanges = false;
+
+                this.StatusMessage = "Legacy settings imported (rules unchanged)";
+                await this.notificationService.ShowNotificationAsync(
+                    "Legacy Import Completed",
+                    $"Imported settings from {Path.GetFileName(importPath)}. Rules were not modified.",
+                    NotificationType.Information);
+
+                this.Logger.LogInformation("Legacy settings imported from {Path}", importPath);
             }
             catch (Exception ex)
             {
                 this.StatusMessage = $"Error importing settings: {ex.Message}";
                 this.Logger.LogError(ex, "Error importing settings");
+
+                await this.notificationService.ShowErrorNotificationAsync(
+                    "Import Error",
+                    "Failed to import configuration",
+                    ex);
             }
             finally
             {
@@ -577,6 +666,73 @@ namespace ThreadPilot.ViewModels
             }
 
             await this.RefreshSettingsAsync();
+        }
+
+        private static bool TryParseBundle(string json, out ConfigurationBundle bundle)
+        {
+            bundle = new ConfigurationBundle();
+
+            try
+            {
+                using var document = JsonDocument.Parse(json);
+                if (document.RootElement.ValueKind != JsonValueKind.Object)
+                {
+                    return false;
+                }
+
+                if (!document.RootElement.TryGetProperty("settings", out var settingsElement))
+                {
+                    return false;
+                }
+
+                if (!document.RootElement.TryGetProperty("processMonitorConfiguration", out var rulesElement) &&
+                    !document.RootElement.TryGetProperty("rulesConfiguration", out rulesElement))
+                {
+                    return false;
+                }
+
+                var parsedBundle = JsonSerializer.Deserialize<ConfigurationBundle>(json, ImportExportJsonOptions);
+                if (parsedBundle?.Settings == null)
+                {
+                    return false;
+                }
+
+                parsedBundle.ProcessMonitorConfiguration =
+                    parsedBundle.ProcessMonitorConfiguration
+                    ?? parsedBundle.RulesConfiguration
+                    ?? JsonSerializer.Deserialize<ProcessMonitorConfiguration>(rulesElement.GetRawText(), ImportExportJsonOptions)
+                    ?? new ProcessMonitorConfiguration();
+
+                parsedBundle.ProcessMonitorConfiguration.Associations ??= new List<ProcessPowerPlanAssociation>();
+                bundle = parsedBundle;
+                return true;
+            }
+            catch (JsonException)
+            {
+                return false;
+            }
+        }
+
+        private static ProcessMonitorConfiguration CloneConfiguration(ProcessMonitorConfiguration source)
+        {
+            var serialized = JsonSerializer.Serialize(source, ImportExportJsonOptions);
+            var clone = JsonSerializer.Deserialize<ProcessMonitorConfiguration>(serialized, ImportExportJsonOptions)
+                ?? new ProcessMonitorConfiguration();
+            clone.Associations ??= new List<ProcessPowerPlanAssociation>();
+            return clone;
+        }
+
+        private sealed class ConfigurationBundle
+        {
+            public string SchemaVersion { get; set; } = "2.0";
+
+            public DateTime ExportedAtUtc { get; set; } = DateTime.UtcNow;
+
+            public ApplicationSettingsModel Settings { get; set; } = new ApplicationSettingsModel();
+
+            public ProcessMonitorConfiguration? ProcessMonitorConfiguration { get; set; }
+
+            public ProcessMonitorConfiguration? RulesConfiguration { get; set; }
         }
     }
 }

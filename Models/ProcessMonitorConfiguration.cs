@@ -44,7 +44,7 @@ namespace ThreadPilot.Models
         private bool preventDuplicatePowerPlanChanges = true;
 
         [ObservableProperty]
-        private int powerPlanChangeDelayMs = 1000;
+        private int powerPlanChangeDelayMs = 250;
 
         [ObservableProperty]
         private bool enableLogging = true;

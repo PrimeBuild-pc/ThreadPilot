@@ -47,6 +47,15 @@ namespace ThreadPilot
         [ObservableProperty]
         private bool showElevationPrompt = false;
 
+        [ObservableProperty]
+        private string initializationStage = "Starting ThreadPilot...";
+
+        [ObservableProperty]
+        private string initializationDetails = "Preparing startup sequence.";
+
+        [ObservableProperty]
+        private bool isDarkTheme = false;
+
         public MainWindowViewModel(
             ILogger<MainWindowViewModel> logger,
             IEnhancedLoggingService? enhancedLoggingService = null,

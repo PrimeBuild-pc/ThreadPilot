@@ -34,8 +34,28 @@ jobs:
       - name: Publish self-contained single-file
         run: dotnet publish "ThreadPilot.csproj" --configuration Release -p:PublishProfile=WinX64-SingleFile
 
+      - name: Ensure bundled power plans in single-file output
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force -Path "artifacts/release/singlefile/Powerplans" | Out-Null
+          Copy-Item "assets/Powerplans/*" -Destination "artifacts/release/singlefile/Powerplans" -Recurse -Force
+
       - name: Publish ReadyToRun
         run: dotnet publish "ThreadPilot.csproj" --configuration Release -p:PublishProfile=WinX64-ReadyToRun
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build Inno Setup installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          $sourceDir = (Resolve-Path "artifacts/release/singlefile").Path
+
+          & iscc.exe "/DMyAppVersion=$version" "/DMyAppSourceDir=$sourceDir" "Installer/setup.iss"
 
       - name: Publish MSIX
         run: dotnet publish "ThreadPilot.csproj" --configuration Release -p:PublishProfile=WinX64-MSIX
@@ -86,6 +106,7 @@ jobs:
           $targets = @()
           $targets += Get-ChildItem "artifacts/release/singlefile" -Recurse -File -Include *.exe -ErrorAction SilentlyContinue
           $targets += Get-ChildItem "artifacts/release/readytorun" -Recurse -File -Include *.exe -ErrorAction SilentlyContinue
+          $targets += Get-ChildItem "artifacts/release/installer" -Recurse -File -Include *.exe -ErrorAction SilentlyContinue
           $targets += Get-ChildItem "artifacts/release/msix" -Recurse -File -Include *.msix,*.appx,*.msixbundle,*.appxbundle -ErrorAction SilentlyContinue
 
           foreach ($target in $targets)
@@ -99,12 +120,75 @@ jobs:
           $ErrorActionPreference = "Stop"
           $version = "${{ github.ref_name }}"
           New-Item -ItemType Directory -Force -Path "artifacts/release/packages" | Out-Null
+          New-Item -ItemType Directory -Force -Path "artifacts/release/package-staging" | Out-Null
+
+          $sharedUninstall = "artifacts/release/package-staging/uninstall.bat"
+          $sharedLicense = "artifacts/release/package-staging/LICENSE.md"
+
+          $uninstallContent = @'
+          @echo off
+          setlocal EnableExtensions
+          title ThreadPilot Uninstaller
+
+          set "APP_DIR=%~dp0"
+          if "%APP_DIR:~-1%"=="\" set "APP_DIR=%APP_DIR:~0,-1%"
+
+          echo ======================================================
+          echo ThreadPilot Uninstaller
+          echo ======================================================
+          echo.
+
+          echo [1/4] Closing running ThreadPilot processes...
+          taskkill /IM "ThreadPilot.exe" /F >nul 2>&1
+
+          echo [2/4] Removing startup task and startup registry entry...
+          schtasks /Delete /TN "ThreadPilot_Startup" /F >nul 2>&1
+          reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "ThreadPilot" /f >nul 2>&1
+
+          echo [3/4] Optional user data cleanup...
+          set "REMOVE_DATA=N"
+          set /p REMOVE_DATA=Do you want to remove user settings at "%APPDATA%\ThreadPilot"? [y/N]:
+          if /I "%REMOVE_DATA%"=="Y" (
+            if exist "%APPDATA%\ThreadPilot" (
+              rd /s /q "%APPDATA%\ThreadPilot"
+              echo User settings removed.
+            ) else (
+              echo No user settings folder found.
+            )
+          ) else (
+            echo User settings were kept.
+          )
+
+          echo [4/4] Scheduling app folder removal...
+          start "" /min cmd /c "timeout /t 5 /nobreak >nul & rd /s /q \"%APP_DIR%\""
+
+          echo.
+          echo Uninstall completed. Remaining files will be removed in a few seconds.
+          endlocal
+          exit /b 0
+          '@
+
+          Set-Content -LiteralPath $sharedUninstall -Value $uninstallContent -Encoding Ascii
+          Copy-Item "LICENSE" -Destination $sharedLicense -Force
+
+          $singleStage = "artifacts/release/package-staging/singlefile"
+          $readyToRunStage = "artifacts/release/package-staging/readytorun"
+          New-Item -ItemType Directory -Force -Path $singleStage | Out-Null
+          New-Item -ItemType Directory -Force -Path $readyToRunStage | Out-Null
+
+          Copy-Item "artifacts/release/singlefile/*" -Destination $singleStage -Recurse -Force
+          Copy-Item "artifacts/release/readytorun/*" -Destination $readyToRunStage -Recurse -Force
+
+          Copy-Item $sharedUninstall -Destination (Join-Path $singleStage "uninstall.bat") -Force
+          Copy-Item $sharedLicense -Destination (Join-Path $singleStage "LICENSE.md") -Force
+          Copy-Item $sharedUninstall -Destination (Join-Path $readyToRunStage "uninstall.bat") -Force
+          Copy-Item $sharedLicense -Destination (Join-Path $readyToRunStage "LICENSE.md") -Force
 
           $singleFileZip = "artifacts/release/packages/ThreadPilot_$version`_singlefile_win-x64.zip"
           $readyToRunZip = "artifacts/release/packages/ThreadPilot_$version`_readytorun_win-x64.zip"
 
-          Compress-Archive -Path "artifacts/release/singlefile/*" -DestinationPath $singleFileZip -Force
-          Compress-Archive -Path "artifacts/release/readytorun/*" -DestinationPath $readyToRunZip -Force
+          Compress-Archive -Path "$singleStage/*" -DestinationPath $singleFileZip -Force
+          Compress-Archive -Path "$readyToRunStage/*" -DestinationPath $readyToRunZip -Force
 
       - name: Generate checksums
         shell: pwsh
@@ -114,6 +198,7 @@ jobs:
 
           $releaseFiles = @()
           $releaseFiles += Get-ChildItem "artifacts/release/packages" -File -ErrorAction SilentlyContinue
+          $releaseFiles += Get-ChildItem "artifacts/release/installer/*.exe" -File -ErrorAction SilentlyContinue
           $releaseFiles += Get-ChildItem "artifacts/release/msix" -Recurse -File -Include *.msix,*.appx,*.msixbundle,*.appxbundle -ErrorAction SilentlyContinue
 
           $releaseFiles | ForEach-Object {
@@ -125,6 +210,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
+            artifacts/release/installer/*.exe
             artifacts/release/packages/*.zip
             artifacts/release/msix/**/*.msix
             artifacts/release/msix/**/*.appx

@@ -336,15 +336,13 @@ namespace ThreadPilot.Services
 
                 if (importedConfig != null)
                 {
-                    lock (this.lockObject)
+                    var replaced = await this.ReplaceConfigurationAsync(importedConfig);
+                    if (replaced)
                     {
-                        importedConfig.Associations ??= new List<ProcessPowerPlanAssociation>();
-                        this.configuration = importedConfig;
+                        this.OnConfigurationChanged("Imported", null, $"Configuration imported from {filePath}");
                     }
 
-                    await this.SaveConfigurationAsync();
-                    this.OnConfigurationChanged("Imported", null, $"Configuration imported from {filePath}");
-                    return true;
+                    return replaced;
                 }
 
                 return false;
@@ -352,6 +350,33 @@ namespace ThreadPilot.Services
             catch (Exception ex)
             {
                 this.OnConfigurationChanged("ImportError", null, $"Failed to import configuration: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> ReplaceConfigurationAsync(ProcessMonitorConfiguration configuration)
+        {
+            if (configuration == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                var cloned = CloneConfiguration(configuration);
+
+                lock (this.lockObject)
+                {
+                    this.configuration = cloned;
+                }
+
+                await this.SaveConfigurationAsync();
+                this.OnConfigurationChanged("Replaced", null, "Configuration replaced from imported bundle");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                this.OnConfigurationChanged("ReplaceError", null, $"Failed to replace configuration: {ex.Message}");
                 return false;
             }
         }
@@ -418,6 +443,15 @@ namespace ThreadPilot.Services
             }
 
             return Path.GetFileNameWithoutExtension(executableName.Trim());
+        }
+
+        private static ProcessMonitorConfiguration CloneConfiguration(ProcessMonitorConfiguration source)
+        {
+            var serialized = JsonSerializer.Serialize(source, JsonOptions);
+            var cloned = JsonSerializer.Deserialize<ProcessMonitorConfiguration>(serialized, JsonOptions)
+                ?? new ProcessMonitorConfiguration();
+            cloned.Associations ??= new List<ProcessPowerPlanAssociation>();
+            return cloned;
         }
     }
 }

@@ -5,7 +5,7 @@
   "IsFallbackPollingEnabled": true,
   "PollingIntervalSeconds": 5,
   "PreventDuplicatePowerPlanChanges": true,
-  "PowerPlanChangeDelayMs": 1000,
+  "PowerPlanChangeDelayMs": 250,
   "Associations": [
     {
       "Id": "sample-gaming-association",

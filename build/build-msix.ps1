@@ -10,7 +10,7 @@ param(
 
     [string]$ProjectDir = (Get-Location).Path,
     [string]$PackageIdentityName = "PrimeBuild.ThreadPilot",
-    [string]$PackagePublisher = "CN=ThreadPilot",
+    [string]$PackagePublisher = "CN=Prime Build",
     [string]$ExecutableName = "ThreadPilot.exe",
     [string]$DisplayName = "ThreadPilot",
     [string]$PublisherDisplayName = "Prime Build",

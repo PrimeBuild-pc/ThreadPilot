@@ -61,6 +61,13 @@ namespace ThreadPilot.Services
         Task<bool> ImportCustomPowerPlan(string filePath);
 
         /// <summary>
+        /// Adds a custom .pow file to the managed custom plans library.
+        /// </summary>
+        /// <param name="filePath">Absolute path to the source .pow file.</param>
+        /// <returns><see langword="true"/> when the file is added successfully; otherwise <see langword="false"/>.</returns>
+        Task<bool> AddCustomPowerPlanFileAsync(string filePath);
+
+        /// <summary>
         /// Sets the active power plan by GUID with duplicate change prevention.
         /// </summary>
         /// <param name="powerPlanGuid">Target power plan GUID.</param>

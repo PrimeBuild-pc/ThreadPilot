@@ -73,6 +73,9 @@ namespace ThreadPilot
         private int currentTabIndex = -1;
         private bool isHandlingTabSelection;
         private readonly SemaphoreSlim tabSwitchGuard = new(1, 1);
+        private bool isPerformanceIntroVisible = false;
+        private double previousAppContentOpacity = 1;
+        private double previousBackdropBlurRadius = 0;
 
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int dwAttribute, ref int pvAttribute, int cbAttribute);
@@ -134,6 +137,8 @@ namespace ThreadPilot
 
                 this.SetDataContexts();
                 System.Diagnostics.Debug.WriteLine("DataContexts set");
+
+                this.UpdateLoadingStatus("Starting ThreadPilot...", "Preparing startup sequence.");
 
                 // Start async initialization - marshal to UI thread to prevent cross-thread access exceptions
                 _ = this.Dispatcher.InvokeAsync(async () => await this.InitializeApplicationAsync());
@@ -224,7 +229,7 @@ namespace ThreadPilot
             {
                 this.LogDebug("=== Starting InitializeApplicationAsync ===");
 
-                await this.Dispatcher.InvokeAsync(() => this.UpdateLoadingStatus("Loading ViewModels..."));
+                await this.Dispatcher.InvokeAsync(() => this.UpdateLoadingStatus("Loading view models...", "Loading process, power plan and rules data."));
                 this.LogDebug("About to call LoadViewModelsAsync...");
                 await this.LoadViewModelsAsync();
                 this.LogDebug("LoadViewModelsAsync completed successfully");
@@ -235,13 +240,13 @@ namespace ThreadPilot
                 this.LogDebug("MainWindowViewModel initialized successfully");
                 this.CompleteInitializationTask("MainWindowViewModel");
 
-                await this.Dispatcher.InvokeAsync(() => this.UpdateLoadingStatus("Initializing services..."));
+                await this.Dispatcher.InvokeAsync(() => this.UpdateLoadingStatus("Initializing services...", "Starting monitoring, tray and notification services."));
                 this.LogDebug("About to call InitializeServicesAsync...");
                 await this.InitializeServicesAsync();
                 this.LogDebug("InitializeServicesAsync completed successfully");
                 this.CompleteInitializationTask("Services");
 
-                await this.Dispatcher.InvokeAsync(() => this.UpdateLoadingStatus("Finalizing startup..."));
+                await this.Dispatcher.InvokeAsync(() => this.UpdateLoadingStatus("Finalizing startup...", "Applying final UI state and startup checks."));
                 this.LogDebug("Finalizing startup...");
                 await Task.Delay(500); // Brief delay to show final status
                 this.CompleteInitializationTask("Finalization");
@@ -258,12 +263,12 @@ namespace ThreadPilot
             }
         }
 
-        private void UpdateLoadingStatus(string status)
+        private void UpdateLoadingStatus(string stage, string details = "")
         {
-            var loadingStatus = this.FindName("LoadingStatus") as TextBlock;
-            if (loadingStatus != null)
+            if (this.mainWindowViewModel != null)
             {
-                loadingStatus.Text = status;
+                this.mainWindowViewModel.InitializationStage = stage;
+                this.mainWindowViewModel.InitializationDetails = details;
             }
         }
 
@@ -396,7 +401,7 @@ namespace ThreadPilot
         {
             try
             {
-                this.UpdateLoadingStatus("Initialization failed");
+                this.UpdateLoadingStatus("Initialization failed", ex.Message);
 
                 var result = System.Windows.MessageBox.Show(
                     $"ThreadPilot failed to initialize properly:\n\n{ex.Message}\n\nDebug log: {this.debugLogPath}\n\nWould you like to retry initialization or close the application?",
@@ -409,7 +414,7 @@ namespace ThreadPilot
                     // Retry initialization - marshal to UI thread to prevent cross-thread access exceptions
                     this.isInitializationComplete = false;
                     this.initializationTasks.Clear();
-                    this.UpdateLoadingStatus("Retrying initialization...");
+                    this.UpdateLoadingStatus("Retrying initialization...", "Restarting startup sequence.");
                     this.LogDebug("=== RETRYING INITIALIZATION ===");
                     _ = this.Dispatcher.InvokeAsync(async () => await this.InitializeApplicationAsync());
                 }
@@ -605,6 +610,7 @@ namespace ThreadPilot
                     : this.themeService.GetSystemUsesDarkTheme();
 
                 this.themeService.ApplyTheme(useDarkTheme);
+                this.mainWindowViewModel.IsDarkTheme = useDarkTheme;
                 this.ApplyWindowCaptionTheme(useDarkTheme);
 
                 if (settings.StartMinimized)
@@ -1326,6 +1332,7 @@ namespace ThreadPilot
                 : this.themeService.GetSystemUsesDarkTheme();
 
             this.themeService.ApplyTheme(useDarkTheme);
+            this.mainWindowViewModel.IsDarkTheme = useDarkTheme;
             this.systemTrayService.ApplyTheme(useDarkTheme);
             this.ApplyWindowCaptionTheme(useDarkTheme);
         }
@@ -1511,6 +1518,80 @@ namespace ThreadPilot
 
             // Keep NavigationView internal state aligned when possible.
             this.RootNavigation.Navigate(tag);
+
+            if (string.Equals(tag, "Performance", StringComparison.Ordinal))
+            {
+                this.TryShowPerformanceIntro();
+            }
+        }
+
+        private void TryShowPerformanceIntro()
+        {
+            if (this.isPerformanceIntroVisible || !this.isInitializationComplete)
+            {
+                return;
+            }
+
+            try
+            {
+                var settings = this.settingsService.Settings;
+                if (settings.HasSeenPerformanceIntro)
+                {
+                    return;
+                }
+
+                this.isPerformanceIntroVisible = true;
+                this.PerformanceIntroOverlay.Visibility = Visibility.Visible;
+
+                this.previousAppContentOpacity = this.AppContentLayer.Opacity;
+                this.AppContentLayer.IsHitTestVisible = false;
+                this.AppContentLayer.Opacity = 0.74;
+
+                if (this.BackdropBlur != null)
+                {
+                    this.previousBackdropBlurRadius = this.BackdropBlur.Radius;
+                    this.BackdropBlur.Radius = Math.Max(this.BackdropBlur.Radius, 16);
+                }
+            }
+            catch (Exception ex)
+            {
+                this.LogDebug($"Failed to show Performance intro overlay: {ex.Message}");
+            }
+        }
+
+        private void HidePerformanceIntro()
+        {
+            this.isPerformanceIntroVisible = false;
+            this.PerformanceIntroOverlay.Visibility = Visibility.Collapsed;
+
+            this.AppContentLayer.IsHitTestVisible = true;
+            this.AppContentLayer.Opacity = this.previousAppContentOpacity;
+
+            if (this.BackdropBlur != null)
+            {
+                this.BackdropBlur.Radius = this.previousBackdropBlurRadius;
+            }
+        }
+
+        private async void PerformanceIntroContinue_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var settings = this.settingsService.Settings;
+                if (!settings.HasSeenPerformanceIntro)
+                {
+                    settings.HasSeenPerformanceIntro = true;
+                    await this.settingsService.UpdateSettingsAsync(settings);
+                }
+            }
+            catch (Exception ex)
+            {
+                this.LogDebug($"Failed to persist Performance intro state: {ex.Message}");
+            }
+            finally
+            {
+                this.HidePerformanceIntro();
+            }
         }
 
         private void ApplySectionVisibility(string tag)
@@ -1596,6 +1677,11 @@ namespace ThreadPilot
                 }
 
                 this.ApplySectionVisibility(tag);
+
+                if (string.Equals(tag, "Performance", StringComparison.Ordinal))
+                {
+                    this.TryShowPerformanceIntro();
+                }
             }
             finally
             {

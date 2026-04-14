@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
-  <assemblyIdentity version="1.0.0.0" name="ThreadPilot.app"/>
+  <assemblyIdentity version="1.1.1.0" name="ThreadPilot.app"/>
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <!-- Run as standard user by default; specific operations request UAC elevation on demand. -->
-        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
+        <!-- Always request elevation at process start (UAC prompt). -->
+        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
       </requestedPrivileges>
     </security>
   </trustInfo>

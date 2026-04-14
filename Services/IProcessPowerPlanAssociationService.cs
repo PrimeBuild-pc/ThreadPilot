@@ -110,6 +110,11 @@ namespace ThreadPilot.Services
         /// Imports configuration from a file.
         /// </summary>
         Task<bool> ImportConfigurationAsync(string filePath);
+
+        /// <summary>
+        /// Replaces the current configuration and persists it.
+        /// </summary>
+        Task<bool> ReplaceConfigurationAsync(ProcessMonitorConfiguration configuration);
     }
 
     /// <summary>

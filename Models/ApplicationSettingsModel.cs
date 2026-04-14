@@ -166,6 +166,9 @@ namespace ThreadPilot.Models
         private bool enablePerformanceCounters = false;
 
         [ObservableProperty]
+        private bool hasSeenPerformanceIntro = false;
+
+        [ObservableProperty]
         private int maxLogFileSizeMb = 10;
 
         [ObservableProperty]
@@ -235,6 +238,7 @@ namespace ThreadPilot.Models
             // Advanced Settings
             this.EnableDebugLogging = other.EnableDebugLogging;
             this.EnablePerformanceCounters = other.EnablePerformanceCounters;
+            this.HasSeenPerformanceIntro = other.HasSeenPerformanceIntro;
             this.MaxLogFileSizeMb = other.MaxLogFileSizeMb;
             this.LogRetentionDays = other.LogRetentionDays;
 
