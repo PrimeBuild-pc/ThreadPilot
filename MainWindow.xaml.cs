@@ -57,6 +57,8 @@ namespace ThreadPilot
         private readonly IServiceProvider serviceProvider;
         private readonly IThemeService themeService;
         private System.Timers.Timer? systemTrayUpdateTimer;
+        private bool isSystemTrayUpdatesSuspended;
+        private int isSystemTrayUpdateInProgress;
         private readonly IElevationService elevationService;
         private readonly ISecurityService securityService;
 
@@ -75,7 +77,6 @@ namespace ThreadPilot
         private readonly SemaphoreSlim tabSwitchGuard = new(1, 1);
         private bool isPerformanceIntroVisible = false;
         private double previousAppContentOpacity = 1;
-        private double previousBackdropBlurRadius = 0;
 
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int dwAttribute, ref int pvAttribute, int cbAttribute);
@@ -184,8 +185,6 @@ namespace ThreadPilot
             try
             {
                 var loadingOverlay = this.FindName("LoadingOverlay") as Grid;
-                var appContentLayer = this.FindName("AppContentLayer") as Grid;
-                var backdropBlur = this.FindName("BackdropBlur") as BlurEffect;
 
                 // Ensure overlay is visible while initialization runs
                 if (loadingOverlay != null)
@@ -194,16 +193,8 @@ namespace ThreadPilot
                     loadingOverlay.Opacity = 1;
                 }
 
-                if (appContentLayer != null)
-                {
-                    appContentLayer.Opacity = 0.84;
-                    appContentLayer.IsHitTestVisible = false;
-                }
-
-                if (backdropBlur != null)
-                {
-                    backdropBlur.Radius = 10;
-                }
+                // Enable blur on main app content during startup loading.
+                this.ApplyUIContentBlur(15);
 
                 // Start spinner animation if available
                 var spinnerAnimation = this.FindResource("SpinnerAnimation") as Storyboard;
@@ -310,21 +301,12 @@ namespace ThreadPilot
                             System.Diagnostics.Debug.WriteLine("Loading overlay visibility set to Collapsed");
                         }
 
-                        // Re-enable main content interaction
-                        var appContentLayer = this.FindName("AppContentLayer") as Grid;
-                        if (appContentLayer != null)
-                        {
-                            appContentLayer.IsHitTestVisible = true;
-                            appContentLayer.Opacity = 1;
-                            System.Diagnostics.Debug.WriteLine("Main content interaction re-enabled");
-                        }
-
-                        var backdropBlur = this.FindName("BackdropBlur") as BlurEffect;
-                        if (backdropBlur != null)
-                        {
-                            backdropBlur.Radius = 0;
-                        }
+                        // Disable app content blur and restore style-driven behavior.
+                        this.ClearUIContentBlur();
                         System.Diagnostics.Debug.WriteLine("=== Loading overlay hidden successfully ===");
+
+                        // Show elevation warning if needed
+                        this.TryShowElevationWarning();
                     };
                     fadeOutAnimation.Begin();
                 }
@@ -338,20 +320,11 @@ namespace ThreadPilot
                         loadingOverlay.Visibility = Visibility.Collapsed;
                     }
 
-                    // Re-enable main content interaction
-                    var appContentLayer = this.FindName("AppContentLayer") as Grid;
-                    if (appContentLayer != null)
-                    {
-                        appContentLayer.IsHitTestVisible = true;
-                        appContentLayer.Opacity = 1;
-                    }
-
-                    var backdropBlur = this.FindName("BackdropBlur") as BlurEffect;
-                    if (backdropBlur != null)
-                    {
-                        backdropBlur.Radius = 0;
-                    }
+                    this.ClearUIContentBlur();
                     System.Diagnostics.Debug.WriteLine("=== Loading overlay hidden immediately (fallback) ===");
+
+                    // Show elevation warning if needed
+                    this.TryShowElevationWarning();
                 }
             }
             catch (Exception ex)
@@ -365,25 +338,35 @@ namespace ThreadPilot
                     {
                         loadingOverlay.Visibility = Visibility.Collapsed;
                     }
-                    var appContentLayer = this.FindName("AppContentLayer") as Grid;
-                    if (appContentLayer != null)
-                    {
-                        appContentLayer.IsHitTestVisible = true;
-                        appContentLayer.Opacity = 1;
-                    }
 
-                    var backdropBlur = this.FindName("BackdropBlur") as BlurEffect;
-                    if (backdropBlur != null)
-                    {
-                        backdropBlur.Radius = 0;
-                    }
+                    this.ClearUIContentBlur();
                     System.Diagnostics.Debug.WriteLine("Emergency fallback: overlay hidden without animation");
+
+                    // Show elevation warning if needed
+                    this.TryShowElevationWarning();
                 }
                 catch (Exception fallbackEx)
                 {
                     System.Diagnostics.Debug.WriteLine($"Emergency fallback also failed: {fallbackEx}");
                 }
             }
+        }
+
+        private void ApplyUIContentBlur(double radius)
+        {
+            if (this.UIContent.Effect is not BlurEffect blur)
+            {
+                blur = new BlurEffect();
+                this.UIContent.Effect = blur;
+            }
+
+            blur.KernelType = KernelType.Gaussian;
+            blur.Radius = radius;
+        }
+
+        private void ClearUIContentBlur()
+        {
+            this.UIContent.Effect = null;
         }
 
         private void OnInitializationTimeout(object? sender, ElapsedEventArgs e)
@@ -1163,7 +1146,7 @@ namespace ThreadPilot
                 try
                 {
                     var performanceService = this.serviceProvider.GetRequiredService<IPerformanceMonitoringService>();
-                    var metricsTask = performanceService.GetSystemMetricsAsync();
+                    var metricsTask = performanceService.GetSystemMetricsAsync(lightweight: true);
                     var metricsResult = await Task.WhenAny(metricsTask, Task.Delay(2000)); // 2 second timeout
 
                     if (metricsResult == metricsTask)
@@ -1205,13 +1188,33 @@ namespace ThreadPilot
                 // Marshal timer callback to UI thread to avoid cross-thread access issues
                 this.systemTrayUpdateTimer.Elapsed += async (s, e) =>
                 {
+                    if (this.isSystemTrayUpdatesSuspended)
+                    {
+                        return;
+                    }
+
+                    if (Interlocked.Exchange(ref this.isSystemTrayUpdateInProgress, 1) == 1)
+                    {
+                        return;
+                    }
+
                     try
                     {
-                        await this.Dispatcher.InvokeAsync(async () => await this.UpdateSystemTrayStatusAsync());
+                        await this.Dispatcher.InvokeAsync(async () =>
+                        {
+                            if (!this.isSystemTrayUpdatesSuspended)
+                            {
+                                await this.UpdateSystemTrayStatusAsync();
+                            }
+                        });
                     }
                     catch (Exception ex)
                     {
                         System.Diagnostics.Debug.WriteLine($"Error in system tray update timer: {ex.Message}");
+                    }
+                    finally
+                    {
+                        Interlocked.Exchange(ref this.isSystemTrayUpdateInProgress, 0);
                     }
                 };
                 this.systemTrayUpdateTimer.AutoReset = true;
@@ -1231,7 +1234,7 @@ namespace ThreadPilot
                 var performanceService = this.serviceProvider.GetRequiredService<IPerformanceMonitoringService>();
 
                 var activePowerPlan = await powerPlanService.GetActivePowerPlan();
-                var currentMetrics = await performanceService.GetSystemMetricsAsync();
+                var currentMetrics = await performanceService.GetSystemMetricsAsync(lightweight: true);
 
                 this.systemTrayService.UpdateSystemStatus(
                     activePowerPlan?.Name ?? "Unknown",
@@ -1377,6 +1380,8 @@ namespace ThreadPilot
                     this.Hide();
                     this.systemTrayService.Show();
 
+                    this.SuspendHiddenModeRefreshes();
+
                     // Pause process refresh when minimized to reduce resource usage
                     if (this.processViewModel != null)
                     {
@@ -1391,6 +1396,8 @@ namespace ThreadPilot
                 else if (this.WindowState == WindowState.Normal)
                 {
                     this.ShowInTaskbar = true;
+
+                    this.ResumeForegroundRefreshes();
 
                     // Resume process refresh when restored
                     if (this.processViewModel != null)
@@ -1410,6 +1417,33 @@ namespace ThreadPilot
             }
 
             base.OnStateChanged(e);
+        }
+
+        private void SuspendHiddenModeRefreshes()
+        {
+            this.isSystemTrayUpdatesSuspended = true;
+            this.systemTrayUpdateTimer?.Stop();
+            Interlocked.Exchange(ref this.isSystemTrayUpdateInProgress, 0);
+            this.powerPlanViewModel.PauseAutoRefresh();
+        }
+
+        private void ResumeForegroundRefreshes()
+        {
+            this.isSystemTrayUpdatesSuspended = false;
+            this.systemTrayUpdateTimer?.Start();
+            this.powerPlanViewModel.ResumeAutoRefresh(refreshImmediately: true);
+
+            _ = this.Dispatcher.InvokeAsync(async () =>
+            {
+                try
+                {
+                    await this.UpdateSystemTrayStatusAsync();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Failed to refresh tray status after resume: {ex.Message}");
+                }
+            });
         }
 
         protected override void OnSourceInitialized(EventArgs e)
@@ -1542,16 +1576,6 @@ namespace ThreadPilot
 
                 this.isPerformanceIntroVisible = true;
                 this.PerformanceIntroOverlay.Visibility = Visibility.Visible;
-
-                this.previousAppContentOpacity = this.AppContentLayer.Opacity;
-                this.AppContentLayer.IsHitTestVisible = false;
-                this.AppContentLayer.Opacity = 0.74;
-
-                if (this.BackdropBlur != null)
-                {
-                    this.previousBackdropBlurRadius = this.BackdropBlur.Radius;
-                    this.BackdropBlur.Radius = Math.Max(this.BackdropBlur.Radius, 16);
-                }
             }
             catch (Exception ex)
             {
@@ -1563,14 +1587,6 @@ namespace ThreadPilot
         {
             this.isPerformanceIntroVisible = false;
             this.PerformanceIntroOverlay.Visibility = Visibility.Collapsed;
-
-            this.AppContentLayer.IsHitTestVisible = true;
-            this.AppContentLayer.Opacity = this.previousAppContentOpacity;
-
-            if (this.BackdropBlur != null)
-            {
-                this.BackdropBlur.Radius = this.previousBackdropBlurRadius;
-            }
         }
 
         private async void PerformanceIntroContinue_Click(object sender, RoutedEventArgs e)
@@ -1591,6 +1607,118 @@ namespace ThreadPilot
             finally
             {
                 this.HidePerformanceIntro();
+            }
+        }
+
+        // Elevation Warning Modal Management
+        private bool isElevationWarningVisible = false;
+        private double previousElevationAppContentOpacity = 1;
+        private double previousElevationBackdropBlurRadius = 0;
+
+        private void TryShowElevationWarning()
+        {
+            if (this.isElevationWarningVisible || !this.isInitializationComplete)
+            {
+                return;
+            }
+
+            try
+            {
+                var settings = this.settingsService.Settings;
+                
+                // Only show if user is not admin AND hasn't dismissed the warning yet
+                if (this.elevationService?.IsRunningAsAdministrator() == true || settings.HasSeenElevationWarning)
+                {
+                    return;
+                }
+
+                this.isElevationWarningVisible = true;
+                var elevationOverlay = this.FindName("ElevationWarningOverlay") as Grid;
+                if (elevationOverlay != null)
+                {
+                    elevationOverlay.Visibility = Visibility.Visible;
+                }
+
+                // Apply blur and disable interaction
+                this.previousElevationAppContentOpacity = this.UIContent.Opacity;
+                this.UIContent.IsHitTestVisible = false;
+                this.UIContent.Opacity = 0.74;
+
+                var elevationBlur = this.FindName("ElevationWarningBlur") as BlurEffect;
+                if (elevationBlur != null)
+                {
+                    this.previousElevationBackdropBlurRadius = elevationBlur.Radius;
+                    elevationBlur.Radius = 16;
+                }
+            }
+            catch (Exception ex)
+            {
+                this.LogDebug($"Failed to show elevation warning overlay: {ex.Message}");
+            }
+        }
+
+        private void HideElevationWarning()
+        {
+            this.isElevationWarningVisible = false;
+            var elevationOverlay = this.FindName("ElevationWarningOverlay") as Grid;
+            if (elevationOverlay != null)
+            {
+                elevationOverlay.Visibility = Visibility.Collapsed;
+            }
+
+            // Restore interaction and remove blur
+            this.UIContent.IsHitTestVisible = true;
+            this.UIContent.Opacity = this.previousElevationAppContentOpacity;
+
+            var elevationBlur = this.FindName("ElevationWarningBlur") as BlurEffect;
+            if (elevationBlur != null)
+            {
+                elevationBlur.Radius = this.previousElevationBackdropBlurRadius;
+            }
+        }
+
+        private void ElevationWarningDismiss_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var settings = this.settingsService.Settings;
+                if (!settings.HasSeenElevationWarning)
+                {
+                    settings.HasSeenElevationWarning = true;
+                    _ = this.settingsService.UpdateSettingsAsync(settings);
+                }
+            }
+            catch (Exception ex)
+            {
+                this.LogDebug($"Failed to persist elevation warning dismiss state: {ex.Message}");
+            }
+            finally
+            {
+                this.HideElevationWarning();
+            }
+        }
+
+        private async void ElevationWarningRequestElevation_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (this.elevationService != null)
+                {
+                    var success = await this.elevationService.RequestElevationIfNeeded();
+                    if (success)
+                    {
+                        System.Diagnostics.Debug.WriteLine("Elevation requested successfully from warning dialog");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                this.LogDebug($"Failed to request elevation from warning dialog: {ex.Message}");
+            }
+            finally
+            {
+                // Hide the warning after attempting elevation (regardless of success)
+                this.HideElevationWarning();
             }
         }
 

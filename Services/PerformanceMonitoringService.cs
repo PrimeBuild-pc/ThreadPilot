@@ -39,6 +39,11 @@ namespace ThreadPilot.Services
         private readonly PerformanceCounter memoryCounter;
         private readonly List<PerformanceCounter> cpuCoreCounters;
         private System.Threading.Timer? monitoringTimer;
+        private readonly object totalMemoryCacheLock = new();
+        private readonly TimeSpan totalPhysicalMemoryCacheDuration = TimeSpan.FromMinutes(5);
+        private long cachedTotalPhysicalMemory;
+        private DateTime totalPhysicalMemoryCacheUtc = DateTime.MinValue;
+        private int isMonitoringTickInProgress;
         private bool isMonitoring;
         private bool disposed;
 
@@ -62,7 +67,7 @@ namespace ThreadPilot.Services
             this.InitializeCpuCoreCounters();
         }
 
-        public async Task<SystemPerformanceMetrics> GetSystemMetricsAsync()
+        public async Task<SystemPerformanceMetrics> GetSystemMetricsAsync(bool lightweight = false)
         {
             try
             {
@@ -70,32 +75,36 @@ namespace ThreadPilot.Services
                 {
                     Timestamp = DateTime.UtcNow,
                     TotalCpuUsage = await this.GetTotalCpuUsageAsync(),
-                    CpuCoreUsages = await this.GetCpuCoreUsageAsync(),
-                    TotalMemoryUsage = await this.GetTotalMemoryUsageAsync(),
                     AvailableMemory = await this.GetAvailableMemoryAsync(),
-                    ActiveProcessCount = Process.GetProcesses().Length,
                 };
 
                 // Calculate memory percentage
                 metrics.TotalMemory = await this.GetTotalPhysicalMemoryAsync();
+                metrics.TotalMemoryUsage = Math.Max(0, metrics.TotalMemory - metrics.AvailableMemory);
                 metrics.MemoryUsagePercentage = metrics.TotalMemory > 0
                     ? ((double)(metrics.TotalMemory - metrics.AvailableMemory) / metrics.TotalMemory) * 100
                     : 0;
 
-                // Get top processes
-                var topCpuProcesses = await this.GetTopCpuProcessesAsync(1);
-                metrics.TopCpuProcess = topCpuProcesses.FirstOrDefault();
-
-                var topMemoryProcesses = await this.GetTopMemoryProcessesAsync(1);
-                metrics.TopMemoryProcess = topMemoryProcesses.FirstOrDefault();
-
-                // Store in historical data
-                this.historicalData.Add(metrics);
-
-                // Keep only last 1000 entries (about 16 minutes at 1-second intervals)
-                if (this.historicalData.Count > 1000)
+                if (!lightweight)
                 {
-                    this.historicalData.RemoveAt(0);
+                    metrics.CpuCoreUsages = await this.GetCpuCoreUsageAsync();
+                    metrics.ActiveProcessCount = Process.GetProcesses().Length;
+
+                    // Get top processes
+                    var topCpuProcesses = await this.GetTopCpuProcessesAsync(1);
+                    metrics.TopCpuProcess = topCpuProcesses.FirstOrDefault();
+
+                    var topMemoryProcesses = await this.GetTopMemoryProcessesAsync(1);
+                    metrics.TopMemoryProcess = topMemoryProcesses.FirstOrDefault();
+
+                    // Store in historical data
+                    this.historicalData.Add(metrics);
+
+                    // Keep only last 1000 entries (about 16 minutes at 1-second intervals)
+                    if (this.historicalData.Count > 1000)
+                    {
+                        this.historicalData.RemoveAt(0);
+                    }
                 }
 
                 return metrics;
@@ -248,11 +257,17 @@ namespace ThreadPilot.Services
 
             this.logger.LogInformation("Starting performance monitoring");
             this.isMonitoring = true;
+            Interlocked.Exchange(ref this.isMonitoringTickInProgress, 0);
 
             // PERFORMANCE OPTIMIZATION: Increased interval from 1s to 2s for better performance
             this.monitoringTimer = new System.Threading.Timer(
                 async _ =>
             {
+                if (Interlocked.Exchange(ref this.isMonitoringTickInProgress, 1) == 1)
+                {
+                    return;
+                }
+
                 try
                 {
                     var metrics = await this.GetSystemMetricsAsync();
@@ -261,6 +276,10 @@ namespace ThreadPilot.Services
                 catch (Exception ex)
                 {
                     this.logger.LogError(ex, "Error during performance monitoring update");
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref this.isMonitoringTickInProgress, 0);
                 }
             }, null, TimeSpan.Zero, TimeSpan.FromSeconds(2));
         }
@@ -274,6 +293,7 @@ namespace ThreadPilot.Services
 
             this.logger.LogInformation("Stopping performance monitoring");
             this.isMonitoring = false;
+            Interlocked.Exchange(ref this.isMonitoringTickInProgress, 0);
 
             this.monitoringTimer?.Dispose();
             this.monitoringTimer = null;
@@ -323,21 +343,6 @@ namespace ThreadPilot.Services
             }
         }
 
-        private async Task<long> GetTotalMemoryUsageAsync()
-        {
-            try
-            {
-                var totalMemory = await this.GetTotalPhysicalMemoryAsync();
-                var availableMemory = await this.GetAvailableMemoryAsync();
-                return totalMemory - availableMemory;
-            }
-            catch (Exception ex)
-            {
-                this.logger.LogError(ex, "Error getting total memory usage");
-                return 0;
-            }
-        }
-
         private async Task<long> GetAvailableMemoryAsync()
         {
             try
@@ -353,13 +358,33 @@ namespace ThreadPilot.Services
 
         private async Task<long> GetTotalPhysicalMemoryAsync()
         {
+            var now = DateTime.UtcNow;
+
+            lock (this.totalMemoryCacheLock)
+            {
+                if (this.cachedTotalPhysicalMemory > 0 &&
+                    (now - this.totalPhysicalMemoryCacheUtc) < this.totalPhysicalMemoryCacheDuration)
+                {
+                    return this.cachedTotalPhysicalMemory;
+                }
+            }
+
             try
             {
                 using var searcher = new ManagementObjectSearcher("SELECT TotalPhysicalMemory FROM Win32_ComputerSystem");
                 foreach (var obj in searcher.Get())
                 {
-                    return Convert.ToInt64(obj["TotalPhysicalMemory"]);
+                    var totalMemory = Convert.ToInt64(obj["TotalPhysicalMemory"]);
+
+                    lock (this.totalMemoryCacheLock)
+                    {
+                        this.cachedTotalPhysicalMemory = totalMemory;
+                        this.totalPhysicalMemoryCacheUtc = DateTime.UtcNow;
+                    }
+
+                    return totalMemory;
                 }
+
                 return 0;
             }
             catch (Exception ex)
@@ -416,6 +441,7 @@ namespace ThreadPilot.Services
             }
 
             this.monitoringTimer?.Dispose();
+            Interlocked.Exchange(ref this.isMonitoringTickInProgress, 0);
             this.totalCpuCounter?.Dispose();
             this.memoryCounter?.Dispose();
 

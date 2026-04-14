@@ -37,9 +37,24 @@
     </UserControl.Resources>
 
     <Grid Margin="10" Background="{DynamicResource AppBackgroundBrush}">
-        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled"
-                      Padding="0">
+        <Grid x:Name="MainDashboardContent" Background="{DynamicResource AppBackgroundBrush}">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsPopupVisible}" Value="True">
+                            <Setter Property="Effect">
+                                <Setter.Value>
+                                    <BlurEffect Radius="15" KernelType="Gaussian" />
+                                </Setter.Value>
+                            </Setter>
+                            <Setter Property="IsEnabled" Value="False" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Padding="0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -383,5 +398,37 @@
                 </Grid>
             </Grid>
         </ScrollViewer>
+        </Grid>
+
+        <Grid x:Name="PopupOverlay"
+              Visibility="{Binding IsPopupVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+              Panel.ZIndex="100">
+            <Grid.InputBindings>
+                <MouseBinding MouseAction="LeftClick" Command="{Binding HidePopupCommand}"/>
+            </Grid.InputBindings>
+            <Border HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    CornerRadius="12"
+                    Padding="32,24"
+                    MaxWidth="500"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1">
+                <Border.Background>
+                    <SolidColorBrush Color="#FF1E1E1E" />
+                </Border.Background>
+                <StackPanel>
+                    <TextBlock Text="{Binding PopupTitle}"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               Margin="0,0,0,12"
+                               TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding PopupContent}"
+                               FontSize="14"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

@@ -19,6 +19,7 @@ namespace ThreadPilot.ViewModels
     using System;
     using System.Collections.ObjectModel;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using System.Windows.Input;
     using CommunityToolkit.Mvvm.ComponentModel;
@@ -33,6 +34,8 @@ namespace ThreadPilot.ViewModels
     {
         private readonly IPowerPlanService powerPlanService;
         private System.Timers.Timer? refreshTimer;
+        private bool isAutoRefreshPaused;
+        private int isRefreshInProgress;
 
         [ObservableProperty]
         private ObservableCollection<PowerPlanModel> powerPlans = new();
@@ -64,20 +67,66 @@ namespace ThreadPilot.ViewModels
             this.refreshTimer = new System.Timers.Timer(10000); // PERFORMANCE OPTIMIZATION: Increased to 10 second refresh - power plans change infrequently
             this.refreshTimer.Elapsed += async (s, e) =>
             {
+                if (this.isAutoRefreshPaused)
+                {
+                    return;
+                }
+
+                if (Interlocked.Exchange(ref this.isRefreshInProgress, 1) == 1)
+                {
+                    return;
+                }
+
                 try
                 {
                     // Marshal timer callback to UI thread to prevent cross-thread access exceptions
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
                     {
-                        await this.RefreshPowerPlansCommand.ExecuteAsync(null);
+                        if (!this.isAutoRefreshPaused)
+                        {
+                            await this.RefreshPowerPlansCommand.ExecuteAsync(null);
+                        }
                     });
                 }
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"Power plan refresh timer error: {ex.Message}");
                 }
+                finally
+                {
+                    Interlocked.Exchange(ref this.isRefreshInProgress, 0);
+                }
             };
             this.refreshTimer.Start();
+        }
+
+        public void PauseAutoRefresh()
+        {
+            this.isAutoRefreshPaused = true;
+            this.refreshTimer?.Stop();
+        }
+
+        public void ResumeAutoRefresh(bool refreshImmediately = true)
+        {
+            this.isAutoRefreshPaused = false;
+            this.refreshTimer?.Start();
+
+            if (!refreshImmediately)
+            {
+                return;
+            }
+
+            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
+            {
+                try
+                {
+                    await this.RefreshPowerPlansCommand.ExecuteAsync(null);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Power plan immediate refresh error: {ex.Message}");
+                }
+            });
         }
 
         [RelayCommand]

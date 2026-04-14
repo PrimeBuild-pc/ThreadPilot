@@ -153,6 +153,18 @@ namespace ThreadPilot.ViewModels
         [ObservableProperty]
         private bool isRuleCreateBusy;
 
+        [ObservableProperty]
+        private bool isPopupVisible;
+
+        [ObservableProperty]
+        private string popupTitle = string.Empty;
+
+        [ObservableProperty]
+        private string popupContent = string.Empty;
+
+        [ObservableProperty]
+        private int blurRadius;
+
         private readonly Dictionary<string, DateTime> lastRuleApplyByExecutable = new(StringComparer.OrdinalIgnoreCase);
         private bool monitoringWasActiveBeforeSuspend;
         private readonly SemaphoreSlim topProcessRefreshGate = new(1, 1);
@@ -452,6 +464,20 @@ namespace ThreadPilot.ViewModels
             this.ShowProcessDetails = !this.ShowProcessDetails;
         }
 
+        [RelayCommand]
+        private void ShowPopup((string Title, string Content) parameters)
+        {
+            this.PopupTitle = parameters.Title;
+            this.PopupContent = parameters.Content;
+            this.IsPopupVisible = true;
+        }
+
+        [RelayCommand]
+        private void HidePopup()
+        {
+            this.IsPopupVisible = false;
+        }
+
         partial void OnSelectedHotspotProcessChanged(ProcessPerformanceInfo? value)
         {
             _ = RefreshSelectedProcessRuleImpactAsync();
@@ -476,6 +502,11 @@ namespace ThreadPilot.ViewModels
         partial void OnProcessSearchTextChanged(string value)
         {
             _ = LoadTopProcessesAsync();
+        }
+
+        partial void OnIsPopupVisibleChanged(bool value)
+        {
+            this.BlurRadius = value ? 15 : 0;
         }
 
         private async Task RefreshSelectedProcessRuleImpactAsync()

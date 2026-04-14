@@ -29,7 +29,7 @@ namespace ThreadPilot.Services
         /// <summary>
         /// Get current system performance metrics.
         /// </summary>
-        Task<SystemPerformanceMetrics> GetSystemMetricsAsync();
+        Task<SystemPerformanceMetrics> GetSystemMetricsAsync(bool lightweight = false);
 
         /// <summary>
         /// Get per-core CPU usage.

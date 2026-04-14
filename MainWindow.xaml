@@ -39,25 +39,30 @@
             <DoubleAnimation Storyboard.TargetName="LoadingOverlay"
                            Storyboard.TargetProperty="Opacity"
                            From="1" To="0" Duration="0:0:0.3"/>
-            <DoubleAnimation Storyboard.TargetName="BackdropBlur"
-                           Storyboard.TargetProperty="Radius"
-                           From="10" To="0" Duration="0:0:0.3"/>
-            <DoubleAnimation Storyboard.TargetName="AppContentLayer"
-                           Storyboard.TargetProperty="Opacity"
-                           From="0.84" To="1" Duration="0:0:0.3"/>
         </Storyboard>
     </ui:FluentWindow.Resources>
 
     <Grid>
-        <Grid x:Name="AppContentLayer" Opacity="0.84">
-            <Grid.Effect>
-                <BlurEffect x:Name="BackdropBlur" Radius="10"/>
-            </Grid.Effect>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+        <Grid x:Name="UIContent">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ElementName=PerformanceIntroOverlay, Path=Visibility}" Value="Visible">
+                            <Setter Property="IsEnabled" Value="False"/>
+                            <Setter Property="Effect">
+                                <Setter.Value>
+                                    <BlurEffect Radius="15" KernelType="Gaussian"/>
+                                </Setter.Value>
+                            </Setter>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
         <ui:TitleBar Grid.Row="0" Title="ThreadPilot">
             <ui:TitleBar.Icon>
@@ -139,26 +144,97 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                     
-                    <!-- Elevation Status Bar embedded inside the content scope to maintain fluid layout -->
-                    <Border Grid.Row="0" Background="{DynamicResource WarningBackgroundBrush}" BorderBrush="{DynamicResource WarningBorderBrush}" BorderThickness="1"
-                            Visibility="{Binding ShowElevationPrompt, Converter={StaticResource BoolToVisibilityConverter}}"
-                            Margin="0,0,0,10" CornerRadius="4">
-                        <Grid Margin="10,5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-
-                            <TextBlock Grid.Column="0" Text="⚠️" FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBlock Grid.Column="1"
-                                       Text="ThreadPilot is running with limited privileges. Some features may not be available. Administrator privileges are required for full functionality."
-                                       TextWrapping="Wrap" VerticalAlignment="Center"/>
-                            <ui:Button Grid.Column="2" Content="Request Elevation"
-                                    Command="{Binding RequestElevationCommand}"
-                                    Margin="10,0,0,0" Padding="10,5"/>
+                    <!-- Elevation Warning Modal (Shell Login Style) -->
+                    <Grid x:Name="ElevationWarningOverlay"
+                          Grid.RowSpan="2"
+                          Visibility="Collapsed"
+                          Panel.ZIndex="900"
+                          AutomationProperties.Name="Elevation warning overlay">
+                        <!-- Blurred Backdrop -->
+                        <Grid x:Name="ElevationWarningBackdrop"
+                              Background="{DynamicResource OverlayBrush}"
+                              IsHitTestVisible="True">
+                            <Grid.Effect>
+                                <BlurEffect x:Name="ElevationWarningBlur" Radius="0"/>
+                            </Grid.Effect>
                         </Grid>
-                    </Border>
+
+                        <!-- Shell Login Popup -->
+                        <Border x:Name="ElevationWarningCard"
+                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="26"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                MinWidth="420"
+                                MaxWidth="560"
+                                IsHitTestVisible="True">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity="0.35"/>
+                            </Border.Effect>
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                                    <TextBlock Text="⚠️"
+                                               FontSize="28"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,12,0"/>
+                                    <TextBlock Text="Administrator Privileges Recommended"
+                                               FontSize="22"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+
+                                <TextBlock Text="ThreadPilot is running with limited privileges. Some features may not be available."
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,12"
+                                           FontSize="14"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+
+                                <TextBlock Text="Administrator access is required for:"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,8"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+
+                                <StackPanel Margin="20,0,0,0">
+                                    <TextBlock Text="• Modifying power plan configurations"
+                                               TextWrapping="Wrap"
+                                               Margin="0,0,0,4"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Text="• Changing process CPU affinity and priority"
+                                               TextWrapping="Wrap"
+                                               Margin="0,0,0,4"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Text="• Applying system-level optimizations and tweaks"
+                                               TextWrapping="Wrap"
+                                               Margin="0,0,0,4"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Text="• Managing protected processes"
+                                               TextWrapping="Wrap"
+                                               Margin="0,0,0,16"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Content="Continue Without Elevation"
+                                            Click="ElevationWarningDismiss_Click"
+                                            Margin="0,0,12,0"
+                                            Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                            Padding="16,8"/>
+                                    <Button Content="Request Elevation"
+                                            Command="{Binding RequestElevationCommand}"
+                                            Click="ElevationWarningRequestElevation_Click"
+                                            Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                            Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                            Padding="16,8"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
 
                     <!-- Hosted Views toggled natively to retain ViewModel mapping -->
                     <Grid Grid.Row="1">
@@ -199,79 +275,78 @@
         </Border>
         </Grid>
 
-        <!-- First-run Performance introduction modal -->
-        <Grid x:Name="PerformanceIntroOverlay"
-              Grid.RowSpan="3"
-              Background="{DynamicResource OverlayBrush}"
-              Visibility="Collapsed"
-              Panel.ZIndex="950"
-              AutomationProperties.Name="Performance introduction overlay">
-            <Border x:Name="PerformanceIntroCard"
-                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="26"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    MinWidth="360"
-                    MaxWidth="560">
-                <Border.Effect>
-                    <DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity="0.35"/>
-                </Border.Effect>
-                <StackPanel>
-                    <TextBlock x:Name="PerformanceIntroTitle"
-                               Text="Performance Dashboard"
-                               FontSize="24"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                               Margin="0,0,0,10"/>
+        <Grid x:Name="PopupOverlay"
+              Panel.ZIndex="950">
+            <Grid x:Name="PerformanceIntroOverlay"
+                  Visibility="Collapsed"
+                  AutomationProperties.Name="Performance introduction overlay">
+                <Border x:Name="PerformanceIntroCard"
+                        Background="#FF1E1E1E"
+                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="26"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        MinWidth="360"
+                        MaxWidth="560"
+                        Opacity="1">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity="0.35"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <TextBlock x:Name="PerformanceIntroTitle"
+                                   Text="Performance Dashboard"
+                                   FontSize="24"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                   Margin="0,0,0,10"/>
 
-                    <TextBlock x:Name="PerformanceIntroDescription"
-                               Text="This page gives you live CPU, memory and hotspot visibility so you can build precise optimization rules."
-                               TextWrapping="Wrap"
-                               Margin="0,0,0,10"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock x:Name="PerformanceIntroDescription"
+                                   Text="This page gives you live CPU, memory and hotspot visibility so you can build precise optimization rules."
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,10"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
 
-                    <TextBlock x:Name="PerformanceIntroTipsHeader"
-                               Text="Quick tips:"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                               Margin="0,0,0,6"/>
+                        <TextBlock x:Name="PerformanceIntroTipsHeader"
+                                   Text="Quick tips:"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                   Margin="0,0,0,6"/>
 
-                    <TextBlock x:Name="PerformanceIntroTip1"
-                               Text="1. Start monitoring to collect a live snapshot."
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Margin="0,0,0,4"/>
-                    <TextBlock x:Name="PerformanceIntroTip2"
-                               Text="2. Review top processes and pick recurring workloads."
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Margin="0,0,0,4"/>
-                    <TextBlock x:Name="PerformanceIntroTip3"
-                               Text="3. Create rules from hotspots to automate power plan and affinity behavior."
-                               TextWrapping="Wrap"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Margin="0,0,0,16"/>
+                        <TextBlock x:Name="PerformanceIntroTip1"
+                                   Text="1. Start monitoring to collect a live snapshot."
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Margin="0,0,0,4"/>
+                        <TextBlock x:Name="PerformanceIntroTip2"
+                                   Text="2. Review top processes and pick recurring workloads."
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Margin="0,0,0,4"/>
+                        <TextBlock x:Name="PerformanceIntroTip3"
+                                   Text="3. Create rules from hotspots to automate power plan and affinity behavior."
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Margin="0,0,0,16"/>
 
-                    <Button x:Name="PerformanceIntroContinueButton"
-                            Content="Continue to Performance"
-                            Click="PerformanceIntroContinue_Click"
-                            HorizontalAlignment="Right"
-                            Background="{DynamicResource AccentFillColorDefaultBrush}"
-                            Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
-                            Padding="16,8"/>
-                </StackPanel>
-            </Border>
-        </Grid>
+                        <Button x:Name="PerformanceIntroContinueButton"
+                                Content="Continue to Performance"
+                                Click="PerformanceIntroContinue_Click"
+                                HorizontalAlignment="Right"
+                                Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                Padding="16,8"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
 
-        <!-- Startup Loading Overlay -->
-        <Grid x:Name="LoadingOverlay"
-              Grid.RowSpan="3"
-              Background="#FFF2F2F2"
-              Visibility="Visible"
-              Panel.ZIndex="1000"
-              AutomationProperties.Name="Application startup loading overlay"
-              AutomationProperties.LiveSetting="Polite">
+            <!-- Startup Loading Overlay -->
+            <Grid x:Name="LoadingOverlay"
+                  Visibility="Visible"
+                  Panel.ZIndex="1000"
+                  AutomationProperties.Name="Application startup loading overlay"
+                  AutomationProperties.LiveSetting="Polite">
+
+            <!-- Loading Popup -->
             <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                     BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                     BorderThickness="1"
@@ -280,7 +355,9 @@
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     MinWidth="300"
-                    MaxWidth="400">
+                    MaxWidth="400"
+                    IsHitTestVisible="True"
+                    Opacity="1">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <!-- Application Icon -->
                     <Border x:Name="LoadingIconBackground"
@@ -314,7 +391,7 @@
                                TextAlignment="Center"/>
                 </StackPanel>
             </Border>
-
+            </Grid>
         </Grid>
     </Grid>
 </ui:FluentWindow>
