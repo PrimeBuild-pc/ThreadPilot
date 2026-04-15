@@ -127,7 +127,7 @@ namespace ThreadPilot
             {
                 if (launchedViaTask)
                 {
-                    logger.LogWarning("Application was launched via managed task marker but is still not elevated. Continuing in limited mode.");
+                    logger.LogError("Application was launched via managed task marker but is still not elevated.");
                 }
 #if DEBUG
                 else if (!isSmokeTest && !isTestMode)
@@ -154,7 +154,19 @@ namespace ThreadPilot
                     }
                 }
 
-                logger.LogWarning("Application is running without administrator privileges. Elevated operations will require explicit elevation.");
+#if DEBUG
+                if (!isSmokeTest && !isTestMode)
+#else
+                if (!isSmokeTest)
+#endif
+                {
+                    logger.LogError("ThreadPilot requires administrator privileges and cannot continue without elevation.");
+                    this.ShowElevationRequiredMessage();
+                    this.Shutdown(1);
+                    return;
+                }
+
+                logger.LogWarning("Application is running without administrator privileges in smoke test mode.");
             }
 
             // Enforce single-instance after elevation bootstrap logic to avoid mutex races during handoff.
@@ -339,13 +351,12 @@ namespace ThreadPilot
             }
 
             System.Windows.MessageBox.Show(
-                "ThreadPilot is running with limited privileges. Some features may not be available.\n\n" +
-                "For full functionality including process affinity and power plan management, " +
-                "administrator privileges are required.\n\n" +
-                "You can request elevation from the application menu when needed.",
-                "Limited Privileges",
+                "ThreadPilot requires administrator privileges to start.\n\n" +
+                "Please relaunch the application and approve the UAC prompt.\n\n" +
+                "This instance will now close.",
+                "Administrator Privileges Required",
                 MessageBoxButton.OK,
-                MessageBoxImage.Information);
+                MessageBoxImage.Warning);
         }
 
         /// <summary>

@@ -9,12 +9,12 @@ What to do:
 - Use "More info" then "Run anyway" only after verification.
 
 ## UAC Prompt and Elevation
-Some operations (priority, affinity, power plan changes) require admin rights.
+ThreadPilot requires administrator privileges at startup.
 
 What to do:
-- Launch normally for read-only monitoring.
-- Use in-app elevation request when needed.
-- If elevation is denied, ThreadPilot continues in limited mode.
+- Launch ThreadPilot and approve the UAC prompt.
+- If elevation is denied, restart and approve elevation.
+- For startup automation, ensure the launch task runs with highest privileges.
 
 ## WMI Errors or Delayed Process Detection
 If WMI is unavailable or slow, process event monitoring can degrade.

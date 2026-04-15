@@ -29,13 +29,13 @@ Please prioritize reports involving:
 
 ## Privilege Model
 
-- The application uses a least-privilege startup model (`asInvoker`).
-- Elevation is requested only when an operation explicitly requires administrator rights.
-- Declining elevation for a privileged action does not terminate the app; the action is denied and logged.
+- The application requires administrator privileges at startup (`requireAdministrator`).
+- A non-elevated startup is considered invalid and is terminated early.
+- Elevated operations are still validated through security checks before execution.
 
 ## UAC Elevation Strategy
 
-- UAC prompts are operation-scoped rather than startup-scoped.
+- UAC prompt is startup-scoped.
 - Elevated operations are validated before execution through security checks.
 - Security audit entries are emitted for allowed and denied elevated actions.
 

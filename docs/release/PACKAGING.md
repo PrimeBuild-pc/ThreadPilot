@@ -23,7 +23,7 @@ Shared packaging defaults are in `Directory.Publish.props`.
 
 Release baseline requirements:
 
-- Executable manifest must use asInvoker and defer elevation to privileged operations.
+- Executable manifest must use requireAdministrator so portable and installed builds always launch elevated.
 - Inno Setup compile warnings target: 0.
 - Build and test stages must pass before packaging.
 

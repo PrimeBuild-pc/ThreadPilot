@@ -31,7 +31,7 @@ The project targets users who need Process Lasso style capabilities in a modern 
 
 - Windows 11 (Build 22000+).
 - .NET 8 SDK for source builds.
-- Administrator privileges are required only for advanced process and power operations.
+- Administrator privileges are required to launch ThreadPilot.
 
 ## 📦 Download
 
@@ -56,8 +56,8 @@ Install flow summary:
 
 Notes:
 
-- ThreadPilot runs with a least-privilege manifest (`asInvoker`) and requests elevation only for operations that need administrator rights.
-- If UAC elevation is declined for a privileged action, the application continues running in limited mode.
+- ThreadPilot uses an administrator-required manifest (`requireAdministrator`) and requests elevation at startup.
+- If UAC elevation is declined at startup, the application exits and does not continue in limited mode.
 - In `Power Plans > Custom Power Plans`, use `Add .pow File` to add new custom plans directly from the app.
 - The first opening of Performance shows a blocking onboarding modal with blurred background for clarity.
 
