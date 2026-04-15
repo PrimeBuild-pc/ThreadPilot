@@ -70,6 +70,7 @@ namespace ThreadPilot.Services
 
         private const uint ProcessQueryLimitedInformation = 0x1000;
         private const int ProcessProtectionInformationClass = 61;
+        private const int MaxLogTokenLength = 200;
 
         [StructLayout(LayoutKind.Sequential)]
         private struct ProcessProtectionInformation
@@ -294,8 +295,8 @@ namespace ThreadPilot.Services
                 .Replace('\t', ' ')
                 .Trim();
 
-            return sanitized.Length > 200
-                ? sanitized[..200]
+            return sanitized.Length > MaxLogTokenLength
+                ? sanitized[..MaxLogTokenLength]
                 : sanitized;
         }
     }

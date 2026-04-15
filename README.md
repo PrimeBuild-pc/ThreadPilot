@@ -4,7 +4,7 @@
 [![Release](https://img.shields.io/github/v/release/PrimeBuild-pc/ThreadPilot?sort=semver)](https://github.com/PrimeBuild-pc/ThreadPilot/releases)
 [![Coverage](https://codecov.io/gh/PrimeBuild-pc/ThreadPilot/branch/main/graph/badge.svg)](https://codecov.io/gh/PrimeBuild-pc/ThreadPilot)
 [![winget](https://img.shields.io/winget/v/PrimeBuild.ThreadPilot)](https://github.com/microsoft/winget-pkgs)
-[![Windows](https://img.shields.io/badge/Windows-11%20official%20%7C%2010%20best--effort-blue?logo=windows)](https://www.microsoft.com/windows)
+[![Windows](https://img.shields.io/badge/Windows-11-blue?logo=windows)](https://www.microsoft.com/windows)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE)
 
@@ -21,7 +21,7 @@ The project targets users who need Process Lasso style capabilities in a modern 
 - I/O and scheduling related tuning utilities.
 - Rule-driven power plan switching based on process start/stop events.
 - Conditional profiles, system tray controls, and runtime monitoring.
-- Windows 11 first-class support; Windows 10 support is best effort.
+- Windows 11 first-class support.
 
 ## Screenshots
 
@@ -29,7 +29,7 @@ The project targets users who need Process Lasso style capabilities in a modern 
 
 ## ⚙️ Requirements
 
-- Windows 11 (official support), Windows 10 22H2+ (best effort).
+- Windows 11 (Build 22000+).
 - .NET 8 SDK for source builds.
 - Administrator privileges are required only for advanced process and power operations.
 

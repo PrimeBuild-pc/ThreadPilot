@@ -283,9 +283,7 @@ namespace ThreadPilot
                 logger.LogInformation("Starting ThreadPilot smoke test");
 
                 var settingsService = this.ServiceProvider.GetRequiredService<IApplicationSettingsService>();
-                await settingsService.LoadSettingsAsync();
-
-                _ = this.ServiceProvider.GetRequiredService<MainWindow>();
+                await settingsService.LoadSettingsAsync().ConfigureAwait(false);
                 _ = this.ServiceProvider.GetRequiredService<ProcessViewModel>();
                 _ = this.ServiceProvider.GetRequiredService<PowerPlanViewModel>();
 

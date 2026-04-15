@@ -35,6 +35,8 @@ coverage*.info
 *.coverage
 *.coveragexml
 *.trx
+FINAL_RELEASE_PLAN.md
+RELEASE_PLAN.md
 
 # .NET / NuGet
 *.deps.json

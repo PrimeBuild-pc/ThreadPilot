@@ -32,14 +32,6 @@ What to do:
 - Ensure Performance Logs and Alerts services are healthy.
 - Validate that perflib counters are enabled on the machine.
 
-## App Does Not Start on Windows 10
-ThreadPilot officially targets Windows 11; Windows 10 support is best effort.
-
-What to do:
-- Install latest Windows 10 updates (22H2+ recommended).
-- Install .NET 8 runtime/SDK if running from source.
-- Check %TEMP%\ThreadPilot_Debug.log for startup diagnostics.
-
 ## Smoke Test Command
 For CI or local validation:
 
