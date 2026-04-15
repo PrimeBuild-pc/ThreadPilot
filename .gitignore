@@ -102,6 +102,8 @@ Installer/Output/
 *.[Pp]ublish.xml
 *.azurePubxml
 *.pubxml
+!Properties/PublishProfiles/WinX64-SingleFile.pubxml
+!Properties/PublishProfiles/WinX64-ReadyToRun.pubxml
 *.publishproj
 PublishScripts/
 
