@@ -44,6 +44,20 @@ Output folder:
 iscc /DMyAppVersion=1.1.1 /DMyAppSourceDir="..\\artifacts\\release\\singlefile" Installer/setup.iss
 ```
 
+Recommended local command (prevents stale publish output by forcing a fresh publish before ISCC):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File build/build-installer.ps1 -Version 1.1.1
+```
+
+The installer now uses Inno Setup native dynamic theming (`WizardStyle=modern dynamic windows11`) and follows the current Windows light/dark preference at startup.
+
+Optional override for QA/troubleshooting:
+
+```powershell
+iscc /DMyWizardStyle="modern dark windows11" /DMyAppVersion=1.1.1 /DMyAppSourceDir="..\\artifacts\\release\\singlefile" Installer/setup.iss
+```
+
 Output folder:
 
 - `artifacts/release/installer/`

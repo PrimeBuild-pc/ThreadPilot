@@ -164,6 +164,12 @@ namespace ThreadPilot
                     ? settings.UseDarkTheme
                     : themeService.GetSystemUsesDarkTheme();
 
+                if (!settings.HasUserThemePreference && settings.UseDarkTheme != useDarkTheme)
+                {
+                    settings.UseDarkTheme = useDarkTheme;
+                    Task.Run(async () => await settingsService.UpdateSettingsAsync(settings)).GetAwaiter().GetResult();
+                }
+
                 themeService.ApplyTheme(useDarkTheme);
             }
             catch (Exception ex)

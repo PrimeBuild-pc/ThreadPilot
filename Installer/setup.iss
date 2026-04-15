@@ -6,6 +6,10 @@
 #define MyAppURL "https://github.com/PrimeBuild-pc/ThreadPilot"
 #define MyAppExeName "ThreadPilot.exe"
 
+#ifndef MyWizardStyle
+	#define MyWizardStyle "modern dynamic windows11"
+#endif
+
 #ifndef MyAppVersion
 	#define MyAppVersion "1.1.1"
 #endif
@@ -33,7 +37,7 @@ OutputBaseFilename=ThreadPilot_v{#MyAppVersion}_Setup
 SetupIconFile=..\assets\icons\ico.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
-WizardStyle=modern
+WizardStyle={#MyWizardStyle}
 ArchitecturesInstallIn64BitMode=x64compatible
 ArchitecturesAllowed=x64compatible
 UninstallDisplayIcon={app}\{#MyAppExeName}

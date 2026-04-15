@@ -48,7 +48,7 @@
                 <Style TargetType="Grid">
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding ElementName=PerformanceIntroOverlay, Path=Visibility}" Value="Visible">
-                            <Setter Property="IsEnabled" Value="False"/>
+                            <Setter Property="IsHitTestVisible" Value="False"/>
                             <Setter Property="Effect">
                                 <Setter.Value>
                                     <BlurEffect Radius="15" KernelType="Gaussian"/>

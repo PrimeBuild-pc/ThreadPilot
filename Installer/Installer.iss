@@ -6,8 +6,15 @@
 #define MyAppURL "https://github.com/"
 #define MyAppExeName "ThreadPilot.exe"
 #define MyAppVersion "0.1.0-beta"
+
+#ifndef MyWizardStyle
+  #define MyWizardStyle "modern dynamic windows11"
+#endif
+
 ; Point this to the folder containing the published binaries (e.g. dotnet publish -c Release -r win-x64)
-#define MyAppBuildDir "..\\publish"
+#ifndef MyAppBuildDir
+  #define MyAppBuildDir "..\\publish"
+#endif
 
 [Setup]
 AppId={{A2A4C8B5-4A9A-4B1B-93F4-5F8B1C7E8C2A}
@@ -28,7 +35,7 @@ PrivilegesRequiredOverridesAllowed=dialog
 OutputBaseFilename=ThreadPilot_Setup
 SetupIconFile=..\assets\icons\ico.ico
 SolidCompression=yes
-WizardStyle=modern
+WizardStyle={#MyWizardStyle}
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

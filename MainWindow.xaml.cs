@@ -592,6 +592,12 @@ namespace ThreadPilot
                     ? settings.UseDarkTheme
                     : this.themeService.GetSystemUsesDarkTheme();
 
+                if (!settings.HasUserThemePreference && settings.UseDarkTheme != useDarkTheme)
+                {
+                    settings.UseDarkTheme = useDarkTheme;
+                    await this.settingsService.UpdateSettingsAsync(settings);
+                }
+
                 this.themeService.ApplyTheme(useDarkTheme);
                 this.mainWindowViewModel.IsDarkTheme = useDarkTheme;
                 this.ApplyWindowCaptionTheme(useDarkTheme);
@@ -1823,6 +1829,17 @@ namespace ThreadPilot
             if (this.isPerformingShutdown)
             {
                 base.OnClosing(e);
+                return;
+            }
+
+            if (this.isPerformanceIntroVisible)
+            {
+                e.Cancel = true;
+                System.Windows.MessageBox.Show(
+                    "Please complete the Performance introduction before closing the application.\n\nClick 'Continue to Performance' to proceed.",
+                    "Performance Introduction Required",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
                 return;
             }
 
