@@ -403,7 +403,7 @@ namespace ThreadPilot.Services
                 var processName = e.NewEvent["ProcessName"]?.ToString() ?? string.Empty;
 
                 // Get detailed process information
-                var process = await this.CreateProcessModelFromId(processId, processName)
+                var process = await this.CreateProcessModelFromId(processId, processName).ConfigureAwait(false)
                     ?? (!string.IsNullOrWhiteSpace(processName)
                         ? new ProcessModel { ProcessId = processId, Name = NormalizeProcessName(processName) }
                         : null);

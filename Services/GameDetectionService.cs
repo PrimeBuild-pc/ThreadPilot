@@ -72,6 +72,8 @@ namespace ThreadPilot.Services
 
         public async Task<ProcessFeatures> ExtractProcessFeaturesAsync(ProcessModel process)
         {
+            var (threadCount, handleCount) = GetRuntimeProcessMetrics(process.ProcessId);
+
             var features = new ProcessFeatures
             {
                 ProcessName = process.Name,
@@ -79,8 +81,8 @@ namespace ThreadPilot.Services
                 HasVisibleWindow = process.HasVisibleWindow,
                 CpuUsage = process.CpuUsage,
                 MemoryUsage = process.MemoryUsage,
-                ThreadCount = process.Process?.Threads.Count ?? 0,
-                HandleCount = process.Process?.HandleCount ?? 0
+                ThreadCount = threadCount,
+                HandleCount = handleCount
             };
 
             try
@@ -120,6 +122,19 @@ namespace ThreadPilot.Services
             }
 
             return features;
+        }
+
+        private static (int ThreadCount, int HandleCount) GetRuntimeProcessMetrics(int processId)
+        {
+            try
+            {
+                using var liveProcess = Process.GetProcessById(processId);
+                return (liveProcess.Threads.Count, liveProcess.HandleCount);
+            }
+            catch
+            {
+                return (0, 0);
+            }
         }
 
         public async Task<GamePerformanceMetrics> GetGamePerformanceAsync(ProcessModel process)

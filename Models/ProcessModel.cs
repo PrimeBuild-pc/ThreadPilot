@@ -22,36 +22,6 @@ namespace ThreadPilot.Models
 
     public partial class ProcessModel : ObservableObject
     {
-        private Process? process;
-
-        public Process? Process
-        {
-            get => this.process;
-            set
-            {
-                this.process = value;
-                if (value != null)
-                {
-                    this.ProcessId = value.Id;
-                    this.Name = value.ProcessName;
-                    try
-                    {
-                        this.ProcessorAffinity = (long)value.ProcessorAffinity;
-                        this.Priority = value.PriorityClass;
-                        this.MemoryUsage = value.PrivateMemorySize64;
-                        this.ExecutablePath = value.MainModule?.FileName ?? string.Empty;
-                        this.MainWindowHandle = value.MainWindowHandle;
-                        this.MainWindowTitle = value.MainWindowTitle ?? string.Empty;
-                        this.HasVisibleWindow = this.MainWindowHandle != IntPtr.Zero && !string.IsNullOrWhiteSpace(this.MainWindowTitle);
-                    }
-                    catch (Exception)
-                    {
-                        // Process may have terminated or access denied
-                    }
-                }
-            }
-        }
-
         [ObservableProperty]
         private int processId;
 

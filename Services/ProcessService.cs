@@ -523,7 +523,7 @@ namespace ThreadPilot.Services
                 {
                     return Enumerable.Empty<ProcessModel>();
                 }
-            });
+            }).ConfigureAwait(false);
         }
 
         public async Task<bool> IsProcessRunningAsync(string executableName)
