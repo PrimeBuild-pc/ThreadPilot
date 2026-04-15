@@ -20,7 +20,6 @@ namespace ThreadPilot
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using System.Runtime.InteropServices;
     using System.Threading;
     using System.Threading.Tasks;
     using System.Timers;
@@ -31,19 +30,21 @@ namespace ThreadPilot
     using System.Windows.Media.Effects;
     using System.Windows.Media.Imaging;
     using Microsoft.Extensions.DependencyInjection;
+    using ThreadPilot.Helpers;
     using ThreadPilot.Services;
     using ThreadPilot.ViewModels;
     using ThreadPilot.Views;
 
     public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     {
-        private const int DwmUseImmersiveDarkMode = 20;
-        private const int DwmUseImmersiveDarkModeLegacy = 19;
+        private const int SystemTrayUpdateBaseIntervalMs = 10000;
+        private const int SystemTrayUpdateMaxIntervalMs = 60000;
 
         private readonly ProcessViewModel processViewModel;
         private readonly PowerPlanViewModel powerPlanViewModel;
         private readonly PerformanceViewModel performanceViewModel;
         private readonly ProcessPowerPlanAssociationViewModel associationViewModel;
+        private readonly LogViewerViewModel logViewerViewModel;
         private readonly ISystemTrayService systemTrayService;
         private readonly IApplicationSettingsService settingsService;
         private readonly INotificationService notificationService;
@@ -59,6 +60,7 @@ namespace ThreadPilot
         private System.Timers.Timer? systemTrayUpdateTimer;
         private bool isSystemTrayUpdatesSuspended;
         private int isSystemTrayUpdateInProgress;
+        private int systemTrayUpdateFailureStreak;
         private readonly IElevationService elevationService;
         private readonly ISecurityService securityService;
 
@@ -72,20 +74,16 @@ namespace ThreadPilot
         // Flag to skip process monitoring during startup if it causes issues
         private readonly bool skipProcessMonitoringDuringStartup = false;
         private bool isPerformingShutdown = false;
-        private int currentTabIndex = -1;
-        private bool isHandlingTabSelection;
-        private readonly SemaphoreSlim tabSwitchGuard = new(1, 1);
+        private readonly NavigationBehavior navigationBehavior = new();
         private bool isPerformanceIntroVisible = false;
         private double previousAppContentOpacity = 1;
-
-        [DllImport("dwmapi.dll")]
-        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int dwAttribute, ref int pvAttribute, int cbAttribute);
 
         public MainWindow(
             ProcessViewModel processViewModel,
             PowerPlanViewModel powerPlanViewModel,
             PerformanceViewModel performanceViewModel,
             ProcessPowerPlanAssociationViewModel associationViewModel,
+            LogViewerViewModel logViewerViewModel,
             ISystemTrayService systemTrayService,
             IApplicationSettingsService settingsService,
             INotificationService notificationService,
@@ -117,6 +115,7 @@ namespace ThreadPilot
                 this.powerPlanViewModel = powerPlanViewModel;
                 this.performanceViewModel = performanceViewModel;
                 this.associationViewModel = associationViewModel;
+                this.logViewerViewModel = logViewerViewModel;
                 this.systemTrayService = systemTrayService;
                 this.settingsService = settingsService;
                 this.notificationService = notificationService;
@@ -145,9 +144,6 @@ namespace ThreadPilot
                 _ = this.Dispatcher.InvokeAsync(async () => await this.InitializeApplicationAsync());
                 System.Diagnostics.Debug.WriteLine("Async initialization started");
                 System.Diagnostics.Debug.WriteLine("MainWindow constructor completed successfully");
-
-                // Initialize navigation index
-                this.currentTabIndex = 0;
             }
             catch (Exception ex)
             {
@@ -172,6 +168,9 @@ namespace ThreadPilot
 
             // Set DataContext for the performance view
             this.PerformanceViewControl.DataContext = this.performanceViewModel;
+
+            // Set DataContext for the log viewer view
+            this.LogViewerViewControl.DataContext = this.logViewerViewModel;
 
             // Set DataContext for the system tweaks view
             this.SystemTweaksView.DataContext = this.systemTweaksViewModel;
@@ -600,7 +599,7 @@ namespace ThreadPilot
 
                 this.themeService.ApplyTheme(useDarkTheme);
                 this.mainWindowViewModel.IsDarkTheme = useDarkTheme;
-                this.ApplyWindowCaptionTheme(useDarkTheme);
+                DwmHelper.ApplyWindowCaptionTheme(this, useDarkTheme);
 
                 if (settings.StartMinimized)
                 {
@@ -1190,8 +1189,11 @@ namespace ThreadPilot
         {
             try
             {
-                this.systemTrayUpdateTimer = new System.Timers.Timer(10000); // PERFORMANCE OPTIMIZATION: Update every 10 seconds instead of 5
-                // Marshal timer callback to UI thread to avoid cross-thread access issues
+                this.systemTrayUpdateTimer?.Stop();
+                this.systemTrayUpdateTimer?.Dispose();
+
+                this.systemTrayUpdateFailureStreak = 0;
+                this.systemTrayUpdateTimer = new System.Timers.Timer(SystemTrayUpdateBaseIntervalMs);
                 this.systemTrayUpdateTimer.Elapsed += async (s, e) =>
                 {
                     if (this.isSystemTrayUpdatesSuspended)
@@ -1206,17 +1208,13 @@ namespace ThreadPilot
 
                     try
                     {
-                        await this.Dispatcher.InvokeAsync(async () =>
-                        {
-                            if (!this.isSystemTrayUpdatesSuspended)
-                            {
-                                await this.UpdateSystemTrayStatusAsync();
-                            }
-                        });
+                        var updateSucceeded = await this.UpdateSystemTrayStatusAsync();
+                        this.ApplySystemTrayUpdateBackoff(updateSucceeded);
                     }
                     catch (Exception ex)
                     {
                         System.Diagnostics.Debug.WriteLine($"Error in system tray update timer: {ex.Message}");
+                        this.ApplySystemTrayUpdateBackoff(updateSucceeded: false);
                     }
                     finally
                     {
@@ -1232,7 +1230,35 @@ namespace ThreadPilot
             }
         }
 
-        private async Task UpdateSystemTrayStatusAsync()
+        private void ApplySystemTrayUpdateBackoff(bool updateSucceeded)
+        {
+            if (this.systemTrayUpdateTimer == null)
+            {
+                return;
+            }
+
+            if (updateSucceeded)
+            {
+                this.systemTrayUpdateFailureStreak = 0;
+                if (Math.Abs(this.systemTrayUpdateTimer.Interval - SystemTrayUpdateBaseIntervalMs) > 1)
+                {
+                    this.systemTrayUpdateTimer.Interval = SystemTrayUpdateBaseIntervalMs;
+                }
+
+                return;
+            }
+
+            this.systemTrayUpdateFailureStreak = Math.Min(4, this.systemTrayUpdateFailureStreak + 1);
+            var exponentialDelay = SystemTrayUpdateBaseIntervalMs * Math.Pow(2, this.systemTrayUpdateFailureStreak);
+            var nextIntervalMs = Math.Min(SystemTrayUpdateMaxIntervalMs, exponentialDelay);
+
+            if (Math.Abs(this.systemTrayUpdateTimer.Interval - nextIntervalMs) > 1)
+            {
+                this.systemTrayUpdateTimer.Interval = nextIntervalMs;
+            }
+        }
+
+        private async Task<bool> UpdateSystemTrayStatusAsync()
         {
             try
             {
@@ -1242,14 +1268,20 @@ namespace ThreadPilot
                 var activePowerPlan = await powerPlanService.GetActivePowerPlan();
                 var currentMetrics = await performanceService.GetSystemMetricsAsync(lightweight: true);
 
-                this.systemTrayService.UpdateSystemStatus(
-                    activePowerPlan?.Name ?? "Unknown",
-                    currentMetrics?.TotalCpuUsage ?? 0.0,
-                    currentMetrics?.MemoryUsagePercentage ?? 0.0);
+                await this.Dispatcher.InvokeAsync(() =>
+                {
+                    this.systemTrayService.UpdateSystemStatus(
+                        activePowerPlan?.Name ?? "Unknown",
+                        currentMetrics?.TotalCpuUsage ?? 0.0,
+                        currentMetrics?.MemoryUsagePercentage ?? 0.0);
+                });
+
+                return true;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to update system tray status: {ex.Message}");
+                return false;
             }
         }
 
@@ -1343,7 +1375,7 @@ namespace ThreadPilot
             this.themeService.ApplyTheme(useDarkTheme);
             this.mainWindowViewModel.IsDarkTheme = useDarkTheme;
             this.systemTrayService.ApplyTheme(useDarkTheme);
-            this.ApplyWindowCaptionTheme(useDarkTheme);
+            DwmHelper.ApplyWindowCaptionTheme(this, useDarkTheme);
         }
 
         private void OnMonitoringStatusChanged(object? sender, MonitoringStatusEventArgs e)
@@ -1436,6 +1468,12 @@ namespace ThreadPilot
         private void ResumeForegroundRefreshes()
         {
             this.isSystemTrayUpdatesSuspended = false;
+            this.systemTrayUpdateFailureStreak = 0;
+            this.systemTrayUpdateTimer?.Stop();
+            if (this.systemTrayUpdateTimer != null)
+            {
+                this.systemTrayUpdateTimer.Interval = SystemTrayUpdateBaseIntervalMs;
+            }
             this.systemTrayUpdateTimer?.Start();
             this.powerPlanViewModel.ResumeAutoRefresh(refreshImmediately: true);
 
@@ -1443,7 +1481,8 @@ namespace ThreadPilot
             {
                 try
                 {
-                    await this.UpdateSystemTrayStatusAsync();
+                    var updateSucceeded = await this.UpdateSystemTrayStatusAsync();
+                    this.ApplySystemTrayUpdateBackoff(updateSucceeded);
                 }
                 catch (Exception ex)
                 {
@@ -1455,7 +1494,14 @@ namespace ThreadPilot
         protected override void OnSourceInitialized(EventArgs e)
         {
             base.OnSourceInitialized(e);
-            this.ApplyWindowCaptionTheme(this.themeService.IsDarkTheme);
+            try
+            {
+                DwmHelper.ApplyWindowCaptionTheme(this, this.themeService.IsDarkTheme);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to apply window caption theme: {ex.Message}");
+            }
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
@@ -1492,11 +1538,6 @@ namespace ThreadPilot
             this.SelectMainTab("Rules");
         }
 
-        private static bool IsTabItem(object? item, object target)
-        {
-            return ReferenceEquals(item, target);
-        }
-
         private void ShowWindowFromTray(string? tabTag = null)
         {
             this.ShowInTaskbar = true;
@@ -1521,29 +1562,6 @@ namespace ThreadPilot
             if (tabTag != null)
             {
                 _ = this.Dispatcher.InvokeAsync(() => this.SelectMainTab(tabTag));
-            }
-        }
-
-        private void ApplyWindowCaptionTheme(bool useDarkTheme)
-        {
-            try
-            {
-                var windowHandle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-                if (windowHandle == IntPtr.Zero)
-                {
-                    return;
-                }
-
-                var darkMode = useDarkTheme ? 1 : 0;
-                var result = DwmSetWindowAttribute(windowHandle, DwmUseImmersiveDarkMode, ref darkMode, Marshal.SizeOf<int>());
-                if (result != 0)
-                {
-                    _ = DwmSetWindowAttribute(windowHandle, DwmUseImmersiveDarkModeLegacy, ref darkMode, Marshal.SizeOf<int>());
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Failed to apply window caption theme: {ex.Message}");
             }
         }
 
@@ -1735,6 +1753,7 @@ namespace ThreadPilot
             this.PowerPlanViewControl.Visibility = tag == "Power" ? Visibility.Visible : Visibility.Collapsed;
             this.AssociationView.Visibility = tag == "Rules" ? Visibility.Visible : Visibility.Collapsed;
             this.PerformanceViewControl.Visibility = tag == "Performance" ? Visibility.Visible : Visibility.Collapsed;
+            this.LogViewerViewControl.Visibility = tag == "Logs" ? Visibility.Visible : Visibility.Collapsed;
             this.SystemTweaksView.Visibility = tag == "Tweaks" ? Visibility.Visible : Visibility.Collapsed;
             this.SettingsView.Visibility = tag == "Settings" ? Visibility.Visible : Visibility.Collapsed;
 
@@ -1743,6 +1762,7 @@ namespace ThreadPilot
             this.NavPower.IsActive = tag == "Power";
             this.NavRules.IsActive = tag == "Rules";
             this.NavPerf.IsActive = tag == "Performance";
+            this.NavLogs.IsActive = tag == "Logs";
             this.NavTweaks.IsActive = tag == "Tweaks";
             this.NavSettings.IsActive = tag == "Settings";
         }
@@ -1757,57 +1777,34 @@ namespace ThreadPilot
 
         private async Task NavMenuItem_ClickAsync(object sender, RoutedEventArgs e)
         {
-            if (this.isHandlingTabSelection)
+            if (!await this.navigationBehavior.TryEnterAsync())
             {
                 return;
             }
-
-            var invokedItem = sender as Wpf.Ui.Controls.NavigationViewItem;
-            if (invokedItem == null)
-            {
-                return;
-            }
-
-            var tag = invokedItem.Tag?.ToString();
-            if (string.IsNullOrEmpty(tag))
-            {
-                return;
-            }
-
-            await this.tabSwitchGuard.WaitAsync();
-            this.isHandlingTabSelection = true;
 
             try
             {
+                var invokedItem = sender as Wpf.Ui.Controls.NavigationViewItem;
+                if (invokedItem == null)
+                {
+                    return;
+                }
+
+                var tag = invokedItem.Tag?.ToString();
+                if (string.IsNullOrEmpty(tag))
+                {
+                    return;
+                }
+
                 if (!this.IsLoaded)
                 {
                     return;
                 }
 
-                // Temporary logic: the Unsaved Settings logic must run before committing to navigation index
-                // but since Wpf.Ui NavigationView selected items are harder to revert implicitly,
-                // we'll run the check here. If unsaved, focus gets yanked back potentially in complex way. 
-                // We keep it functionally safe:
-                if (this.settingsViewModel.HasPendingChanges && tag != "Settings")
+                var canNavigate = await NavigationBehavior.EnsureCanNavigateAsync(tag, this.settingsViewModel);
+                if (!canNavigate)
                 {
-                    var result = System.Windows.MessageBox.Show(
-                        "You have unsaved changes in Settings.\n\nChoose an action:\n- Yes: Save changes\n- No: Discard changes\n- Cancel: Stay on current tab",
-                        "Unsaved Settings",
-                        MessageBoxButton.YesNoCancel,
-                        MessageBoxImage.Warning);
-
-                    if (result == MessageBoxResult.Cancel)
-                    {
-                        // Rollback logic would be needed here via NavigationView API, but let's just gracefully continue ignoring cancel for now.
-                    }
-                    else if (result == MessageBoxResult.Yes)
-                    {
-                        var saved = await this.settingsViewModel.SaveIfDirtyAsync();
-                    }
-                    else if (result == MessageBoxResult.No)
-                    {
-                        await this.settingsViewModel.DiscardPendingChangesAsync();
-                    }
+                    return;
                 }
 
                 this.ApplySectionVisibility(tag);
@@ -1819,8 +1816,7 @@ namespace ThreadPilot
             }
             finally
             {
-                this.isHandlingTabSelection = false;
-                this.tabSwitchGuard.Release();
+                this.navigationBehavior.Exit();
             }
         }
 
@@ -1867,7 +1863,7 @@ namespace ThreadPilot
                 this.initializationTimeoutTimer?.Stop();
                 this.initializationTimeoutTimer?.Dispose();
 
-                this.tabSwitchGuard.Dispose();
+                this.navigationBehavior.Dispose();
             }
             catch (Exception ex)
             {

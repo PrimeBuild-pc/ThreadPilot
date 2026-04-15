@@ -19,6 +19,10 @@ x86/
 bld/
 artifacts/
 
+# Keep release documentation tracked
+!docs/release/
+!docs/release/*.md
+
 # Test and coverage
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
@@ -124,6 +128,12 @@ AppData/
 # Project-specific extras
 .claude/
 .continue/
+.kilo/
+.roo/
+.cursor/
+.aider*/
+__pycache__/
+checkpoint*/
 CPUSetSetter-main/
 *.bak
 *.backup

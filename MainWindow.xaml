@@ -122,6 +122,11 @@
                             <ui:SymbolIcon Symbol="DataHistogram24"/>
                         </ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
+                    <ui:NavigationViewItem x:Name="NavLogs" Content="Activity Logs" Tag="Logs" TargetPageTag="Logs" Click="NavMenuItem_Click">
+                        <ui:NavigationViewItem.Icon>
+                            <ui:SymbolIcon Symbol="DocumentText24"/>
+                        </ui:NavigationViewItem.Icon>
+                    </ui:NavigationViewItem>
                     <ui:NavigationViewItem x:Name="NavTweaks" Content="Tweaks" Tag="Tweaks" TargetPageTag="Tweaks" Click="NavMenuItem_Click">
                         <ui:NavigationViewItem.Icon>
                             <ui:SymbolIcon Symbol="Wrench24"/>
@@ -243,6 +248,7 @@
                         <views:PowerPlanView x:Name="PowerPlanViewControl" Visibility="Collapsed"/>
                         <views:ProcessPowerPlanAssociationView x:Name="AssociationView" Visibility="Collapsed"/>
                         <views:PerformanceView x:Name="PerformanceViewControl" Visibility="Collapsed"/>
+                        <views:LogViewerView x:Name="LogViewerViewControl" Visibility="Collapsed"/>
                         <views:SystemTweaksView x:Name="SystemTweaksView" Visibility="Collapsed"/>
                         <views:SettingsView x:Name="SettingsView" Visibility="Collapsed"/>
                     </Grid>
@@ -270,6 +276,8 @@
                     <TextBlock Text="🔒"
                                Margin="5,0,0,0"
                                Visibility="{Binding IsRunningAsAdministrator, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    <TextBlock Text=" • " Margin="8,0,8,0" Opacity="0.7"/>
+                    <TextBlock Text="{Binding ApplicationVersion}" Opacity="0.85"/>
                 </StackPanel>
             </Grid>
         </Border>

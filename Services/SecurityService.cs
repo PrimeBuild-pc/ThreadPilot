@@ -17,7 +17,12 @@
 namespace ThreadPilot.Services
 {
     using System;
+    using System.ComponentModel;
+    using System.Diagnostics;
+    using System.IO;
     using System.Linq;
+    using System.Runtime.InteropServices;
+    using Microsoft.Win32.SafeHandles;
     using Microsoft.Extensions.Logging;
 
     /// <summary>
@@ -57,7 +62,31 @@ namespace ThreadPilot.Services
             "explorer",
             "wininit",
             "smss",
+            "WmiPrvSE",
+            "MsMpEng",
+            "SecurityHealthService",
+            "audiodg",
         };
+
+        private const uint ProcessQueryLimitedInformation = 0x1000;
+        private const int ProcessProtectionInformationClass = 61;
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct ProcessProtectionInformation
+        {
+            public byte ProtectionLevel;
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern SafeProcessHandle OpenProcess(uint desiredAccess, bool inheritHandle, int processId);
+
+        [DllImport("ntdll.dll")]
+        private static extern int NtQueryInformationProcess(
+            IntPtr processHandle,
+            int processInformationClass,
+            out ProcessProtectionInformation processInformation,
+            int processInformationLength,
+            out int returnLength);
 
         public SecurityService(ILogger<SecurityService> logger, IEnhancedLoggingService enhancedLogger)
         {
@@ -73,15 +102,17 @@ namespace ThreadPilot.Services
                 return false;
             }
 
-            var isAllowed = AllowedElevatedOperations.Contains(operation, StringComparer.OrdinalIgnoreCase);
+            var normalizedOperation = SanitizeForLog(operation);
+
+            var isAllowed = AllowedElevatedOperations.Contains(normalizedOperation, StringComparer.OrdinalIgnoreCase);
 
             if (!isAllowed)
             {
-                this.logger.LogWarning("Attempted to perform unauthorized elevated operation: {Operation}", operation);
+                this.logger.LogWarning("Attempted to perform unauthorized elevated operation: {Operation}", normalizedOperation);
             }
             else
             {
-                this.logger.LogDebug("Validated elevated operation: {Operation}", operation);
+                this.logger.LogDebug("Validated elevated operation: {Operation}", normalizedOperation);
             }
 
             return isAllowed;
@@ -89,16 +120,18 @@ namespace ThreadPilot.Services
 
         public async Task AuditElevatedAction(string action, string target, bool success)
         {
+            var normalizedAction = SanitizeForLog(action);
+            var normalizedTarget = SanitizeForLog(target);
             var logLevel = success ? LogLevel.Information : LogLevel.Warning;
-            var message = $"Elevated action performed: {action} on {target} - Success: {success}";
+            var message = $"Elevated action performed: {normalizedAction} on {normalizedTarget} - Success: {success}";
 
             this.logger.Log(logLevel, message);
 
             // Use enhanced logging for structured audit trail
             await this.enhancedLogger.LogSystemEventAsync(
                 success ? "ElevatedActionSuccess" : "ElevatedActionFailure",
-                $"Security audit: {action} on {target} - Success: {success}",
-                logLevel);
+                $"Security audit: {normalizedAction} on {normalizedTarget} - Success: {success}",
+                logLevel).ConfigureAwait(false);
         }
 
         public bool ValidateProcessOperation(string processName, string operation)
@@ -109,19 +142,22 @@ namespace ThreadPilot.Services
                 return false;
             }
 
+            var normalizedProcessName = NormalizeProcessName(processName);
+            var normalizedOperation = SanitizeForLog(operation);
+
             // Check if the process is in the protected list
-            var isProtected = ProtectedProcesses.Contains(processName, StringComparer.OrdinalIgnoreCase);
+            var isProtected = ProtectedProcesses.Contains(normalizedProcessName, StringComparer.OrdinalIgnoreCase);
 
             if (isProtected)
             {
                 this.logger.LogWarning(
                     "Attempted to perform operation '{Operation}' on protected process '{ProcessName}'",
-                    operation, processName);
+                    normalizedOperation, normalizedProcessName);
                 return false;
             }
 
             // Validate the operation itself
-            var isValidOperation = operation switch
+            var isValidOperation = normalizedOperation switch
             {
                 "SetProcessAffinity" => true,
                 "SetProcessPriority" => true,
@@ -133,10 +169,63 @@ namespace ThreadPilot.Services
             {
                 this.logger.LogWarning(
                     "Attempted to perform invalid process operation '{Operation}' on '{ProcessName}'",
-                    operation, processName);
+                    normalizedOperation, normalizedProcessName);
             }
 
             return isValidOperation;
+        }
+
+        public bool IsProtected(Process process)
+        {
+            ArgumentNullException.ThrowIfNull(process);
+
+            var normalizedName = NormalizeProcessName(process.ProcessName);
+            if (ProtectedProcesses.Contains(normalizedName, StringComparer.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            try
+            {
+                using var handle = OpenProcess(ProcessQueryLimitedInformation, false, process.Id);
+                if (handle.IsInvalid)
+                {
+                    var error = Marshal.GetLastWin32Error();
+                    this.logger.LogDebug(
+                        "OpenProcess failed for PID {ProcessId} with Win32 error {ErrorCode}",
+                        process.Id,
+                        error);
+                    return false;
+                }
+
+                var status = NtQueryInformationProcess(
+                    handle.DangerousGetHandle(),
+                    ProcessProtectionInformationClass,
+                    out var protectionInfo,
+                    Marshal.SizeOf<ProcessProtectionInformation>(),
+                    out _);
+
+                if (status != 0)
+                {
+                    this.logger.LogDebug(
+                        "NtQueryInformationProcess returned status {Status} for PID {ProcessId}",
+                        status,
+                        process.Id);
+                    return false;
+                }
+
+                return protectionInfo.ProtectionLevel != 0;
+            }
+            catch (Win32Exception ex)
+            {
+                this.logger.LogDebug(ex, "Win32 error while checking protected process state for PID {ProcessId}", process.Id);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogDebug(ex, "Failed dynamic protected-process check for PID {ProcessId}", process.Id);
+                return false;
+            }
         }
 
         public bool ValidatePowerPlanOperation(string powerPlanId, string operation)
@@ -184,6 +273,30 @@ namespace ThreadPilot.Services
             };
 
             return systemPowerPlans.Contains(powerPlanId, StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizeProcessName(string processName)
+        {
+            var sanitized = SanitizeForLog(processName);
+            return Path.GetFileNameWithoutExtension(sanitized);
+        }
+
+        private static string SanitizeForLog(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            var sanitized = value
+                .Replace('\r', ' ')
+                .Replace('\n', ' ')
+                .Replace('\t', ' ')
+                .Trim();
+
+            return sanitized.Length > 200
+                ? sanitized[..200]
+                : sanitized;
         }
     }
 }

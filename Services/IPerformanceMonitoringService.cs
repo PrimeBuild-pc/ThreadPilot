@@ -94,6 +94,34 @@ namespace ThreadPilot.Services
 
         public double MemoryUsagePercentage { get; set; }
 
+        public int Gen0Collections { get; set; }
+
+        public int Gen1Collections { get; set; }
+
+        public int Gen2Collections { get; set; }
+
+        public int Gen0CollectionsDelta { get; set; }
+
+        public int Gen1CollectionsDelta { get; set; }
+
+        public int Gen2CollectionsDelta { get; set; }
+
+        public long TotalAllocatedBytes { get; set; }
+
+        public long AllocatedBytesDelta { get; set; }
+
+        public long ManagedHeapSizeBytes { get; set; }
+
+        public long GcCommittedBytes { get; set; }
+
+        public double LastGcPauseMs { get; set; }
+
+        public double MaxGcPauseMs { get; set; }
+
+        public int HandleCount { get; set; }
+
+        public long ProcessWorkingSetBytes { get; set; }
+
         public List<CpuCoreUsage> CpuCoreUsages { get; set; } = new();
 
         public ProcessPerformanceInfo? TopCpuProcess { get; set; }

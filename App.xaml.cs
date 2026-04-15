@@ -23,6 +23,7 @@ using ThreadPilot.ViewModels;
 namespace ThreadPilot
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using System.Security.Principal;
     using System.Threading;
@@ -31,6 +32,7 @@ namespace ThreadPilot
     using System.Windows.Threading;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
+    using ThreadPilot.Models;
 
     public partial class App : System.Windows.Application
     {
@@ -57,61 +59,10 @@ namespace ThreadPilot
 
         protected override void OnStartup(StartupEventArgs e)
         {
-            // Enforce single-instance: bail out if another instance is already running
-            bool createdNew;
-            this.singleInstanceMutex = new Mutex(initiallyOwned: true, name: "Global\\ThreadPilot_SingleInstance", createdNew: out createdNew);
-            if (!createdNew)
-            {
-                System.Windows.MessageBox.Show(
-                    "ThreadPilot is already running.",
-                    "Instance already open",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-
-                this.Shutdown();
-                return;
-            }
-
-            // Set up global exception handlers first
-            AppDomain.CurrentDomain.UnhandledException += this.OnUnhandledException;
-            this.DispatcherUnhandledException += this.OnDispatcherUnhandledException;
-
-            // Check elevation status first
-            var elevationService = this.ServiceProvider.GetRequiredService<IElevationService>();
-            var logger = this.ServiceProvider.GetRequiredService<ILogger<App>>();
-
-            if (!elevationService.IsRunningAsAdministrator())
-            {
-                logger.LogWarning("Application is not running with administrator privileges. Requesting elevation before startup.");
-
-                var elevationRequested = elevationService.RequestElevationIfNeeded().GetAwaiter().GetResult();
-                if (!elevationRequested)
-                {
-                    logger.LogWarning("Elevation was declined or failed. Application startup will be terminated.");
-                    System.Windows.MessageBox.Show(
-                        "ThreadPilot requires administrator privileges to start.\n\n" +
-                        "The application will now close.",
-                        "Administrator Privileges Required",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                    this.Shutdown(1);
-                    return;
-                }
-
-                // An elevated instance has been requested; terminate this non-elevated instance.
-                this.Shutdown();
-                return;
-            }
-            else
-            {
-                logger.LogInformation("Application is running with administrator privileges");
-            }
-
-            base.OnStartup(e);
-
-            // Parse command line arguments
+            // Parse command line arguments early so special startup modes can short-circuit normal flow.
             bool startMinimized = false;
             bool isAutostart = false;
+            bool isSmokeTest = false;
 #if DEBUG
             bool isTestMode = false;
 #endif
@@ -125,6 +76,9 @@ namespace ThreadPilot
                         isTestMode = true;
                         break;
 #endif
+                    case "--smoke-test":
+                        isSmokeTest = true;
+                        break;
                     case "--start-minimized":
                         startMinimized = true;
                         break;
@@ -137,6 +91,44 @@ namespace ThreadPilot
                         break;
                 }
             }
+
+            // Enforce single-instance: bail out if another instance is already running
+            if (!isSmokeTest)
+            {
+                bool createdNew;
+                this.singleInstanceMutex = new Mutex(initiallyOwned: true, name: "Global\\ThreadPilot_SingleInstance", createdNew: out createdNew);
+                if (!createdNew)
+                {
+                    System.Windows.MessageBox.Show(
+                        "ThreadPilot is already running.",
+                        "Instance already open",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+
+                    this.Shutdown();
+                    return;
+                }
+            }
+
+            // Set up global exception handlers first
+            AppDomain.CurrentDomain.UnhandledException += this.OnUnhandledException;
+            this.DispatcherUnhandledException += this.OnDispatcherUnhandledException;
+            TaskScheduler.UnobservedTaskException += this.OnUnobservedTaskException;
+
+            // Check elevation status first
+            var elevationService = this.ServiceProvider.GetRequiredService<IElevationService>();
+            var logger = this.ServiceProvider.GetRequiredService<ILogger<App>>();
+
+            if (!elevationService.IsRunningAsAdministrator())
+            {
+                logger.LogWarning("Application is running without administrator privileges. Elevated operations will require explicit elevation.");
+            }
+            else
+            {
+                logger.LogInformation("Application is running with administrator privileges");
+            }
+
+            base.OnStartup(e);
 
             // Check for test mode
 #if DEBUG
@@ -152,6 +144,13 @@ namespace ThreadPilot
                 return;
             }
 #endif
+
+            if (isSmokeTest)
+            {
+                var smokeTestResult = Task.Run(async () => await this.RunSmokeTestAsync(logger)).GetAwaiter().GetResult();
+                this.Shutdown(smokeTestResult);
+                return;
+            }
 
             try
             {
@@ -230,8 +229,35 @@ namespace ThreadPilot
             }
         }
 
+        private async Task<int> RunSmokeTestAsync(ILogger logger)
+        {
+            try
+            {
+                logger.LogInformation("Starting ThreadPilot smoke test");
+
+                var settingsService = this.ServiceProvider.GetRequiredService<IApplicationSettingsService>();
+                await settingsService.LoadSettingsAsync();
+
+                _ = this.ServiceProvider.GetRequiredService<MainWindow>();
+                _ = this.ServiceProvider.GetRequiredService<ProcessViewModel>();
+                _ = this.ServiceProvider.GetRequiredService<PowerPlanViewModel>();
+
+                logger.LogInformation("ThreadPilot smoke test completed successfully");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "ThreadPilot smoke test failed");
+                return 1;
+            }
+        }
+
         protected override void OnExit(ExitEventArgs e)
         {
+            AppDomain.CurrentDomain.UnhandledException -= this.OnUnhandledException;
+            this.DispatcherUnhandledException -= this.OnDispatcherUnhandledException;
+            TaskScheduler.UnobservedTaskException -= this.OnUnobservedTaskException;
+
             if (this.singleInstanceMutex != null)
             {
                 try
@@ -282,10 +308,8 @@ namespace ThreadPilot
         /// </summary>
         private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            var exception = e.ExceptionObject as Exception;
-            var logger = this.ServiceProvider?.GetService<ILogger<App>>();
-
-            logger?.LogCritical(exception, "Unhandled exception occurred");
+            var exception = e.ExceptionObject as Exception ?? new InvalidOperationException("Unhandled non-Exception object was raised.");
+            this.ReportUnhandledException(exception, "AppDomain.CurrentDomain.UnhandledException", LogLevel.Critical);
 
             var errorMessage = $"A critical error occurred:\n\n{exception?.Message}\n\nThe application will now exit.";
             System.Windows.MessageBox.Show(errorMessage, "Critical Error",
@@ -297,9 +321,7 @@ namespace ThreadPilot
         /// </summary>
         private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
-            var logger = this.ServiceProvider?.GetService<ILogger<App>>();
-
-            logger?.LogError(e.Exception, "Unhandled dispatcher exception occurred");
+            this.ReportUnhandledException(e.Exception, "Application.DispatcherUnhandledException", LogLevel.Error);
 
             if (Interlocked.CompareExchange(ref this.uiExceptionDialogOpen, 1, 0) != 0)
             {
@@ -330,6 +352,51 @@ namespace ThreadPilot
             }
 
             Interlocked.Exchange(ref this.uiExceptionDialogOpen, 0);
+        }
+
+        /// <summary>
+        /// Handles unobserved task exceptions from fire-and-forget tasks that escaped local handlers.
+        /// </summary>
+        private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+        {
+            var exception = e.Exception.Flatten();
+            this.ReportUnhandledException(exception, "TaskScheduler.UnobservedTaskException", LogLevel.Error);
+            e.SetObserved();
+        }
+
+        private void ReportUnhandledException(Exception exception, string source, LogLevel level)
+        {
+            var logger = this.ServiceProvider?.GetService<ILogger<App>>();
+            if (level == LogLevel.Critical)
+            {
+                logger?.LogCritical(exception, "Unhandled exception in {Source}", source);
+            }
+            else
+            {
+                logger?.LogError(exception, "Unhandled exception in {Source}", source);
+            }
+
+            var enhancedLogger = this.ServiceProvider?.GetService<IEnhancedLoggingService>();
+            if (enhancedLogger == null)
+            {
+                return;
+            }
+
+            var errorCode = exception is ThreadPilotException typedException
+                ? typedException.ErrorCode.ToString()
+                : ErrorCode.Unhandled.ToString();
+
+            var context = new Dictionary<string, object>
+            {
+                ["Source"] = source,
+                [LogProperties.ErrorCode] = errorCode,
+                [LogProperties.CorrelationId] = enhancedLogger.GetCurrentCorrelationId() ?? "N/A",
+                ["IsTerminatingLevel"] = level == LogLevel.Critical,
+            };
+
+            TaskSafety.FireAndForget(
+                enhancedLogger.LogErrorAsync(exception, source, context),
+                logFailure => logger?.LogWarning(logFailure, "Failed to persist unhandled exception report"));
         }
     }
 }

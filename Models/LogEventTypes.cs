@@ -112,6 +112,7 @@ namespace ThreadPilot.Models
             public const string SlowOperation = "SlowOperation";
             public const string LargeLogFile = "LargeLogFile";
             public const string ProcessCountHigh = "ProcessCountHigh";
+            public const string Gen2PauseAlert = "Gen2PauseAlert";
         }
     }
 
@@ -196,10 +197,13 @@ namespace ThreadPilot.Models
 
         public static Dictionary<string, object> CreateErrorData(Exception exception)
         {
+            var stackTrace = exception.StackTrace ?? "N/A";
+            stackTrace = stackTrace[..Math.Min(2000, stackTrace.Length)];
+
             return new Dictionary<string, object>
             {
                 [LogProperties.ErrorCode] = exception.HResult,
-                [LogProperties.StackTrace] = exception.StackTrace ?? "N/A",
+                [LogProperties.StackTrace] = stackTrace,
                 ["ExceptionType"] = exception.GetType().Name,
                 ["InnerException"] = exception.InnerException?.Message ?? "N/A",
             };

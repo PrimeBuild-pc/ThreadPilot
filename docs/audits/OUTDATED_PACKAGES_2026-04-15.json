@@ -1,0 +1,155 @@
+{
+  "version": 1,
+  "parameters": "--outdated --include-transitive",
+  "sources": [
+    "https://api.nuget.org/v3/index.json",
+    "C:/Program Files (x86)/Microsoft SDKs/NuGetPackages/"
+  ],
+  "projects": [
+    {
+      "path": "C:/Users/Lorenzo/Documents/Projects/ThreadPilot/ThreadPilot.csproj",
+      "frameworks": [
+        {
+          "framework": "net8.0-windows10.0.22000",
+          "topLevelPackages": [
+            {
+              "id": "CommunityToolkit.Mvvm",
+              "requestedVersion": "8.4.0",
+              "resolvedVersion": "8.4.0",
+              "latestVersion": "8.4.2"
+            },
+            {
+              "id": "Microsoft.Extensions.Caching.Memory",
+              "requestedVersion": "9.0.0",
+              "resolvedVersion": "9.0.0",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection",
+              "requestedVersion": "9.0.0",
+              "resolvedVersion": "9.0.0",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "Microsoft.Extensions.Logging",
+              "requestedVersion": "9.0.0",
+              "resolvedVersion": "9.0.0",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "Microsoft.Extensions.Logging.Console",
+              "requestedVersion": "9.0.0",
+              "resolvedVersion": "9.0.0",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "System.Drawing.Common",
+              "requestedVersion": "9.0.7",
+              "resolvedVersion": "9.0.7",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "System.Management",
+              "requestedVersion": "8.0.0",
+              "resolvedVersion": "8.0.0",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "System.ServiceProcess.ServiceController",
+              "requestedVersion": "9.0.7",
+              "resolvedVersion": "9.0.7",
+              "latestVersion": "10.0.6"
+            }
+          ],
+          "transitivePackages": [
+            {
+              "id": "Microsoft.Extensions.Caching.Abstractions",
+              "resolvedVersion": "9.0.0",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "Microsoft.Extensions.Configuration",
+              "resolvedVersion": "9.0.0",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "Microsoft.Extensions.Configuration.Abstractions",
+              "resolvedVersion": "9.0.0",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "Microsoft.Extensions.Configuration.Binder",
+              "resolvedVersion": "9.0.0",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "resolvedVersion": "9.0.0",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "Microsoft.Extensions.Logging.Abstractions",
+              "resolvedVersion": "9.0.0",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "Microsoft.Extensions.Logging.Configuration",
+              "resolvedVersion": "9.0.0",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "Microsoft.Extensions.Options",
+              "resolvedVersion": "9.0.0",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "Microsoft.Extensions.Options.ConfigurationExtensions",
+              "resolvedVersion": "9.0.0",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "Microsoft.Extensions.Primitives",
+              "resolvedVersion": "9.0.0",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "Microsoft.Win32.SystemEvents",
+              "resolvedVersion": "9.0.7",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "System.CodeDom",
+              "resolvedVersion": "8.0.0",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "System.Diagnostics.DiagnosticSource",
+              "resolvedVersion": "9.0.0",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "System.Diagnostics.EventLog",
+              "resolvedVersion": "9.0.7",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "System.IO.Pipelines",
+              "resolvedVersion": "9.0.0",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "System.Text.Encodings.Web",
+              "resolvedVersion": "9.0.0",
+              "latestVersion": "10.0.6"
+            },
+            {
+              "id": "System.Text.Json",
+              "resolvedVersion": "9.0.0",
+              "latestVersion": "10.0.6"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

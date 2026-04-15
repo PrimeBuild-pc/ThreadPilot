@@ -37,6 +37,7 @@ namespace ThreadPilot.Services
         private readonly ConcurrentDictionary<int, CpuSample> cpuSamples = new();
         private readonly ConcurrentDictionary<int, IProcessCpuSetHandler> cpuSetHandlers = new();
         private readonly ILogger<ProcessService>? logger;
+        private readonly ISecurityService? securityService;
 
         private string ProfilesDirectory => StoragePaths.ProfilesDirectory;
 
@@ -46,9 +47,10 @@ namespace ThreadPilot.Services
         private readonly ConcurrentDictionary<int, string> appliedMasks = new(); // ProcessId -> MaskId
         private readonly ConcurrentDictionary<int, ProcessPriorityClass> originalPriorities = new(); // ProcessId -> OriginalPriority
 
-        public ProcessService(ILogger<ProcessService>? logger = null)
+        public ProcessService(ILogger<ProcessService>? logger = null, ISecurityService? securityService = null)
         {
             this.logger = logger;
+            this.securityService = securityService;
 
             StoragePaths.EnsureAppDataDirectories();
             this.MigrateLegacyProfilesIfNeeded();
@@ -71,7 +73,7 @@ namespace ThreadPilot.Services
                     .OrderBy(p => p.Name);
 
                 return new ObservableCollection<ProcessModel>(processes);
-            });
+            }).ConfigureAwait(false);
         }
 
         private sealed class CpuSample
@@ -136,7 +138,6 @@ namespace ThreadPilot.Services
             var model = new ProcessModel();
             try
             {
-                model.Process = process;
                 model.ProcessId = process.Id;
                 model.Name = process.ProcessName;
                 model.MemoryUsage = process.PrivateMemorySize64;
@@ -172,6 +173,8 @@ namespace ThreadPilot.Services
 
         public async Task SetProcessorAffinity(ProcessModel process, long affinityMask)
         {
+            this.EnsureProcessOperationAllowed(process, "SetProcessAffinity");
+
             await Task.Run(() =>
             {
                 try
@@ -193,6 +196,7 @@ namespace ThreadPilot.Services
 
                             // Update the model with the new affinity
                             process.ProcessorAffinity = affinityMask;
+                            this.AuditProcessOperation("SetProcessAffinity", process.Name, success: true);
                             return;
                         }
                         else
@@ -204,15 +208,11 @@ namespace ThreadPilot.Services
                     }
 
                     // Fallback to classic ProcessorAffinity method
-                    var targetProcess = process.Process;
-                    if (targetProcess == null || targetProcess.HasExited)
-                    {
-                        targetProcess = Process.GetProcessById(process.ProcessId);
-                    }
+                    using var targetProcess = Process.GetProcessById(process.ProcessId);
 
                     targetProcess.ProcessorAffinity = new IntPtr(affinityMask);
-                    process.Process = targetProcess;
                     process.ProcessorAffinity = (long)targetProcess.ProcessorAffinity;
+                    this.AuditProcessOperation("SetProcessAffinity", process.Name, success: true);
 
                     this.logger?.LogInformation(
                         "Successfully applied classic ProcessorAffinity 0x{AffinityMask:X} to process {ProcessName} (PID: {ProcessId})",
@@ -220,17 +220,20 @@ namespace ThreadPilot.Services
                 }
                 catch (Win32Exception ex) when (ex.NativeErrorCode == 87)
                 {
+                    this.AuditProcessOperation("SetProcessAffinity", process.Name, success: false);
                     throw new InvalidOperationException("Invalid affinity mask for this system.", ex);
                 }
                 catch (Win32Exception ex) when (ex.NativeErrorCode == 5)
                 {
+                    this.AuditProcessOperation("SetProcessAffinity", process.Name, success: false);
                     throw new InvalidOperationException("Access denied while setting processor affinity. The process may be protected (e.g., anti-cheat).", ex);
                 }
                 catch (Exception ex)
                 {
+                    this.AuditProcessOperation("SetProcessAffinity", process.Name, success: false);
                     throw new InvalidOperationException($"Failed to set processor affinity: {ex.Message}");
                 }
-            });
+            }).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -282,33 +285,34 @@ namespace ThreadPilot.Services
 
         public async Task SetProcessPriority(ProcessModel process, ProcessPriorityClass priority)
         {
+            this.EnsureProcessOperationAllowed(process, "SetProcessPriority");
+
             await Task.Run(() =>
             {
                 try
                 {
-                    var targetProcess = process.Process;
-                    if (targetProcess == null || targetProcess.HasExited)
-                    {
-                        targetProcess = Process.GetProcessById(process.ProcessId);
-                    }
+                    using var targetProcess = Process.GetProcessById(process.ProcessId);
 
                     targetProcess.PriorityClass = priority;
-                    process.Process = targetProcess;
                     process.Priority = targetProcess.PriorityClass;
+                    this.AuditProcessOperation("SetProcessPriority", process.Name, success: true);
                 }
                 catch (Win32Exception ex) when (ex.NativeErrorCode == 5)
                 {
+                    this.AuditProcessOperation("SetProcessPriority", process.Name, success: false);
                     throw new InvalidOperationException("Access denied while setting process priority. The process may be protected (e.g., anti-cheat).", ex);
                 }
                 catch (UnauthorizedAccessException ex)
                 {
+                    this.AuditProcessOperation("SetProcessPriority", process.Name, success: false);
                     throw new InvalidOperationException("Access denied while setting process priority. The process may be protected (e.g., anti-cheat).", ex);
                 }
                 catch (Exception ex)
                 {
+                    this.AuditProcessOperation("SetProcessPriority", process.Name, success: false);
                     throw new InvalidOperationException($"Failed to set process priority: {ex.Message}");
                 }
-            });
+            }).ConfigureAwait(false);
         }
 
         public async Task<bool> SaveProcessProfile(string profileName, ProcessModel process)
@@ -322,7 +326,7 @@ namespace ThreadPilot.Services
 
             var filePath = Path.Combine(this.ProfilesDirectory, $"{profileName}.json");
             var json = JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true });
-            await AtomicFileWriter.WriteAllTextAsync(filePath, json, Encoding.UTF8);
+            await AtomicFileWriter.WriteAllTextAsync(filePath, json, Encoding.UTF8).ConfigureAwait(false);
             return true;
         }
 
@@ -334,7 +338,7 @@ namespace ThreadPilot.Services
                 return false;
             }
 
-            var content = await File.ReadAllTextAsync(filePath);
+            var content = await File.ReadAllTextAsync(filePath).ConfigureAwait(false);
             var profile = JsonSerializer.Deserialize<ProcessProfileSnapshot>(content, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
@@ -347,8 +351,8 @@ namespace ThreadPilot.Services
                 return false;
             }
 
-            await this.SetProcessPriority(process, profile.Priority);
-            await this.SetProcessorAffinity(process, profile.ProcessorAffinity);
+            await this.SetProcessPriority(process, profile.Priority).ConfigureAwait(false);
+            await this.SetProcessorAffinity(process, profile.ProcessorAffinity).ConfigureAwait(false);
             return true;
         }
 
@@ -358,7 +362,7 @@ namespace ThreadPilot.Services
             {
                 try
                 {
-                    var p = Process.GetProcessById(process.ProcessId);
+                    using var p = Process.GetProcessById(process.ProcessId);
 
                     // Check if process has exited
                     if (p.HasExited)
@@ -370,7 +374,6 @@ namespace ThreadPilot.Services
                     process.Priority = p.PriorityClass;
                     process.ProcessorAffinity = (long)p.ProcessorAffinity;
                     process.CpuUsage = this.CalculateCpuUsage(p);
-                    process.Process = p;
 
                     // Update window information
                     process.MainWindowHandle = p.MainWindowHandle;
@@ -389,7 +392,7 @@ namespace ThreadPilot.Services
                     this.CleanupProcessResources(process.ProcessId);
                     throw new InvalidOperationException("Process has terminated");
                 }
-            });
+            }).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -485,7 +488,7 @@ namespace ThreadPilot.Services
                     this.cpuSetHandlers.TryRemove(process.ProcessId, out _);
                     return false;
                 }
-            });
+            }).ConfigureAwait(false);
         }
 
         public async Task<ProcessModel?> GetProcessByIdAsync(int processId)
@@ -501,7 +504,7 @@ namespace ThreadPilot.Services
                 {
                     return null;
                 }
-            });
+            }).ConfigureAwait(false);
         }
 
         public async Task<IEnumerable<ProcessModel>> GetProcessesByNameAsync(string executableName)
@@ -525,7 +528,7 @@ namespace ThreadPilot.Services
 
         public async Task<bool> IsProcessRunningAsync(string executableName)
         {
-            var processes = await this.GetProcessesByNameAsync(executableName);
+            var processes = await this.GetProcessesByNameAsync(executableName).ConfigureAwait(false);
             return processes.Any();
         }
 
@@ -539,7 +542,7 @@ namespace ThreadPilot.Services
                     .OrderBy(p => p.Name);
 
                 return processes;
-            });
+            }).ConfigureAwait(false);
         }
 
         public async Task<ObservableCollection<ProcessModel>> GetActiveApplicationsAsync()
@@ -552,7 +555,7 @@ namespace ThreadPilot.Services
                     .OrderBy(p => p.Name);
 
                 return new ObservableCollection<ProcessModel>(processes);
-            });
+            }).ConfigureAwait(false);
         }
 
         public async Task<bool> IsProcessStillRunning(ProcessModel process)
@@ -574,7 +577,7 @@ namespace ThreadPilot.Services
                     // Any other exception means process is not accessible/running
                     return false;
                 }
-            });
+            }).ConfigureAwait(false);
         }
 
         public async Task<bool> SetIdleServerStateAsync(ProcessModel process, bool enableIdleServer)
@@ -611,11 +614,13 @@ namespace ThreadPilot.Services
                 {
                     return false;
                 }
-            });
+            }).ConfigureAwait(false);
         }
 
         public async Task<bool> SetRegistryPriorityAsync(ProcessModel process, bool enable, ProcessPriorityClass priority)
         {
+            this.EnsureProcessOperationAllowed(process, "SetProcessPriority");
+
             return await Task.Run(() =>
             {
                 try
@@ -646,13 +651,71 @@ namespace ThreadPilot.Services
                         key.DeleteValue("PriorityClass", false);
                     }
 
+                    this.AuditProcessOperation("SetProcessPriority", process.Name, success: true);
+
                     return true;
                 }
                 catch (Exception)
                 {
+                    this.AuditProcessOperation("SetProcessPriority", process.Name, success: false);
                     return false;
                 }
-            });
+            }).ConfigureAwait(false);
+        }
+
+        private void EnsureProcessOperationAllowed(ProcessModel process, string operation)
+        {
+            ArgumentNullException.ThrowIfNull(process);
+
+            if (this.securityService == null)
+            {
+                return;
+            }
+
+            var processName = this.GetProcessDisplayName(process);
+            if (!this.securityService.ValidateProcessOperation(processName, operation))
+            {
+                this.AuditProcessOperation(operation, processName, success: false);
+                throw new UnauthorizedAccessException(
+                    $"Operation '{operation}' is not permitted for process '{processName}'.");
+            }
+
+            try
+            {
+                using var liveProcess = Process.GetProcessById(process.ProcessId);
+                if (this.securityService.IsProtected(liveProcess))
+                {
+                    this.AuditProcessOperation(operation, processName, success: false);
+                    throw new UnauthorizedAccessException(
+                        $"Operation '{operation}' is blocked for protected process '{processName}'.");
+                }
+            }
+            catch (ArgumentException)
+            {
+                // Process already exited; defer to operation code-paths for termination handling.
+            }
+        }
+
+        private string GetProcessDisplayName(ProcessModel process)
+        {
+            if (!string.IsNullOrWhiteSpace(process.Name))
+            {
+                return process.Name;
+            }
+
+            return $"PID_{process.ProcessId}";
+        }
+
+        private void AuditProcessOperation(string operation, string processName, bool success)
+        {
+            if (this.securityService == null)
+            {
+                return;
+            }
+
+            TaskSafety.FireAndForget(
+                this.securityService.AuditElevatedAction(operation, processName, success),
+                ex => this.logger?.LogDebug(ex, "Security audit logging failed for {Operation} on {ProcessName}", operation, processName));
         }
 
         /// <summary>
@@ -692,7 +755,7 @@ namespace ThreadPilot.Services
         /// Clears all applied CPU masks/affinities from all tracked processes
         /// Processes return to using all cores (used on application exit).
         /// </summary>
-        public async Task ClearAllAppliedMasksAsync()
+        public Task ClearAllAppliedMasksAsync()
         {
             this.logger?.LogInformation("Clearing all applied CPU masks from {Count} tracked processes", this.appliedMasks.Count);
 
@@ -756,13 +819,13 @@ namespace ThreadPilot.Services
             }
 
             this.logger?.LogInformation("Cleared CPU masks: {Cleared} succeeded, {Failed} failed", clearedCount, failedCount);
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
 
         /// <summary>
         /// Resets all modified process priorities to Normal (or their original priority).
         /// </summary>
-        public async Task ResetAllProcessPrioritiesAsync()
+        public Task ResetAllProcessPrioritiesAsync()
         {
             this.logger?.LogInformation("Resetting priorities for {Count} tracked processes", this.originalPriorities.Count);
 
@@ -812,7 +875,7 @@ namespace ThreadPilot.Services
             }
 
             this.logger?.LogInformation("Reset priorities: {Reset} succeeded, {Failed} failed", resetCount, failedCount);
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
 
         /// <summary>

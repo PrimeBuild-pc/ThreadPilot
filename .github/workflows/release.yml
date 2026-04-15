@@ -10,17 +10,44 @@ permissions:
   contents: write
 
 jobs:
-  build-and-release:
+  build:
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          $refName = "${{ github.ref_name }}"
+          if ($refName -match '^v\d+\.\d+\.\d+$') {
+            $version = $refName.TrimStart('v')
+            $tag = $refName
+          }
+          else {
+            [xml]$project = Get-Content "ThreadPilot.csproj"
+            $version = $project.Project.PropertyGroup.Version
+            if ([string]::IsNullOrWhiteSpace($version)) {
+              throw "Unable to resolve version from tag or ThreadPilot.csproj"
+            }
+
+            $tag = "v$version"
+          }
+
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Restore
         run: dotnet restore "ThreadPilot_1.sln"
@@ -29,7 +56,7 @@ jobs:
         run: dotnet build "ThreadPilot_1.sln" --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test "ThreadPilot_1.sln" --configuration Release --no-build
+        run: dotnet test "ThreadPilot_1.sln" --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory TestResults
 
       - name: Publish self-contained single-file
         run: dotnet publish "ThreadPilot.csproj" --configuration Release -p:PublishProfile=WinX64-SingleFile
@@ -52,7 +79,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $version = "${{ github.ref_name }}".TrimStart('v')
+          $version = "${{ steps.version.outputs.version }}"
           $sourceDir = (Resolve-Path "artifacts/release/singlefile").Path
 
           & iscc.exe "/DMyAppVersion=$version" "/DMyAppSourceDir=$sourceDir" "Installer/setup.iss"
@@ -118,7 +145,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $version = "${{ github.ref_name }}"
+          $version = "${{ steps.version.outputs.tag }}"
           New-Item -ItemType Directory -Force -Path "artifacts/release/packages" | Out-Null
           New-Item -ItemType Directory -Force -Path "artifacts/release/package-staging" | Out-Null
 
@@ -206,15 +233,185 @@ jobs:
             "$($hash.Hash)  $($_.Name)" | Out-File -FilePath $hashFile -Append -Encoding utf8
           }
 
+      - name: Update winget installer manifest
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $version = "${{ steps.version.outputs.version }}"
+          $tag = "${{ steps.version.outputs.tag }}"
+          $installer = Get-ChildItem "artifacts/release/installer/*.exe" -File | Select-Object -First 1
+          if (-not $installer)
+          {
+            throw "Installer executable not found."
+          }
+
+          $sha = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToUpperInvariant()
+          $url = "https://github.com/${{ github.repository }}/releases/download/$tag/$($installer.Name)"
+          $manifestPath = "winget/manifests/p/PrimeBuild/ThreadPilot/$version/PrimeBuild.ThreadPilot.installer.yaml"
+
+          if (-not (Test-Path $manifestPath))
+          {
+            throw "Winget installer manifest not found at $manifestPath"
+          }
+
+          $content = Get-Content $manifestPath -Raw
+          $content = $content.Replace("{{INSTALLER_URL}}", $url).Replace("{{INSTALLER_SHA256}}", $sha)
+          Set-Content -Path $manifestPath -Value $content -Encoding utf8
+
+      - name: Generate SBOM
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          dotnet tool install --global Microsoft.Sbom.DotNetTool
+          $env:PATH += ";$env:USERPROFILE\.dotnet\tools"
+          sbom-tool generate -b ./artifacts -bc . -pn ThreadPilot -pv "${{ steps.version.outputs.version }}" -ps PrimeBuild -nsb https://github.com/PrimeBuild-pc/ThreadPilot
+
+      - name: Upload portable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-portable
+          path: artifacts/release/singlefile
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-installer
+          path: artifacts/release/installer
+
+      - name: Upload packages artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-packages
+          path: artifacts/release/packages
+
+      - name: Upload msix artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-msix
+          path: artifacts/release/msix
+
+      - name: Upload checksums artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-checksums
+          path: artifacts/release/SHA256SUMS.txt
+
+      - name: Upload winget manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: winget-manifests
+          path: winget/manifests/p/PrimeBuild/ThreadPilot/${{ steps.version.outputs.version }}
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: _manifest/spdx_2.2/manifest.spdx.json
+
+  smoke-test:
+    runs-on: windows-latest
+    needs: build
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-portable
+          path: smoke
+
+      - name: Smoke test
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $exe = Get-ChildItem "smoke" -Recurse -Filter "ThreadPilot.exe" -File | Select-Object -First 1
+          if (-not $exe)
+          {
+            throw "ThreadPilot.exe not found in smoke-test artifact."
+          }
+
+          $process = Start-Process -FilePath $exe.FullName -ArgumentList "--smoke-test" -Wait -PassThru
+          if ($process.ExitCode -ne 0)
+          {
+            throw "Smoke test failed with exit code $($process.ExitCode)."
+          }
+
+  release:
+    runs-on: windows-latest
+    needs:
+      - build
+      - smoke-test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download installer artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-installer
+          path: release-assets/installer
+
+      - name: Download packages artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-packages
+          path: release-assets/packages
+
+      - name: Download msix artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-msix
+          path: release-assets/msix
+
+      - name: Download checksums artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-checksums
+          path: release-assets
+
+      - name: Download winget manifests
+        uses: actions/download-artifact@v4
+        with:
+          name: winget-manifests
+          path: winget-manifests
+
+      - name: Download SBOM artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom
+          path: sbom
+
+      - name: Generate changelog
+        id: git-cliff
+        uses: orhun/git-cliff-action@v3
+        with:
+          config: cliff.toml
+          args: --latest
+
+      - name: Contributors file check (manual maintenance mode)
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "CONTRIBUTORS.md")) {
+            throw "CONTRIBUTORS.md not found."
+          }
+
+          Write-Host "CONTRIBUTORS.md is maintained manually in this workflow."
+
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.build.outputs.tag }}
+          name: ThreadPilot ${{ needs.build.outputs.tag }}
+          body: ${{ steps.git-cliff.outputs.content }}
           files: |
-            artifacts/release/installer/*.exe
-            artifacts/release/packages/*.zip
-            artifacts/release/msix/**/*.msix
-            artifacts/release/msix/**/*.appx
-            artifacts/release/msix/**/*.msixbundle
-            artifacts/release/msix/**/*.appxbundle
-            artifacts/release/SHA256SUMS.txt
+            release-assets/installer/*.exe
+            release-assets/packages/*.zip
+            release-assets/msix/**/*.msix
+            release-assets/msix/**/*.appx
+            release-assets/msix/**/*.msixbundle
+            release-assets/msix/**/*.appxbundle
+            release-assets/SHA256SUMS.txt
+            winget-manifests/**/*.yaml
+            sbom/manifest.spdx.json
           generate_release_notes: true

@@ -64,10 +64,6 @@
     <None Remove="CPUSetSetter-main\**\*.*" />
     <EmbeddedResource Remove="Tests\ThreadPilot.Core.Tests\**\*.*" />
     <None Remove="Tests\ThreadPilot.Core.Tests\**\*.*" />
-    <!-- Remove Activity Logs screen -->
-    <Compile Remove="ViewModels\LogViewerViewModel.cs" />
-    <Compile Remove="Views\LogViewerView.xaml.cs" />
-    <Page Remove="Views\LogViewerView.xaml" />
     <!-- Remove optional Game Boost feature from build -->
     <Compile Remove="Services\GameBoostService.cs" />
     <Compile Remove="Services\IGameBoostService.cs" />

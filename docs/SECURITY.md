@@ -27,6 +27,30 @@ Please prioritize reports involving:
 - command execution and input validation,
 - configuration parsing and path handling.
 
+## Privilege Model
+
+- The application uses a least-privilege startup model (`asInvoker`).
+- Elevation is requested only when an operation explicitly requires administrator rights.
+- Declining elevation for a privileged action does not terminate the app; the action is denied and logged.
+
+## UAC Elevation Strategy
+
+- UAC prompts are operation-scoped rather than startup-scoped.
+- Elevated operations are validated before execution through security checks.
+- Security audit entries are emitted for allowed and denied elevated actions.
+
+## Process Manipulation Safeguards
+
+- Critical process denylist enforcement blocks protected targets (`System`, `csrss`, `lsass`, `wininit`).
+- Security validation is enforced in process mutation paths (priority/affinity/registry-priority operations).
+- Logging inputs are sanitized to reduce log-injection risk.
+
+## Known Limitations
+
+- Some legacy interop paths still require incremental hardening of error-code diagnostics.
+- Compatibility smoke validation remains a release-candidate activity across supported Windows versions.
+- Dependency updates are managed in controlled waves to reduce regression risk.
+
 ## Disclosure Process
 We follow coordinated disclosure:
 - confirm report,

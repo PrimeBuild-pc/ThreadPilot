@@ -69,18 +69,18 @@ namespace ThreadPilot.Services
             this.logger.LogInformation("Initializing ConditionalProfileService");
 
             // Load initial system state
-            this.lastSystemState = await this.GetSystemStateAsync();
+            this.lastSystemState = await this.GetSystemStateAsync().ConfigureAwait(false);
 
             // Create some default profiles for demonstration
-            await this.CreateDefaultProfilesAsync();
+            await this.CreateDefaultProfilesAsync().ConfigureAwait(false);
         }
 
         public async Task AddProfileAsync(ConditionalProcessProfile profile)
         {
-            await this.profileLock.WaitAsync();
+            await this.profileLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                var (isValid, errors) = await this.ValidateProfileAsync(profile);
+                var (isValid, errors) = await this.ValidateProfileAsync(profile).ConfigureAwait(false);
                 if (!isValid)
                 {
                     throw new ArgumentException($"Invalid profile: {string.Join(", ", errors)}");
@@ -99,7 +99,7 @@ namespace ThreadPilot.Services
 
         public async Task RemoveProfileAsync(string profileId)
         {
-            await this.profileLock.WaitAsync();
+            await this.profileLock.WaitAsync().ConfigureAwait(false);
             try
             {
                 var profile = this.profiles.FirstOrDefault(p => p.Id == profileId);
@@ -117,7 +117,7 @@ namespace ThreadPilot.Services
 
         public async Task UpdateProfileAsync(ConditionalProcessProfile profile)
         {
-            await this.profileLock.WaitAsync();
+            await this.profileLock.WaitAsync().ConfigureAwait(false);
             try
             {
                 var existingProfile = this.profiles.FirstOrDefault(p => p.Id == profile.Id);
@@ -136,7 +136,7 @@ namespace ThreadPilot.Services
 
         public async Task<List<ConditionalProcessProfile>> GetAllProfilesAsync()
         {
-            await this.profileLock.WaitAsync();
+            await this.profileLock.WaitAsync().ConfigureAwait(false);
             try
             {
                 return this.profiles.ToList();
@@ -149,7 +149,7 @@ namespace ThreadPilot.Services
 
         public async Task<List<ConditionalProcessProfile>> GetProfilesForProcessAsync(string processName)
         {
-            await this.profileLock.WaitAsync();
+            await this.profileLock.WaitAsync().ConfigureAwait(false);
             try
             {
                 return this.profiles
@@ -164,10 +164,10 @@ namespace ThreadPilot.Services
 
         public async Task<List<ConditionalProcessProfile>> EvaluateProfilesAsync(ProcessModel process)
         {
-            var systemState = await this.GetSystemStateAsync();
+            var systemState = await this.GetSystemStateAsync().ConfigureAwait(false);
             var applicableProfiles = new List<ConditionalProcessProfile>();
 
-            await this.profileLock.WaitAsync();
+            await this.profileLock.WaitAsync().ConfigureAwait(false);
             try
             {
                 var processProfiles = this.profiles
@@ -197,7 +197,7 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var applicableProfiles = await this.EvaluateProfilesAsync(process);
+                var applicableProfiles = await this.EvaluateProfilesAsync(process).ConfigureAwait(false);
 
                 if (!applicableProfiles.Any())
                 {
@@ -225,7 +225,7 @@ namespace ThreadPilot.Services
                 }
 
                 // Apply the profile (simplified - would use actual process service)
-                var success = await this.ApplyProfileToProcessAsync(process, selectedProfile);
+                var success = await this.ApplyProfileToProcessAsync(process, selectedProfile).ConfigureAwait(false);
 
                 if (success)
                 {
@@ -235,7 +235,7 @@ namespace ThreadPilot.Services
                     {
                         Profile = selectedProfile,
                         Process = process,
-                        SystemState = await this.GetSystemStateAsync(),
+                        SystemState = await this.GetSystemStateAsync().ConfigureAwait(false),
                         WasApplied = true,
                         Reason = "Conditions satisfied",
                     });
@@ -258,14 +258,14 @@ namespace ThreadPilot.Services
                 var systemState = new SystemState
                 {
                     CurrentTime = DateTime.Now,
-                    CpuUsage = await this.GetCpuUsageAsync(),
-                    MemoryUsage = await this.GetMemoryUsageAsync(),
-                    ProcessCount = await this.GetProcessCountAsync(),
+                    CpuUsage = await this.GetCpuUsageAsync().ConfigureAwait(false),
+                    MemoryUsage = await this.GetMemoryUsageAsync().ConfigureAwait(false),
+                    ProcessCount = await this.GetProcessCountAsync().ConfigureAwait(false),
                     IsOnBattery = this.GetBatteryStatus(),
                     BatteryLevel = this.GetBatteryLevel(),
                     IsUserIdle = this.GetUserIdleStatus(),
                     UserIdleTime = this.GetUserIdleTime(),
-                    NetworkActivity = await this.GetNetworkActivityAsync(),
+                    NetworkActivity = await this.GetNetworkActivityAsync().ConfigureAwait(false),
                 };
 
                 // Check if system state changed significantly
@@ -276,7 +276,7 @@ namespace ThreadPilot.Services
                 }
 
                 return systemState;
-            }, this.retryPolicy.CreateProcessOperationPolicy());
+            }, this.retryPolicy.CreateProcessOperationPolicy()).ConfigureAwait(false);
         }
 
         public async Task StartMonitoringAsync()
@@ -377,7 +377,7 @@ namespace ThreadPilot.Services
 
         public async Task<string> ExportProfilesToJsonAsync()
         {
-            await this.profileLock.WaitAsync();
+            await this.profileLock.WaitAsync().ConfigureAwait(false);
             try
             {
                 return JsonSerializer.Serialize(this.profiles, new JsonSerializerOptions { WriteIndented = true });
@@ -398,13 +398,13 @@ namespace ThreadPilot.Services
                     return 0;
                 }
 
-                await this.profileLock.WaitAsync();
+                await this.profileLock.WaitAsync().ConfigureAwait(false);
                 try
                 {
                     var validProfiles = 0;
                     foreach (var profile in importedProfiles)
                     {
-                        var (isValid, _) = await this.ValidateProfileAsync(profile);
+                        var (isValid, _) = await this.ValidateProfileAsync(profile).ConfigureAwait(false);
                         if (isValid)
                         {
                             this.profiles.Add(profile);
@@ -447,10 +447,10 @@ namespace ThreadPilot.Services
 
             try
             {
-                var processes = await this.processService.GetProcessesAsync();
+                var processes = await this.processService.GetProcessesAsync().ConfigureAwait(false);
                 foreach (var process in processes)
                 {
-                    await this.ApplyBestProfileAsync(process);
+                    await this.ApplyBestProfileAsync(process).ConfigureAwait(false);
                 }
             }
             catch (Exception ex)
@@ -515,7 +515,7 @@ namespace ThreadPilot.Services
                 },
             };
 
-            await this.AddProfileAsync(gameProfile);
+            await this.AddProfileAsync(gameProfile).ConfigureAwait(false);
         }
 
         private Task<double> GetCpuUsageAsync()
@@ -532,7 +532,7 @@ namespace ThreadPilot.Services
 
         private async Task<int> GetProcessCountAsync()
         {
-            var processes = await this.processService.GetProcessesAsync();
+            var processes = await this.processService.GetProcessesAsync().ConfigureAwait(false);
             return processes.Count;
         }
 

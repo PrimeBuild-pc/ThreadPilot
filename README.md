@@ -1,6 +1,9 @@
 # ThreadPilot ✈️ v1.1.1
 
-[![Windows CI](https://img.shields.io/badge/CI-Windows-success)](.github/workflows/ci-devsecops.yml)
+[![Build](https://github.com/PrimeBuild-pc/ThreadPilot/actions/workflows/ci-devsecops.yml/badge.svg)](https://github.com/PrimeBuild-pc/ThreadPilot/actions/workflows/ci-devsecops.yml)
+[![Release](https://img.shields.io/github/v/release/PrimeBuild-pc/ThreadPilot?sort=semver)](https://github.com/PrimeBuild-pc/ThreadPilot/releases)
+[![Coverage](https://codecov.io/gh/PrimeBuild-pc/ThreadPilot/branch/main/graph/badge.svg)](https://codecov.io/gh/PrimeBuild-pc/ThreadPilot)
+[![winget](https://img.shields.io/winget/v/PrimeBuild.ThreadPilot)](https://github.com/microsoft/winget-pkgs)
 [![Windows](https://img.shields.io/badge/Windows-11%20official%20%7C%2010%20best--effort-blue?logo=windows)](https://www.microsoft.com/windows)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE)
@@ -28,7 +31,7 @@ The project targets users who need Process Lasso style capabilities in a modern 
 
 - Windows 11 (official support), Windows 10 22H2+ (best effort).
 - .NET 8 SDK for source builds.
-- Administrator privileges for advanced process and power operations.
+- Administrator privileges are required only for advanced process and power operations.
 
 ## 📦 Download
 
@@ -55,10 +58,36 @@ Install flow summary:
 
 Notes:
 
-- ThreadPilot executable is built with requireAdministrator manifest, so installer and portable builds always prompt UAC at launch and run elevated after consent.
-- If UAC elevation is declined, the application does not start.
+- ThreadPilot runs with a least-privilege manifest (`asInvoker`) and requests elevation only for operations that need administrator rights.
+- If UAC elevation is declined for a privileged action, the application continues running in limited mode.
 - In `Power Plans > Custom Power Plans`, use `Add .pow File` to add new custom plans directly from the app.
 - The first opening of Performance shows a blocking onboarding modal with blurred background for clarity.
+
+## Installation
+
+Install from winget:
+
+```powershell
+winget install PrimeBuild.ThreadPilot
+```
+
+Install from Chocolatey:
+
+```powershell
+choco install threadpilot
+```
+
+Direct installer (latest release):
+
+- https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest
+
+Verify SHA256 before running the installer:
+
+```powershell
+Get-FileHash .\ThreadPilot_v1.1.1_Setup.exe -Algorithm SHA256
+```
+
+Compare the output with `SHA256SUMS.txt` from the same release.
 
 ### Build from Source
 
@@ -75,6 +104,7 @@ Useful startup arguments:
 - --start-minimized
 - --autostart
 - --test
+- --smoke-test
 
 ## Usage Examples
 
@@ -101,6 +131,17 @@ Build release artifacts via script:
 - CI validates build, formatting, analyzers, vulnerability checks, and secret scanning.
 - Security disclosures are handled through private GitHub advisories. See docs/SECURITY.md.
 - Change history is tracked in docs/CHANGELOG.md.
+
+## Comparison with Process Lasso
+
+| Capability | ThreadPilot | Process Lasso |
+|---|---|---|
+| Open source | Yes (AGPL v3) | No |
+| Rule-based power plan switching | Yes | Yes |
+| CPU affinity and priority controls | Yes | Yes |
+| Modern Windows 11 Fluent UI | Yes | Partial |
+| Scriptable CI release artifacts | Yes | Not applicable |
+| Package manager distribution | winget + Chocolatey | Varies by edition |
 
 ## Repository Docs
 

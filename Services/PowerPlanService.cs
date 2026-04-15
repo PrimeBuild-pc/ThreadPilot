@@ -102,12 +102,12 @@ namespace ThreadPilot.Services
         public async Task<ObservableCollection<PowerPlanModel>> GetPowerPlansAsync()
         {
             var powerPlans = new ObservableCollection<PowerPlanModel>();
-            var activePlan = await this.GetActivePowerPlan();
+            var activePlan = await this.GetActivePowerPlan().ConfigureAwait(false);
 
             using var process = CreatePowerCfgProcess("/list");
             process.Start();
-            string output = await process.StandardOutput.ReadToEndAsync();
-            await process.WaitForExitAsync();
+            string output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
+            await process.WaitForExitAsync().ConfigureAwait(false);
 
             var matches = powerSchemeRegex.Matches(output);
 
@@ -148,12 +148,12 @@ namespace ThreadPilot.Services
                 });
             }
 
-            return await Task.FromResult(customPlans);
+            return await Task.FromResult(customPlans).ConfigureAwait(false);
         }
 
         public async Task<bool> SetActivePowerPlan(PowerPlanModel powerPlan)
         {
-            return await this.SetActivePowerPlanByGuidAsync(powerPlan.Guid, false);
+            return await this.SetActivePowerPlanByGuidAsync(powerPlan.Guid, false).ConfigureAwait(false);
         }
 
         public async Task<bool> SetActivePowerPlanByGuidAsync(string powerPlanGuid, bool preventDuplicateChanges = true)
@@ -169,7 +169,7 @@ namespace ThreadPilot.Services
                 // Check if change is needed when duplicate prevention is enabled
                 if (preventDuplicateChanges)
                 {
-                    var isChangeNeeded = await this.IsPowerPlanChangeNeededAsync(powerPlanGuid);
+                    var isChangeNeeded = await this.IsPowerPlanChangeNeededAsync(powerPlanGuid).ConfigureAwait(false);
                     if (!isChangeNeeded)
                     {
                         this.logger.LogDebug("Power plan change skipped - already active: {PowerPlanGuid}", powerPlanGuid);
@@ -177,8 +177,8 @@ namespace ThreadPilot.Services
                     }
                 }
 
-                var previousPowerPlan = await this.GetActivePowerPlan();
-                var targetPowerPlan = await this.GetPowerPlanByGuidAsync(powerPlanGuid);
+                var previousPowerPlan = await this.GetActivePowerPlan().ConfigureAwait(false);
+                var targetPowerPlan = await this.GetPowerPlanByGuidAsync(powerPlanGuid).ConfigureAwait(false);
 
                 this.logger.LogInformation(
                     "Attempting to change power plan from '{FromPlan}' to '{ToPlan}'",
@@ -187,12 +187,12 @@ namespace ThreadPilot.Services
                 await this.enhancedLogger.LogPowerPlanChangeAsync(
                     previousPowerPlan?.Name ?? "Unknown",
                     targetPowerPlan?.Name ?? "Unknown",
-                    "Manual power plan change requested");
+                    "Manual power plan change requested").ConfigureAwait(false);
 
                 using var process = CreatePowerCfgProcess($"/setactive {powerPlanGuid}");
                 process.Start();
-                var stdError = await process.StandardError.ReadToEndAsync();
-                await process.WaitForExitAsync();
+                var stdError = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
+                await process.WaitForExitAsync().ConfigureAwait(false);
 
                 var success = process.ExitCode == 0;
 
@@ -203,14 +203,14 @@ namespace ThreadPilot.Services
                         this.lastActivePowerPlanGuid = powerPlanGuid;
                     }
 
-                    var newPowerPlan = await this.GetPowerPlanByGuidAsync(powerPlanGuid);
+                    var newPowerPlan = await this.GetPowerPlanByGuidAsync(powerPlanGuid).ConfigureAwait(false);
 
                     this.logger.LogInformation("Power plan successfully changed to '{PowerPlan}'", newPowerPlan?.Name ?? "Unknown");
 
                     await this.enhancedLogger.LogPowerPlanChangeAsync(
                         previousPowerPlan?.Name ?? "Unknown",
                         newPowerPlan?.Name ?? "Unknown",
-                        "Manual power plan change completed");
+                        "Manual power plan change completed").ConfigureAwait(false);
 
                     this.PowerPlanChanged?.Invoke(this, new PowerPlanChangedEventArgs(
                         previousPowerPlan, newPowerPlan, "Manual power plan change"));
@@ -226,7 +226,7 @@ namespace ThreadPilot.Services
                     await this.enhancedLogger.LogSystemEventAsync(
                         LogEventTypes.PowerPlan.ChangeFailed,
                         $"Failed to change power plan to '{targetPowerPlan?.Name ?? powerPlanGuid}' - Exit code: {process.ExitCode}",
-                        Microsoft.Extensions.Logging.LogLevel.Warning);
+                        Microsoft.Extensions.Logging.LogLevel.Warning).ConfigureAwait(false);
                 }
 
                 return success;
@@ -240,7 +240,7 @@ namespace ThreadPilot.Services
                     {
                         ["PowerPlanGuid"] = powerPlanGuid,
                         ["PreventDuplicateChanges"] = preventDuplicateChanges,
-                    });
+                    }).ConfigureAwait(false);
 
                 return false;
             }
@@ -252,8 +252,8 @@ namespace ThreadPilot.Services
             {
                 using var process = CreatePowerCfgProcess("/getactivescheme");
                 process.Start();
-                string output = await process.StandardOutput.ReadToEndAsync();
-                await process.WaitForExitAsync();
+                string output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
+                await process.WaitForExitAsync().ConfigureAwait(false);
 
                 var match = powerSchemeRegex.Match(output);
 
@@ -289,8 +289,8 @@ namespace ThreadPilot.Services
             {
                 using var process = CreatePowerCfgProcess($"/import {QuoteArgument(normalizedPath)}");
                 process.Start();
-                var stdError = await process.StandardError.ReadToEndAsync();
-                await process.WaitForExitAsync();
+                var stdError = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
+                await process.WaitForExitAsync().ConfigureAwait(false);
 
                 if (process.ExitCode != 0)
                 {
@@ -310,7 +310,7 @@ namespace ThreadPilot.Services
             {
                 this.logger.LogError(ex, "Exception occurred while importing custom power plan from '{Path}'", normalizedPath);
                 await this.enhancedLogger.LogErrorAsync(ex, "PowerPlanService.ImportCustomPowerPlan",
-                    new Dictionary<string, object> { ["Path"] = normalizedPath });
+                    new Dictionary<string, object> { ["Path"] = normalizedPath }).ConfigureAwait(false);
                 return false;
             }
         }
@@ -357,21 +357,21 @@ namespace ThreadPilot.Services
                     normalizedPath,
                     destinationPath);
 
-                await Task.CompletedTask;
+                await Task.CompletedTask.ConfigureAwait(false);
                 return true;
             }
             catch (Exception ex)
             {
                 this.logger.LogError(ex, "Failed to add custom power plan file '{Path}'", normalizedPath);
                 await this.enhancedLogger.LogErrorAsync(ex, "PowerPlanService.AddCustomPowerPlanFileAsync",
-                    new Dictionary<string, object> { ["Path"] = normalizedPath });
+                    new Dictionary<string, object> { ["Path"] = normalizedPath }).ConfigureAwait(false);
                 return false;
             }
         }
 
         public async Task<string?> GetActivePowerPlanGuidAsync()
         {
-            var activePlan = await this.GetActivePowerPlan();
+            var activePlan = await this.GetActivePowerPlan().ConfigureAwait(false);
             return activePlan?.Guid;
         }
 
@@ -382,7 +382,7 @@ namespace ThreadPilot.Services
                 return false;
             }
 
-            var powerPlans = await this.GetPowerPlansAsync();
+            var powerPlans = await this.GetPowerPlansAsync().ConfigureAwait(false);
             return powerPlans.Any(p => string.Equals(p.Guid, powerPlanGuid, StringComparison.OrdinalIgnoreCase));
         }
 
@@ -393,7 +393,7 @@ namespace ThreadPilot.Services
                 return null;
             }
 
-            var powerPlans = await this.GetPowerPlansAsync();
+            var powerPlans = await this.GetPowerPlansAsync().ConfigureAwait(false);
             return powerPlans.FirstOrDefault(p => string.Equals(p.Guid, powerPlanGuid, StringComparison.OrdinalIgnoreCase));
         }
 
@@ -401,7 +401,7 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var currentGuid = await this.GetActivePowerPlanGuidAsync();
+                var currentGuid = await this.GetActivePowerPlanGuidAsync().ConfigureAwait(false);
 
                 // Check if the target power plan is already active
                 if (string.Equals(currentGuid, targetPowerPlanGuid, StringComparison.OrdinalIgnoreCase))

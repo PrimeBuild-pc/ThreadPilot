@@ -1,0 +1,7 @@
+GNU AFFERO GENERAL PUBLIC LICENSE
+Version 3, 19 November 2007
+
+ThreadPilot is licensed under AGPL v3.
+
+Full license text:
+https://github.com/PrimeBuild-pc/ThreadPilot/blob/main/LICENSE

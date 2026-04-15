@@ -34,7 +34,9 @@ namespace ThreadPilot.Services
         private readonly ILogger<PerformanceMonitoringService> logger;
         private readonly IProcessService processService;
         private readonly ICpuTopologyService cpuTopologyService;
-        private readonly List<SystemPerformanceMetrics> historicalData;
+        private readonly IApplicationSettingsService settingsService;
+        private readonly IEnhancedLoggingService enhancedLoggingService;
+        private readonly Queue<SystemPerformanceMetrics> historicalData;
         private readonly PerformanceCounter totalCpuCounter;
         private readonly PerformanceCounter memoryCounter;
         private readonly List<PerformanceCounter> cpuCoreCounters;
@@ -43,25 +45,46 @@ namespace ThreadPilot.Services
         private readonly TimeSpan totalPhysicalMemoryCacheDuration = TimeSpan.FromMinutes(5);
         private long cachedTotalPhysicalMemory;
         private DateTime totalPhysicalMemoryCacheUtc = DateTime.MinValue;
+        private readonly object processCountCacheLock = new();
+        private readonly TimeSpan processCountCacheDuration = TimeSpan.FromSeconds(5);
+        private int cachedProcessCount;
+        private DateTime processCountCacheUtc = DateTime.MinValue;
+        private readonly object runtimeTelemetryLock = new();
         private int isMonitoringTickInProgress;
+        private bool runtimeTelemetryInitialized;
+        private int previousGen0Collections;
+        private int previousGen1Collections;
+        private int previousGen2Collections;
+        private long previousTotalAllocatedBytes;
+        private double maxObservedGcPauseMs;
+        private DateTime lastGcPauseAlertUtc = DateTime.MinValue;
         private bool isMonitoring;
         private bool disposed;
+
+        private static readonly TimeSpan GcPauseAlertCooldown = TimeSpan.FromMinutes(1);
+        private static readonly TimeSpan WmiQueryTimeout = TimeSpan.FromSeconds(5);
+        private const int HistoricalDataCapacity = 1000;
+        private const double Gen2PauseAlertThresholdMs = 100;
 
         public event EventHandler<PerformanceMetricsUpdatedEventArgs>? MetricsUpdated;
 
         public PerformanceMonitoringService(
             ILogger<PerformanceMonitoringService> logger,
             IProcessService processService,
-            ICpuTopologyService cpuTopologyService)
+            ICpuTopologyService cpuTopologyService,
+            IApplicationSettingsService settingsService,
+            IEnhancedLoggingService enhancedLoggingService)
         {
             this.logger = logger;
             this.processService = processService;
             this.cpuTopologyService = cpuTopologyService;
-            this.historicalData = new List<SystemPerformanceMetrics>();
+            this.settingsService = settingsService;
+            this.enhancedLoggingService = enhancedLoggingService;
+            this.historicalData = new Queue<SystemPerformanceMetrics>(HistoricalDataCapacity);
 
             // Initialize performance counters
-            this.totalCpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
-            this.memoryCounter = new PerformanceCounter("Memory", "Available MBytes");
+            this.totalCpuCounter = this.CreatePrimedCounter("Processor", "% Processor Time", "_Total");
+            this.memoryCounter = this.CreatePrimedCounter("Memory", "Available MBytes");
             this.cpuCoreCounters = new List<PerformanceCounter>();
 
             this.InitializeCpuCoreCounters();
@@ -74,37 +97,38 @@ namespace ThreadPilot.Services
                 var metrics = new SystemPerformanceMetrics
                 {
                     Timestamp = DateTime.UtcNow,
-                    TotalCpuUsage = await this.GetTotalCpuUsageAsync(),
-                    AvailableMemory = await this.GetAvailableMemoryAsync(),
+                    TotalCpuUsage = await this.GetTotalCpuUsageAsync().ConfigureAwait(false),
+                    AvailableMemory = await this.GetAvailableMemoryAsync().ConfigureAwait(false),
                 };
 
                 // Calculate memory percentage
-                metrics.TotalMemory = await this.GetTotalPhysicalMemoryAsync();
+                metrics.TotalMemory = await this.GetTotalPhysicalMemoryAsync().ConfigureAwait(false);
                 metrics.TotalMemoryUsage = Math.Max(0, metrics.TotalMemory - metrics.AvailableMemory);
                 metrics.MemoryUsagePercentage = metrics.TotalMemory > 0
                     ? ((double)(metrics.TotalMemory - metrics.AvailableMemory) / metrics.TotalMemory) * 100
                     : 0;
 
+                this.PopulateRuntimeTelemetry(metrics);
+
                 if (!lightweight)
                 {
-                    metrics.CpuCoreUsages = await this.GetCpuCoreUsageAsync();
-                    metrics.ActiveProcessCount = Process.GetProcesses().Length;
+                    metrics.CpuCoreUsages = await this.GetCpuCoreUsageAsync().ConfigureAwait(false);
+                    metrics.ActiveProcessCount = await this.GetActiveProcessCountAsync().ConfigureAwait(false);
 
                     // Get top processes
-                    var topCpuProcesses = await this.GetTopCpuProcessesAsync(1);
+                    var topCpuProcesses = await this.GetTopCpuProcessesAsync(1).ConfigureAwait(false);
                     metrics.TopCpuProcess = topCpuProcesses.FirstOrDefault();
 
-                    var topMemoryProcesses = await this.GetTopMemoryProcessesAsync(1);
+                    var topMemoryProcesses = await this.GetTopMemoryProcessesAsync(1).ConfigureAwait(false);
                     metrics.TopMemoryProcess = topMemoryProcesses.FirstOrDefault();
 
                     // Store in historical data
-                    this.historicalData.Add(metrics);
-
-                    // Keep only last 1000 entries (about 16 minutes at 1-second intervals)
-                    if (this.historicalData.Count > 1000)
+                    if (this.historicalData.Count >= HistoricalDataCapacity)
                     {
-                        this.historicalData.RemoveAt(0);
+                        this.historicalData.Dequeue();
                     }
+
+                    this.historicalData.Enqueue(metrics);
                 }
 
                 return metrics;
@@ -122,7 +146,7 @@ namespace ThreadPilot.Services
 
             try
             {
-                var topology = await this.cpuTopologyService.DetectTopologyAsync();
+                var topology = await this.cpuTopologyService.DetectTopologyAsync().ConfigureAwait(false);
 
                 for (int i = 0; i < this.cpuCoreCounters.Count; i++)
                 {
@@ -157,7 +181,8 @@ namespace ThreadPilot.Services
                 var memoryInfo = new MemoryUsageInfo();
 
                 // Get physical memory info
-                using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_ComputerSystem");
+                var scope = CreateCimv2ScopeWithTimeout();
+                using var searcher = new ManagementObjectSearcher(scope, new ObjectQuery("SELECT TotalPhysicalMemory FROM Win32_ComputerSystem"));
                 foreach (var obj in searcher.Get())
                 {
                     memoryInfo.TotalPhysicalMemory = Convert.ToInt64(obj["TotalPhysicalMemory"]);
@@ -171,7 +196,7 @@ namespace ThreadPilot.Services
                     : 0;
 
                 // Get virtual memory info
-                using var memSearcher = new ManagementObjectSearcher("SELECT * FROM Win32_OperatingSystem");
+                using var memSearcher = new ManagementObjectSearcher(scope, new ObjectQuery("SELECT TotalVirtualMemorySize, FreeVirtualMemory FROM Win32_OperatingSystem"));
                 foreach (var obj in memSearcher.Get())
                 {
                     memoryInfo.TotalVirtualMemory = Convert.ToInt64(obj["TotalVirtualMemorySize"]) * 1024; // Convert KB to bytes
@@ -196,7 +221,7 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var processes = await this.processService.GetProcessesAsync();
+                var processes = await this.processService.GetProcessesAsync().ConfigureAwait(false);
                 return processes
                     .OrderByDescending(p => p.CpuUsage)
                     .Take(count)
@@ -207,7 +232,7 @@ namespace ThreadPilot.Services
                         WindowTitle = p.MainWindowTitle,
                         CpuUsage = p.CpuUsage,
                         MemoryUsage = p.MemoryUsage,
-                        ThreadCount = p.Process?.Threads?.Count ?? 0,
+                        ThreadCount = GetThreadCountSafe(p.ProcessId),
                         ExecutablePath = p.ExecutablePath ?? string.Empty,
                         Priority = p.Priority.ToString(),
                     })
@@ -224,7 +249,7 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var processes = await this.processService.GetProcessesAsync();
+                var processes = await this.processService.GetProcessesAsync().ConfigureAwait(false);
                 return processes
                     .OrderByDescending(p => p.MemoryUsage)
                     .Take(count)
@@ -235,7 +260,7 @@ namespace ThreadPilot.Services
                         WindowTitle = p.MainWindowTitle,
                         CpuUsage = p.CpuUsage,
                         MemoryUsage = p.MemoryUsage,
-                        ThreadCount = p.Process?.Threads?.Count ?? 0,
+                        ThreadCount = GetThreadCountSafe(p.ProcessId),
                         ExecutablePath = p.ExecutablePath ?? string.Empty,
                         Priority = p.Priority.ToString(),
                     })
@@ -270,7 +295,8 @@ namespace ThreadPilot.Services
 
                 try
                 {
-                    var metrics = await this.GetSystemMetricsAsync();
+                    var metrics = await this.GetSystemMetricsAsync().ConfigureAwait(false);
+                    await this.EmitGcDiagnosticsIfNeededAsync(metrics).ConfigureAwait(false);
                     this.MetricsUpdated?.Invoke(this, new PerformanceMetricsUpdatedEventArgs(metrics));
                 }
                 catch (Exception ex)
@@ -284,11 +310,11 @@ namespace ThreadPilot.Services
             }, null, TimeSpan.Zero, TimeSpan.FromSeconds(2));
         }
 
-        public async Task StopMonitoringAsync()
+        public Task StopMonitoringAsync()
         {
             if (!this.isMonitoring)
             {
-                return;
+                return Task.CompletedTask;
             }
 
             this.logger.LogInformation("Stopping performance monitoring");
@@ -297,36 +323,79 @@ namespace ThreadPilot.Services
 
             this.monitoringTimer?.Dispose();
             this.monitoringTimer = null;
+            return Task.CompletedTask;
         }
 
-        public async Task<List<SystemPerformanceMetrics>> GetHistoricalDataAsync(TimeSpan duration)
+        public Task<List<SystemPerformanceMetrics>> GetHistoricalDataAsync(TimeSpan duration)
         {
             var cutoffTime = DateTime.UtcNow - duration;
-            return this.historicalData.Where(m => m.Timestamp >= cutoffTime).ToList();
+            var data = this.historicalData.Where(m => m.Timestamp >= cutoffTime).ToList();
+            return Task.FromResult(data);
         }
 
-        public async Task ClearHistoricalDataAsync()
+        public Task ClearHistoricalDataAsync()
         {
             this.historicalData.Clear();
             this.logger.LogInformation("Historical performance data cleared");
+            return Task.CompletedTask;
         }
 
         private void InitializeCpuCoreCounters()
         {
+            var tempCounters = new List<PerformanceCounter>();
+
             try
             {
                 var coreCount = Environment.ProcessorCount;
                 for (int i = 0; i < coreCount; i++)
                 {
-                    var counter = new PerformanceCounter("Processor", "% Processor Time", i.ToString());
-                    this.cpuCoreCounters.Add(counter);
+                    tempCounters.Add(this.CreatePrimedCounter("Processor", "% Processor Time", i.ToString()));
                 }
+
+                this.cpuCoreCounters.Clear();
+                this.cpuCoreCounters.AddRange(tempCounters);
 
                 this.logger.LogInformation("Initialized {CoreCount} CPU core performance counters", coreCount);
             }
             catch (Exception ex)
             {
                 this.logger.LogError(ex, "Error initializing CPU core counters");
+                foreach (var counter in tempCounters)
+                {
+                    try
+                    {
+                        counter.Dispose();
+                    }
+                    catch
+                    {
+                        // Best effort cleanup for partially initialized counters.
+                    }
+                }
+
+                throw;
+            }
+        }
+
+        private PerformanceCounter CreatePrimedCounter(string categoryName, string counterName, string? instanceName = null)
+        {
+            try
+            {
+                var counter = string.IsNullOrWhiteSpace(instanceName)
+                    ? new PerformanceCounter(categoryName, counterName)
+                    : new PerformanceCounter(categoryName, counterName, instanceName);
+
+                _ = counter.NextValue();
+                return counter;
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogError(
+                    ex,
+                    "Failed to initialize PerformanceCounter category '{Category}' counter '{Counter}' instance '{Instance}'",
+                    categoryName,
+                    counterName,
+                    instanceName ?? "<none>");
+                throw;
             }
         }
 
@@ -371,7 +440,8 @@ namespace ThreadPilot.Services
 
             try
             {
-                using var searcher = new ManagementObjectSearcher("SELECT TotalPhysicalMemory FROM Win32_ComputerSystem");
+                var scope = CreateCimv2ScopeWithTimeout();
+                using var searcher = new ManagementObjectSearcher(scope, new ObjectQuery("SELECT TotalPhysicalMemory FROM Win32_ComputerSystem"));
                 foreach (var obj in searcher.Get())
                 {
                     var totalMemory = Convert.ToInt64(obj["TotalPhysicalMemory"]);
@@ -392,6 +462,168 @@ namespace ThreadPilot.Services
                 this.logger.LogError(ex, "Error getting total physical memory");
                 return 0;
             }
+        }
+
+        private async Task<int> GetActiveProcessCountAsync()
+        {
+            var now = DateTime.UtcNow;
+            lock (this.processCountCacheLock)
+            {
+                if ((now - this.processCountCacheUtc) < this.processCountCacheDuration)
+                {
+                    return this.cachedProcessCount;
+                }
+            }
+
+            try
+            {
+                var scope = CreateCimv2ScopeWithTimeout();
+                using var searcher = new ManagementObjectSearcher(scope, new ObjectQuery("SELECT Count(*) AS Count FROM Win32_Process"));
+                var result = searcher.Get().Cast<ManagementBaseObject>().FirstOrDefault();
+                var countValue = result?["Count"];
+                var count = countValue != null ? Convert.ToInt32(countValue) : 0;
+
+                lock (this.processCountCacheLock)
+                {
+                    this.cachedProcessCount = count;
+                    this.processCountCacheUtc = now;
+                }
+
+                return count;
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogWarning(ex, "Failed to read process count via WMI, falling back to Process.GetProcesses");
+                return Process.GetProcesses().Length;
+            }
+        }
+
+        private static ManagementScope CreateCimv2ScopeWithTimeout()
+        {
+            var options = new ConnectionOptions { Timeout = WmiQueryTimeout };
+            var scope = new ManagementScope(@"\\.\root\cimv2", options);
+            scope.Connect();
+            return scope;
+        }
+
+        private static int GetThreadCountSafe(int processId)
+        {
+            try
+            {
+                using var process = Process.GetProcessById(processId);
+                return process.Threads.Count;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private void PopulateRuntimeTelemetry(SystemPerformanceMetrics metrics)
+        {
+            try
+            {
+                var gen0Collections = GC.CollectionCount(0);
+                var gen1Collections = GC.CollectionCount(1);
+                var gen2Collections = GC.CollectionCount(2);
+                var totalAllocatedBytes = GC.GetTotalAllocatedBytes();
+                var gcInfo = GC.GetGCMemoryInfo();
+                var lastGcPauseMs = GetLastGcPauseMilliseconds(gcInfo);
+
+                metrics.Gen0Collections = gen0Collections;
+                metrics.Gen1Collections = gen1Collections;
+                metrics.Gen2Collections = gen2Collections;
+                metrics.TotalAllocatedBytes = totalAllocatedBytes;
+                metrics.ManagedHeapSizeBytes = gcInfo.HeapSizeBytes;
+                metrics.GcCommittedBytes = gcInfo.TotalCommittedBytes;
+                metrics.LastGcPauseMs = lastGcPauseMs;
+
+                lock (this.runtimeTelemetryLock)
+                {
+                    if (this.runtimeTelemetryInitialized)
+                    {
+                        metrics.Gen0CollectionsDelta = Math.Max(0, gen0Collections - this.previousGen0Collections);
+                        metrics.Gen1CollectionsDelta = Math.Max(0, gen1Collections - this.previousGen1Collections);
+                        metrics.Gen2CollectionsDelta = Math.Max(0, gen2Collections - this.previousGen2Collections);
+                        metrics.AllocatedBytesDelta = Math.Max(0, totalAllocatedBytes - this.previousTotalAllocatedBytes);
+                    }
+                    else
+                    {
+                        metrics.Gen0CollectionsDelta = 0;
+                        metrics.Gen1CollectionsDelta = 0;
+                        metrics.Gen2CollectionsDelta = 0;
+                        metrics.AllocatedBytesDelta = 0;
+                        this.runtimeTelemetryInitialized = true;
+                    }
+
+                    this.previousGen0Collections = gen0Collections;
+                    this.previousGen1Collections = gen1Collections;
+                    this.previousGen2Collections = gen2Collections;
+                    this.previousTotalAllocatedBytes = totalAllocatedBytes;
+
+                    this.maxObservedGcPauseMs = Math.Max(this.maxObservedGcPauseMs, lastGcPauseMs);
+                    metrics.MaxGcPauseMs = this.maxObservedGcPauseMs;
+                }
+
+                using var currentProcess = Process.GetCurrentProcess();
+                metrics.HandleCount = currentProcess.HandleCount;
+                metrics.ProcessWorkingSetBytes = currentProcess.WorkingSet64;
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogDebug(ex, "Failed to collect runtime GC telemetry sample");
+            }
+        }
+
+        private async Task EmitGcDiagnosticsIfNeededAsync(SystemPerformanceMetrics metrics)
+        {
+            try
+            {
+                if (!this.settingsService.Settings.EnablePerformanceCounters)
+                {
+                    return;
+                }
+
+                if (metrics.Gen2CollectionsDelta <= 0 || metrics.LastGcPauseMs < Gen2PauseAlertThresholdMs)
+                {
+                    return;
+                }
+
+                var now = DateTime.UtcNow;
+                if ((now - this.lastGcPauseAlertUtc) < GcPauseAlertCooldown)
+                {
+                    return;
+                }
+
+                this.lastGcPauseAlertUtc = now;
+
+                this.logger.LogWarning(
+                    "Gen2 GC pause alert: LastPauseMs={LastPauseMs}, Gen2Delta={Gen2Delta}, HeapBytes={HeapBytes}, AllocDeltaBytes={AllocDeltaBytes}",
+                    metrics.LastGcPauseMs,
+                    metrics.Gen2CollectionsDelta,
+                    metrics.ManagedHeapSizeBytes,
+                    metrics.AllocatedBytesDelta);
+
+                await this.enhancedLoggingService.LogSystemEventAsync(
+                    LogEventTypes.Performance.SlowOperation,
+                    $"Gen2 GC pause {metrics.LastGcPauseMs:F2}ms (delta={metrics.Gen2CollectionsDelta}, heap={metrics.ManagedHeapSizeBytes} bytes)",
+                    LogLevel.Warning).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogDebug(ex, "Failed to emit GC diagnostics alert");
+            }
+        }
+
+        private static double GetLastGcPauseMilliseconds(GCMemoryInfo gcInfo)
+        {
+            var pauseDurations = gcInfo.PauseDurations;
+            if (pauseDurations.Length == 0)
+            {
+                return 0;
+            }
+
+            return pauseDurations[pauseDurations.Length - 1].TotalMilliseconds;
         }
 
         private static string DetermineCoreType(int coreId, CpuTopologyModel? topology)

@@ -86,6 +86,7 @@ namespace ThreadPilot.Services
         {
             // Core system interaction services
             services.AddSingleton<IProcessService, ProcessService>();
+            services.AddSingleton<ProcessFilterService>();
             services.AddSingleton<IVirtualizedProcessService, VirtualizedProcessService>();
             services.AddSingleton<IConditionalProfileService, ConditionalProfileService>();
             services.AddSingleton<IPowerPlanService, PowerPlanService>();
@@ -167,6 +168,7 @@ namespace ThreadPilot.Services
             services.AddTransient<SettingsViewModel>();
             services.AddTransient<MainWindowViewModel>();
             services.AddTransient<PerformanceViewModel>();
+            services.AddTransient<LogViewerViewModel>();
             services.AddTransient<SystemTweaksViewModel>();
 
             // Views - Transient for proper lifecycle management

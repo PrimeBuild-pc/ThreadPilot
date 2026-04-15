@@ -16,6 +16,8 @@
  */
 namespace ThreadPilot.Services
 {
+    using System.Diagnostics;
+
     /// <summary>
     /// Service for security validation and auditing of elevated operations.
     /// </summary>
@@ -57,6 +59,13 @@ namespace ThreadPilot.Services
         /// </summary>
         /// <returns>Array of allowed operation names.</returns>
         string[] GetAllowedElevatedOperations();
+
+        /// <summary>
+        /// Determines whether a process is protected and should be excluded from optimization operations.
+        /// </summary>
+        /// <param name="process">Target process.</param>
+        /// <returns>True if process is protected; otherwise false.</returns>
+        bool IsProtected(Process process);
     }
 }
 

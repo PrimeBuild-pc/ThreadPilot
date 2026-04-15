@@ -37,7 +37,13 @@ jobs:
         run: dotnet build "ThreadPilot_1.sln" --configuration Release --no-restore
 
       - name: Run tests
-        run: dotnet test "ThreadPilot_1.sln" --configuration Release --no-build --verbosity normal
+        run: dotnet test "ThreadPilot_1.sln" --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory TestResults
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: '**/coverage.cobertura.xml'
+          fail_ci_if_error: false
 
       - name: Dependency vulnerability audit
         shell: pwsh

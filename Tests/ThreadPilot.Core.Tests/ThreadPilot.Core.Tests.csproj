@@ -5,6 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <CoverletOutputFormat>cobertura</CoverletOutputFormat>
+    <Threshold>40</Threshold>
   </PropertyGroup>
 
   <ItemGroup>

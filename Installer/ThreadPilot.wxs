@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Optional WiX template for MSI packaging.
+  This file is a starter template and is not part of the active build pipeline.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+      Name="ThreadPilot"
+      Manufacturer="Prime Build"
+      Version="1.1.1.0"
+      UpgradeCode="PUT-GENERATED-UPGRADE-CODE-HERE"
+      Language="1033">
+    <SummaryInformation Description="ThreadPilot MSI template" />
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of ThreadPilot is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Feature Id="MainFeature" Title="ThreadPilot" Level="1">
+      <ComponentGroupRef Id="AppFiles" />
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="ThreadPilot" />
+    </StandardDirectory>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
+      <!-- Add harvested files/components here in real MSI packaging setup. -->
+    </ComponentGroup>
+  </Fragment>
+</Wix>

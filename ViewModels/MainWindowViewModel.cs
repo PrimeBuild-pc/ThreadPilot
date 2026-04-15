@@ -17,6 +17,7 @@
 namespace ThreadPilot
 {
     using System;
+    using System.Reflection;
     using System.Threading.Tasks;
     using CommunityToolkit.Mvvm.ComponentModel;
     using CommunityToolkit.Mvvm.Input;
@@ -56,6 +57,9 @@ namespace ThreadPilot
         [ObservableProperty]
         private bool isDarkTheme = false;
 
+        [ObservableProperty]
+        private string applicationVersion = "v0.0.0";
+
         public MainWindowViewModel(
             ILogger<MainWindowViewModel> logger,
             IEnhancedLoggingService? enhancedLoggingService = null,
@@ -69,6 +73,7 @@ namespace ThreadPilot
             this.notificationService = notificationService;
             this.elevationService = elevationService;
             this.securityService = securityService;
+            this.ApplicationVersion = GetApplicationVersion();
         }
 
         public override async Task InitializeAsync()
@@ -209,6 +214,22 @@ namespace ThreadPilot
             }
 
             base.OnDispose();
+        }
+
+        private static string GetApplicationVersion()
+        {
+            var assembly = typeof(MainWindowViewModel).Assembly;
+            var informationalVersion = assembly
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                .InformationalVersion;
+
+            var normalizedVersion = string.IsNullOrWhiteSpace(informationalVersion)
+                ? assembly.GetName().Version?.ToString(3) ?? "0.0.0"
+                : informationalVersion.Split('+')[0];
+
+            return normalizedVersion.StartsWith("v", StringComparison.OrdinalIgnoreCase)
+                ? normalizedVersion
+                : $"v{normalizedVersion}";
         }
     }
 }

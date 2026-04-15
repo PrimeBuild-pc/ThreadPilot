@@ -34,6 +34,7 @@ namespace ThreadPilot.ViewModels
         public event EventHandler? OpenRulesRequested;
 
         private readonly IProcessService processService;
+        private readonly ProcessFilterService processFilterService;
         private readonly IVirtualizedProcessService virtualizedProcessService;
         private readonly ICpuTopologyService cpuTopologyService;
         private readonly IPowerPlanService powerPlanService;
@@ -43,7 +44,8 @@ namespace ThreadPilot.ViewModels
         private readonly IProcessPowerPlanAssociationService associationService;
         private readonly IGameModeService gameModeService;
         private System.Timers.Timer? refreshTimer;
-        private System.Timers.Timer? searchDebounceTimer;
+        private readonly ThrottledRefreshCoordinator searchRefreshCoordinator;
+        private readonly ThrottledRefreshCoordinator filterRefreshCoordinator;
         private bool isApplyingFilter;
         private bool filterRefreshPending;
         private bool suppressCoreSelectionEvents;
@@ -150,6 +152,7 @@ namespace ThreadPilot.ViewModels
         public ProcessViewModel(
             ILogger<ProcessViewModel> logger,
             IProcessService processService,
+            ProcessFilterService processFilterService,
             IVirtualizedProcessService virtualizedProcessService,
             ICpuTopologyService cpuTopologyService,
             IPowerPlanService powerPlanService,
@@ -162,6 +165,7 @@ namespace ThreadPilot.ViewModels
             : base(logger, enhancedLoggingService)
         {
             this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
+            this.processFilterService = processFilterService ?? throw new ArgumentNullException(nameof(processFilterService));
             this.virtualizedProcessService = virtualizedProcessService ?? throw new ArgumentNullException(nameof(virtualizedProcessService));
             this.cpuTopologyService = cpuTopologyService ?? throw new ArgumentNullException(nameof(cpuTopologyService));
             this.powerPlanService = powerPlanService ?? throw new ArgumentNullException(nameof(powerPlanService));
@@ -177,9 +181,24 @@ namespace ThreadPilot.ViewModels
             // Subscribe to system tray events
             this.systemTrayService.QuickApplyRequested += this.OnTrayQuickApplyRequested;
 
+            this.searchRefreshCoordinator = new ThrottledRefreshCoordinator(
+                TimeSpan.FromMilliseconds(300),
+                this.ApplyFiltersOnUiAsync,
+                ex => this.Logger.LogWarning(ex, "Search filter refresh failed"));
+
+            this.filterRefreshCoordinator = new ThrottledRefreshCoordinator(
+                TimeSpan.FromMilliseconds(100),
+                this.ApplyFiltersOnUiAsync,
+                ex => this.Logger.LogWarning(ex, "Filter refresh failed"));
+
             this.SetupRefreshTimer();
             this.SetupVirtualizedProcessService();
             // Note: InitializeAsync() will be called explicitly by MainWindow loading overlay
+        }
+
+        private async Task ApplyFiltersOnUiAsync()
+        {
+            await System.Windows.Application.Current.Dispatcher.InvokeAsync(this.FilterProcesses);
         }
 
         private void SetupVirtualizedProcessService()
@@ -1514,21 +1533,7 @@ namespace ThreadPilot.ViewModels
 
         partial void OnSearchTextChanged(string value)
         {
-            // PERFORMANCE OPTIMIZATION: Debounce search to prevent excessive filtering
-            searchDebounceTimer?.Stop();
-            searchDebounceTimer?.Dispose();
-
-            searchDebounceTimer = new System.Timers.Timer(300); // 300ms debounce
-            searchDebounceTimer.Elapsed += (s, e) =>
-            {
-                searchDebounceTimer?.Stop();
-                searchDebounceTimer?.Dispose();
-                searchDebounceTimer = null;
-
-                // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
-                System.Windows.Application.Current.Dispatcher.InvokeAsync(() => FilterProcesses());
-            };
-            searchDebounceTimer.Start();
+            this.searchRefreshCoordinator.Schedule();
         }
 
         partial void OnShowActiveApplicationsOnlyChanged(bool value)
@@ -1541,40 +1546,17 @@ namespace ThreadPilot.ViewModels
 
         partial void OnHideSystemProcessesChanged(bool value)
         {
-            // PERFORMANCE OPTIMIZATION: Debounce filter operations
-            DebounceFilterOperation();
+            this.filterRefreshCoordinator.Schedule();
         }
 
         partial void OnHideIdleProcessesChanged(bool value)
         {
-            // PERFORMANCE OPTIMIZATION: Debounce filter operations
-            DebounceFilterOperation();
+            this.filterRefreshCoordinator.Schedule();
         }
 
         partial void OnSortModeChanged(string value)
         {
-            // PERFORMANCE OPTIMIZATION: Debounce filter operations
-            DebounceFilterOperation();
-        }
-
-        private System.Timers.Timer? filterDebounceTimer;
-
-        private void DebounceFilterOperation()
-        {
-            this.filterDebounceTimer?.Stop();
-            this.filterDebounceTimer?.Dispose();
-
-            this.filterDebounceTimer = new System.Timers.Timer(100); // 100ms debounce for filter operations
-            this.filterDebounceTimer.Elapsed += (s, e) =>
-            {
-                this.filterDebounceTimer?.Stop();
-                this.filterDebounceTimer?.Dispose();
-                this.filterDebounceTimer = null;
-
-                // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
-                System.Windows.Application.Current.Dispatcher.InvokeAsync(() => this.FilterProcesses());
-            };
-            this.filterDebounceTimer.Start();
+            this.filterRefreshCoordinator.Schedule();
         }
 
         partial void OnIsIdleServerDisabledChanged(bool value)
@@ -1615,7 +1597,6 @@ namespace ThreadPilot.ViewModels
             }
 
             this.isApplyingFilter = true;
-            var filtered = this.Processes.AsEnumerable();
 
             try
             {
@@ -1623,33 +1604,16 @@ namespace ThreadPilot.ViewModels
                 {
                     this.filterRefreshPending = false;
 
-                    filtered = this.Processes.AsEnumerable();
-
-                    if (!string.IsNullOrWhiteSpace(this.SearchText))
+                    var criteria = new ProcessFilterCriteria
                     {
-                        filtered = filtered.Where(p => p.Name.Contains(this.SearchText, StringComparison.OrdinalIgnoreCase));
-                    }
-
-                    if (this.HideSystemProcesses)
-                    {
-                        filtered = filtered.Where(p => !IsSystemProcess(p));
-                    }
-
-                    if (this.HideIdleProcesses)
-                    {
-                        filtered = filtered.Where(p => p.CpuUsage > 0.1);
-                    }
-
-                    filtered = this.SortMode switch
-                    {
-                        "CpuUsage" => filtered.OrderByDescending(p => p.CpuUsage),
-                        "MemoryUsage" => filtered.OrderByDescending(p => p.MemoryUsage),
-                        "Name" => filtered.OrderBy(p => p.Name),
-                        "ProcessId" => filtered.OrderBy(p => p.ProcessId),
-                        _ => filtered.OrderByDescending(p => p.CpuUsage),
+                        SearchText = this.SearchText,
+                        HideSystemProcesses = this.HideSystemProcesses,
+                        HideIdleProcesses = this.HideIdleProcesses,
+                        SortMode = this.SortMode,
                     };
 
-                    this.FilteredProcesses = new ObservableCollection<ProcessModel>(filtered);
+                    var filteredResults = this.processFilterService.FilterAndSort(this.Processes, criteria);
+                    this.FilteredProcesses = new ObservableCollection<ProcessModel>(filteredResults);
                 }
                 while (this.filterRefreshPending);
             }
@@ -1657,21 +1621,6 @@ namespace ThreadPilot.ViewModels
             {
                 this.isApplyingFilter = false;
             }
-        }
-
-        private static bool IsSystemProcess(ProcessModel process)
-        {
-            var systemProcesses = new[]
-            {
-                "System", "Registry", "smss.exe", "csrss.exe", "wininit.exe", "winlogon.exe",
-                "services.exe", "lsass.exe", "svchost.exe", "spoolsv.exe", "explorer.exe",
-                "dwm.exe", "audiodg.exe", "conhost.exe", "dllhost.exe", "rundll32.exe",
-                "taskhostw.exe", "SearchIndexer.exe", "WmiPrvSE.exe", "MsMpEng.exe",
-                "SecurityHealthService.exe", "SecurityHealthSystray.exe",
-            };
-
-            return systemProcesses.Any(sp => process.Name.Equals(sp, StringComparison.OrdinalIgnoreCase)) ||
-                   process.Name.StartsWith("System", StringComparison.OrdinalIgnoreCase);
         }
 
         private async Task LoadProcessPowerPlanAssociation(ProcessModel process)
@@ -1949,6 +1898,21 @@ namespace ThreadPilot.ViewModels
                     "Error",
                     $"Failed to save rule: {ex.Message}", NotificationType.Error);
             }
+        }
+
+        protected override void OnDispose()
+        {
+            this.refreshTimer?.Stop();
+            this.refreshTimer?.Dispose();
+            this.refreshTimer = null;
+
+            this.searchRefreshCoordinator.Dispose();
+            this.filterRefreshCoordinator.Dispose();
+
+            this.cpuTopologyService.TopologyDetected -= this.OnTopologyDetected;
+            this.systemTrayService.QuickApplyRequested -= this.OnTrayQuickApplyRequested;
+
+            base.OnDispose();
         }
     }
 }

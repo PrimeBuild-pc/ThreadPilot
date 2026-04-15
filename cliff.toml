@@ -1,0 +1,69 @@
+[changelog]
+header = """
+# Changelog
+
+All notable changes to ThreadPilot are documented in this file.
+"""
+body = """
+{% if version %}
+## {{ version }} - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}
+## Unreleased
+{% endif %}
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group }}
+{% for commit in commits %}
+- {{ commit.message | upper_first }} ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/PrimeBuild-pc/ThreadPilot/commit/{{ commit.id }}))
+{% endfor %}
+{% endfor %}
+"""
+footer = """
+"""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+tag_pattern = "v[0-9]*"
+sort_commits = "oldest"
+
+[[git.commit_parsers]]
+message = "^feat"
+group = "Features"
+
+[[git.commit_parsers]]
+message = "^fix"
+group = "Fixes"
+
+[[git.commit_parsers]]
+message = "^perf"
+group = "Performance"
+
+[[git.commit_parsers]]
+message = "^docs"
+group = "Documentation"
+
+[[git.commit_parsers]]
+message = "^refactor"
+group = "Refactoring"
+
+[[git.commit_parsers]]
+message = "^test"
+group = "Tests"
+
+[[git.commit_parsers]]
+message = "^chore"
+group = "Chores"
+
+[[git.commit_parsers]]
+message = "^ci"
+group = "CI"
+
+[[git.commit_parsers]]
+message = "^build"
+group = "Build"
+
+[[git.commit_parsers]]
+message = "^revert"
+group = "Reverts"

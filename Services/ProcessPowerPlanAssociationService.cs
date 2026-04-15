@@ -73,11 +73,11 @@ namespace ThreadPilot.Services
                 {
                     // Create default configuration
                     this.configuration = new ProcessMonitorConfiguration();
-                    await this.SaveConfigurationAsync();
+                    await this.SaveConfigurationAsync().ConfigureAwait(false);
                     return true;
                 }
 
-                var json = await File.ReadAllTextAsync(this.configurationFilePath);
+                var json = await File.ReadAllTextAsync(this.configurationFilePath).ConfigureAwait(false);
                 var loadedConfig = JsonSerializer.Deserialize<ProcessMonitorConfiguration>(json, JsonOptions);
 
                 if (loadedConfig != null)
@@ -113,7 +113,7 @@ namespace ThreadPilot.Services
                 }
 
                 var json = JsonSerializer.Serialize(configToSave, JsonOptions);
-                await AtomicFileWriter.WriteAllTextAsync(this.configurationFilePath, json, Encoding.UTF8);
+                await AtomicFileWriter.WriteAllTextAsync(this.configurationFilePath, json, Encoding.UTF8).ConfigureAwait(false);
 
                 this.OnConfigurationChanged("Saved", null, "Configuration saved to file");
                 return true;
@@ -127,7 +127,7 @@ namespace ThreadPilot.Services
 
         public async Task<IEnumerable<ProcessPowerPlanAssociation>> GetAssociationsAsync()
         {
-            await Task.CompletedTask;
+            await Task.CompletedTask.ConfigureAwait(false);
             lock (this.lockObject)
             {
                 return this.configuration.Associations.ToList();
@@ -136,7 +136,7 @@ namespace ThreadPilot.Services
 
         public async Task<IEnumerable<ProcessPowerPlanAssociation>> GetEnabledAssociationsAsync()
         {
-            await Task.CompletedTask;
+            await Task.CompletedTask.ConfigureAwait(false);
             lock (this.lockObject)
             {
                 return this.configuration.GetEnabledAssociations().ToList();
@@ -166,7 +166,7 @@ namespace ThreadPilot.Services
                     this.configuration.AddOrUpdateAssociation(association);
                 }
 
-                await this.SaveConfigurationAsync();
+                await this.SaveConfigurationAsync().ConfigureAwait(false);
                 this.OnConfigurationChanged("Added", association, $"Association added for {association.ExecutableName}");
                 return true;
             }
@@ -191,7 +191,7 @@ namespace ThreadPilot.Services
                     this.configuration.AddOrUpdateAssociation(association);
                 }
 
-                await this.SaveConfigurationAsync();
+                await this.SaveConfigurationAsync().ConfigureAwait(false);
                 this.OnConfigurationChanged("Updated", association, $"Association updated for {association.ExecutableName}");
                 return true;
             }
@@ -217,7 +217,7 @@ namespace ThreadPilot.Services
 
                 if (removed)
                 {
-                    await this.SaveConfigurationAsync();
+                    await this.SaveConfigurationAsync().ConfigureAwait(false);
                     this.OnConfigurationChanged("Removed", removedAssociation,
                         $"Association removed for {removedAssociation?.ExecutableName}");
                 }
@@ -233,7 +233,7 @@ namespace ThreadPilot.Services
 
         public async Task<ProcessPowerPlanAssociation?> FindMatchingAssociationAsync(ProcessModel process)
         {
-            await Task.CompletedTask;
+            await Task.CompletedTask.ConfigureAwait(false);
             lock (this.lockObject)
             {
                 return this.configuration.FindMatchingAssociation(process);
@@ -242,7 +242,7 @@ namespace ThreadPilot.Services
 
         public async Task<ProcessPowerPlanAssociation?> FindAssociationByExecutableAsync(string executableName)
         {
-            await Task.CompletedTask;
+            await Task.CompletedTask.ConfigureAwait(false);
             lock (this.lockObject)
             {
                 return this.configuration.FindAssociationByExecutable(executableName);
@@ -259,7 +259,7 @@ namespace ThreadPilot.Services
                     this.configuration.DefaultPowerPlanName = powerPlanName;
                 }
 
-                await this.SaveConfigurationAsync();
+                await this.SaveConfigurationAsync().ConfigureAwait(false);
                 this.OnConfigurationChanged("DefaultPowerPlanChanged", null, $"Default power plan set to {powerPlanName}");
                 return true;
             }
@@ -272,7 +272,7 @@ namespace ThreadPilot.Services
 
         public async Task<(string Guid, string Name)> GetDefaultPowerPlanAsync()
         {
-            await Task.CompletedTask;
+            await Task.CompletedTask.ConfigureAwait(false);
             lock (this.lockObject)
             {
                 return (this.configuration.DefaultPowerPlanGuid, this.configuration.DefaultPowerPlanName);
@@ -281,7 +281,7 @@ namespace ThreadPilot.Services
 
         public async Task<IEnumerable<string>> ValidateConfigurationAsync()
         {
-            await Task.CompletedTask;
+            await Task.CompletedTask.ConfigureAwait(false);
             lock (this.lockObject)
             {
                 return this.configuration.Validate();
@@ -295,7 +295,7 @@ namespace ThreadPilot.Services
                 this.configuration = new ProcessMonitorConfiguration();
             }
 
-            await this.SaveConfigurationAsync();
+            await this.SaveConfigurationAsync().ConfigureAwait(false);
             this.OnConfigurationChanged("Reset", null, "Configuration reset to defaults");
         }
 
@@ -310,7 +310,7 @@ namespace ThreadPilot.Services
                 }
 
                 var json = JsonSerializer.Serialize(configToExport, JsonOptions);
-                await AtomicFileWriter.WriteAllTextAsync(filePath, json, Encoding.UTF8);
+                await AtomicFileWriter.WriteAllTextAsync(filePath, json, Encoding.UTF8).ConfigureAwait(false);
 
                 this.OnConfigurationChanged("Exported", null, $"Configuration exported to {filePath}");
                 return true;
@@ -331,12 +331,12 @@ namespace ThreadPilot.Services
                     return false;
                 }
 
-                var json = await File.ReadAllTextAsync(filePath);
+                var json = await File.ReadAllTextAsync(filePath).ConfigureAwait(false);
                 var importedConfig = JsonSerializer.Deserialize<ProcessMonitorConfiguration>(json, JsonOptions);
 
                 if (importedConfig != null)
                 {
-                    var replaced = await this.ReplaceConfigurationAsync(importedConfig);
+                    var replaced = await this.ReplaceConfigurationAsync(importedConfig).ConfigureAwait(false);
                     if (replaced)
                     {
                         this.OnConfigurationChanged("Imported", null, $"Configuration imported from {filePath}");
@@ -370,7 +370,7 @@ namespace ThreadPilot.Services
                     this.configuration = cloned;
                 }
 
-                await this.SaveConfigurationAsync();
+                await this.SaveConfigurationAsync().ConfigureAwait(false);
                 this.OnConfigurationChanged("Replaced", null, "Configuration replaced from imported bundle");
                 return true;
             }

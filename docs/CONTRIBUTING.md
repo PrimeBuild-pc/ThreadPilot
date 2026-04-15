@@ -21,6 +21,23 @@ Thanks for helping improve ThreadPilot.
 - Use clear commit messages in imperative mood.
 - Keep history clean and avoid unrelated formatting churn.
 
+## Branch Policy
+- `main` is protected: no direct pushes.
+- Pull requests into `main` require at least 1 approval.
+- All required CI checks must pass before merge.
+- Branch naming must follow one of these prefixes:
+   - `feat/`
+   - `fix/`
+   - `perf/`
+   - `chore/`
+   - `release/`
+- Commit messages should follow Conventional Commits:
+   - `feat: ...`
+   - `fix: ...`
+   - `perf: ...`
+   - `docs: ...`
+   - `chore: ...`
+
 ## Pull Request Checklist
 - I built the solution successfully in Debug and Release.
 - I ran tests and validated impacted features.
@@ -38,3 +55,23 @@ Thanks for helping improve ThreadPilot.
 - Add unit tests for new logic when feasible.
 - Add or update integration checks for process and power plan workflows.
 - Validate behavior on Windows 11; Windows 10 is best effort.
+
+## Artifact Cleanup Policy
+
+Before committing, ensure local/generated artifacts are not staged.
+
+- AI workspace artifacts: `.kilo/`, `.roo/`, `.cursor/`, `.continue/`, `.aider*/`
+- Build artifacts: `bin/`, `obj/`, `artifacts/` generated outputs
+- Logs/temp: `*.log`, `*.tmp`, `checkpoint*/`
+
+If an artifact is accidentally tracked, remove it from index without deleting local copy:
+
+- `git rm --cached <path>`
+
+Then update `.gitignore` when needed.
+
+Optional local enforcement:
+
+- `./build/install-git-hooks.ps1`
+
+This enables the repository pre-commit hook (`.githooks/pre-commit.ps1`) that blocks common artifact patterns and large files.

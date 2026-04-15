@@ -4,8 +4,8 @@
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <!-- Always request elevation at process start (UAC prompt). -->
-        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+        <!-- Run with standard user rights and elevate only for privileged operations. -->
+        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
       </requestedPrivileges>
     </security>
   </trustInfo>

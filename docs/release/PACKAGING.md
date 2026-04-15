@@ -24,7 +24,7 @@ Shared packaging defaults are in `Directory.Publish.props`.
 
 Release baseline requirements:
 
-- Executable manifest must use requireAdministrator.
+- Executable manifest must use asInvoker and defer elevation to privileged operations.
 - Inno Setup compile warnings target: 0.
 - Build and test stages must pass before packaging.
 
@@ -149,6 +149,12 @@ iscc Installer/setup.iss
 7. Sign artifacts
 8. Generate SHA-256 checksums
 9. Upload release artifacts
+
+Optional automation for publishing the GitHub release after artifacts are ready:
+
+```powershell
+./build/create-github-release.ps1 -Version "1.1.1" -NotesFile "docs/release/RELEASE_NOTES.md"
+```
 
 ## CI/CD
 
