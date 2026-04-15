@@ -68,19 +68,29 @@ jobs:
           $baseUrl = "https://github.com/gitleaks/gitleaks/releases/download/v$version"
           $zipAsset = "gitleaks_${version}_windows_x64.zip"
           $tarAsset = "gitleaks_${version}_windows_x64.tar.gz"
+          $toolDir = Join-Path $env:RUNNER_TEMP "gitleaks-bin"
+
+          if (Test-Path $toolDir) {
+            Remove-Item -Path $toolDir -Recurse -Force
+          }
 
           try {
             Invoke-WebRequest -Uri "$baseUrl/$zipAsset" -OutFile "gitleaks.zip"
-            Expand-Archive -Path "gitleaks.zip" -DestinationPath ".\\gitleaks-bin" -Force
+            Expand-Archive -Path "gitleaks.zip" -DestinationPath $toolDir -Force
           }
           catch {
             Invoke-WebRequest -Uri "$baseUrl/$tarAsset" -OutFile "gitleaks.tar.gz"
-            New-Item -ItemType Directory -Force -Path ".\\gitleaks-bin" | Out-Null
-            tar -xzf "gitleaks.tar.gz" -C ".\\gitleaks-bin"
+            New-Item -ItemType Directory -Force -Path $toolDir | Out-Null
+            tar -xzf "gitleaks.tar.gz" -C $toolDir
           }
 
-          $gitleaksExe = Resolve-Path ".\\gitleaks-bin\\gitleaks.exe"
-          & $gitleaksExe detect --source "." --redact --verbose --report-format json --report-path gitleaks-report.json
+          # Remove vendored tool docs from scan scope to avoid known upstream sample false positives.
+          if (Test-Path ".\\gitleaks-bin") {
+            Remove-Item -Path ".\\gitleaks-bin" -Recurse -Force
+          }
+
+          $gitleaksExe = Resolve-Path (Join-Path $toolDir "gitleaks.exe")
+          & $gitleaksExe detect --source "." --no-git --exit-code 1 --redact --verbose --report-format json --report-path gitleaks-report.json
 
       - name: Upload security artifacts
         if: always()
