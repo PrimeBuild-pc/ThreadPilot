@@ -84,21 +84,6 @@ jobs:
 
           & iscc.exe "/DMyAppVersion=$version" "/DMyAppSourceDir=$sourceDir" "Installer/setup.iss"
 
-      - name: Publish MSIX
-        run: dotnet publish "ThreadPilot.csproj" --configuration Release -p:PublishProfile=WinX64-MSIX
-
-      - name: Validate MSIX output
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          $msixFiles = Get-ChildItem "artifacts/release/msix" -Recurse -File -Include *.msix,*.appx,*.msixbundle,*.appxbundle -ErrorAction SilentlyContinue
-          if (-not $msixFiles)
-          {
-            throw "MSIX package generation failed: no package artifacts found in artifacts/release/msix."
-          }
-
-          Write-Host "MSIX artifacts found: $($msixFiles.Count)"
-
       - name: Prepare signing certificate (optional)
         shell: pwsh
         run: |
@@ -134,7 +119,6 @@ jobs:
           $targets += Get-ChildItem "artifacts/release/singlefile" -Recurse -File -Include *.exe -ErrorAction SilentlyContinue
           $targets += Get-ChildItem "artifacts/release/readytorun" -Recurse -File -Include *.exe -ErrorAction SilentlyContinue
           $targets += Get-ChildItem "artifacts/release/installer" -Recurse -File -Include *.exe -ErrorAction SilentlyContinue
-          $targets += Get-ChildItem "artifacts/release/msix" -Recurse -File -Include *.msix,*.appx,*.msixbundle,*.appxbundle -ErrorAction SilentlyContinue
 
           foreach ($target in $targets)
           {
@@ -226,7 +210,6 @@ jobs:
           $releaseFiles = @()
           $releaseFiles += Get-ChildItem "artifacts/release/packages" -File -ErrorAction SilentlyContinue
           $releaseFiles += Get-ChildItem "artifacts/release/installer/*.exe" -File -ErrorAction SilentlyContinue
-          $releaseFiles += Get-ChildItem "artifacts/release/msix" -Recurse -File -Include *.msix,*.appx,*.msixbundle,*.appxbundle -ErrorAction SilentlyContinue
 
           $releaseFiles | ForEach-Object {
             $hash = Get-FileHash $_.FullName -Algorithm SHA256
@@ -283,12 +266,6 @@ jobs:
         with:
           name: release-packages
           path: artifacts/release/packages
-
-      - name: Upload msix artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-msix
-          path: artifacts/release/msix
 
       - name: Upload checksums artifact
         uses: actions/upload-artifact@v4
@@ -358,12 +335,6 @@ jobs:
           name: release-packages
           path: release-assets/packages
 
-      - name: Download msix artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: release-msix
-          path: release-assets/msix
-
       - name: Download checksums artifact
         uses: actions/download-artifact@v4
         with:
@@ -407,10 +378,6 @@ jobs:
           files: |
             release-assets/installer/*.exe
             release-assets/packages/*.zip
-            release-assets/msix/**/*.msix
-            release-assets/msix/**/*.appx
-            release-assets/msix/**/*.msixbundle
-            release-assets/msix/**/*.appxbundle
             release-assets/SHA256SUMS.txt
             winget-manifests/**/*.yaml
             sbom/manifest.spdx.json

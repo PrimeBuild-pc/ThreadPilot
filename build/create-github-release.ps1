@@ -32,7 +32,6 @@ if (-not (Test-Path -LiteralPath $notesPath)) {
 $artifacts = @()
 $artifacts += Get-ChildItem "artifacts/release/packages" -File -ErrorAction SilentlyContinue
 $artifacts += Get-ChildItem "artifacts/release/installer" -File -Include *.exe -ErrorAction SilentlyContinue
-$artifacts += Get-ChildItem "artifacts/release/msix" -Recurse -File -Include *.msix,*.appx,*.msixbundle,*.appxbundle -ErrorAction SilentlyContinue
 
 $checksums = Join-Path $projectRoot "artifacts/release/SHA256SUMS.txt"
 if (Test-Path -LiteralPath $checksums) {

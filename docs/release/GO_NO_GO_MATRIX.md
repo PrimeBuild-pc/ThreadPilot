@@ -7,7 +7,7 @@
 | Build | Complete | Yes | Release build currently passing |
 | Tests | Complete | Yes | Core test suite currently green |
 | Security scan | Complete | Yes | No vulnerable packages and no secret leaks |
-| Packaging | Complete | Yes | Installer, msix, zip artifacts and checksums generated |
+| Packaging | Complete | Yes | Installer, portable zip artifacts and checksums generated |
 | Documentation | Complete | Yes | Release docs and governance artifacts updated |
 | Compatibility smoke tests | Deferred | Yes | Execute on final release candidate |
 

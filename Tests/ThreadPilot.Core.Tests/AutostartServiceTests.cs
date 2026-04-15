@@ -43,7 +43,8 @@ namespace ThreadPilot.Core.Tests
         private static AutostartService CreateService()
         {
             var elevationService = new Mock<IElevationService>(MockBehavior.Loose);
-            return new AutostartService(NullLogger<AutostartService>.Instance, elevationService.Object);
+            var elevatedTaskService = new Mock<IElevatedTaskService>(MockBehavior.Loose);
+            return new AutostartService(NullLogger<AutostartService>.Instance, elevationService.Object, elevatedTaskService.Object);
         }
     }
 }

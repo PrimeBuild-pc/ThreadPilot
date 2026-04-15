@@ -34,4 +34,4 @@ Release can proceed only when all gates are marked complete or explicitly waived
 - Tests: `dotnet test Tests/ThreadPilot.Core.Tests/ThreadPilot.Core.Tests.csproj --configuration Release` (20 passed, 0 failed).
 - Dependency security: `dotnet list ThreadPilot.csproj package --vulnerable --include-transitive` (no vulnerable packages).
 - Secret hygiene: local gitleaks run, report `docs/audits/GITLEAKS_REPORT_2026-04-15.json` (no leaks).
-- Packaging: installer/msix/packages/checksums generated in `artifacts/release/`.
+- Packaging: installer/packages/checksums generated in `artifacts/release/`.

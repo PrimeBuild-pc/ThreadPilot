@@ -7,16 +7,15 @@ This document describes production packaging for ThreadPilot v1.1.1.
 - Windows 11 build machine (or GitHub Actions `windows-latest`)
 - .NET SDK 8.x
 - Optional for signing:
-- Code-signing certificate (`.pfx`) for Authenticode/MSIX signing
+- Code-signing certificate (`.pfx`) for Authenticode signing
 - Optional strong-name key (`.snk`) if strong naming is required
 
 ## Publish Profiles
 
-The repository provides three publish profiles under `Properties/PublishProfiles`:
+The repository provides two publish profiles under `Properties/PublishProfiles`:
 
 - `WinX64-SingleFile.pubxml`
 - `WinX64-ReadyToRun.pubxml`
-- `WinX64-MSIX.pubxml`
 
 Shared packaging defaults are in `Directory.Publish.props`.
 
@@ -72,19 +71,6 @@ Output folder:
 
 - `artifacts/release/readytorun/`
 
-### 4) MSIX package (secondary)
-
-```powershell
-dotnet publish ThreadPilot.csproj -c Release -p:PublishProfile=WinX64-MSIX
-```
-
-Output:
-
-- `artifacts/release/msix/ThreadPilot_<version>_win-x64.msix`
-- `artifacts/release/msix/publish/` (packaging input folder used to create the MSIX)
-
-`WinX64-MSIX.pubxml` enables a post-publish packaging target that calls `build/build-msix.ps1` and creates the `.msix` using the Windows SDK `makeappx.exe` tool.
-
 ## Code Signing
 
 ### Strong name (optional)
@@ -108,11 +94,6 @@ Sign binaries after publish:
 signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /f path\to\cert.pfx /p <password> artifacts\release\singlefile\ThreadPilot.exe
 ```
 
-For MSIX signing:
-
-- Sign the produced `.msix`/`.appx` using `signtool` with the same certificate.
-- Keep `AppxPackageSigningEnabled=false` in profile and sign in CI so secrets are not stored in project files.
-
 ## CI Signing Placeholders
 
 `.github/workflows/release.yml` supports optional signing with these repository secrets:
@@ -125,7 +106,7 @@ Expose these values to the workflow as environment variables (same names) via re
 When both secrets are present:
 
 1. The workflow decodes the certificate to the runner temp directory.
-2. `signtool.exe` signs `.exe` and MSIX/AppX artifacts before ZIP packaging.
+2. `signtool.exe` signs `.exe` artifacts before ZIP packaging.
 3. SHA-256 checksums are generated for signed outputs.
 
 When secrets are missing, the release still builds and publishes unsigned artifacts.
@@ -145,10 +126,9 @@ iscc Installer/setup.iss
 3. `dotnet test ThreadPilot_1.sln --configuration Release --no-build`
 4. Publish Single-file and ReadyToRun profiles
 5. Build Inno Setup installer from Single-file output
-6. Publish MSIX as secondary artifact
-7. Sign artifacts
-8. Generate SHA-256 checksums
-9. Upload release artifacts
+6. Sign artifacts
+7. Generate SHA-256 checksums
+8. Upload release artifacts
 
 Optional automation for publishing the GitHub release after artifacts are ready:
 
@@ -163,8 +143,6 @@ The release workflow (`.github/workflows/release.yml`) now builds:
 - Inno Setup installer (`.exe`) as primary installer artifact
 - Single-file package (ZIP)
 - ReadyToRun package (ZIP)
-- MSIX artifact (secondary)
 - SHA-256 checksum manifest
-- Optional signing of EXE/MSIX artifacts when signing secrets are configured
-- Explicit MSIX validation (workflow fails if no package artifact is generated)
+- Optional signing of EXE artifacts when signing secrets are configured
 

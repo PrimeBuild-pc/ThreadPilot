@@ -93,8 +93,6 @@ Logs/
 Installer/Output/
 *.cab
 *.msi
-*.msix
-*.msixbundle
 *.msm
 *.msp
 *.lnk

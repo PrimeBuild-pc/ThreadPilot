@@ -41,7 +41,6 @@ Latest artifacts are published on each tagged release in [GitHub Releases](https
 |---|---|---|
 | Installer (Recommended) | `ThreadPilot_v1.1.1_Setup.exe` | Standard Windows installer (Inno Setup) for most users |
 | Portable | `ThreadPilot_v1.1.1_singlefile_win-x64.zip` | No-install deployment for power users |
-| MSIX (Secondary) | `ThreadPilot_1.1.1.0_win-x64.msix` | Advanced/enterprise sideload scenarios |
 
 Verification example:
 
@@ -54,7 +53,6 @@ Install flow summary:
 1. Download the package matching your deployment model.
 2. Installer package (recommended): run `ThreadPilot_vX.Y.Z_Setup.exe` and complete the wizard.
 3. Portable package: extract ZIP and launch `ThreadPilot.exe`.
-4. MSIX package (secondary): install only if your environment supports sideload trust requirements.
 
 Notes:
 

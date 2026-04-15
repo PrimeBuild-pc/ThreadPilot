@@ -37,6 +37,7 @@ namespace ThreadPilot.Services
 
         private readonly ILogger<AutostartService> logger;
         private readonly IElevationService elevationService;
+        private readonly IElevatedTaskService elevatedTaskService;
         private bool isAutostartEnabled;
         private string? autostartPath;
 
@@ -46,10 +47,11 @@ namespace ThreadPilot.Services
 
         public string? AutostartPath => this.autostartPath;
 
-        public AutostartService(ILogger<AutostartService> logger, IElevationService elevationService)
+        public AutostartService(ILogger<AutostartService> logger, IElevationService elevationService, IElevatedTaskService elevatedTaskService)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.elevationService = elevationService ?? throw new ArgumentNullException(nameof(elevationService));
+            this.elevatedTaskService = elevatedTaskService ?? throw new ArgumentNullException(nameof(elevatedTaskService));
 
             // Initialize current status without surfacing startup exceptions.
             TaskSafety.FireAndForget(this.CheckAutostartStatusAsync(), ex =>
@@ -72,19 +74,28 @@ namespace ThreadPilot.Services
                 var arguments = this.GetAutostartArguments(startMinimized);
                 var fullCommand = $"\"{executablePath}\" {arguments}";
 
-                using var key = Registry.CurrentUser.OpenSubKey(REGISTRYKEYPATH, true);
-                if (key == null)
+                // Clean up legacy registry-based startup to keep a single elevated startup mechanism.
+                this.TryRemoveLegacyRegistryAutostart();
+
+                if (!this.elevationService.IsRunningAsAdministrator())
                 {
-                    LogAutostartRegistryKeyMissing(this.logger);
+                    LogAutostartRequiresElevation(this.logger);
+
+                    var elevationRequested = await this.elevationService.RequestElevationIfNeeded();
+                    if (!elevationRequested)
+                    {
+                        return false;
+                    }
+
+                    LogAutostartDeferredToElevatedInstance(this.logger);
                     return false;
                 }
 
-                key.SetValue(APPLICATIONNAME, fullCommand, RegistryValueKind.String);
-
-                // For elevated apps, also create a scheduled task as backup
-                if (this.elevationService.IsRunningAsAdministrator())
+                var scheduledTaskCreated = await this.elevatedTaskService.EnsureAutostartTaskAsync(executablePath, arguments);
+                if (!scheduledTaskCreated)
                 {
-                    await this.CreateElevatedStartupTask(executablePath, arguments);
+                    LogAutostartTaskRegistrationFailed(this.logger);
+                    return false;
                 }
 
                 this.isAutostartEnabled = true;
@@ -112,21 +123,30 @@ namespace ThreadPilot.Services
         {
             try
             {
-                using var key = Registry.CurrentUser.OpenSubKey(REGISTRYKEYPATH, true);
-                if (key == null)
+                if (!this.elevationService.IsRunningAsAdministrator())
                 {
-                    LogAutostartRegistryRemovalKeyMissing(this.logger);
+                    LogAutostartDisableRequiresElevation(this.logger);
+
+                    var elevationRequested = await this.elevationService.RequestElevationIfNeeded();
+                    if (!elevationRequested)
+                    {
+                        return false;
+                    }
+
+                    LogAutostartDisableDeferredToElevatedInstance(this.logger);
                     return false;
                 }
 
-                if (key.GetValue(APPLICATIONNAME) != null)
+                this.TryRemoveLegacyRegistryAutostart();
+
+                var scheduledTaskRemoved = await this.elevatedTaskService.RemoveAutostartTaskAsync();
+                if (!scheduledTaskRemoved)
                 {
-                    key.DeleteValue(APPLICATIONNAME, false);
-                    LogAutostartDisabled(this.logger);
+                    LogAutostartTaskRemovalFailed(this.logger);
+                    return false;
                 }
 
-                // Also remove the scheduled task if it exists
-                await this.RemoveElevatedStartupTask();
+                LogAutostartDisabled(this.logger);
 
                 this.isAutostartEnabled = false;
                 this.autostartPath = null;
@@ -146,32 +166,28 @@ namespace ThreadPilot.Services
             }
         }
 
-        public Task<bool> CheckAutostartStatusAsync()
+        public async Task<bool> CheckAutostartStatusAsync()
         {
             try
             {
-                using var key = Registry.CurrentUser.OpenSubKey(REGISTRYKEYPATH, false);
-                if (key == null)
-                {
-                    this.isAutostartEnabled = false;
-                    this.autostartPath = null;
-                    return Task.FromResult(false);
-                }
+                var taskRegistered = await this.elevatedTaskService.IsAutostartTaskRegisteredAsync();
+                var legacyRegistryValue = this.TryReadLegacyRegistryAutostart();
 
-                var value = key.GetValue(APPLICATIONNAME) as string;
-                this.isAutostartEnabled = !string.IsNullOrEmpty(value);
-                this.autostartPath = value;
+                this.isAutostartEnabled = taskRegistered || !string.IsNullOrWhiteSpace(legacyRegistryValue);
+                this.autostartPath = taskRegistered
+                    ? $"task://{this.elevatedTaskService.AutostartTaskName}"
+                    : legacyRegistryValue;
 
                 LogAutostartStatusChecked(this.logger, this.isAutostartEnabled, this.autostartPath);
 
-                return Task.FromResult(this.isAutostartEnabled);
+                return this.isAutostartEnabled;
             }
             catch (Exception ex)
             {
                 LogCheckAutostartStatusFailed(this.logger, ex);
                 this.isAutostartEnabled = false;
                 this.autostartPath = null;
-                return Task.FromResult(false);
+                return false;
             }
         }
 
@@ -231,6 +247,37 @@ namespace ThreadPilot.Services
             {
                 LogGetExecutablePathFailed(this.logger, ex);
                 return null;
+            }
+        }
+
+        private string? TryReadLegacyRegistryAutostart()
+        {
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(REGISTRYKEYPATH, false);
+                return key?.GetValue(APPLICATIONNAME) as string;
+            }
+            catch (Exception ex)
+            {
+                LogLegacyRegistryReadFailed(this.logger, ex);
+                return null;
+            }
+        }
+
+        private void TryRemoveLegacyRegistryAutostart()
+        {
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(REGISTRYKEYPATH, true);
+                if (key?.GetValue(APPLICATIONNAME) != null)
+                {
+                    key.DeleteValue(APPLICATIONNAME, false);
+                    LogLegacyRegistryEntryRemoved(this.logger);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogLegacyRegistryCleanupFailed(this.logger, ex);
             }
         }
 
@@ -357,6 +404,33 @@ namespace ThreadPilot.Services
 
         [LoggerMessage(EventId = 4217, Level = LogLevel.Warning, Message = "Failed to remove elevated startup task")]
         private static partial void LogRemoveElevatedStartupTaskException(ILogger logger, Exception ex);
+
+        [LoggerMessage(EventId = 4218, Level = LogLevel.Information, Message = "Autostart configuration requires elevation; requesting elevated restart")]
+        private static partial void LogAutostartRequiresElevation(ILogger logger);
+
+        [LoggerMessage(EventId = 4219, Level = LogLevel.Information, Message = "Autostart enable request delegated to elevated instance")]
+        private static partial void LogAutostartDeferredToElevatedInstance(ILogger logger);
+
+        [LoggerMessage(EventId = 4220, Level = LogLevel.Warning, Message = "Failed to register elevated autostart task")]
+        private static partial void LogAutostartTaskRegistrationFailed(ILogger logger);
+
+        [LoggerMessage(EventId = 4221, Level = LogLevel.Information, Message = "Autostart disable requires elevation; requesting elevated restart")]
+        private static partial void LogAutostartDisableRequiresElevation(ILogger logger);
+
+        [LoggerMessage(EventId = 4222, Level = LogLevel.Information, Message = "Autostart disable request delegated to elevated instance")]
+        private static partial void LogAutostartDisableDeferredToElevatedInstance(ILogger logger);
+
+        [LoggerMessage(EventId = 4223, Level = LogLevel.Warning, Message = "Failed to remove elevated autostart task")]
+        private static partial void LogAutostartTaskRemovalFailed(ILogger logger);
+
+        [LoggerMessage(EventId = 4224, Level = LogLevel.Debug, Message = "Legacy HKCU Run autostart value removed")]
+        private static partial void LogLegacyRegistryEntryRemoved(ILogger logger);
+
+        [LoggerMessage(EventId = 4225, Level = LogLevel.Debug, Message = "Failed to read legacy HKCU Run autostart value")]
+        private static partial void LogLegacyRegistryReadFailed(ILogger logger, Exception ex);
+
+        [LoggerMessage(EventId = 4226, Level = LogLevel.Debug, Message = "Failed to remove legacy HKCU Run autostart value")]
+        private static partial void LogLegacyRegistryCleanupFailed(ILogger logger, Exception ex);
 
         private static bool IsValidExecutablePath(string executablePath)
         {

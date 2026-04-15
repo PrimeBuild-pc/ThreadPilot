@@ -14,14 +14,12 @@ Use this checklist before creating a release tag. It is aligned with local build
 Goal: keep only 1.1.1 artifacts in artifacts/release.
 
 - [ ] Delete old installer: artifacts/release/installer/ThreadPilot_v1.1.0_Setup.exe
-- [ ] Delete old msix: artifacts/release/msix/ThreadPilot_1.1.0.0_win-x64.msix
 - [ ] Delete old zips: artifacts/release/ThreadPilot_v1.1.0_Installer.zip, artifacts/release/ThreadPilot_v1.1.0_Portable.zip
 - [ ] Delete temporary staging dirs: artifacts/release/package-stage, artifacts/release/_stage_installer, artifacts/release/_stage_portable
 
 Expected state:
 
 - [ ] artifacts/release/installer/ThreadPilot_v1.1.1_Setup.exe
-- [ ] artifacts/release/msix/ThreadPilot_1.1.1.0_win-x64.msix
 - [ ] artifacts/release/packages/ThreadPilot_v1.1.1_Installer.zip
 - [ ] artifacts/release/packages/ThreadPilot_v1.1.1_Portable.zip
 
@@ -44,11 +42,9 @@ Commands:
 Commands:
 
   ./build/build-installer.ps1 -Version "1.1.1"
-  dotnet publish "ThreadPilot.csproj" --configuration Release -p:PublishProfile=WinX64-MSIX
   ./build/package-release-zips.ps1 -Version "1.1.1"
 
 - [ ] Installer generated in artifacts/release/installer
-- [ ] MSIX generated in artifacts/release/msix
 - [ ] Zip packages generated in artifacts/release/packages
 - [ ] Inno Setup warnings target is zero (artifacts/release/installer_iscc_setup.log)
 
@@ -78,7 +74,6 @@ Commands:
     $releaseFiles = @()
     $releaseFiles += Get-ChildItem "artifacts/release/packages" -File -ErrorAction SilentlyContinue
     $releaseFiles += Get-ChildItem "artifacts/release/installer/*.exe" -File -ErrorAction SilentlyContinue
-    $releaseFiles += Get-ChildItem "artifacts/release/msix" -Recurse -File -Include *.msix,*.appx,*.msixbundle,*.appxbundle -ErrorAction SilentlyContinue
 
     $releaseFiles | ForEach-Object {
       $hash = Get-FileHash $_.FullName -Algorithm SHA256

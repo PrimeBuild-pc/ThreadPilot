@@ -17,24 +17,18 @@ Date: 2026-04-15
 ./build/build-installer.ps1 -Version "<version>"
 ```
 
-2. Build MSIX (secondary artifact):
-
-```powershell
-dotnet publish ThreadPilot.csproj --configuration Release -p:PublishProfile=WinX64-MSIX
-```
-
-3. Build ZIP packages:
+2. Build ZIP packages:
 
 ```powershell
 ./build/package-release-zips.ps1 -Version "<version>"
 ```
 
-4. Generate checksums:
+3. Generate checksums:
 
 ```powershell
 $hashFile = "artifacts/release/SHA256SUMS.txt"
 if (Test-Path $hashFile) { Remove-Item $hashFile -Force }
-Get-ChildItem "artifacts/release" -Recurse -File -Include *.zip,*.exe,*.msix,*.appx,*.msixbundle,*.appxbundle |
+Get-ChildItem "artifacts/release" -Recurse -File -Include *.zip,*.exe |
 ForEach-Object {
   $hash = Get-FileHash $_.FullName -Algorithm SHA256
   "$($hash.Hash)  $($_.Name)" | Out-File -FilePath $hashFile -Append -Encoding utf8

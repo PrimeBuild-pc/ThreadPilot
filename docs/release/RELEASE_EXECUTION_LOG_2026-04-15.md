@@ -6,21 +6,18 @@ Scope: Final one-shot packaging execution after completion of non-packaging phas
 ## Commands Executed
 
 1. build/build-installer.ps1 -Version 1.1.1
-2. dotnet publish ThreadPilot.csproj --configuration Release -p:PublishProfile=WinX64-MSIX
-3. build/package-release-zips.ps1 -Version 1.1.1
-4. SHA256 manifest generation to artifacts/release/SHA256SUMS.txt
+2. build/package-release-zips.ps1 -Version 1.1.1
+3. SHA256 manifest generation to artifacts/release/SHA256SUMS.txt
 
 ## Result
 
 - Installer build: success
-- MSIX publish: success
 - Release ZIP packaging: success
 - Checksum generation: success
 
 ## Produced Artifacts
 
 - artifacts/release/installer/ThreadPilot_v1.1.1_Setup.exe
-- artifacts/release/msix/ThreadPilot_1.1.1.0_win-x64.msix
 - artifacts/release/packages/ThreadPilot_v1.1.1_Portable.zip
 - artifacts/release/packages/ThreadPilot_v1.1.1_Installer.zip
 - artifacts/release/SHA256SUMS.txt

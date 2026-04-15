@@ -25,7 +25,6 @@ namespace ThreadPilot
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Security.Principal;
     using System.Threading;
     using System.Threading.Tasks;
     using System.Windows;
@@ -36,6 +35,9 @@ namespace ThreadPilot
 
     public partial class App : System.Windows.Application
     {
+        private const string RegisterLaunchTaskArgument = "--register-launch-task";
+        private const string LaunchedViaTaskArgument = "--launched-via-task";
+
         private Mutex? singleInstanceMutex;
         private int uiExceptionDialogOpen;
         private DateTime lastUiExceptionDialogUtc = DateTime.MinValue;
@@ -63,6 +65,8 @@ namespace ThreadPilot
             bool startMinimized = false;
             bool isAutostart = false;
             bool isSmokeTest = false;
+            bool registerLaunchTask = false;
+            bool launchedViaTask = false;
 #if DEBUG
             bool isTestMode = false;
 #endif
@@ -89,10 +93,71 @@ namespace ThreadPilot
                         isAutostart = true;
                         startMinimized = true;
                         break;
+                    case RegisterLaunchTaskArgument:
+                        registerLaunchTask = true;
+                        break;
+                    case LaunchedViaTaskArgument:
+                        launchedViaTask = true;
+                        break;
                 }
             }
 
-            // Enforce single-instance: bail out if another instance is already running
+            // Set up global exception handlers first
+            AppDomain.CurrentDomain.UnhandledException += this.OnUnhandledException;
+            this.DispatcherUnhandledException += this.OnDispatcherUnhandledException;
+            TaskScheduler.UnobservedTaskException += this.OnUnobservedTaskException;
+
+            // Check elevation status first
+            var elevationService = this.ServiceProvider.GetRequiredService<IElevationService>();
+            var elevatedTaskService = this.ServiceProvider.GetRequiredService<IElevatedTaskService>();
+            var logger = this.ServiceProvider.GetRequiredService<ILogger<App>>();
+            var isRunningAsAdministrator = elevationService.IsRunningAsAdministrator();
+
+            if (isRunningAsAdministrator)
+            {
+                logger.LogInformation("Application is running with administrator privileges");
+
+                var launchTaskEnsured = Task.Run(async () => await elevatedTaskService.EnsureLaunchTaskAsync()).GetAwaiter().GetResult();
+                if (!launchTaskEnsured)
+                {
+                    logger.LogWarning("Failed to ensure managed elevated launch task during startup. Future launches may require one-time elevation again.");
+                }
+            }
+            else
+            {
+                if (launchedViaTask)
+                {
+                    logger.LogWarning("Application was launched via managed task marker but is still not elevated. Continuing in limited mode.");
+                }
+#if DEBUG
+                else if (!isSmokeTest && !isTestMode)
+#else
+                else if (!isSmokeTest)
+#endif
+                {
+                    var launchedElevatedInstance = Task.Run(async () => await elevatedTaskService.TryRunLaunchTaskAsync()).GetAwaiter().GetResult();
+                    if (launchedElevatedInstance)
+                    {
+                        logger.LogInformation("Managed elevated launch task started successfully. Exiting current non-elevated instance.");
+                        this.Shutdown();
+                        return;
+                    }
+
+                    if (!registerLaunchTask)
+                    {
+                        logger.LogInformation("Managed elevated launch task is unavailable. Requesting one-time elevation to bootstrap persistent launch.");
+                        var restartInitiated = Task.Run(async () => await elevationService.RestartWithElevation(new[] { RegisterLaunchTaskArgument })).GetAwaiter().GetResult();
+                        if (restartInitiated)
+                        {
+                            return;
+                        }
+                    }
+                }
+
+                logger.LogWarning("Application is running without administrator privileges. Elevated operations will require explicit elevation.");
+            }
+
+            // Enforce single-instance after elevation bootstrap logic to avoid mutex races during handoff.
             if (!isSmokeTest)
             {
                 bool createdNew;
@@ -108,24 +173,6 @@ namespace ThreadPilot
                     this.Shutdown();
                     return;
                 }
-            }
-
-            // Set up global exception handlers first
-            AppDomain.CurrentDomain.UnhandledException += this.OnUnhandledException;
-            this.DispatcherUnhandledException += this.OnDispatcherUnhandledException;
-            TaskScheduler.UnobservedTaskException += this.OnUnobservedTaskException;
-
-            // Check elevation status first
-            var elevationService = this.ServiceProvider.GetRequiredService<IElevationService>();
-            var logger = this.ServiceProvider.GetRequiredService<ILogger<App>>();
-
-            if (!elevationService.IsRunningAsAdministrator())
-            {
-                logger.LogWarning("Application is running without administrator privileges. Elevated operations will require explicit elevation.");
-            }
-            else
-            {
-                logger.LogInformation("Application is running with administrator privileges");
             }
 
             base.OnStartup(e);

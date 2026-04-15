@@ -142,6 +142,7 @@ namespace ThreadPilot.Services
             // Security and elevation services
             services.AddSingleton<ISecurityService, SecurityService>();
             services.AddSingleton<IElevationService, ElevationService>();
+            services.AddSingleton<IElevatedTaskService, ElevatedTaskService>();
 
             // System tweaks service
             services.AddSingleton<ISystemTweaksService, SystemTweaksService>();
