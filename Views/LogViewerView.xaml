@@ -15,19 +15,37 @@
             <Setter Property="Padding" Value="4,2"/>
             <Setter Property="HorizontalAlignment" Value="Center"/>
         </Style>
+
+        <Style x:Key="LogGridViewHeaderStyle" TargetType="GridViewColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        </Style>
+
+        <Style x:Key="LogListViewStyle" TargetType="ListView">
+            <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
         
         <Style x:Key="LogEntryStyle" TargetType="ListViewItem">
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Padding" Value="2"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Level}" Value="Error">
-                    <Setter Property="Background" Value="#FFEEEE"/>
+                    <Setter Property="Background" Value="{DynamicResource ErrorBackgroundBrush}"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Level}" Value="Critical">
-                    <Setter Property="Background" Value="#FFDDDD"/>
+                    <Setter Property="Background" Value="{DynamicResource ErrorBackgroundBrush}"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Level}" Value="Warning">
-                    <Setter Property="Background" Value="#FFFAEE"/>
+                    <Setter Property="Background" Value="{DynamicResource WarningBackgroundBrush}"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -125,6 +143,7 @@
         <!-- Log Entries List -->
         <ListView Grid.Row="2" ItemsSource="{Binding LogEntries}"
                   SelectedItem="{Binding SelectedLogEntry}"
+                  Style="{StaticResource LogListViewStyle}"
                   ItemContainerStyle="{StaticResource LogEntryStyle}"
                   ScrollViewer.HorizontalScrollBarVisibility="Auto"
                   ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -133,7 +152,7 @@
                   VirtualizingPanel.ScrollUnit="Item"
                   ScrollViewer.CanContentScroll="True">
             <ListView.View>
-                <GridView>
+                <GridView ColumnHeaderContainerStyle="{StaticResource LogGridViewHeaderStyle}">
                     <GridViewColumn Header="Time" Width="150">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
@@ -270,8 +289,8 @@
                             </TextBlock.Style>
                         </TextBlock>
                         <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Exception, Mode=OneWay}"
-                                 IsReadOnly="True" TextWrapping="Wrap" Background="#FFEEEE"
-                                 BorderThickness="1" BorderBrush="#FFCCCC" Margin="0,0,0,10">
+                                 IsReadOnly="True" TextWrapping="Wrap" Background="{DynamicResource ErrorBackgroundBrush}"
+                                 BorderThickness="1" BorderBrush="{DynamicResource ErrorBorderBrush}" Margin="0,0,0,10">
                             <TextBox.Style>
                                 <Style TargetType="TextBox">
                                     <Style.Triggers>
@@ -289,7 +308,7 @@
                     
                     <TextBlock Text="No log entry selected"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
-                               Foreground="Gray" FontStyle="Italic">
+                               Foreground="{DynamicResource TextSecondaryBrush}" FontStyle="Italic">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -306,7 +325,7 @@
         </Border>
 
         <!-- Status and Settings Panel -->
-        <Border Grid.Row="5" Background="#F5F5F5" Padding="10" BorderBrush="#CCCCCC" BorderThickness="0,1,0,0">
+        <Border Grid.Row="5" Background="{DynamicResource ControlFillColorSecondaryBrush}" Padding="10" BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
