@@ -252,13 +252,13 @@ jobs:
           $sbomReleaseDir = "artifacts/release/sbom"
           New-Item -ItemType Directory -Force -Path $sbomReleaseDir | Out-Null
 
-          $sbomManifest = Get-ChildItem "_manifest" -Recurse -File -Filter "manifest.spdx.json" -ErrorAction SilentlyContinue |
+          $sbomManifest = Get-ChildItem "artifacts" -Recurse -File -Filter "manifest.spdx.json" -ErrorAction SilentlyContinue |
             Sort-Object LastWriteTimeUtc -Descending |
             Select-Object -First 1
 
           if (-not $sbomManifest)
           {
-            throw "SBOM manifest not found under _manifest after generation."
+            throw "SBOM manifest not found under artifacts after generation."
           }
 
           Copy-Item -LiteralPath $sbomManifest.FullName -Destination (Join-Path $sbomReleaseDir "manifest.spdx.json") -Force
