@@ -249,6 +249,20 @@ jobs:
           $env:PATH += ";$env:USERPROFILE\.dotnet\tools"
           sbom-tool generate -b ./artifacts -bc . -pn ThreadPilot -pv "${{ steps.version.outputs.version }}" -ps PrimeBuild -nsb https://github.com/PrimeBuild-pc/ThreadPilot
 
+          $sbomReleaseDir = "artifacts/release/sbom"
+          New-Item -ItemType Directory -Force -Path $sbomReleaseDir | Out-Null
+
+          $sbomManifest = Get-ChildItem "_manifest" -Recurse -File -Filter "manifest.spdx.json" -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTimeUtc -Descending |
+            Select-Object -First 1
+
+          if (-not $sbomManifest)
+          {
+            throw "SBOM manifest not found under _manifest after generation."
+          }
+
+          Copy-Item -LiteralPath $sbomManifest.FullName -Destination (Join-Path $sbomReleaseDir "manifest.spdx.json") -Force
+
       - name: Upload portable artifact
         uses: actions/upload-artifact@v4
         with:
@@ -283,7 +297,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sbom
-          path: _manifest/spdx_2.2/manifest.spdx.json
+          path: artifacts/release/sbom/manifest.spdx.json
+          if-no-files-found: error
 
   smoke-test:
     runs-on: windows-latest
