@@ -35,43 +35,50 @@ The project targets users who need Process Lasso style capabilities in a modern 
 
 ## 📦 Download
 
+[![Download Latest Release](https://img.shields.io/badge/Download-Latest%20Release-2ea44f?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest)
+[![Direct Portable ZIP](https://img.shields.io/badge/Direct-Portable%20ZIP-1f6feb?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest/download/ThreadPilot_v1.1.2_Portable.zip)
+
+### One-Click Terminal Install
+
+```powershell
+# winget
+winget install PrimeBuild.ThreadPilot
+
+# chocolatey
+choco install threadpilot
+
+# PowerShell bootstrap (Admin)
+iwr https://raw.githubusercontent.com/PrimeBuild-pc/ThreadPilot/main/build/install-threadpilot.ps1 -UseBasicParsing | iex
+```
+
+<details>
+<summary>Manual download files and checksum verification</summary>
+
 Latest artifacts are published on each tagged release in [GitHub Releases](https://github.com/PrimeBuild-pc/ThreadPilot/releases).
 
 | Package | File name | Recommended use |
 |---|---|---|
 | Installer (Recommended) | `ThreadPilot_v1.1.2_Setup.exe` | Standard Windows installer (Inno Setup) for most users |
-| Portable | `ThreadPilot_v1.1.2_singlefile_win-x64.zip` | No-install deployment for power users |
+| Portable | `ThreadPilot_v1.1.2_Portable.zip` | No-install deployment for power users |
 
-Verification example:
+Quick links:
+
+- Release page: https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest
+- Direct portable ZIP: https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest/download/ThreadPilot_v1.1.2_Portable.zip
+
+Verification examples:
 
 ```powershell
+Get-FileHash .\ThreadPilot_v1.1.2_Setup.exe -Algorithm SHA256
 Get-FileHash .\ThreadPilot_v1.1.2_Portable.zip -Algorithm SHA256
 ```
 
-Install flow summary:
+Compare hashes with `SHA256SUMS.txt` from the same release.
 
-1. Download the package matching your deployment model.
-2. Installer package (recommended): run `ThreadPilot_vX.Y.Z_Setup.exe` and complete the wizard.
-3. Portable package: extract ZIP and launch `ThreadPilot.exe`.
+</details>
 
-Notes:
-
-- ThreadPilot uses an administrator-required manifest (`requireAdministrator`) and requests elevation at startup.
-- If UAC elevation is declined at startup, the application exits and does not continue in limited mode.
-- In `Power Plans > Custom Power Plans`, use `Add .pow File` to add new custom plans directly from the app.
-- The first opening of Performance shows a blocking onboarding modal with blurred background for clarity.
-
-## Installation
-
-### Quick Install (PowerShell, Admin)
-
-Fast copy/paste one-liner:
-
-```powershell
-iwr https://raw.githubusercontent.com/PrimeBuild-pc/ThreadPilot/main/build/install-threadpilot.ps1 -UseBasicParsing | iex
-```
-
-Expanded script (auditable):
+<details>
+<summary>Expanded PowerShell installer script (auditable)</summary>
 
 ```powershell
 # 1) Verify administrator permissions
@@ -111,36 +118,20 @@ Notes:
 
 - This installation flow is machine-wide (`Program Files`) and requires administrator rights.
 - The PATH update is optional but included in the script for command-line convenience.
-- If package manager search does not show the latest package, see the channel notes below.
 
-Install from winget:
+</details>
 
-```powershell
-winget install PrimeBuild.ThreadPilot
-```
-
-Install from Chocolatey:
-
-```powershell
-choco install threadpilot
-```
-
-Direct installer (latest release):
-
-- https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest
-
-Verify SHA256 before running the installer:
-
-```powershell
-Get-FileHash .\ThreadPilot_v1.1.2_Setup.exe -Algorithm SHA256
-```
-
-Compare the output with `SHA256SUMS.txt` from the same release.
-
-Channel availability notes:
+<details>
+<summary>Channel availability and install notes</summary>
 
 - Winget visibility depends on microsoft/winget-pkgs publication and client source refresh.
 - Chocolatey visibility depends on moderation and verification approval state.
+- ThreadPilot uses an administrator-required manifest (`requireAdministrator`) and requests elevation at startup.
+- If UAC elevation is declined at startup, the application exits and does not continue in limited mode.
+- In `Power Plans > Custom Power Plans`, use `Add .pow File` to add new custom plans directly from the app.
+- The first opening of Performance shows a blocking onboarding modal with blurred background for clarity.
+
+</details>
 
 ### Build from Source
 
