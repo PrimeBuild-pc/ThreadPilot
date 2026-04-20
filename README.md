@@ -1,4 +1,4 @@
-# ThreadPilot ✈️ v1.1.1
+# ThreadPilot ✈️
 
 [![Build](https://github.com/PrimeBuild-pc/ThreadPilot/actions/workflows/ci-devsecops.yml/badge.svg)](https://github.com/PrimeBuild-pc/ThreadPilot/actions/workflows/ci-devsecops.yml)
 [![Release](https://img.shields.io/github/v/release/PrimeBuild-pc/ThreadPilot?sort=semver)](https://github.com/PrimeBuild-pc/ThreadPilot/releases)
