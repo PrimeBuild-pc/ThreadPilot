@@ -1,6 +1,6 @@
 # Packaging and Distribution Guide
 
-This document describes production packaging for ThreadPilot v1.1.1.
+This document describes production packaging for ThreadPilot v1.1.2.
 
 ## Prerequisites
 
@@ -40,13 +40,13 @@ Output folder:
 ### 2) Inno Setup Installer (primary)
 
 ```powershell
-iscc /DMyAppVersion=1.1.1 /DMyAppSourceDir="..\\artifacts\\release\\singlefile" Installer/setup.iss
+iscc /DMyAppVersion=1.1.2 /DMyAppSourceDir="..\\artifacts\\release\\singlefile" Installer/setup.iss
 ```
 
 Recommended local command (prevents stale publish output by forcing a fresh publish before ISCC):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File build/build-installer.ps1 -Version 1.1.1
+powershell -ExecutionPolicy Bypass -File build/build-installer.ps1 -Version 1.1.2
 ```
 
 The installer now uses Inno Setup native dynamic theming (`WizardStyle=modern dynamic windows11`) and follows the current Windows light/dark preference at startup.
@@ -54,7 +54,7 @@ The installer now uses Inno Setup native dynamic theming (`WizardStyle=modern dy
 Optional override for QA/troubleshooting:
 
 ```powershell
-iscc /DMyWizardStyle="modern dark windows11" /DMyAppVersion=1.1.1 /DMyAppSourceDir="..\\artifacts\\release\\singlefile" Installer/setup.iss
+iscc /DMyWizardStyle="modern dark windows11" /DMyAppVersion=1.1.2 /DMyAppSourceDir="..\\artifacts\\release\\singlefile" Installer/setup.iss
 ```
 
 Output folder:
@@ -130,10 +130,29 @@ iscc Installer/setup.iss
 7. Generate SHA-256 checksums
 8. Upload release artifacts
 
+## Package Channel Alignment
+
+Use GitHub release as the source of truth for version alignment:
+
+- Publish GitHub release `vX.Y.Z` first.
+- Ensure winget/chocolatey metadata references the same `X.Y.Z`.
+- Ensure package URLs point to assets under the same GitHub tag.
+
+Channel behavior:
+
+- Chocolatey packages can be temporarily hidden from normal search while moderation/verification is pending or failed.
+- Winget packages are discoverable only after the manifest is accepted in microsoft/winget-pkgs and clients refresh sources.
+
+Current workflow scope:
+
+- `.github/workflows/release.yml` builds release artifacts and uploads winget manifests as artifacts.
+- It does not automatically submit a PR to microsoft/winget-pkgs.
+- It does not automatically publish to Chocolatey community moderation.
+
 Optional automation for publishing the GitHub release after artifacts are ready:
 
 ```powershell
-./build/create-github-release.ps1 -Version "1.1.1" -NotesFile "docs/release/RELEASE_NOTES.md"
+./build/create-github-release.ps1 -Version "1.1.2" -NotesFile "docs/release/RELEASE_NOTES.md"
 ```
 
 ## CI/CD

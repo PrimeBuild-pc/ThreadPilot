@@ -1,4 +1,4 @@
-# ThreadPilot v1.1.1 Release Notes
+# ThreadPilot v1.1.2 Release Notes
 
 ## Highlights
 
@@ -33,13 +33,13 @@
 
 ### Installer
 
-1. Download ThreadPilot_v1.1.1_Setup.exe.
+1. Download ThreadPilot_v1.1.2_Setup.exe.
 2. Run installer.
 3. Launch ThreadPilot.
 
 ### Portable
 
-1. Download ThreadPilot_v1.1.1_singlefile_win-x64.zip.
+1. Download ThreadPilot_v1.1.2_singlefile_win-x64.zip.
 2. Extract archive.
 3. Run ThreadPilot.exe.
 

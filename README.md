@@ -39,13 +39,13 @@ Latest artifacts are published on each tagged release in [GitHub Releases](https
 
 | Package | File name | Recommended use |
 |---|---|---|
-| Installer (Recommended) | `ThreadPilot_v1.1.1_Setup.exe` | Standard Windows installer (Inno Setup) for most users |
-| Portable | `ThreadPilot_v1.1.1_singlefile_win-x64.zip` | No-install deployment for power users |
+| Installer (Recommended) | `ThreadPilot_v1.1.2_Setup.exe` | Standard Windows installer (Inno Setup) for most users |
+| Portable | `ThreadPilot_v1.1.2_singlefile_win-x64.zip` | No-install deployment for power users |
 
 Verification example:
 
 ```powershell
-Get-FileHash .\ThreadPilot_v1.1.1_Portable.zip -Algorithm SHA256
+Get-FileHash .\ThreadPilot_v1.1.2_Portable.zip -Algorithm SHA256
 ```
 
 Install flow summary:
@@ -62,6 +62,56 @@ Notes:
 - The first opening of Performance shows a blocking onboarding modal with blurred background for clarity.
 
 ## Installation
+
+### Quick Install (PowerShell, Admin)
+
+Fast copy/paste one-liner:
+
+```powershell
+iwr https://raw.githubusercontent.com/PrimeBuild-pc/ThreadPilot/main/build/install-threadpilot.ps1 -UseBasicParsing | iex
+```
+
+Expanded script (auditable):
+
+```powershell
+# 1) Verify administrator permissions
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+  Write-Warning "Please run this command in a PowerShell window opened as Administrator."
+  exit 1
+}
+
+Write-Host "Starting ThreadPilot installation..." -ForegroundColor Cyan
+
+# 2) Define paths
+$url = "https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest/download/ThreadPilot_v1.1.2_Setup.exe"
+$destPath = "$env:ProgramFiles\ThreadPilot"
+$exePath = "$destPath\ThreadPilot_v1.1.2_Setup.exe"
+
+# 3) Ensure destination folder exists
+if (-not (Test-Path $destPath)) { New-Item -ItemType Directory -Force -Path $destPath | Out-Null }
+
+# 4) Download installer
+Write-Host "Downloading installer..."
+Invoke-WebRequest -Uri $url -OutFile $exePath -UseBasicParsing
+
+# 5) Optional: add install folder to machine PATH
+$currentPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+if ($currentPath -notmatch [regex]::Escape($destPath)) {
+  [Environment]::SetEnvironmentVariable("Path", $currentPath + ";" + $destPath, "Machine")
+  Write-Host "Added install folder to machine PATH."
+}
+
+# 6) Run installer silently
+Start-Process -FilePath $exePath -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-" -Wait
+
+Write-Host "Installation completed successfully." -ForegroundColor Green
+```
+
+Notes:
+
+- This installation flow is machine-wide (`Program Files`) and requires administrator rights.
+- The PATH update is optional but included in the script for command-line convenience.
+- If package manager search does not show the latest package, see the channel notes below.
 
 Install from winget:
 
@@ -82,10 +132,15 @@ Direct installer (latest release):
 Verify SHA256 before running the installer:
 
 ```powershell
-Get-FileHash .\ThreadPilot_v1.1.1_Setup.exe -Algorithm SHA256
+Get-FileHash .\ThreadPilot_v1.1.2_Setup.exe -Algorithm SHA256
 ```
 
 Compare the output with `SHA256SUMS.txt` from the same release.
+
+Channel availability notes:
+
+- Winget visibility depends on microsoft/winget-pkgs publication and client source refresh.
+- Chocolatey visibility depends on moderation and verification approval state.
 
 ### Build from Source
 

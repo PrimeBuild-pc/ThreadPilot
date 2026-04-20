@@ -26,4 +26,4 @@ This folder contains release and engineering documentation for ThreadPilot.
 
 - Release execution log (2026-04-15): release/RELEASE_EXECUTION_LOG_2026-04-15.md
 ## Migration Note
-Repository documentation is being progressively consolidated under docs/ as part of the v1.1.1 enterprise hardening cycle.
+Repository documentation is being progressively consolidated under docs/ as part of the v1.1.2 enterprise hardening cycle.
