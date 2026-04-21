@@ -41,6 +41,7 @@ Source-of-truth policy:
 
 - GitHub release tag and assets are the canonical release source.
 - Winget and Chocolatey metadata must reference an existing GitHub release tag and reachable asset URLs.
+- Changelog generation in CI must run with runner-native `git-cliff` binary (pinned version + checksum verification), not Docker-based changelog actions.
 
 Use script automation (requires authenticated gh CLI):
 
@@ -60,6 +61,7 @@ Package publication prechecks:
 2. Confirm installer URL resolves for the exact version.
 3. Confirm SHA256 in package metadata matches the published installer.
 4. Confirm winget and Chocolatey package versions match the GitHub release version.
+5. Confirm release workflow changelog step executed successfully with the pinned `git-cliff` version.
 
 ## Post-Release (T+24h)
 

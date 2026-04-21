@@ -137,6 +137,9 @@ AppData/
 __pycache__/
 checkpoint*/
 CPUSetSetter-main/
+gitleaks-bin/
+gitleaks*.zip
+gitleaks*.tar.gz
 *.bak
 *.backup
 *_backup.*

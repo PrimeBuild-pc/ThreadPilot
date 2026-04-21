@@ -44,6 +44,7 @@ Thanks for helping improve ThreadPilot.
 - I updated documentation for any user-facing or architectural changes.
 - I validated no credentials or secrets were introduced.
 - I included risk notes for any changes touching elevation, process control, or power plans.
+- I did not vendor scanner binaries/docs (for example `gitleaks-bin`); security tools must run from CI runtime downloads.
 
 ## Coding Standards
 - Follow existing MVVM and DI patterns.
@@ -75,3 +76,9 @@ Optional local enforcement:
 - `./build/install-git-hooks.ps1`
 
 This enables the repository pre-commit hook (`.githooks/pre-commit.ps1`) that blocks common artifact patterns and large files.
+
+## Security Tooling Policy
+
+- Do not commit third-party security scanner binaries, archives, or copied upstream documentation.
+- Secret scanning and dependency/security tools must be installed at CI runtime from trusted release sources.
+- If scanner test vectors trigger GitHub Secret Scanning alerts, remove vendored artifacts and close alerts with documented rationale.

@@ -13,12 +13,14 @@ Scope: Release readiness hardening (privileges, interop, process manipulation, c
 - [x] Confirm structured logging sanitizes user-provided strings.
 - [x] Confirm dependency vulnerability scan is green in CI.
 - [x] Confirm secret scanning is green in CI.
+- [x] Confirm security scanner binaries are downloaded at runtime in CI and not vendored in repository history.
 
 ## Validation Evidence
 
 - User-space configuration path verified via `StoragePaths.AppDataRoot` (`%AppData%\\ThreadPilot`) and `ApplicationSettingsService` persistence path usage.
 - Secret scan evidence: `docs/audits/GITLEAKS_REPORT_2026-04-15.json` (no leaks found).
 - Dependency scan evidence: `docs/audits/VULNERABILITY_SCAN_2026-04-15.json` (no vulnerable packages).
+- Scanner runtime policy: `.github/workflows/ci-devsecops.yml` downloads Gitleaks to `$RUNNER_TEMP` and does not require vendored scanner artifacts.
 
 ## P/Invoke Audit Snapshot
 

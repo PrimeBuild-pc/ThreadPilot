@@ -122,6 +122,13 @@ Required:
 4. Publish quality and security governance docs under `docs/` with ownership and review cadence.
 5. Add release checklist with HLK-aligned Windows validation evidence.
 
+## Corrective Actions (2026-04-21)
+
+- Replaced Docker-based changelog generation in release workflow with runner-native `git-cliff` binary installation using pinned version and checksum verification.
+- Removed vendored `gitleaks-bin` artifacts from repository tracking to eliminate recurring secret-scanning false positives from upstream scanner sample content.
+- Added repository guardrails in `.gitignore` to prevent recommitting scanner binaries and archives.
+- Added operational documentation updates in release and security checklists to keep the remediation stable across future release cycles.
+
 ## Acceptance Criteria For Compliance Baseline
 
 - CI required on all pull requests and main branch merges.
