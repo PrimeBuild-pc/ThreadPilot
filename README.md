@@ -126,6 +126,7 @@ Notes:
 
 - Winget visibility depends on microsoft/winget-pkgs publication and client source refresh.
 - Chocolatey visibility depends on moderation and verification approval state.
+- The release workflow can auto-submit winget and Chocolatey publication jobs when repository secrets are configured.
 - ThreadPilot uses an administrator-required manifest (`requireAdministrator`) and requests elevation at startup.
 - If UAC elevation is declined at startup, the application exits and does not continue in limited mode.
 - In `Power Plans > Custom Power Plans`, use `Add .pow File` to add new custom plans directly from the app.

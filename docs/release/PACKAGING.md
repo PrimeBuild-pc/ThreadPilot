@@ -146,8 +146,16 @@ Channel behavior:
 Current workflow scope:
 
 - `.github/workflows/release.yml` builds release artifacts and uploads winget manifests as artifacts.
-- It does not automatically submit a PR to microsoft/winget-pkgs.
-- It does not automatically publish to Chocolatey community moderation.
+- It automatically submits a PR to `microsoft/winget-pkgs` when release succeeds and winget secrets are configured.
+- It automatically publishes to Chocolatey community feed when release succeeds and Chocolatey API key is configured.
+
+Required repository secrets for full channel automation:
+
+- `WINGET_GITHUB_TOKEN`: PAT with permission to push to your `winget-pkgs` fork and create PRs.
+- `WINGET_FORK_OWNER`: GitHub username/org that owns your `winget-pkgs` fork.
+- `CHOCOLATEY_API_KEY`: API key for `https://push.chocolatey.org/`.
+
+If secrets are missing, publish jobs are skipped and GitHub release remains successful.
 
 Optional automation for publishing the GitHub release after artifacts are ready:
 

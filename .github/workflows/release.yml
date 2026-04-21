@@ -443,3 +443,107 @@ jobs:
             winget-manifests/**/*.yaml
             sbom/manifest.spdx.json
           generate_release_notes: true
+
+  publish-winget:
+    runs-on: windows-latest
+    needs:
+      - build
+      - release
+    if: needs.release.result == 'success'
+
+    steps:
+      - name: Check winget publish secrets
+        id: gate
+        shell: pwsh
+        env:
+          WINGET_GITHUB_TOKEN: ${{ secrets.WINGET_GITHUB_TOKEN }}
+          WINGET_FORK_OWNER: ${{ secrets.WINGET_FORK_OWNER }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WINGET_GITHUB_TOKEN) -or [string]::IsNullOrWhiteSpace($env:WINGET_FORK_OWNER))
+          {
+            Write-Host "Winget publish secrets missing. Skipping publish-winget job."
+            "enabled=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+            exit 0
+          }
+
+          "enabled=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Checkout
+        if: steps.gate.outputs.enabled == 'true'
+        uses: actions/checkout@v4
+
+      - name: Download winget manifests
+        if: steps.gate.outputs.enabled == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: winget-manifests
+          path: winget-manifests
+
+      - name: Submit winget PR
+        if: steps.gate.outputs.enabled == 'true'
+        shell: pwsh
+        env:
+          WINGET_GITHUB_TOKEN: ${{ secrets.WINGET_GITHUB_TOKEN }}
+          WINGET_FORK_OWNER: ${{ secrets.WINGET_FORK_OWNER }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          ./build/submit-winget-pr.ps1 `
+            -Version "${{ needs.build.outputs.version }}" `
+            -ManifestSourcePath "winget-manifests" `
+            -ForkOwner "$env:WINGET_FORK_OWNER" `
+            -RepositoryOwner "PrimeBuild" `
+            -PackageIdentifier "PrimeBuild.ThreadPilot" `
+            -GithubToken "$env:WINGET_GITHUB_TOKEN"
+
+  publish-chocolatey:
+    runs-on: windows-latest
+    needs:
+      - build
+      - release
+    if: needs.release.result == 'success'
+
+    steps:
+      - name: Check chocolatey publish secret
+        id: gate
+        shell: pwsh
+        env:
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:CHOCOLATEY_API_KEY))
+          {
+            Write-Host "Chocolatey API key missing. Skipping publish-chocolatey job."
+            "enabled=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+            exit 0
+          }
+
+          "enabled=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Checkout
+        if: steps.gate.outputs.enabled == 'true'
+        uses: actions/checkout@v4
+
+      - name: Download installer artifact
+        if: steps.gate.outputs.enabled == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: release-installer
+          path: release-assets/installer
+
+      - name: Publish chocolatey package
+        if: steps.gate.outputs.enabled == 'true'
+        shell: pwsh
+        env:
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $installer = Get-ChildItem "release-assets/installer/*.exe" -File | Select-Object -First 1
+          if (-not $installer)
+          {
+            throw "Installer executable not found for Chocolatey publish."
+          }
+
+          ./build/publish-chocolatey.ps1 `
+            -Version "${{ needs.build.outputs.version }}" `
+            -Tag "${{ needs.build.outputs.tag }}" `
+            -InstallerPath $installer.FullName `
+            -ApiKey "$env:CHOCOLATEY_API_KEY"
