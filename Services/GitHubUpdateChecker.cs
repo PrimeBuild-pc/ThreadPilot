@@ -17,16 +17,26 @@
 namespace ThreadPilot.Services
 {
     using System;
-    using System.Net.Http;
-    using System.Net.Http.Headers;
     using System.Text.Json;
+    using System.Threading;
     using System.Threading.Tasks;
+    using ThreadPilot.Services.Abstractions;
 
-    public static class GitHubUpdateChecker
+    public sealed class GitHubUpdateChecker
     {
+        private readonly IGitHubReleaseClient gitHubReleaseClient;
+
         private record LatestRelease(string Tag_name, bool Prerelease, bool Draft, string Html_url);
 
-        public static async Task<(Version? latest, string? releaseUrl)> GetLatestVersionAsync(string owner, string repo)
+        public GitHubUpdateChecker(IGitHubReleaseClient gitHubReleaseClient)
+        {
+            this.gitHubReleaseClient = gitHubReleaseClient ?? throw new ArgumentNullException(nameof(gitHubReleaseClient));
+        }
+
+        public async Task<(Version? latest, string? releaseUrl)> GetLatestVersionAsync(
+            string owner,
+            string repo,
+            CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(owner))
             {
@@ -38,13 +48,7 @@ namespace ThreadPilot.Services
                 throw new ArgumentException("Repository is required", nameof(repo));
             }
 
-            var url = $"https://api.github.com/repos/{owner}/{repo}/releases/latest";
-
-            using var http = new HttpClient();
-            http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("ThreadPilot", "1.0"));
-            http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-
-            var json = await http.GetStringAsync(url);
+            var json = await this.gitHubReleaseClient.GetLatestReleaseJsonAsync(owner, repo, cancellationToken);
             var release = JsonSerializer.Deserialize<LatestRelease>(json, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,

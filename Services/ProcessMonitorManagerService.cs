@@ -746,14 +746,26 @@ namespace ThreadPilot.Services
                 return;
             }
 
-            this.StopAsync().Wait(5000); // Wait up to 5 seconds for clean shutdown
+            try
+            {
+                // Dispose can be called from the WPF UI thread; stop on the thread pool to avoid
+                // deadlocking on a captured SynchronizationContext during async shutdown.
+                Task.Run(this.StopAsync).GetAwaiter().GetResult();
+            }
+            finally
+            {
+                this.processMonitorService.ProcessStarted -= this.OnProcessStarted;
+                this.processMonitorService.ProcessStopped -= this.OnProcessStopped;
+                this.processMonitorService.MonitoringStatusChanged -= this.OnMonitoringStatusChanged;
+                this.associationService.ConfigurationChanged -= this.OnConfigurationChanged;
 
-            this.delayTimer?.Dispose();
-            this.powerPlanChangeSemaphore?.Dispose();
-            this.stateMutationSemaphore?.Dispose();
-            this.processMonitorService?.Dispose();
+                this.delayTimer?.Dispose();
+                this.powerPlanChangeSemaphore?.Dispose();
+                this.stateMutationSemaphore?.Dispose();
+                this.processMonitorService?.Dispose();
 
-            this.disposed = true;
+                this.disposed = true;
+            }
         }
     }
 }

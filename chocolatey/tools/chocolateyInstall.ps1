@@ -2,8 +2,9 @@ $ErrorActionPreference = 'Stop'
 
 $packageName = 'threadpilot'
 $toolsDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$url64 = 'https://github.com/PrimeBuild-pc/ThreadPilot/releases/download/v1.1.2/ThreadPilot_v1.1.2_Setup.exe'
-$checksum64 = 'fac3935ba126b01987b15cb323502ee8b6e91c957f22006bd9e62b8d57169790'
+# These placeholders are replaced during pack/publish automation.
+$url64 = '__INSTALLER_URL__'
+$checksum64 = '__INSTALLER_SHA256__'
 
 $packageArgs = @{
     packageName    = $packageName

@@ -6,6 +6,10 @@
     <title>ThreadPilot</title>
     <authors>Prime Build</authors>
     <projectUrl>https://github.com/PrimeBuild-pc/ThreadPilot</projectUrl>
+    <projectSourceUrl>https://github.com/PrimeBuild-pc/ThreadPilot</projectSourceUrl>
+    <packageSourceUrl>https://github.com/PrimeBuild-pc/ThreadPilot/tree/main/chocolatey</packageSourceUrl>
+    <docsUrl>https://github.com/PrimeBuild-pc/ThreadPilot/tree/main/docs</docsUrl>
+    <bugTrackerUrl>https://github.com/PrimeBuild-pc/ThreadPilot/issues</bugTrackerUrl>
     <licenseUrl>https://github.com/PrimeBuild-pc/ThreadPilot/blob/main/LICENSE</licenseUrl>
     <iconUrl>https://raw.githubusercontent.com/PrimeBuild-pc/ThreadPilot/main/assets/icons/ico.ico</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>

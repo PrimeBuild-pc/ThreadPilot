@@ -48,6 +48,7 @@ namespace ThreadPilot.ViewModels
         private readonly IProcessMonitorManagerService processMonitorManagerService;
         private readonly IThemeService themeService;
         private readonly ISystemTrayService systemTrayService;
+        private readonly GitHubUpdateChecker gitHubUpdateChecker;
         private bool isSyncingFromService = false;
         private string cachedDefaultPowerPlanGuid = string.Empty;
         private string cachedDefaultPowerPlanName = string.Empty;
@@ -102,6 +103,7 @@ namespace ThreadPilot.ViewModels
             IProcessMonitorManagerService processMonitorManagerService,
             IThemeService themeService,
             ISystemTrayService systemTrayService,
+            GitHubUpdateChecker gitHubUpdateChecker,
             IEnhancedLoggingService? enhancedLoggingService = null)
             : base(logger, enhancedLoggingService)
         {
@@ -113,6 +115,7 @@ namespace ThreadPilot.ViewModels
             this.processMonitorManagerService = processMonitorManagerService ?? throw new ArgumentNullException(nameof(processMonitorManagerService));
             this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
             this.systemTrayService = systemTrayService ?? throw new ArgumentNullException(nameof(systemTrayService));
+            this.gitHubUpdateChecker = gitHubUpdateChecker ?? throw new ArgumentNullException(nameof(gitHubUpdateChecker));
 
             // Get version and strip the git commit hash (everything after '+')
             var rawVersion = typeof(App).Assembly
@@ -572,7 +575,7 @@ namespace ThreadPilot.ViewModels
                 this.StatusMessage = "Checking for updates...";
 
                 var currentVersion = ParseVersion(this.ApplicationVersion);
-                var (latest, releaseUrl) = await GitHubUpdateChecker.GetLatestVersionAsync("PrimeBuild-pc", "ThreadPilot");
+                var (latest, releaseUrl) = await this.gitHubUpdateChecker.GetLatestVersionAsync("PrimeBuild-pc", "ThreadPilot");
 
                 if (latest is null)
                 {

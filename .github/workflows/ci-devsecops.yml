@@ -37,7 +37,42 @@ jobs:
         run: dotnet build "ThreadPilot_1.sln" --configuration Release --no-restore
 
       - name: Run tests
-        run: dotnet test "ThreadPilot_1.sln" --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory TestResults
+        run: dotnet test "Tests/ThreadPilot.Core.Tests/ThreadPilot.Core.Tests.csproj" --configuration Release --no-restore --verbosity normal --collect:"XPlat Code Coverage" --settings "Tests/ThreadPilot.Core.Tests/coverlet.runsettings" --results-directory TestResults
+
+      - name: Enforce coverage gate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $coveragePath = Get-ChildItem -Path "TestResults" -Recurse -Filter "coverage.cobertura.xml" |
+            Sort-Object LastWriteTimeUtc -Descending |
+            Select-Object -First 1 -ExpandProperty FullName
+
+          if ([string]::IsNullOrWhiteSpace($coveragePath))
+          {
+            throw "Coverage file not found under TestResults."
+          }
+
+          [xml]$coverage = Get-Content $coveragePath
+          $lineRate = [double]$coverage.coverage.'line-rate' * 100
+          $branchRate = [double]$coverage.coverage.'branch-rate' * 100
+          # Temporary floor until the service-hardening coverage tasks land.
+          $minimumLineRate = 1.5
+
+          $summary = @(
+            "## Coverage Gate",
+            "- file: $coveragePath",
+            "- line coverage: $([math]::Round($lineRate, 2))%",
+            "- branch coverage: $([math]::Round($branchRate, 2))%",
+            "- minimum line coverage: $minimumLineRate%"
+          )
+
+          $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+          $summary | ForEach-Object { Write-Host $_ }
+
+          if ($lineRate -lt $minimumLineRate)
+          {
+            throw "Coverage gate failed. Expected >= $minimumLineRate, actual: $([math]::Round($lineRate, 2))"
+          }
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4

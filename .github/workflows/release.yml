@@ -5,6 +5,11 @@ on:
     tags:
       - "v*.*.*"
   workflow_dispatch:
+    inputs:
+      dry_run_publish:
+        description: "Build and validate release without external channel publication"
+        required: false
+        default: "false"
 
 permissions:
   contents: write
@@ -56,7 +61,7 @@ jobs:
         run: dotnet build "ThreadPilot_1.sln" --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test "ThreadPilot_1.sln" --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory TestResults
+        run: dotnet test "Tests/ThreadPilot.Core.Tests/ThreadPilot.Core.Tests.csproj" --configuration Release --no-restore --verbosity normal --collect:"XPlat Code Coverage" --settings "Tests/ThreadPilot.Core.Tests/coverlet.runsettings" --results-directory TestResults
 
       - name: Publish self-contained single-file
         run: dotnet publish "ThreadPilot.csproj" --configuration Release -p:PublishProfile=WinX64-SingleFile
@@ -216,7 +221,7 @@ jobs:
             "$($hash.Hash)  $($_.Name)" | Out-File -FilePath $hashFile -Append -Encoding utf8
           }
 
-      - name: Update winget installer manifest
+      - name: Generate winget manifests
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -230,16 +235,13 @@ jobs:
 
           $sha = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToUpperInvariant()
           $url = "https://github.com/${{ github.repository }}/releases/download/$tag/$($installer.Name)"
-          $manifestPath = "winget/manifests/p/PrimeBuild/ThreadPilot/$version/PrimeBuild.ThreadPilot.installer.yaml"
 
-          if (-not (Test-Path $manifestPath))
-          {
-            throw "Winget installer manifest not found at $manifestPath"
-          }
-
-          $content = Get-Content $manifestPath -Raw
-          $content = $content.Replace("{{INSTALLER_URL}}", $url).Replace("{{INSTALLER_SHA256}}", $sha)
-          Set-Content -Path $manifestPath -Value $content -Encoding utf8
+          ./build/generate-winget-manifests.ps1 `
+            -Version $version `
+            -Tag $tag `
+            -InstallerUrl $url `
+            -InstallerSha256 $sha `
+            -OutputRoot "winget-manifests"
 
       - name: Generate SBOM
         shell: pwsh
@@ -291,7 +293,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: winget-manifests
-          path: winget/manifests/p/PrimeBuild/ThreadPilot/${{ steps.version.outputs.version }}
+          path: winget-manifests
 
       - name: Upload SBOM
         uses: actions/upload-artifact@v4
@@ -452,18 +454,57 @@ jobs:
     if: needs.release.result == 'success'
 
     steps:
-      - name: Check winget publish secrets
+      - name: Resolve winget publish policy
+        id: policy
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $dryRun = "${{ github.event_name }}" -eq "workflow_dispatch" -and "${{ github.event.inputs.dry_run_publish }}" -eq "true"
+          "dry_run=$($dryRun.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Check winget publish policy
         id: gate
         shell: pwsh
         env:
           WINGET_GITHUB_TOKEN: ${{ secrets.WINGET_GITHUB_TOKEN }}
           WINGET_FORK_OWNER: ${{ secrets.WINGET_FORK_OWNER }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:WINGET_GITHUB_TOKEN) -or [string]::IsNullOrWhiteSpace($env:WINGET_FORK_OWNER))
+          $ErrorActionPreference = "Stop"
+          $logsDir = "release-channel-logs"
+          New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
+          $logPath = Join-Path $logsDir "winget-submit-log.txt"
+          $dryRun = "${{ steps.policy.outputs.dry_run }}" -eq "true"
+
+          if ($dryRun)
           {
-            Write-Host "Winget publish secrets missing. Skipping publish-winget job."
+            $summary = @(
+              "## winget publish",
+              "- attempted: false",
+              "- version: ${{ needs.build.outputs.version }}",
+              "- result: dry-run",
+              "- reason: workflow_dispatch requested dry_run_publish=true"
+            )
+
+            $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+            "Dry run requested. Winget submission intentionally skipped." | Set-Content -Path $logPath -Encoding utf8
             "enabled=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
             exit 0
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:WINGET_GITHUB_TOKEN) -or [string]::IsNullOrWhiteSpace($env:WINGET_FORK_OWNER))
+          {
+            $message = "Winget publish secrets are missing. Refusing to report a green public release without a submission attempt."
+            $summary = @(
+              "## winget publish",
+              "- attempted: false",
+              "- version: ${{ needs.build.outputs.version }}",
+              "- result: failed-policy",
+              "- reason: missing WINGET_GITHUB_TOKEN and/or WINGET_FORK_OWNER"
+            )
+
+            $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+            $message | Set-Content -Path $logPath -Encoding utf8
+            throw $message
           }
 
           "enabled=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
@@ -487,13 +528,50 @@ jobs:
           WINGET_FORK_OWNER: ${{ secrets.WINGET_FORK_OWNER }}
         run: |
           $ErrorActionPreference = "Stop"
-          ./build/submit-winget-pr.ps1 `
-            -Version "${{ needs.build.outputs.version }}" `
-            -ManifestSourcePath "winget-manifests" `
-            -ForkOwner "$env:WINGET_FORK_OWNER" `
-            -RepositoryOwner "PrimeBuild" `
-            -PackageIdentifier "PrimeBuild.ThreadPilot" `
-            -GithubToken "$env:WINGET_GITHUB_TOKEN"
+          $logsDir = "release-channel-logs"
+          New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
+          $logPath = Join-Path $logsDir "winget-submit-log.txt"
+
+          try
+          {
+            & ./build/submit-winget-pr.ps1 `
+              -Version "${{ needs.build.outputs.version }}" `
+              -ManifestSourcePath "winget-manifests" `
+              -ForkOwner "$env:WINGET_FORK_OWNER" `
+              -RepositoryOwner "PrimeBuild" `
+              -PackageIdentifier "PrimeBuild.ThreadPilot" `
+              -GithubToken "$env:WINGET_GITHUB_TOKEN" *>&1 | Tee-Object -FilePath $logPath
+
+            if ($LASTEXITCODE -ne 0)
+            {
+              throw "submit-winget-pr.ps1 exited with code $LASTEXITCODE"
+            }
+
+            @(
+              "## winget publish",
+              "- attempted: true",
+              "- version: ${{ needs.build.outputs.version }}",
+              "- result: submitted"
+            ) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+          }
+          catch
+          {
+            @(
+              "## winget publish",
+              "- attempted: true",
+              "- version: ${{ needs.build.outputs.version }}",
+              "- result: failed"
+            ) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+            throw
+          }
+
+      - name: Upload winget publish logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: winget-publish-logs
+          path: release-channel-logs/winget-submit-log.txt
+          if-no-files-found: error
 
   publish-chocolatey:
     runs-on: windows-latest
@@ -503,17 +581,59 @@ jobs:
     if: needs.release.result == 'success'
 
     steps:
-      - name: Check chocolatey publish secret
+      - name: Resolve chocolatey publish policy
+        id: policy
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $dryRun = "${{ github.event_name }}" -eq "workflow_dispatch" -and "${{ github.event.inputs.dry_run_publish }}" -eq "true"
+          "dry_run=$($dryRun.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Check chocolatey publish policy
         id: gate
         shell: pwsh
         env:
           CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:CHOCOLATEY_API_KEY))
+          $ErrorActionPreference = "Stop"
+          $logsDir = "release-channel-logs"
+          New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
+          $packLogPath = Join-Path $logsDir "choco-pack-log.txt"
+          $pushLogPath = Join-Path $logsDir "choco-push-log.txt"
+          $dryRun = "${{ steps.policy.outputs.dry_run }}" -eq "true"
+
+          if ($dryRun)
           {
-            Write-Host "Chocolatey API key missing. Skipping publish-chocolatey job."
+            $summary = @(
+              "## chocolatey publish",
+              "- attempted: false",
+              "- version: ${{ needs.build.outputs.version }}",
+              "- result: dry-run",
+              "- reason: workflow_dispatch requested dry_run_publish=true"
+            )
+
+            $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+            "Dry run requested. Chocolatey pack validation and push intentionally skipped." | Set-Content -Path $packLogPath -Encoding utf8
+            "Dry run requested. Chocolatey push intentionally skipped." | Set-Content -Path $pushLogPath -Encoding utf8
             "enabled=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
             exit 0
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:CHOCOLATEY_API_KEY))
+          {
+            $message = "CHOCOLATEY_API_KEY is missing. Refusing to report a green public release without a package publish attempt."
+            $summary = @(
+              "## chocolatey publish",
+              "- attempted: false",
+              "- version: ${{ needs.build.outputs.version }}",
+              "- result: failed-policy",
+              "- reason: missing CHOCOLATEY_API_KEY"
+            )
+
+            $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+            $message | Set-Content -Path $packLogPath -Encoding utf8
+            $message | Set-Content -Path $pushLogPath -Encoding utf8
+            throw $message
           }
 
           "enabled=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
@@ -529,6 +649,35 @@ jobs:
           name: release-installer
           path: release-assets/installer
 
+      - name: Validate chocolatey package
+        if: steps.gate.outputs.enabled == 'true'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $logsDir = (Resolve-Path "release-channel-logs").Path
+          $packLogPath = Join-Path $logsDir "choco-pack-log.txt"
+          $artifactRoot = "release-channel-artifacts/chocolatey"
+          New-Item -ItemType Directory -Force -Path $artifactRoot | Out-Null
+
+          $installer = Get-ChildItem "release-assets/installer/*.exe" -File | Select-Object -First 1
+          if (-not $installer)
+          {
+            throw "Installer executable not found for Chocolatey validation."
+          }
+
+          & ./build/publish-chocolatey.ps1 `
+            -Version "${{ needs.build.outputs.version }}" `
+            -Tag "${{ needs.build.outputs.tag }}" `
+            -InstallerPath $installer.FullName `
+            -DryRun `
+            -PackageOutputDirectory $artifactRoot `
+            -MetadataOutputPath (Join-Path $artifactRoot "chocolatey-package-metadata.json") *>&1 | Tee-Object -FilePath $packLogPath
+
+          if ($LASTEXITCODE -ne 0)
+          {
+            throw "Chocolatey dry-run validation failed with exit code $LASTEXITCODE"
+          }
+
       - name: Publish chocolatey package
         if: steps.gate.outputs.enabled == 'true'
         shell: pwsh
@@ -536,14 +685,57 @@ jobs:
           CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
         run: |
           $ErrorActionPreference = "Stop"
+          $logsDir = (Resolve-Path "release-channel-logs").Path
+          $pushLogPath = Join-Path $logsDir "choco-push-log.txt"
+          $artifactRoot = "release-channel-artifacts/chocolatey"
+          New-Item -ItemType Directory -Force -Path $artifactRoot | Out-Null
           $installer = Get-ChildItem "release-assets/installer/*.exe" -File | Select-Object -First 1
           if (-not $installer)
           {
             throw "Installer executable not found for Chocolatey publish."
           }
 
-          ./build/publish-chocolatey.ps1 `
-            -Version "${{ needs.build.outputs.version }}" `
-            -Tag "${{ needs.build.outputs.tag }}" `
-            -InstallerPath $installer.FullName `
-            -ApiKey "$env:CHOCOLATEY_API_KEY"
+          try
+          {
+            & ./build/publish-chocolatey.ps1 `
+              -Version "${{ needs.build.outputs.version }}" `
+              -Tag "${{ needs.build.outputs.tag }}" `
+              -InstallerPath $installer.FullName `
+              -ApiKey "$env:CHOCOLATEY_API_KEY" `
+              -PackageOutputDirectory $artifactRoot `
+              -MetadataOutputPath (Join-Path $artifactRoot "chocolatey-publish-metadata.json") *>&1 | Tee-Object -FilePath $pushLogPath
+
+            if ($LASTEXITCODE -ne 0)
+            {
+              throw "publish-chocolatey.ps1 exited with code $LASTEXITCODE"
+            }
+
+            @(
+              "## chocolatey publish",
+              "- attempted: true",
+              "- version: ${{ needs.build.outputs.version }}",
+              "- result: published"
+            ) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+          }
+          catch
+          {
+            @(
+              "## chocolatey publish",
+              "- attempted: true",
+              "- version: ${{ needs.build.outputs.version }}",
+              "- result: failed"
+            ) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+            throw
+          }
+
+      - name: Upload chocolatey publish logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chocolatey-publish-logs
+          path: |
+            release-channel-logs/choco-pack-log.txt
+            release-channel-logs/choco-push-log.txt
+            release-channel-artifacts/chocolatey/*.nupkg
+            release-channel-artifacts/chocolatey/*.json
+          if-no-files-found: error

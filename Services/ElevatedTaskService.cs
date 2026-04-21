@@ -26,6 +26,7 @@ namespace ThreadPilot.Services
     using System.Text;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
+    using ThreadPilot.Services.Abstractions;
 
     /// <summary>
     /// Manages Scheduled Tasks used for persistent elevated launch and elevated autostart.
@@ -36,10 +37,25 @@ namespace ThreadPilot.Services
         private static readonly TimeSpan ScheduledTaskTimeout = TimeSpan.FromSeconds(20);
 
         private readonly ILogger<ElevatedTaskService> logger;
+        private readonly IProcessRunner processRunner;
+        private readonly Func<string?>? executablePathProvider;
+        private readonly Func<string>? currentUserProvider;
 
-        public ElevatedTaskService(ILogger<ElevatedTaskService> logger)
+        public ElevatedTaskService(ILogger<ElevatedTaskService> logger, IProcessRunner processRunner)
+            : this(logger, processRunner, null, null)
+        {
+        }
+
+        public ElevatedTaskService(
+            ILogger<ElevatedTaskService> logger,
+            IProcessRunner processRunner,
+            Func<string?>? executablePathProvider,
+            Func<string>? currentUserProvider)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.processRunner = processRunner ?? throw new ArgumentNullException(nameof(processRunner));
+            this.executablePathProvider = executablePathProvider;
+            this.currentUserProvider = currentUserProvider;
         }
 
         public string LaunchTaskName => "ThreadPilot_Launch";
@@ -50,7 +66,7 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var executablePath = this.GetExecutablePath();
+                var executablePath = this.executablePathProvider?.Invoke() ?? this.GetExecutablePath();
                 if (!IsValidExecutablePath(executablePath))
                 {
                     LogSkipEnsureLaunchTaskInvalidPath(this.logger, executablePath ?? "(null)");
@@ -60,9 +76,12 @@ namespace ThreadPilot.Services
                 var taskXmlPath = Path.Combine(Path.GetTempPath(), $"threadpilot-launch-task-{Guid.NewGuid():N}.xml");
                 try
                 {
-                    WriteLaunchTaskDefinition(taskXmlPath, executablePath);
+                    WriteLaunchTaskDefinition(
+                        taskXmlPath,
+                        executablePath!,
+                        this.currentUserProvider?.Invoke() ?? GetCurrentUserName());
 
-                    var result = await RunSchTasksAsync(new List<string>
+                    var result = await this.RunSchTasksAsync(new List<string>
                     {
                         "/Create",
                         "/TN", this.LaunchTaskName,
@@ -72,7 +91,7 @@ namespace ThreadPilot.Services
 
                     if (result.ExitCode == 0)
                     {
-                        LogLaunchTaskEnsured(this.logger, this.LaunchTaskName, executablePath);
+                        LogLaunchTaskEnsured(this.logger, this.LaunchTaskName, executablePath!);
                         return true;
                     }
 
@@ -95,7 +114,7 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var result = await RunSchTasksAsync(new List<string>
+                var result = await this.RunSchTasksAsync(new List<string>
                 {
                     "/Run",
                     "/TN", this.LaunchTaskName,
@@ -128,7 +147,7 @@ namespace ThreadPilot.Services
                 }
 
                 var taskRunCommand = BuildCommand(executablePath, arguments);
-                var result = await RunSchTasksAsync(new List<string>
+                var result = await this.RunSchTasksAsync(new List<string>
                 {
                     "/Create",
                     "/TN", this.AutostartTaskName,
@@ -159,7 +178,7 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var result = await RunSchTasksAsync(new List<string>
+                var result = await this.RunSchTasksAsync(new List<string>
                 {
                     "/Delete",
                     "/TN", this.AutostartTaskName,
@@ -193,7 +212,7 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var result = await RunSchTasksAsync(new List<string>
+                var result = await this.RunSchTasksAsync(new List<string>
                 {
                     "/Query",
                     "/TN", this.AutostartTaskName,
@@ -261,9 +280,19 @@ namespace ThreadPilot.Services
                    string.Equals(Path.GetExtension(executablePath), ".exe", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static void WriteLaunchTaskDefinition(string taskXmlPath, string executablePath)
+        private static string GetCurrentUserName()
         {
             var userName = WindowsIdentity.GetCurrent().Name;
+            if (string.IsNullOrWhiteSpace(userName))
+            {
+                throw new InvalidOperationException("Could not determine current user identity for launch task registration.");
+            }
+
+            return userName;
+        }
+
+        private static void WriteLaunchTaskDefinition(string taskXmlPath, string executablePath, string userName)
+        {
             if (string.IsNullOrWhiteSpace(userName))
             {
                 throw new InvalidOperationException("Could not determine current user identity for launch task registration.");
@@ -324,54 +353,9 @@ namespace ThreadPilot.Services
             File.WriteAllText(taskXmlPath, taskXml, Encoding.Unicode);
         }
 
-        private static async Task<ProcessResult> RunSchTasksAsync(IReadOnlyList<string> arguments)
+        private Task<ProcessRunResult> RunSchTasksAsync(IReadOnlyList<string> arguments)
         {
-            if (!File.Exists(SchTasksExecutablePath))
-            {
-                return new ProcessResult(-1, string.Empty, "schtasks.exe not found in system directory");
-            }
-
-            var processInfo = new ProcessStartInfo
-            {
-                FileName = SchTasksExecutablePath,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            };
-
-            foreach (var argument in arguments)
-            {
-                processInfo.ArgumentList.Add(argument);
-            }
-
-            using var process = Process.Start(processInfo);
-            if (process == null)
-            {
-                return new ProcessResult(-1, string.Empty, "Could not start schtasks.exe");
-            }
-
-            var outputTask = process.StandardOutput.ReadToEndAsync();
-            var errorTask = process.StandardError.ReadToEndAsync();
-            var exitTask = process.WaitForExitAsync();
-            var completedTask = await Task.WhenAny(exitTask, Task.Delay(ScheduledTaskTimeout));
-
-            if (completedTask != exitTask)
-            {
-                try
-                {
-                    process.Kill(entireProcessTree: true);
-                }
-                catch
-                {
-                    // Best-effort kill for timeout.
-                }
-
-                return new ProcessResult(-1, await outputTask, $"schtasks timeout after {ScheduledTaskTimeout.TotalSeconds} seconds");
-            }
-
-            await exitTask;
-            return new ProcessResult(process.ExitCode, await outputTask, await errorTask);
+            return this.processRunner.RunAsync(SchTasksExecutablePath, arguments, ScheduledTaskTimeout);
         }
 
         private static void TryDeleteFile(string path, ILogger logger)
@@ -445,21 +429,5 @@ namespace ThreadPilot.Services
 
         [LoggerMessage(EventId = 4268, Level = LogLevel.Debug, Message = "Failed to delete temporary file '{Path}'")]
         private static partial void LogDeleteTemporaryFileFailed(ILogger logger, string path, Exception ex);
-
-        private readonly struct ProcessResult
-        {
-            public ProcessResult(int exitCode, string standardOutput, string standardError)
-            {
-                this.ExitCode = exitCode;
-                this.StandardOutput = standardOutput;
-                this.StandardError = standardError;
-            }
-
-            public int ExitCode { get; }
-
-            public string StandardOutput { get; }
-
-            public string StandardError { get; }
-        }
     }
 }

@@ -38,8 +38,9 @@ namespace ThreadPilot.Services
         private readonly ConcurrentDictionary<int, IProcessCpuSetHandler> cpuSetHandlers = new();
         private readonly ILogger<ProcessService>? logger;
         private readonly ISecurityService? securityService;
+        private readonly Func<string> profilesDirectoryProvider;
 
-        private string ProfilesDirectory => StoragePaths.ProfilesDirectory;
+        private string ProfilesDirectory => this.profilesDirectoryProvider();
 
         private bool useCpuSets = true; // Enable CPU Sets by default
 
@@ -47,10 +48,14 @@ namespace ThreadPilot.Services
         private readonly ConcurrentDictionary<int, string> appliedMasks = new(); // ProcessId -> MaskId
         private readonly ConcurrentDictionary<int, ProcessPriorityClass> originalPriorities = new(); // ProcessId -> OriginalPriority
 
-        public ProcessService(ILogger<ProcessService>? logger = null, ISecurityService? securityService = null)
+        public ProcessService(
+            ILogger<ProcessService>? logger = null,
+            ISecurityService? securityService = null,
+            Func<string>? profilesDirectoryProvider = null)
         {
             this.logger = logger;
             this.securityService = securityService;
+            this.profilesDirectoryProvider = profilesDirectoryProvider ?? (() => StoragePaths.ProfilesDirectory);
 
             StoragePaths.EnsureAppDataDirectories();
             this.MigrateLegacyProfilesIfNeeded();

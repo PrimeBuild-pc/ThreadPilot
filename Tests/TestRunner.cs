@@ -20,7 +20,7 @@ namespace ThreadPilot.Tests
     using System.Threading.Tasks;
 
     /// <summary>
-    /// Integrated runtime test runner used by --test mode.
+    /// Legacy runtime smoke test runner used by debug-only --test mode.
     /// </summary>
     public static class TestRunner
     {

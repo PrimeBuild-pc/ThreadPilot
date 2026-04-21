@@ -19,18 +19,19 @@ namespace ThreadPilot.Services
     using System;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
-    using System.Diagnostics;
     using System.IO;
     using System.Linq;
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using ThreadPilot.Models;
+    using ThreadPilot.Services.Abstractions;
 
     public class PowerPlanService : IPowerPlanService
     {
         private static readonly Lazy<string> powerPlansPath = new(GetPowerPlansPath);
         private static readonly string powerCfgExecutablePath = Path.Combine(Environment.SystemDirectory, "powercfg.exe");
+        private static readonly TimeSpan powerCfgTimeout = TimeSpan.FromSeconds(20);
         private static readonly Regex powerSchemeRegex = new(@"Power Scheme GUID: (.*?)  \((.*?)\)", RegexOptions.Multiline | RegexOptions.Compiled);
         private static readonly Regex pathTraversalRegex = new(@"(^|[\\/])\.\.([\\/]|$)", RegexOptions.Compiled);
 
@@ -39,14 +40,32 @@ namespace ThreadPilot.Services
         private readonly object lockObject = new();
         private readonly ILogger<PowerPlanService> logger;
         private readonly IEnhancedLoggingService enhancedLogger;
+        private readonly IProcessRunner processRunner;
+        private readonly Func<string> powerPlansPathProvider;
         private string? lastActivePowerPlanGuid;
 
         public event EventHandler<PowerPlanChangedEventArgs>? PowerPlanChanged;
 
         public PowerPlanService(ILogger<PowerPlanService> logger, IEnhancedLoggingService enhancedLogger)
+            : this(logger, enhancedLogger, new SystemProcessRunner(), null)
+        {
+        }
+
+        public PowerPlanService(ILogger<PowerPlanService> logger, IEnhancedLoggingService enhancedLogger, IProcessRunner processRunner)
+            : this(logger, enhancedLogger, processRunner, null)
+        {
+        }
+
+        public PowerPlanService(
+            ILogger<PowerPlanService> logger,
+            IEnhancedLoggingService enhancedLogger,
+            IProcessRunner processRunner,
+            Func<string>? powerPlansPathProvider)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.enhancedLogger = enhancedLogger ?? throw new ArgumentNullException(nameof(enhancedLogger));
+            this.processRunner = processRunner ?? throw new ArgumentNullException(nameof(processRunner));
+            this.powerPlansPathProvider = powerPlansPathProvider ?? (() => PowerPlansPath);
         }
 
         /// <summary>
@@ -104,12 +123,8 @@ namespace ThreadPilot.Services
             var powerPlans = new ObservableCollection<PowerPlanModel>();
             var activePlan = await this.GetActivePowerPlan().ConfigureAwait(false);
 
-            using var process = CreatePowerCfgProcess("/list");
-            process.Start();
-            string output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
-            await process.WaitForExitAsync().ConfigureAwait(false);
-
-            var matches = powerSchemeRegex.Matches(output);
+            var result = await this.RunPowerCfgAsync("/list").ConfigureAwait(false);
+            var matches = powerSchemeRegex.Matches(result.StandardOutput);
 
             foreach (Match match in matches)
             {
@@ -133,12 +148,13 @@ namespace ThreadPilot.Services
         public async Task<ObservableCollection<PowerPlanModel>> GetCustomPowerPlansAsync()
         {
             var customPlans = new ObservableCollection<PowerPlanModel>();
-            if (!Directory.Exists(PowerPlansPath))
+            var powerPlansPath = this.powerPlansPathProvider();
+            if (!Directory.Exists(powerPlansPath))
             {
                 return customPlans;
             }
 
-            foreach (var file in Directory.GetFiles(PowerPlansPath, "*.pow"))
+            foreach (var file in Directory.GetFiles(powerPlansPath, "*.pow"))
             {
                 customPlans.Add(new PowerPlanModel
                 {
@@ -189,12 +205,8 @@ namespace ThreadPilot.Services
                     targetPowerPlan?.Name ?? "Unknown",
                     "Manual power plan change requested").ConfigureAwait(false);
 
-                using var process = CreatePowerCfgProcess($"/setactive {powerPlanGuid}");
-                process.Start();
-                var stdError = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
-                await process.WaitForExitAsync().ConfigureAwait(false);
-
-                var success = process.ExitCode == 0;
+                var result = await this.RunPowerCfgAsync("/setactive", powerPlanGuid).ConfigureAwait(false);
+                var success = result.ExitCode == 0;
 
                 if (success)
                 {
@@ -220,12 +232,12 @@ namespace ThreadPilot.Services
                     this.logger.LogWarning(
                         "Failed to change power plan to '{PowerPlanGuid}' - powercfg exit code: {ExitCode}, stderr: {StdErr}",
                         powerPlanGuid,
-                        process.ExitCode,
-                        stdError);
+                        result.ExitCode,
+                        result.StandardError);
 
                     await this.enhancedLogger.LogSystemEventAsync(
                         LogEventTypes.PowerPlan.ChangeFailed,
-                        $"Failed to change power plan to '{targetPowerPlan?.Name ?? powerPlanGuid}' - Exit code: {process.ExitCode}",
+                        $"Failed to change power plan to '{targetPowerPlan?.Name ?? powerPlanGuid}' - Exit code: {result.ExitCode}",
                         Microsoft.Extensions.Logging.LogLevel.Warning).ConfigureAwait(false);
                 }
 
@@ -250,12 +262,8 @@ namespace ThreadPilot.Services
         {
             try
             {
-                using var process = CreatePowerCfgProcess("/getactivescheme");
-                process.Start();
-                string output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
-                await process.WaitForExitAsync().ConfigureAwait(false);
-
-                var match = powerSchemeRegex.Match(output);
+                var result = await this.RunPowerCfgAsync("/getactivescheme").ConfigureAwait(false);
+                var match = powerSchemeRegex.Match(result.StandardOutput);
 
                 if (match.Success)
                 {
@@ -287,18 +295,15 @@ namespace ThreadPilot.Services
 
             try
             {
-                using var process = CreatePowerCfgProcess($"/import {QuoteArgument(normalizedPath)}");
-                process.Start();
-                var stdError = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
-                await process.WaitForExitAsync().ConfigureAwait(false);
+                var result = await this.RunPowerCfgAsync("/import", normalizedPath).ConfigureAwait(false);
 
-                if (process.ExitCode != 0)
+                if (result.ExitCode != 0)
                 {
                     this.logger.LogWarning(
                         "Power plan import failed for '{Path}' with exit code {ExitCode}. stderr: {StdErr}",
                         normalizedPath,
-                        process.ExitCode,
-                        stdError);
+                        result.ExitCode,
+                        result.StandardError);
 
                     return false;
                 }
@@ -325,10 +330,11 @@ namespace ThreadPilot.Services
 
             try
             {
-                Directory.CreateDirectory(PowerPlansPath);
+                var powerPlansPath = this.powerPlansPathProvider();
+                Directory.CreateDirectory(powerPlansPath);
 
                 var fileName = Path.GetFileName(normalizedPath);
-                var destinationPath = Path.Combine(PowerPlansPath, fileName);
+                var destinationPath = Path.Combine(powerPlansPath, fileName);
 
                 // If user selects a file already in the managed folder, treat as success.
                 if (string.Equals(normalizedPath, destinationPath, StringComparison.OrdinalIgnoreCase))
@@ -344,7 +350,7 @@ namespace ThreadPilot.Services
 
                     do
                     {
-                        destinationPath = Path.Combine(PowerPlansPath, $"{baseName}_{suffix}{extension}");
+                        destinationPath = Path.Combine(powerPlansPath, $"{baseName}_{suffix}{extension}");
                         suffix++;
                     }
                     while (File.Exists(destinationPath));
@@ -427,8 +433,6 @@ namespace ThreadPilot.Services
             }
         }
 
-        private static string QuoteArgument(string value) => $"\"{value.Replace("\"", "\\\"")}\"";
-
         private bool TryNormalizePowerPlanPath(string filePath, out string normalizedPath, out string error)
         {
             normalizedPath = string.Empty;
@@ -484,20 +488,7 @@ namespace ThreadPilot.Services
             return true;
         }
 
-        private static Process CreatePowerCfgProcess(string arguments)
-        {
-            return new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = powerCfgExecutablePath,
-                    Arguments = arguments,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                },
-            };
-        }
+        private Task<ProcessRunResult> RunPowerCfgAsync(params string[] arguments) =>
+            this.processRunner.RunAsync(powerCfgExecutablePath, arguments, powerCfgTimeout);
     }
 }

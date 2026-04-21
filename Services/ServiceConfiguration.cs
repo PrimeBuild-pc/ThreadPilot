@@ -16,8 +16,11 @@
  */
 namespace ThreadPilot.Services
 {
+    using System.Net.Http;
+    using System.Net.Http.Headers;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
+    using ThreadPilot.Services.Abstractions;
     using ThreadPilot.ViewModels;
 
     /// <summary>
@@ -62,6 +65,17 @@ namespace ThreadPilot.Services
 
             // Enhanced logging service
             services.AddSingleton<IEnhancedLoggingService, EnhancedLoggingService>();
+            services.AddSingleton<IProcessRunner, SystemProcessRunner>();
+            services.AddSingleton<ISettingsStorage, FileSettingsStorage>();
+            services.AddSingleton(sp =>
+            {
+                var httpClient = new HttpClient();
+                httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("ThreadPilot", "1.0"));
+                httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+                return httpClient;
+            });
+            services.AddSingleton<IGitHubReleaseClient, GitHubReleaseClient>();
+            services.AddSingleton<GitHubUpdateChecker>();
 
             // Memory caching for performance - PERFORMANCE IMPROVEMENT
             services.AddMemoryCache();

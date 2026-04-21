@@ -23,6 +23,10 @@ artifacts/
 !docs/release/
 !docs/release/*.md
 
+# Local worktrees and planning docs
+.worktrees/
+docs/superpowers/plans/
+
 # Test and coverage
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*

@@ -12,6 +12,8 @@ ThreadPilot is a free and open-source Windows process and power plan manager foc
 
 The project targets users who need Process Lasso style capabilities in a modern WPF desktop application with enterprise-grade reliability, security hardening, and automation support.
 
+Coverage badge tracks business/application code and excludes generated build artifacts.
+
 [![Thread-Pilotbanner.png](https://i.postimg.cc/sDZLXMqr/Thread-Pilotbanner.png)](https://postimg.cc/cr0hkLd9)
 
 ## ✨ Key Features
@@ -36,7 +38,7 @@ The project targets users who need Process Lasso style capabilities in a modern 
 ## 📦 Download
 
 [![Download Latest Release](https://img.shields.io/badge/Download-Latest%20Release-2ea44f?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest)
-[![Direct Portable ZIP](https://img.shields.io/badge/Direct-Portable%20ZIP-1f6feb?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest/download/ThreadPilot_v1.1.2_Portable.zip)
+[![Portable ZIP Assets](https://img.shields.io/badge/Portable%20ZIP-Release%20Assets-1f6feb?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest)
 
 ### One-Click Terminal Install
 
@@ -58,19 +60,18 @@ Latest artifacts are published on each tagged release in [GitHub Releases](https
 
 | Package | File name | Recommended use |
 |---|---|---|
-| Installer (Recommended) | `ThreadPilot_v1.1.2_Setup.exe` | Standard Windows installer (Inno Setup) for most users |
-| Portable | `ThreadPilot_v1.1.2_Portable.zip` | No-install deployment for power users |
+| Installer (Recommended) | `ThreadPilot_v<version>_Setup.exe` | Standard Windows installer (Inno Setup) for most users |
+| Portable | `ThreadPilot_v<version>_singlefile_win-x64.zip` | No-install deployment for power users |
 
 Quick links:
 
 - Release page: https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest
-- Direct portable ZIP: https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest/download/ThreadPilot_v1.1.2_Portable.zip
 
 Verification examples:
 
 ```powershell
-Get-FileHash .\ThreadPilot_v1.1.2_Setup.exe -Algorithm SHA256
-Get-FileHash .\ThreadPilot_v1.1.2_Portable.zip -Algorithm SHA256
+Get-FileHash .\ThreadPilot_v<version>_Setup.exe -Algorithm SHA256
+Get-FileHash .\ThreadPilot_v<version>_singlefile_win-x64.zip -Algorithm SHA256
 ```
 
 Compare hashes with `SHA256SUMS.txt` from the same release.
@@ -89,10 +90,16 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
 
 Write-Host "Starting ThreadPilot installation..." -ForegroundColor Cyan
 
-# 2) Define paths
-$url = "https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest/download/ThreadPilot_v1.1.2_Setup.exe"
+# 2) Resolve latest installer asset from GitHub Releases
+$release = Invoke-RestMethod -Uri "https://api.github.com/repos/PrimeBuild-pc/ThreadPilot/releases/latest"
+$asset = $release.assets | Where-Object { $_.name -match '^ThreadPilot_v.*_Setup\.exe$' } | Select-Object -First 1
+if (-not $asset) {
+  throw "Unable to locate the latest ThreadPilot installer asset."
+}
+
+$url = $asset.browser_download_url
 $destPath = "$env:ProgramFiles\ThreadPilot"
-$exePath = "$destPath\ThreadPilot_v1.1.2_Setup.exe"
+$exePath = Join-Path $destPath $asset.name
 
 # 3) Ensure destination folder exists
 if (-not (Test-Path $destPath)) { New-Item -ItemType Directory -Force -Path $destPath | Out-Null }

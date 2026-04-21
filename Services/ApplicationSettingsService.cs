@@ -23,6 +23,7 @@ namespace ThreadPilot.Services
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using ThreadPilot.Models;
+    using ThreadPilot.Services.Abstractions;
 
     /// <summary>
     /// Service for managing application settings with JSON persistence.
@@ -30,7 +31,9 @@ namespace ThreadPilot.Services
     public class ApplicationSettingsService : IApplicationSettingsService
     {
         private readonly ILogger<ApplicationSettingsService> logger;
+        private readonly ISettingsStorage settingsStorage;
         private readonly string settingsFilePath;
+        private readonly string? legacySettingsPath;
         private ApplicationSettingsModel settings;
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -46,11 +49,24 @@ namespace ThreadPilot.Services
         public ApplicationSettingsModel Settings => (ApplicationSettingsModel)this.settings.Clone();
 
         public ApplicationSettingsService(ILogger<ApplicationSettingsService> logger)
+            : this(
+                logger,
+                CreateDefaultStorage(),
+                StoragePaths.SettingsFilePath,
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json"))
+        {
+        }
+
+        public ApplicationSettingsService(
+            ILogger<ApplicationSettingsService> logger,
+            ISettingsStorage settingsStorage,
+            string settingsFilePath,
+            string? legacySettingsPath)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
-            StoragePaths.EnsureAppDataDirectories();
-            this.settingsFilePath = StoragePaths.SettingsFilePath;
+            this.settingsStorage = settingsStorage ?? throw new ArgumentNullException(nameof(settingsStorage));
+            this.settingsFilePath = settingsFilePath ?? throw new ArgumentNullException(nameof(settingsFilePath));
+            this.legacySettingsPath = legacySettingsPath;
 
             this.MigrateLegacySettingsIfNeeded();
 
@@ -63,7 +79,7 @@ namespace ThreadPilot.Services
             {
                 this.logger.LogInformation("Loading application settings from {FilePath}", this.settingsFilePath);
 
-                if (!File.Exists(this.settingsFilePath))
+                if (!this.settingsStorage.Exists(this.settingsFilePath))
                 {
                     this.logger.LogInformation("Settings file not found, using defaults");
                     this.settings = new ApplicationSettingsModel();
@@ -71,7 +87,15 @@ namespace ThreadPilot.Services
                     return;
                 }
 
-                var json = await File.ReadAllTextAsync(this.settingsFilePath);
+                var json = await this.settingsStorage.ReadAsync(this.settingsFilePath);
+                if (string.IsNullOrWhiteSpace(json))
+                {
+                    this.logger.LogWarning("Settings file was empty, using defaults");
+                    this.settings = new ApplicationSettingsModel();
+                    await this.SaveSettingsAsync();
+                    return;
+                }
+
                 var legacyThemePreferenceDetected = false;
 
                 try
@@ -127,7 +151,7 @@ namespace ThreadPilot.Services
                 this.ValidateAndFixSettings();
 
                 var json = JsonSerializer.Serialize(this.settings, JsonOptions);
-                await AtomicFileWriter.WriteAllTextAsync(this.settingsFilePath, json, Encoding.UTF8);
+                await this.settingsStorage.WriteAsync(this.settingsFilePath, json);
 
                 this.logger.LogDebug("Settings saved successfully");
             }
@@ -240,7 +264,7 @@ namespace ThreadPilot.Services
                 this.logger.LogInformation("Exporting settings to {FilePath}", filePath);
 
                 var json = JsonSerializer.Serialize(this.settings, JsonOptions);
-                await AtomicFileWriter.WriteAllTextAsync(filePath, json, Encoding.UTF8);
+                await this.settingsStorage.WriteAsync(filePath, json);
 
                 this.logger.LogInformation("Settings exported successfully");
             }
@@ -257,12 +281,17 @@ namespace ThreadPilot.Services
             {
                 this.logger.LogInformation("Importing settings from {FilePath}", filePath);
 
-                if (!File.Exists(filePath))
+                if (!this.settingsStorage.Exists(filePath))
                 {
                     throw new FileNotFoundException($"Settings file not found: {filePath}");
                 }
 
-                var json = await File.ReadAllTextAsync(filePath);
+                var json = await this.settingsStorage.ReadAsync(filePath);
+                if (string.IsNullOrWhiteSpace(json))
+                {
+                    throw new InvalidOperationException("Imported settings file was empty");
+                }
+
                 var importedSettings = JsonSerializer.Deserialize<ApplicationSettingsModel>(json, JsonOptions);
 
                 if (importedSettings == null)
@@ -304,11 +333,12 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var legacySettingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
-                if (File.Exists(legacySettingsPath) && !File.Exists(this.settingsFilePath))
+                if (!string.IsNullOrWhiteSpace(this.legacySettingsPath) &&
+                    this.settingsStorage.Exists(this.legacySettingsPath) &&
+                    !this.settingsStorage.Exists(this.settingsFilePath))
                 {
-                    Directory.CreateDirectory(Path.GetDirectoryName(this.settingsFilePath)!);
-                    File.Copy(legacySettingsPath, this.settingsFilePath);
+                    this.settingsStorage.EnsureDirectoryForFile(this.settingsFilePath);
+                    this.settingsStorage.Copy(this.legacySettingsPath, this.settingsFilePath, overwrite: false);
                     this.logger.LogInformation("Migrated legacy settings file to AppData storage");
                 }
             }
@@ -316,6 +346,12 @@ namespace ThreadPilot.Services
             {
                 this.logger.LogWarning(ex, "Failed to migrate legacy settings file");
             }
+        }
+
+        private static ISettingsStorage CreateDefaultStorage()
+        {
+            StoragePaths.EnsureAppDataDirectories();
+            return new FileSettingsStorage();
         }
     }
 }
