@@ -4,7 +4,7 @@ $packageName = 'threadpilot'
 $toolsDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 # Installer URL and checksum for ThreadPilot v1.1.2
 $url64 = 'https://github.com/PrimeBuild-pc/ThreadPilot/releases/download/v1.1.2/ThreadPilot_v1.1.2_Setup.exe'
-$checksum64 = 'FAC3935BA126B01987B15CB323502EE8B6E91C957F22006BD9E62B8D57169790'
+$checksum64 = '5ee64d2268cc8b8c6378d403c098ba4c22e5017b65a0ca58c45c46341b220f01'
 
 $packageArgs = @{
     packageName    = $packageName
