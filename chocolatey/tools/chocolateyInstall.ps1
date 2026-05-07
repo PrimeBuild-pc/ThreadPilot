@@ -13,8 +13,8 @@ $packageArgs = @{
     checksum64     = $checksum64
     checksumType64 = 'sha256'
     softwareName   = 'ThreadPilot*'
-    silentArgs     = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS=0'
-    validExitCodes = @(0, 3010, 1641)
+    silentArgs     = '/VERYSILENT /SP- /NORESTART'
+    validExitCodes = @(0, 1, 3010, 1641)
 }
 
 Install-ChocolateyPackage @packageArgs

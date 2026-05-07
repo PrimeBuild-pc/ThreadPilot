@@ -41,6 +41,7 @@ coverage*.info
 *.trx
 FINAL_RELEASE_PLAN.md
 RELEASE_PLAN.md
+CHOCOLATEY_MODERATOR_NOTICE.md
 
 # .NET / NuGet
 *.deps.json
