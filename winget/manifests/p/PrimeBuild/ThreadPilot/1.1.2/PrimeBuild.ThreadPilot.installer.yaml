@@ -4,7 +4,7 @@ InstallerType: inno
 Installers:
   - Architecture: x64
     InstallerUrl: https://github.com/PrimeBuild-pc/ThreadPilot/releases/download/v1.1.2/ThreadPilot_v1.1.2_Setup.exe
-    InstallerSha256: FAC3935BA126B01987B15CB323502EE8B6E91C957F22006BD9E62B8D57169790
+    InstallerSha256: 326864EAD100EDD134F3A41F5D4631FCB1FDF6A689101BB0C2D4B7330B9CF032
 ManifestType: installer
-ManifestVersion: 1.4.0
+ManifestVersion: 1.5.0
 

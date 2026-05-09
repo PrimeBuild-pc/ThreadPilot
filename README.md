@@ -40,18 +40,12 @@ Coverage badge tracks business/application code and excludes generated build art
 [![Download Latest Release](https://img.shields.io/badge/Download-Latest%20Release-2ea44f?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest)
 [![Portable ZIP Assets](https://img.shields.io/badge/Portable%20ZIP-Release%20Assets-1f6feb?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest)
 
-### One-Click Terminal Install
+### Package Manager Status
 
-```powershell
-# winget
-winget install PrimeBuild.ThreadPilot
-
-# chocolatey
-choco install threadpilot
-
-# PowerShell bootstrap (Admin)
-iwr https://raw.githubusercontent.com/PrimeBuild-pc/ThreadPilot/main/build/install-threadpilot.ps1 -UseBasicParsing | iex
-```
+- GitHub Release v1.1.2 is live.
+- WinGet is pending review.
+- Chocolatey is pending verification/approval.
+- PowerShell bootstrap (Admin): `iwr https://raw.githubusercontent.com/PrimeBuild-pc/ThreadPilot/main/build/install-threadpilot.ps1 -UseBasicParsing | iex`
 
 <details>
 <summary>Manual download files and checksum verification</summary>

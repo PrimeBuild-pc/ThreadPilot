@@ -40,7 +40,7 @@ SolidCompression=yes
 WizardStyle={#MyWizardStyle}
 ArchitecturesInstallIn64BitMode=x64compatible
 ArchitecturesAllowed=x64compatible
-MinVersion=10.0.22000
+MinVersion=10.0.17763
 UninstallDisplayIcon={app}\{#MyAppExeName}
 DisableReadyPage=yes
 

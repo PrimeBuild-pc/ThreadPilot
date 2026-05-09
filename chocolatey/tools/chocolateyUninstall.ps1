@@ -34,7 +34,7 @@ else {
     }
 }
 
-$silentFlags = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS=0'
+$silentFlags = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /CLOSEAPPLICATIONS'
 $allArgs = @($baseArgs, $silentFlags) -join ' '
 $allArgs = $allArgs.Trim()
 
