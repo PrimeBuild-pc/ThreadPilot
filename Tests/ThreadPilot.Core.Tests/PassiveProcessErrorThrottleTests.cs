@@ -36,5 +36,24 @@ namespace ThreadPilot.Core.Tests
             Assert.True(throttle.ShouldLog(42, PassiveProcessErrorKind.Terminated));
             Assert.True(throttle.ShouldLog(43, PassiveProcessErrorKind.AccessDenied));
         }
+
+        [Fact]
+        public void ShouldLog_WhenElapsedTimeEqualsTtl_ReturnsTrue()
+        {
+            var now = new DateTimeOffset(2026, 5, 9, 12, 0, 0, TimeSpan.Zero);
+            var throttle = new PassiveProcessErrorThrottle(TimeSpan.FromMinutes(1), () => now);
+
+            Assert.True(throttle.ShouldLog(42, PassiveProcessErrorKind.Unknown));
+            now = now.AddMinutes(1);
+
+            Assert.True(throttle.ShouldLog(42, PassiveProcessErrorKind.Unknown));
+        }
+
+        [Fact]
+        public void Constructor_WhenTtlIsZero_Throws()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                new PassiveProcessErrorThrottle(TimeSpan.Zero, () => DateTimeOffset.UtcNow));
+        }
     }
 }

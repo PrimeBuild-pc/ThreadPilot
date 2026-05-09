@@ -79,6 +79,38 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void IsPassiveProcessAccessException_ReturnsTrue_ForUnauthorizedAccess()
+        {
+            var exception = new UnauthorizedAccessException("Access denied.");
+
+            var result = ProcessService.IsPassiveProcessAccessException(exception);
+
+            Assert.True(result);
+        }
+
+        [Theory]
+        [InlineData("Unable to access modules for this process.")]
+        [InlineData("ReadProcessMemory failed for protected process.")]
+        public void IsPassiveProcessAccessException_ReturnsTrue_ForKnownPassiveMessages(string message)
+        {
+            var exception = new InvalidOperationException(message);
+
+            var result = ProcessService.IsPassiveProcessAccessException(exception);
+
+            Assert.True(result);
+        }
+
+        [Fact]
+        public void IsPassiveProcessAccessException_ReturnsFalse_ForUnrelatedException()
+        {
+            var exception = new InvalidOperationException("Unexpected parse failure.");
+
+            var result = ProcessService.IsPassiveProcessAccessException(exception);
+
+            Assert.False(result);
+        }
+
+        [Fact]
         public void TrackPriorityChange_PreservesOriginalPriority()
         {
             var service = CreateService(CreateTemporaryDirectory());

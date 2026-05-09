@@ -85,5 +85,50 @@ namespace ThreadPilot.Core.Tests
             Assert.Null(result.SelectedProcess);
             Assert.True(result.SelectedProcessTerminated);
         }
+
+        [Fact]
+        public void ApplyDelta_WhenSnapshotContainsDuplicatePid_UsesLatestSnapshot()
+        {
+            var existing = new ProcessModel { ProcessId = 42, Name = "Old" };
+            var processes = new ObservableCollection<ProcessModel> { existing };
+            var snapshot = new[]
+            {
+                new ProcessModel { ProcessId = 42, Name = "First", CpuUsage = 1 },
+                new ProcessModel { ProcessId = 42, Name = "Latest", CpuUsage = 9 },
+            };
+
+            var result = ProcessListDeltaUpdater.ApplyDelta(processes, snapshot, 42);
+
+            Assert.Single(processes);
+            Assert.Same(existing, processes[0]);
+            Assert.Same(existing, result.SelectedProcess);
+            Assert.Equal("Latest", existing.Name);
+            Assert.Equal(9, existing.CpuUsage);
+        }
+
+        [Fact]
+        public void ApplyDelta_PreservesSelectionDuringAddRemoveChurn()
+        {
+            var selected = new ProcessModel { ProcessId = 20, Name = "Selected" };
+            var processes = new ObservableCollection<ProcessModel>
+            {
+                new() { ProcessId = 10, Name = "Removed" },
+                selected,
+            };
+
+            var snapshot = new[]
+            {
+                new ProcessModel { ProcessId = 20, Name = "Selected Updated" },
+                new ProcessModel { ProcessId = 30, Name = "Added" },
+            };
+
+            var result = ProcessListDeltaUpdater.ApplyDelta(processes, snapshot, 20);
+
+            Assert.Equal(2, processes.Count);
+            Assert.Same(selected, result.SelectedProcess);
+            Assert.False(result.SelectedProcessTerminated);
+            Assert.DoesNotContain(processes, process => process.ProcessId == 10);
+            Assert.Contains(processes, process => process.ProcessId == 30);
+        }
     }
 }

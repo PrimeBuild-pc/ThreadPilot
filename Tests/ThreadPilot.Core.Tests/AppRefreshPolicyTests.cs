@@ -27,5 +27,18 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal(powerPlanUiRefreshEnabled, decision.PowerPlanUiRefreshEnabled);
             Assert.Equal(backgroundAutomationEnabled, decision.BackgroundAutomationEnabled);
         }
+
+        [Fact]
+        public void Evaluate_WhenStateIsUnknown_KeepsBackgroundAutomationOnly()
+        {
+            var decision = AppRefreshPolicy.Evaluate((AppActivityState)999);
+
+            Assert.False(decision.ProcessUiRefreshEnabled);
+            Assert.False(decision.ImmediateProcessRefresh);
+            Assert.False(decision.VirtualizedPreloadEnabled);
+            Assert.False(decision.PerformanceUiMonitoringEnabled);
+            Assert.False(decision.PowerPlanUiRefreshEnabled);
+            Assert.True(decision.BackgroundAutomationEnabled);
+        }
     }
 }

@@ -261,6 +261,60 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task ProcessStarted_AppliesConfiguredCoreMaskForMatchingProcess()
+        {
+            var process = new ProcessModel { ProcessId = 31, Name = "game" };
+            var processMonitor = new FakeProcessMonitorService();
+
+            var configuration = new ProcessMonitorConfiguration
+            {
+                PowerPlanChangeDelayMs = 0,
+                Associations =
+                {
+                    new ProcessPowerPlanAssociation("game", "plan-game", "Game")
+                    {
+                        CoreMaskId = "mask-game",
+                        Priority = 5,
+                    },
+                },
+            };
+
+            var associationService = CreateAssociationService(configuration);
+            var powerPlanService = CreatePowerPlanService();
+            var notificationService = CreateNotificationService();
+            var processService = CreateProcessService();
+            processService.Setup(x => x.TrackAppliedMask(31, "mask-game"));
+            var coreMaskService = CreateCoreMaskService();
+            coreMaskService.SetupGet(x => x.AvailableMasks).Returns(new ObservableCollection<CoreMask>
+            {
+                new()
+                {
+                    Id = "mask-game",
+                    Name = "Game Mask",
+                    BoolMask = new ObservableCollection<bool> { true, false },
+                },
+            });
+            coreMaskService.Setup(x => x.RegisterMaskApplication(31, "mask-game"));
+            var affinityApplyService = CreateAffinityApplyService();
+            var manager = CreateService(
+                processMonitor,
+                associationService,
+                powerPlanService,
+                notificationService,
+                processService,
+                coreMaskService,
+                affinityApplyService);
+
+            await manager.StartAsync();
+            processMonitor.RaiseProcessStarted(process);
+            await Task.Delay(100);
+
+            affinityApplyService.Verify(x => x.ApplyAsync(process, 1), Times.Once);
+            processService.Verify(x => x.TrackAppliedMask(31, "mask-game"), Times.Once);
+            coreMaskService.Verify(x => x.RegisterMaskApplication(31, "mask-game"), Times.Once);
+        }
+
+        [Fact]
         public async Task Dispose_CompletesOnBlockingSynchronizationContext()
         {
             var processMonitor = new FakeProcessMonitorService

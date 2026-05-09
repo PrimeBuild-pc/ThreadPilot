@@ -98,5 +98,52 @@ namespace ThreadPilot.Core.Tests
 
             Assert.Equal(ProcessClassification.BackgroundUser, result);
         }
+
+        [Fact]
+        public void Classify_TerminatedTakesPrecedenceOverForegroundAndSystem()
+        {
+            var classifier = new ProcessClassifier(new ProcessFilterService());
+            var process = new ProcessModel
+            {
+                ProcessId = 10,
+                Name = "svchost",
+                HasVisibleWindow = true,
+            };
+
+            var result = classifier.Classify(process, new ProcessClassificationContext(10, Terminated: true));
+
+            Assert.Equal(ProcessClassification.Terminated, result);
+        }
+
+        [Fact]
+        public void Classify_AccessDeniedTakesPrecedenceOverForegroundAndWindow()
+        {
+            var classifier = new ProcessClassifier(new ProcessFilterService());
+            var process = new ProcessModel
+            {
+                ProcessId = 10,
+                Name = "ProtectedWindow",
+                HasVisibleWindow = true,
+            };
+
+            var result = classifier.Classify(process, new ProcessClassificationContext(10, AccessDenied: true));
+
+            Assert.Equal(ProcessClassification.ProtectedOrAccessDenied, result);
+        }
+
+        [Fact]
+        public void Classify_ReturnsUnknownWhenNameIsMissing()
+        {
+            var classifier = new ProcessClassifier(new ProcessFilterService());
+            var process = new ProcessModel
+            {
+                ProcessId = 10,
+                Name = string.Empty,
+            };
+
+            var result = classifier.Classify(process, new ProcessClassificationContext(null));
+
+            Assert.Equal(ProcessClassification.Unknown, result);
+        }
     }
 }

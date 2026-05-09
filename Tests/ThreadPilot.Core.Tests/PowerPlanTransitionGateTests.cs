@@ -57,5 +57,33 @@ namespace ThreadPilot.Core.Tests
 
             Assert.True(decision.ShouldApply);
         }
+
+        [Fact]
+        public void ShouldApply_WhenDuplicateWindowExpires_ReturnsTrue()
+        {
+            var now = DateTimeOffset.Parse("2026-05-09T10:00:00Z");
+            var gate = new PowerPlanTransitionGate(TimeSpan.FromSeconds(2), () => now);
+
+            gate.RecordAttempt("plan-game");
+            now = now.AddSeconds(3);
+
+            var decision = gate.ShouldApply("plan-game", "balanced");
+
+            Assert.True(decision.ShouldApply);
+            Assert.Equal(PowerPlanTransitionSuppressionReason.None, decision.SuppressionReason);
+        }
+
+        [Fact]
+        public void Constructor_WhenDuplicateWindowIsNegative_UsesZeroWindow()
+        {
+            var now = DateTimeOffset.Parse("2026-05-09T10:00:00Z");
+            var gate = new PowerPlanTransitionGate(TimeSpan.FromSeconds(-1), () => now);
+
+            gate.RecordAttempt("plan-game");
+
+            var decision = gate.ShouldApply("plan-game", "balanced");
+
+            Assert.True(decision.ShouldApply);
+        }
     }
 }
