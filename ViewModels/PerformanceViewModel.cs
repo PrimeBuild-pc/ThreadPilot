@@ -58,7 +58,7 @@ namespace ThreadPilot.ViewModels
         private bool isMonitoring;
 
         [ObservableProperty]
-        private string monitoringStatusText = "Monitoring Stopped";
+        private string monitoringStatusText = "Live metrics stopped";
 
         [ObservableProperty]
         private DateTime lastUpdateTime;
@@ -224,9 +224,9 @@ namespace ThreadPilot.ViewModels
                 await this.performanceService.StartMonitoringAsync();
 
                 this.IsMonitoring = true;
-                this.MonitoringStatusText = "Monitoring Active";
+                this.MonitoringStatusText = "Live metrics active";
                 this.MonitoringStateText = "Active";
-                this.AddTimelineEvent("Monitoring", "Real-time monitoring started.", "Info");
+                this.AddTimelineEvent("Live Metrics", "Live metrics started.", "Info");
 
                 this.SetStatus("Performance monitoring started", false);
             }
@@ -245,9 +245,9 @@ namespace ThreadPilot.ViewModels
                 await this.performanceService.StopMonitoringAsync();
 
                 this.IsMonitoring = false;
-                this.MonitoringStatusText = "Monitoring Stopped";
+                this.MonitoringStatusText = "Live metrics stopped";
                 this.MonitoringStateText = "Stopped";
-                this.AddTimelineEvent("Monitoring", "Real-time monitoring stopped.", "Warning");
+                this.AddTimelineEvent("Live Metrics", "Live metrics stopped.", "Warning");
 
                 this.SetStatus("Performance monitoring stopped", false);
             }
@@ -271,9 +271,9 @@ namespace ThreadPilot.ViewModels
                 await this.performanceService.StopMonitoringAsync();
 
                 this.IsMonitoring = false;
-                this.MonitoringStatusText = "Monitoring Paused";
+                this.MonitoringStatusText = "Live metrics paused";
                 this.MonitoringStateText = "Paused";
-                this.AddTimelineEvent("Monitoring", "Monitoring paused while app is minimized.", "Info");
+                this.AddTimelineEvent("Live Metrics", "Live metrics paused while app is minimized.", "Info");
             }
             catch (Exception ex)
             {
@@ -293,9 +293,9 @@ namespace ThreadPilot.ViewModels
                 await this.performanceService.StartMonitoringAsync();
 
                 this.IsMonitoring = true;
-                this.MonitoringStatusText = "Monitoring Active";
+                this.MonitoringStatusText = "Live metrics active";
                 this.MonitoringStateText = "Active";
-                this.AddTimelineEvent("Monitoring", "Monitoring resumed after restore.", "Info");
+                this.AddTimelineEvent("Live Metrics", "Live metrics resumed after restore.", "Info");
                 this.monitoringWasActiveBeforeSuspend = false;
             }
             catch (Exception ex)

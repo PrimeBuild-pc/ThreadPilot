@@ -18,7 +18,7 @@
 
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
             <TextBlock Text="Power Plans" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,4"/>
-            <TextBlock Text="Manage system power plans and import custom profiles" FontSize="14" Opacity="0.7"/>
+            <TextBlock Text="Manage the active Windows power plan and import custom .pow profiles" FontSize="14" Opacity="0.7"/>
         </StackPanel>
 
         <Grid Grid.Row="1">
@@ -29,7 +29,7 @@
 
             <!-- System Power Plans -->
             <GroupBox Grid.Column="0"
-                    Header="Available Power Plans"
+                    Header="Windows Power Plans"
                     Margin="0,0,5,0">
                 <Grid Margin="8">
                     <Grid.RowDefinitions>
@@ -107,15 +107,15 @@
                     Orientation="Horizontal" 
                     Margin="0,12,0,0">
             <Button Command="{Binding SetActivePlanCommand}"
-                    Content="Set Active"
+                    Content="Set as Active Windows Plan"
                     Padding="20,5"
                     Margin="0,0,10,0"
-                    ToolTip="Activate the selected power plan"/>
+                    ToolTip="Change the active Windows power plan to the selected plan"/>
             <Button Command="{Binding ImportCustomPlanCommand}"
-                Content="Apply Selected Custom"
+                Content="Import Selected .pow"
                     Padding="20,5"
                 Margin="0,0,10,0"
-                    ToolTip="Import the selected custom power plan into the system"/>
+                    ToolTip="Import the selected custom .pow file into Windows"/>
             <Button Command="{Binding AddCustomPlanFileCommand}"
                 Content="Add .pow File"
                 Padding="20,5"

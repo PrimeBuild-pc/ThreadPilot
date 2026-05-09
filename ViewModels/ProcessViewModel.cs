@@ -53,7 +53,6 @@ namespace ThreadPilot.ViewModels
         private bool isApplyingFilter;
         private bool filterRefreshPending;
         private bool suppressCoreSelectionEvents;
-        private bool hasPendingAffinityEdits;
 
         [ObservableProperty]
         private ObservableCollection<ProcessModel> processes = new();
@@ -86,6 +85,18 @@ namespace ThreadPilot.ViewModels
 
         [ObservableProperty]
         private CoreMask? selectedCoreMask;
+
+        [ObservableProperty]
+        private bool hasPendingAffinityEdits;
+
+        [ObservableProperty]
+        private string currentAffinityText = "Current OS affinity: no process selected";
+
+        [ObservableProperty]
+        private string pendingAffinityText = "Pending core mask: none";
+
+        [ObservableProperty]
+        private string affinityEditStateText = "Select a process to view its current Windows affinity.";
 
         [ObservableProperty]
         private bool isTopologyDetectionSuccessful = false;

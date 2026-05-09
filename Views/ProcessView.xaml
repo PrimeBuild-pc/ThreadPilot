@@ -3,8 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:local="clr-namespace:ThreadPilot.Views"
-             xmlns:helpers="clr-namespace:ThreadPilot.Helpers"
              xmlns:converters="clr-namespace:ThreadPilot.Converters"
              xmlns:Diagnostics="clr-namespace:System.Diagnostics;assembly=System.Diagnostics.Process"
              xmlns:sys="clr-namespace:System;assembly=mscorlib"
@@ -26,378 +24,427 @@
         <sys:Double x:Key="ProcessFontMediumSmall">12</sys:Double>
         <sys:Double x:Key="ProcessFontSmall">11</sys:Double>
     </UserControl.Resources>
-    
+
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Standardized Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
             <TextBlock Text="Process Management" FontSize="{StaticResource ProcessFontLarge}" FontWeight="SemiBold" Margin="0,0,0,4"/>
             <TextBlock Text="Search, filter, and control active process configurations" FontSize="{StaticResource ProcessFontMedium}" Opacity="0.7"/>
         </StackPanel>
 
-        <!-- Search and Refresh Controls Filter Grid -->
-        <Border Grid.Row="1" Background="{DynamicResource ControlFillColorDefaultBrush}" Padding="16" BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Margin="0,0,0,12">
-            <Grid>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="360"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="12"/>
-                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <!-- Search and Basic Controls -->
-                 <Grid Grid.Row="0">
-                     <Grid.ColumnDefinitions>
-                         <ColumnDefinition Width="*"/>
-                         <ColumnDefinition Width="16"/>
-                         <ColumnDefinition Width="Auto"/>
-                         <ColumnDefinition Width="16"/>
-                         <ColumnDefinition Width="Auto"/>
-                         <ColumnDefinition Width="8"/>
-                         <ColumnDefinition Width="Auto"/>
-                     </Grid.ColumnDefinitions>
-
-                     <TextBox Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" ToolTip="Search processes by name" HorizontalAlignment="Stretch" AutomationProperties.Name="Process search" />
-                     <CheckBox Grid.Column="2" Content="Active Apps Only" IsChecked="{Binding ShowActiveApplicationsOnly}" VerticalAlignment="Center" ToolTip="Show only applications with visible windows"/>
-                     <Button Grid.Column="4" Command="{Binding LoadProcessesCommand}" Content="Refresh" ToolTip="Refresh the process list" AutomationProperties.Name="Refresh processes"/>
-                     <Button Grid.Column="6" Command="{Binding LoadMoreProcessesCommand}" Content="Load More" Visibility="{Binding HasMoreBatches, Converter={StaticResource BoolToVisibilityConverter}}" ToolTip="Load more processes" AutomationProperties.Name="Load more processes"/>
-                 </Grid>
-
-                <!-- Smart Filtering Controls -->
-                <WrapPanel Grid.Row="2" Orientation="Horizontal">
-                    <CheckBox Content="Hide System Processes"
-                              IsChecked="{Binding HideSystemProcesses}"
-                              Margin="0,0,15,0"
-                              VerticalAlignment="Center"
-                              ToolTip="Hide Windows system processes"/>
-                    <CheckBox Content="Hide Idle Processes"
-                              IsChecked="{Binding HideIdleProcesses}"
-                              Margin="0,0,15,0"
-                              VerticalAlignment="Center"
-                              ToolTip="Hide processes with very low CPU usage"/>
-                    <TextBlock Text="Sort by:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                    <ComboBox SelectedValue="{Binding SortMode}"
-                              SelectedValuePath="Tag"
-                              Width="120"
-                              VerticalAlignment="Center"
-                              ToolTip="Choose how to sort the process list">
-                        <ComboBoxItem Content="CPU Usage" Tag="CpuUsage"/>
-                        <ComboBoxItem Content="Memory Usage" Tag="MemoryUsage"/>
-                        <ComboBoxItem Content="Process Name" Tag="Name"/>
-                        <ComboBoxItem Content="Process ID" Tag="ProcessId"/>
-                    </ComboBox>
-                </WrapPanel>
-            </Grid>
-        </Border>
-
-        <!-- Process List with Loading Overlay -->
-        <Grid Grid.Row="2">
-            <DataGrid ItemsSource="{Binding FilteredProcesses}"
-                      SelectedItem="{Binding SelectedProcess}"
-                      AutoGenerateColumns="False"
-                      IsReadOnly="True"
-                      SelectionMode="Single"
-                      GridLinesVisibility="Horizontal"
-                      HeadersVisibility="Column"
-                      CanUserResizeColumns="True"
-                      CanUserSortColumns="True"
-                      Margin="0,0,0,10"
-                      VirtualizingPanel.IsVirtualizing="True"
-                      VirtualizingPanel.VirtualizationMode="Recycling"
-                      VirtualizingPanel.ScrollUnit="Item"
-                      EnableRowVirtualization="True"
-                      EnableColumnVirtualization="True"
-                      ScrollViewer.CanContentScroll="True"
-                      AutomationProperties.Name="Running process list"
-                      AutomationProperties.HelpText="Virtualized process table with sorting and selection">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="150"/>
-                    <DataGridTextColumn Header="ID" Binding="{Binding ProcessId}" Width="60"/>
-                    <DataGridTextColumn Header="Window Title" Binding="{Binding MainWindowTitle}" Width="200"/>
-                    <DataGridCheckBoxColumn Header="Has Window" Binding="{Binding HasVisibleWindow}" Width="80"/>
-                    <DataGridTextColumn Header="CPU Usage" Binding="{Binding CpuUsage, StringFormat={}{0:N1}%}" Width="80"/>
-                    <DataGridTextColumn Header="Memory (MB)"
-                                      Binding="{Binding MemoryUsage, Converter={StaticResource BytesToMbConverter}}"
-                                      Width="80"/>
-                    <DataGridTextColumn Header="Priority" Binding="{Binding Priority}" Width="*"/>
-                </DataGrid.Columns>
-            </DataGrid>
-
-            <!-- Progressive Loading Indicator -->
-            <Border Background="{DynamicResource OverlayBrush}" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <ProgressBar Value="{Binding LoadingProgress}" Maximum="100" Width="200" Height="20" Margin="0,0,0,10"/>
-                    <TextBlock Text="{Binding LoadingStatusText}" HorizontalAlignment="Center" FontWeight="Bold"/>
-                </StackPanel>
-            </Border>
-
-            <!-- Virtualization Status -->
-            <Border Background="{DynamicResource InfoBackgroundBrush}" BorderBrush="{DynamicResource InfoBorderBrush}" BorderThickness="1"
-                    Visibility="{Binding IsVirtualizationEnabled, Converter={StaticResource BoolToVisibilityConverter}}"
-                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="10" Padding="5">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="📊" FontSize="{StaticResource ProcessFontMediumSmall}" Margin="0,0,3,0"/>
-                    <TextBlock FontSize="{StaticResource ProcessFontSmall}" Foreground="{DynamicResource InfoTextBrush}">
-                        <Run Text="Batch:"/>
-                        <Run Text="{Binding CurrentBatchIndex, StringFormat={}{0:N0}}"/>
-                        <Run Text="/"/>
-                        <Run Text="{Binding TotalBatches, StringFormat={}{0:N0}}"/>
-                        <Run Text="("/>
-                        <Run Text="{Binding TotalProcessCount, StringFormat={}{0:N0}}"/>
-                        <Run Text="total)"/>
-                    </TextBlock>
-                </StackPanel>
-            </Border>
-        </Grid>
-
-        <!-- Process Controls -->
-        <Grid Grid.Row="3">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-                
-            <Grid Grid.Row="0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="2*"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- Priority Controls -->
-                <GroupBox Grid.Column="0" Header="Process Priority" Margin="0,0,5,0">
-                    <StackPanel Margin="5">
-                        <ComboBox x:Name="PriorityComboBox"
-                                  SelectedValue="{Binding SelectedProcess.Priority, Mode=TwoWay}"
-                                  SelectedValuePath="Tag"
-                                  Margin="0,0,0,5"
-                                  IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}">
-                            <ComboBoxItem Content="Realtime" Tag="{x:Static Diagnostics:ProcessPriorityClass.RealTime}"/>
-                            <ComboBoxItem Content="High" Tag="{x:Static Diagnostics:ProcessPriorityClass.High}"/>
-                            <ComboBoxItem Content="Above Normal" Tag="{x:Static Diagnostics:ProcessPriorityClass.AboveNormal}"/>
-                            <ComboBoxItem Content="Normal" Tag="{x:Static Diagnostics:ProcessPriorityClass.Normal}"/>
-                            <ComboBoxItem Content="Below Normal" Tag="{x:Static Diagnostics:ProcessPriorityClass.BelowNormal}"/>
-                            <ComboBoxItem Content="Idle" Tag="{x:Static Diagnostics:ProcessPriorityClass.Idle}"/>
-                        </ComboBox>
-                        <Button Command="{Binding SetPriorityCommand}"
-                                CommandParameter="{Binding ElementName=PriorityComboBox, Path=SelectedValue}"
-                                Content="Set Priority"
-                                Padding="10,5"
-                                Margin="0,0,0,5"
-                                IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
-                                ToolTip="Apply the selected priority to the process"/>
-
-                        <!-- Registry Priority Enforcement -->
-                        <CheckBox Content="Enforce Priority by Registry"
-                                  IsChecked="{Binding IsRegistryPriorityEnabled}"
-                                  IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
-                                  Margin="0,0,0,5"
-                                  ToolTip="Apply priority through Windows registry. Process must be restarted for changes to take effect. This setting persists across system reboots."/>
-
-                        <!-- Disable Idle Server -->
-                        <CheckBox Content="Disable Idle Server"
-                                  IsChecked="{Binding IsIdleServerDisabled}"
-                                  IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
-                                  ToolTip="Prevents the system from entering idle state while this process is running. Useful for games and performance-critical applications."/>
-                    </StackPanel>
-                </GroupBox>
-
-                <!-- CPU Mask Selection -->
-                <GroupBox Grid.Column="1" Header="CPU Mask" Margin="5,0,5,0">
-                    <Grid Margin="5" MinHeight="148">
+                <Border Grid.Row="0"
+                        Background="{DynamicResource ControlFillColorDefaultBrush}"
+                        Padding="16"
+                        BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Margin="0,0,0,12">
+                    <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="12"/>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0"
-                                   Text="Quick apply a predefined CPU mask:"
-                                   FontSize="{StaticResource ProcessFontSmall}"
-                                   Margin="0,0,0,5"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
-                        <ComboBox Grid.Row="1"
-                                  ItemsSource="{Binding AvailableCoreMasks}"
-                                  SelectedItem="{Binding SelectedCoreMask, Mode=TwoWay}"
-                                  Margin="0,0,0,8">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="0,0,8,0"/>
-                                        <TextBlock Text="{Binding SelectedCoreCount, StringFormat='({0} CPUs)'}"
-                                                   FontSize="{StaticResource ProcessFontSmall}"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                                   VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="Search processes by name"
+                                     HorizontalAlignment="Stretch"
+                                     AutomationProperties.Name="Process search"/>
+                            <CheckBox Grid.Column="2"
+                                      Content="Active Apps Only"
+                                      IsChecked="{Binding ShowActiveApplicationsOnly}"
+                                      VerticalAlignment="Center"
+                                      ToolTip="Show only applications with visible windows"/>
+                            <Button Grid.Column="4"
+                                    Command="{Binding LoadProcessesCommand}"
+                                    Content="Refresh"
+                                    ToolTip="Refresh the process list"
+                                    AutomationProperties.Name="Refresh processes"/>
+                            <Button Grid.Column="6"
+                                    Command="{Binding LoadMoreProcessesCommand}"
+                                    Content="Load More"
+                                    Visibility="{Binding HasMoreBatches, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    ToolTip="Load more processes"
+                                    AutomationProperties.Name="Load more processes"/>
+                        </Grid>
 
-                        <Button Grid.Row="2"
-                                Command="{Binding CreateCustomMaskCommand}"
-                                Padding="8,6"
-                                Margin="0,0,0,0"
-                                ToolTip="Open CPU Masks tab to create a new custom mask">
-                            <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="Add12" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Create Custom Mask"
-                                           FontSize="{StaticResource ProcessFontMediumSmall}"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
+                        <WrapPanel Grid.Row="2" Orientation="Horizontal">
+                            <CheckBox Content="Hide System Processes"
+                                      IsChecked="{Binding HideSystemProcesses}"
+                                      Margin="0,0,15,0"
+                                      VerticalAlignment="Center"
+                                      ToolTip="Hide Windows system processes"/>
+                            <CheckBox Content="Hide Idle Processes"
+                                      IsChecked="{Binding HideIdleProcesses}"
+                                      Margin="0,0,15,0"
+                                      VerticalAlignment="Center"
+                                      ToolTip="Hide processes with very low CPU usage"/>
+                            <TextBlock Text="Sort by:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <ComboBox SelectedValue="{Binding SortMode}"
+                                      SelectedValuePath="Tag"
+                                      Width="120"
+                                      VerticalAlignment="Center"
+                                      ToolTip="Choose how to sort the process list">
+                                <ComboBoxItem Content="CPU Usage" Tag="CpuUsage"/>
+                                <ComboBoxItem Content="Memory Usage" Tag="MemoryUsage"/>
+                                <ComboBoxItem Content="Process Name" Tag="Name"/>
+                                <ComboBoxItem Content="Process ID" Tag="ProcessId"/>
+                            </ComboBox>
+                        </WrapPanel>
                     </Grid>
-                </GroupBox>
+                </Border>
 
-                <!-- Advanced CPU Affinity Controls -->
-                <GroupBox Grid.Column="2" Header="Advanced CPU Affinity" Margin="5,0,0,0">
-                    <Grid Margin="5">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
+                <Grid Grid.Row="1">
+                    <DataGrid ItemsSource="{Binding FilteredProcesses}"
+                              SelectedItem="{Binding SelectedProcess}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              SelectionMode="Single"
+                              GridLinesVisibility="Horizontal"
+                              HeadersVisibility="Column"
+                              CanUserResizeColumns="True"
+                              CanUserSortColumns="True"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
+                              VirtualizingPanel.ScrollUnit="Item"
+                              EnableRowVirtualization="True"
+                              EnableColumnVirtualization="True"
+                              ScrollViewer.CanContentScroll="True"
+                              AutomationProperties.Name="Running process list"
+                              AutomationProperties.HelpText="Virtualized process table with sorting and selection">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="160"/>
+                            <DataGridTextColumn Header="ID" Binding="{Binding ProcessId}" Width="70"/>
+                            <DataGridTextColumn Header="Window Title" Binding="{Binding MainWindowTitle}" Width="220"/>
+                            <DataGridCheckBoxColumn Header="Has Window" Binding="{Binding HasVisibleWindow}" Width="90"/>
+                            <DataGridTextColumn Header="CPU Usage" Binding="{Binding CpuUsage, StringFormat={}{0:N1}%}" Width="90"/>
+                            <DataGridTextColumn Header="Memory (MB)"
+                                                Binding="{Binding MemoryUsage, Converter={StaticResource BytesToMbConverter}}"
+                                                Width="90"/>
+                            <DataGridTextColumn Header="Priority" Binding="{Binding Priority}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
 
-                        <!-- Topology Status and HyperThreading Status -->
-                        <StackPanel Grid.Row="0" Orientation="Vertical" Margin="0,0,0,5">
-                            <TextBlock Text="{Binding TopologyStatus}"
-                                       FontSize="{StaticResource ProcessFontSmall}"
-                                       Foreground="{Binding IsTopologyDetectionSuccessful, Converter={StaticResource BoolToColorConverter}}"/>
-                            <TextBlock Text="{Binding HyperThreadingStatusText}"
-                                       FontSize="{StaticResource ProcessFontSmall}"
-                                       Margin="0,2,0,0"
-                                       Foreground="{Binding IsHyperThreadingActive, Converter={StaticResource BoolToColorConverter}}"
-                                       ToolTip="Shows whether Hyper-Threading (Intel) or SMT (AMD) is present and active on this system"/>
+                    <Border Background="{DynamicResource OverlayBrush}" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <ProgressBar Value="{Binding LoadingProgress}" Maximum="100" Width="200" Height="20" Margin="0,0,0,10"/>
+                            <TextBlock Text="{Binding LoadingStatusText}" HorizontalAlignment="Center" FontWeight="Bold"/>
                         </StackPanel>
+                    </Border>
 
-                        <!-- CPU Core Grid -->
-                        <ScrollViewer Grid.Row="1"
-                                      MaxHeight="120"
-                                      VerticalScrollBarVisibility="Auto"
-                                      HorizontalScrollBarVisibility="Disabled"
-                                      Margin="0,0,0,5">
-                            <ItemsControl ItemsSource="{Binding CpuCores}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel Orientation="Horizontal"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <CheckBox Content="{Binding Label}"
-                                                  IsChecked="{Binding IsSelected, Mode=OneWay}"
-                                                  IsHitTestVisible="False"
-                                                  Focusable="False"
-                                                  IsEnabled="{Binding IsEnabled}"
-                                                  Margin="2"
-                                                  FontSize="{StaticResource ProcessFontSmall}"
-                                                  Foreground="{DynamicResource TextPrimaryBrush}"
-                                                  ToolTip="Read-only - modify CPUs in CPU Mask tab">
-                                        </CheckBox>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                    </Grid>
-                </GroupBox>
-            </Grid>
-
-            <!-- Profile Management & Rule Save -->
-            <GroupBox Grid.Row="1" Header="Profile Management &amp; Rule Save" Margin="0,10,0,0">
-                <Grid Margin="5">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <!-- Profile Management Row -->
-                    <Grid Grid.Row="0" Margin="0,0,0,10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBox Grid.Column="0"
-                                Text="{Binding ProfileName, UpdateSourceTrigger=PropertyChanged}"
-                                Margin="0,0,10,0"
-                                ToolTip="Enter a profile name to save current settings"/>
-                        <Button Grid.Column="1"
-                                Command="{Binding SaveProfileCommand}"
-                                Content="Save Profile"
-                                Padding="10,5"
-                                Margin="0,0,5,0"
-                                ToolTip="Save current CPU affinity and priority as a reusable profile"/>
-                        <Button Grid.Column="2"
-                                Command="{Binding LoadProfileCommand}"
-                                Content="Load Profile"
-                                Padding="10,5"
-                                ToolTip="Load a previously saved profile"/>
-                    </Grid>
-
-                    <!-- Rule Save Row -->
-                    <Grid Grid.Row="1">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Grid.Column="0"
-                                   VerticalAlignment="Center"
-                                   TextWrapping="Wrap"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   FontSize="{StaticResource ProcessFontMediumSmall}">
-                            <Run Text="💾 Save current settings (CPU mask, priority) as an automatic rule for this process"/>
-                        </TextBlock>
-                        <Button Grid.Column="1"
-                                Command="{Binding SaveCurrentAsAssociationCommand}"
-                                Content="💾 Save as Rule"
-                                Padding="12,6"
-                                FontWeight="SemiBold"
-                                IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
-                                ToolTip="Save current process settings as a rule. These settings will be automatically applied when this process starts in the future."/>
-                    </Grid>
-
-                    <Border Grid.Row="2"
-                            Margin="0,10,0,0"
-                            Padding="10,7"
-                            CornerRadius="6"
+                    <Border Background="{DynamicResource InfoBackgroundBrush}"
+                            BorderBrush="{DynamicResource InfoBorderBrush}"
                             BorderThickness="1"
-                            Opacity="{Binding StatusOpacity}"
-                            Visibility="{Binding StatusMessage, Converter={x:Static converters:StringToVisibilityConverter.Instance}}">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Background" Value="{DynamicResource SuccessBackgroundBrush}"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource SuccessBorderBrush}"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding HasError}" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource ErrorBackgroundBrush}"/>
-                                        <Setter Property="BorderBrush" Value="{DynamicResource ErrorBorderBrush}"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <TextBlock Text="{Binding StatusMessage}">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding HasError}" Value="True">
-                                            <Setter Property="Foreground" Value="{DynamicResource ErrorTextBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
+                            Visibility="{Binding IsVirtualizationEnabled, Converter={StaticResource BoolToVisibilityConverter}}"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Bottom"
+                            Margin="10"
+                            Padding="6"
+                            CornerRadius="4">
+                        <TextBlock FontSize="{StaticResource ProcessFontSmall}" Foreground="{DynamicResource InfoTextBrush}">
+                            <Run Text="Batch "/>
+                            <Run Text="{Binding CurrentBatchIndex, StringFormat={}{0:N0}}"/>
+                            <Run Text="/"/>
+                            <Run Text="{Binding TotalBatches, StringFormat={}{0:N0}}"/>
+                            <Run Text=" ("/>
+                            <Run Text="{Binding TotalProcessCount, StringFormat={}{0:N0}}"/>
+                            <Run Text=" total)"/>
                         </TextBlock>
                     </Border>
                 </Grid>
-            </GroupBox>
+            </Grid>
+
+            <Border Grid.Column="2"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="14">
+                        <TextBlock Text="Selected Process"
+                                   FontSize="{StaticResource ProcessFontMedium}"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,8"/>
+
+                        <Border Padding="10"
+                                CornerRadius="6"
+                                BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="{Binding SelectedProcess.Name, TargetNullValue=No process selected}"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock FontSize="{StaticResource ProcessFontSmall}" Foreground="{DynamicResource TextSecondaryBrush}">
+                                    <Run Text="PID "/>
+                                    <Run Text="{Binding SelectedProcess.ProcessId, TargetNullValue=-}"/>
+                                    <Run Text="  Priority "/>
+                                    <Run Text="{Binding SelectedProcess.Priority, TargetNullValue=-}"/>
+                                </TextBlock>
+                                <TextBlock Text="{Binding SelectedProcess.MainWindowTitle, TargetNullValue=Select a process from the table to enable actions.}"
+                                           FontSize="{StaticResource ProcessFontSmall}"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <GroupBox Header="Affinity" Margin="0,0,0,12">
+                            <StackPanel Margin="8">
+                                <TextBlock Text="{Binding CurrentAffinityText}"
+                                           FontSize="{StaticResource ProcessFontSmall}"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           TextWrapping="Wrap"
+                                           ToolTip="Affinity currently reported by Windows for the selected process"/>
+                                <TextBlock Text="{Binding PendingAffinityText}"
+                                           FontSize="{StaticResource ProcessFontSmall}"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,3,0,0"
+                                           ToolTip="Affinity staged in the UI. It is not applied until Apply Affinity is clicked."/>
+                                <TextBlock Text="{Binding AffinityEditStateText}"
+                                           FontSize="{StaticResource ProcessFontSmall}"
+                                           Foreground="{DynamicResource WarningTextBrush}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,3,0,10"/>
+
+                                <TextBlock Text="Pending core mask" FontSize="{StaticResource ProcessFontSmall}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding AvailableCoreMasks}"
+                                          SelectedItem="{Binding SelectedCoreMask, Mode=TwoWay}"
+                                          IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
+                                          Margin="0,0,0,8"
+                                          ToolTip="Select a mask to stage it. This does not change OS affinity until Apply Affinity is clicked.">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                                                <TextBlock Text="{Binding SelectedCoreCount, StringFormat='({0} CPUs)'}"
+                                                           FontSize="{StaticResource ProcessFontSmall}"
+                                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+
+                                <TextBlock Text="{Binding TopologyStatus}"
+                                           FontSize="{StaticResource ProcessFontSmall}"
+                                           Foreground="{Binding IsTopologyDetectionSuccessful, Converter={StaticResource BoolToColorConverter}}"/>
+                                <TextBlock Text="{Binding HyperThreadingStatusText}"
+                                           FontSize="{StaticResource ProcessFontSmall}"
+                                           Margin="0,2,0,6"
+                                           Foreground="{Binding IsHyperThreadingActive, Converter={StaticResource BoolToColorConverter}}"
+                                           ToolTip="Shows whether Hyper-Threading (Intel) or SMT (AMD) is present and active on this system"/>
+
+                                <ScrollViewer MaxHeight="92"
+                                              VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Disabled"
+                                              Margin="0,0,0,8">
+                                    <ItemsControl ItemsSource="{Binding CpuCores}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel Orientation="Horizontal"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <CheckBox Content="{Binding Label}"
+                                                          IsChecked="{Binding IsSelected, Mode=OneWay}"
+                                                          IsHitTestVisible="False"
+                                                          Focusable="False"
+                                                          IsEnabled="{Binding IsEnabled}"
+                                                          Margin="2"
+                                                          FontSize="{StaticResource ProcessFontSmall}"
+                                                          Foreground="{DynamicResource TextPrimaryBrush}"
+                                                          ToolTip="Read-only preview of current or pending CPU selection"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0"
+                                            Command="{Binding SetAffinityCommand}"
+                                            Content="Apply Affinity"
+                                            Padding="10,6"
+                                            IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
+                                            ToolTip="Apply the pending core mask to the selected process and verify the Windows affinity state"/>
+                                    <Button Grid.Column="2"
+                                            Command="{Binding CreateCustomMaskCommand}"
+                                            Padding="8,6"
+                                            ToolTip="Open CPU Masks tab to create a new custom mask">
+                                        <StackPanel Orientation="Horizontal">
+                                            <ui:SymbolIcon Symbol="Add12" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Custom" FontSize="{StaticResource ProcessFontMediumSmall}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Priority" Margin="0,0,0,12">
+                            <StackPanel Margin="8">
+                                <ComboBox x:Name="PriorityComboBox"
+                                          SelectedValue="{Binding SelectedProcess.Priority, Mode=TwoWay}"
+                                          SelectedValuePath="Tag"
+                                          Margin="0,0,0,6"
+                                          IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}">
+                                    <ComboBoxItem Content="Realtime" Tag="{x:Static Diagnostics:ProcessPriorityClass.RealTime}"/>
+                                    <ComboBoxItem Content="High" Tag="{x:Static Diagnostics:ProcessPriorityClass.High}"/>
+                                    <ComboBoxItem Content="Above Normal" Tag="{x:Static Diagnostics:ProcessPriorityClass.AboveNormal}"/>
+                                    <ComboBoxItem Content="Normal" Tag="{x:Static Diagnostics:ProcessPriorityClass.Normal}"/>
+                                    <ComboBoxItem Content="Below Normal" Tag="{x:Static Diagnostics:ProcessPriorityClass.BelowNormal}"/>
+                                    <ComboBoxItem Content="Idle" Tag="{x:Static Diagnostics:ProcessPriorityClass.Idle}"/>
+                                </ComboBox>
+                                <Button Command="{Binding SetPriorityCommand}"
+                                        CommandParameter="{Binding ElementName=PriorityComboBox, Path=SelectedValue}"
+                                        Content="Set Priority"
+                                        Padding="10,6"
+                                        Margin="0,0,0,8"
+                                        IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
+                                        ToolTip="Apply the selected priority to the process"/>
+                                <CheckBox Content="Enforce Priority by Registry"
+                                          IsChecked="{Binding IsRegistryPriorityEnabled}"
+                                          IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
+                                          Margin="0,0,0,6"
+                                          ToolTip="Apply priority through Windows registry. Process must be restarted for changes to take effect. This setting persists across system reboots."/>
+                                <CheckBox Content="Disable Idle Server"
+                                          IsChecked="{Binding IsIdleServerDisabled}"
+                                          IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
+                                          ToolTip="Prevents the system from entering idle state while this process is running. Useful for games and performance-critical applications."/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Power Plan / Quick Apply" Margin="0,0,0,12">
+                            <StackPanel Margin="8">
+                                <TextBlock Text="Selected power plan"
+                                           FontSize="{StaticResource ProcessFontSmall}"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding PowerPlans}"
+                                          SelectedItem="{Binding SelectedPowerPlan, Mode=TwoWay}"
+                                          DisplayMemberPath="Name"
+                                          Margin="0,0,0,8"
+                                          ToolTip="Choose the power plan to activate manually or include with quick apply"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0"
+                                            Command="{Binding SetPowerPlanCommand}"
+                                            Content="Set Power Plan"
+                                            Padding="10,6"
+                                            ToolTip="Activate the selected Windows power plan"/>
+                                    <Button Grid.Column="2"
+                                            Command="{Binding QuickApplyAffinityAndPowerPlanCommand}"
+                                            Content="Quick Apply"
+                                            Padding="10,6"
+                                            IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
+                                            ToolTip="Apply pending affinity and selected power plan to the selected process"/>
+                                </Grid>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Profile / Rule" Margin="0,0,0,12">
+                            <StackPanel Margin="8">
+                                <TextBox Text="{Binding ProfileName, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,0,0,8"
+                                         ToolTip="Enter a profile name to save or load settings"/>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0"
+                                            Command="{Binding SaveProfileCommand}"
+                                            Content="Save Profile"
+                                            Padding="10,6"
+                                            ToolTip="Save current CPU affinity and priority as a reusable profile"/>
+                                    <Button Grid.Column="2"
+                                            Command="{Binding LoadProfileCommand}"
+                                            Content="Load Profile"
+                                            Padding="10,6"
+                                            ToolTip="Load a previously saved profile"/>
+                                </Grid>
+                                <Button Command="{Binding SaveCurrentAsAssociationCommand}"
+                                        Content="Save as Rule"
+                                        Padding="10,6"
+                                        FontWeight="SemiBold"
+                                        IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
+                                        ToolTip="Save current process settings as a rule. These settings will be automatically applied when this process starts in the future."/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <Border Padding="10,7"
+                                CornerRadius="6"
+                                BorderThickness="1"
+                                Opacity="{Binding StatusOpacity}"
+                                Visibility="{Binding StatusMessage, Converter={x:Static converters:StringToVisibilityConverter.Instance}}">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="{DynamicResource SuccessBackgroundBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource SuccessBorderBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasError}" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource ErrorBackgroundBrush}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource ErrorBorderBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasError}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource ErrorTextBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
         </Grid>
     </Grid>
 </UserControl>

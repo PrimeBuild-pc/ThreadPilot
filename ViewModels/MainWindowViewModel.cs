@@ -37,7 +37,7 @@ namespace ThreadPilot
         private bool isProcessMonitoringActive = false;
 
         [ObservableProperty]
-        private string processMonitoringStatusText = "Process Monitoring: Inactive";
+        private string processMonitoringStatusText = "Automation Monitoring: Inactive";
 
         [ObservableProperty]
         private bool isRunningAsAdministrator = false;
@@ -109,14 +109,14 @@ namespace ThreadPilot
                 if (this.IsProcessMonitoringActive)
                 {
                     await this.processMonitorManagerService.StopAsync();
-                    await this.LogUserActionAsync("ProcessMonitoring", "Stopped process monitoring", "User action");
+                    await this.LogUserActionAsync("ProcessMonitoring", "Stopped automation monitoring", "User action");
                 }
                 else
                 {
                     await this.processMonitorManagerService.StartAsync();
-                    await this.LogUserActionAsync("ProcessMonitoring", "Started process monitoring", "User action");
+                    await this.LogUserActionAsync("ProcessMonitoring", "Started automation monitoring", "User action");
                 }
-            }, this.IsProcessMonitoringActive ? "Stopping monitoring..." : "Starting monitoring...");
+            }, this.IsProcessMonitoringActive ? "Stopping automation monitoring..." : "Starting automation monitoring...");
         }
 
         [RelayCommand]
@@ -151,8 +151,8 @@ namespace ThreadPilot
                 {
                     this.IsProcessMonitoringActive = this.processMonitorManagerService.IsRunning;
                     this.ProcessMonitoringStatusText = this.IsProcessMonitoringActive
-                        ? "Process Monitoring: Active"
-                        : "Process Monitoring: Inactive";
+                        ? "Automation Monitoring: Active"
+                        : "Automation Monitoring: Inactive";
                 }
 
                 // Update elevation status
@@ -185,7 +185,7 @@ namespace ThreadPilot
             System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 this.IsProcessMonitoringActive = e.IsRunning;
-                this.ProcessMonitoringStatusText = $"Process Monitoring: {e.Status}";
+                this.ProcessMonitoringStatusText = $"Automation Monitoring: {e.Status}";
             });
         }
 
@@ -194,14 +194,14 @@ namespace ThreadPilot
             if (System.Windows.Application.Current.Dispatcher.CheckAccess())
             {
                 this.IsProcessMonitoringActive = isActive;
-                this.ProcessMonitoringStatusText = $"Process Monitoring: {status}";
+                this.ProcessMonitoringStatusText = $"Automation Monitoring: {status}";
             }
             else
             {
                 System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     this.IsProcessMonitoringActive = isActive;
-                    this.ProcessMonitoringStatusText = $"Process Monitoring: {status}";
+                    this.ProcessMonitoringStatusText = $"Automation Monitoring: {status}";
                 });
             }
         }

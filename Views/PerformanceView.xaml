@@ -75,15 +75,15 @@
                         </StackPanel>
 
                         <WrapPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" ItemHeight="32">
-                            <Button Content="Start Monitoring"
+                            <Button Content="Start Live Metrics"
                                     Command="{Binding StartMonitoringCommand}"
                                     IsEnabled="{Binding IsMonitoring, Converter={StaticResource InverseBooleanConverter}}"
-                                    MinWidth="118"
+                                    MinWidth="128"
                                     Margin="0,0,8,0"/>
-                            <Button Content="Stop Monitoring"
+                            <Button Content="Stop Live Metrics"
                                     Command="{Binding StopMonitoringCommand}"
                                     IsEnabled="{Binding IsMonitoring}"
-                                    MinWidth="108"
+                                    MinWidth="120"
                                     Margin="0,0,8,0"/>
                             <Button Content="Refresh"
                                     Command="{Binding RefreshMetricsCommand}"
@@ -124,7 +124,7 @@
                         <StackPanel>
                             <TextBlock Text="Active Processes" Style="{StaticResource LabelTextStyle}"/>
                             <TextBlock Text="{Binding ProcessCountText}" Style="{StaticResource ValueTextStyle}"/>
-                            <TextBlock Text="{Binding MonitoringStateText, StringFormat=Monitoring: {0}}" Style="{StaticResource LabelTextStyle}"/>
+                            <TextBlock Text="{Binding MonitoringStateText, StringFormat=Live metrics: {0}}" Style="{StaticResource LabelTextStyle}"/>
                         </StackPanel>
                     </Border>
 

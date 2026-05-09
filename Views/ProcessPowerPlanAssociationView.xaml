@@ -174,7 +174,7 @@
                                      Margin="0,0,0,10"
                                      ToolTip="Match processes by full path instead of just executable name"/>
 
-                             <TextBlock Text="Power Plan (Global):" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                             <TextBlock Text="Rule Power Plan (global switch):" Margin="0,0,0,5" FontWeight="SemiBold"/>
                              <TextBlock Text="Changing this rule changes the system power plan when matched."
                                         Foreground="{DynamicResource WarningTextBrush}"
                                         FontSize="10"
@@ -185,7 +185,7 @@
                                      DisplayMemberPath="Name"
                                      Padding="5" Margin="0,0,0,10"/>
 
-                            <TextBlock Text="CPU Mask:" Margin="0,0,0,5"/>
+                            <TextBlock Text="Rule CPU Mask:" Margin="0,0,0,5"/>
                             <ComboBox ItemsSource="{Binding AvailableCoreMasks}"
                                      SelectedItem="{Binding SelectedCoreMask}"
                                      DisplayMemberPath="Name"
@@ -237,13 +237,17 @@
                 </Grid>
             </TabItem>
 
-            <!-- Monitoring Configuration Tab -->
-            <TabItem Header="🛰️ Monitoring Configuration">
+            <!-- Automation Monitoring Tab -->
+            <TabItem Header="Automation Monitoring">
                 <ScrollViewer Margin="10">
                     <StackPanel>
                         <!-- Service Control -->
-                        <GroupBox Header="Service Control" Margin="0,0,0,15">
+                        <GroupBox Header="Automation Service" Margin="0,0,0,15">
                             <StackPanel>
+                                <TextBlock Text="Automation monitoring watches process start/stop events and applies configured power plan, CPU mask, and priority rules."
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,10"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                     <TextBlock Text="Status: " VerticalAlignment="Center"/>
                                     <TextBlock Text="{Binding ServiceStatus}"
@@ -252,11 +256,11 @@
                                 </StackPanel>
 
                                 <StackPanel Orientation="Horizontal">
-                                    <Button Content="Start Monitoring"
+                                    <Button Content="Start Automation Monitoring"
                                            Command="{Binding StartMonitoringCommand}"
                                            IsEnabled="{Binding IsServiceRunning, Converter={StaticResource InverseBoolConverter}}"
                                            Padding="15,8" Margin="0,0,10,0"/>
-                                    <Button Content="Stop Monitoring"
+                                    <Button Content="Stop Automation Monitoring"
                                            Command="{Binding StopMonitoringCommand}"
                                            IsEnabled="{Binding IsServiceRunning}"
                                            Padding="15,8"/>
@@ -265,7 +269,7 @@
                         </GroupBox>
 
                         <!-- Default Power Plan -->
-                         <GroupBox Header="Default Power Plan (Global fallback)" Margin="0,0,0,15">
+                         <GroupBox Header="Default Power Plan (fallback when no rule matches)" Margin="0,0,0,15">
                              <StackPanel>
                                  <TextBlock Text="Power plan to use when no associated processes are running:"
                                             Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,10"/>
@@ -281,14 +285,14 @@
                             </StackPanel>
                         </GroupBox>
 
-                        <!-- Monitoring Settings -->
-                        <GroupBox Header="Monitoring Settings" Margin="0,0,0,15">
+                        <!-- Automation Monitoring Settings -->
+                        <GroupBox Header="Automation Monitoring Settings" Margin="0,0,0,15">
                             <StackPanel>
-                                <CheckBox Content="Enable Event-Based Monitoring (WMI)"
+                                <CheckBox Content="Enable Event-Based Automation (WMI)"
                                          IsChecked="{Binding IsEventBasedMonitoringEnabled}"
                                          Margin="0,0,0,10"/>
 
-                                <CheckBox Content="Enable Fallback Polling"
+                                <CheckBox Content="Enable Automation Fallback Polling"
                                          IsChecked="{Binding IsFallbackPollingEnabled}"
                                          Margin="0,0,0,10"/>
 
