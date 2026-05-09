@@ -382,33 +382,9 @@ jobs:
           test -f "sbom/manifest.spdx.json" || { echo "Missing SBOM manifest"; exit 1; }
 
       - name: Install git-cliff
-        shell: bash
-        env:
-          GIT_CLIFF_VERSION: "2.10.0"
-        run: |
-          set -euo pipefail
-
-          archive="git-cliff-${GIT_CLIFF_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
-          checksums="git-cliff-${GIT_CLIFF_VERSION}-checksums.txt"
-          base_url="https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}"
-
-          curl -fsSL "$base_url/$archive" -o "$archive"
-          curl -fsSL "$base_url/$checksums" -o "$checksums"
-
-          grep "  ${archive}$" "$checksums" > expected-checksum.txt
-          sha256sum --check expected-checksum.txt
-
-          temp_dir="$(mktemp -d)"
-          tar -xzf "$archive" -C "$temp_dir"
-
-          binary_path="$(find "$temp_dir" -type f -name git-cliff | head -n 1)"
-          if [ -z "$binary_path" ]; then
-            echo "Unable to locate git-cliff binary after extraction"
-            exit 1
-          fi
-
-          sudo install -m 0755 "$binary_path" /usr/local/bin/git-cliff
-          git-cliff --version
+        uses: taiki-e/install-action@v2
+        with:
+          tool: git-cliff@2.10.0
 
       - name: Generate changelog
         id: git-cliff
