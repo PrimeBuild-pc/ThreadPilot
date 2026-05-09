@@ -104,10 +104,12 @@ namespace ThreadPilot.Services
             services.AddSingleton<IPassiveProcessErrorThrottle, PassiveProcessErrorThrottle>();
             services.AddSingleton<IProcessClassifier, ProcessClassifier>();
             services.AddSingleton<IProcessService, ProcessService>();
+            services.AddSingleton<IAffinityApplyService, AffinityApplyService>();
             services.AddSingleton<ProcessFilterService>();
             services.AddSingleton<IVirtualizedProcessService, VirtualizedProcessService>();
             services.AddSingleton<IConditionalProfileService, ConditionalProfileService>();
             services.AddSingleton<IPowerPlanService, PowerPlanService>();
+            services.AddSingleton<PowerPlanTransitionGate>();
             services.AddSingleton<ICpuTopologyService, CpuTopologyService>();
 
             // CoreMaskService needs IServiceProvider for checking profile references

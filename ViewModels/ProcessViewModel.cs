@@ -26,6 +26,7 @@ namespace ThreadPilot.ViewModels
     using CommunityToolkit.Mvvm.ComponentModel;
     using CommunityToolkit.Mvvm.Input;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Logging.Abstractions;
     using ThreadPilot.Models;
     using ThreadPilot.Services;
 
@@ -43,6 +44,7 @@ namespace ThreadPilot.ViewModels
         private readonly ICoreMaskService coreMaskService;
         private readonly IProcessPowerPlanAssociationService associationService;
         private readonly IGameModeService gameModeService;
+        private readonly IAffinityApplyService affinityApplyService;
         private System.Timers.Timer? refreshTimer;
         private bool isUiRefreshPaused;
         private bool isProcessViewActive = true;
@@ -163,6 +165,7 @@ namespace ThreadPilot.ViewModels
             ICoreMaskService coreMaskService,
             IProcessPowerPlanAssociationService associationService,
             IGameModeService gameModeService,
+            IAffinityApplyService? affinityApplyService = null,
             IEnhancedLoggingService? enhancedLoggingService = null)
             : base(logger, enhancedLoggingService)
         {
@@ -176,6 +179,10 @@ namespace ThreadPilot.ViewModels
             this.coreMaskService = coreMaskService ?? throw new ArgumentNullException(nameof(coreMaskService));
             this.associationService = associationService ?? throw new ArgumentNullException(nameof(associationService));
             this.gameModeService = gameModeService ?? throw new ArgumentNullException(nameof(gameModeService));
+            this.affinityApplyService = affinityApplyService ?? new AffinityApplyService(
+                this.processService,
+                this.cpuTopologyService,
+                NullLogger<AffinityApplyService>.Instance);
 
             // Subscribe to topology detection events
             this.cpuTopologyService.TopologyDetected += this.OnTopologyDetected;

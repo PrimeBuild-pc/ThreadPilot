@@ -657,7 +657,8 @@ namespace ThreadPilot.ViewModels
         [RelayCommand]
         private async Task SetAffinity()
         {
-            if (this.SelectedProcess == null)
+            var selectedProcess = this.SelectedProcess;
+            if (selectedProcess == null)
             {
                 return;
             }
@@ -665,65 +666,55 @@ namespace ThreadPilot.ViewModels
             try
             {
                 var affinityMask = this.CalculateAffinityMask();
-                if (affinityMask == 0)
-                {
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
-                    {
-                        this.SetStatus("Please select at least one CPU core", false);
-                    });
-                    return;
-                }
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    this.SetStatus($"Setting affinity for {this.SelectedProcess.Name}...");
+                    this.SetStatus($"Setting affinity for {selectedProcess.Name}...");
                 });
 
-                // Apply the affinity change
-                await this.processService.SetProcessorAffinity(this.SelectedProcess, affinityMask);
+                var result = await this.affinityApplyService.ApplyAsync(selectedProcess, affinityMask);
 
-                // Immediately refresh the process to get the actual system state
-                await this.processService.RefreshProcessInfo(this.SelectedProcess);
-
-                // Update UI to reflect the actual system affinity (not our calculated one)
-                // This ensures we show what the OS actually set, which may differ from our request
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    this.UpdateCoreSelections(this.SelectedProcess.ProcessorAffinity, true);
-
-                    // Notify UI of all changes
+                    this.UpdateCoreSelections(selectedProcess.ProcessorAffinity, true);
+                    selectedProcess.ForceNotifyProcessorAffinityChanged();
                     this.OnPropertyChanged(nameof(this.SelectedProcess));
 
-                    // Verify the affinity was set correctly
-                    if (this.SelectedProcess.ProcessorAffinity == affinityMask)
+                    if (result.Success)
                     {
-                        this.SetStatus($"Affinity applied successfully to {this.SelectedProcess.Name} (0x{affinityMask:X}).", false);
-                        _ = this.notificationService.ShowNotificationAsync("Affinity applied", $"{this.SelectedProcess.Name}: 0x{affinityMask:X}", NotificationType.Success);
+                        this.hasPendingAffinityEdits = false;
+                        this.SetStatus($"Affinity applied successfully to {selectedProcess.Name} (0x{result.VerifiedMask:X}).", false);
+                        _ = this.notificationService.ShowNotificationAsync("Affinity applied", $"{selectedProcess.Name}: 0x{result.VerifiedMask:X}", NotificationType.Success);
+                    }
+                    else if (result.FailureReason == AffinityApplyFailureReason.VerificationMismatch)
+                    {
+                        this.hasPendingAffinityEdits = false;
+                        this.SetStatus(result.Message, false);
+                        _ = this.notificationService.ShowNotificationAsync("Affinity adjusted", result.Message, NotificationType.Warning);
+                    }
+                    else if (result.FailureReason == AffinityApplyFailureReason.ProcessTerminated)
+                    {
+                        this.SelectedProcess = null;
+                        this.ClearProcessSelection();
+                        this.SetStatus(result.Message, false);
+                        _ = this.notificationService.ShowNotificationAsync("Affinity failed", result.Message, NotificationType.Warning);
+                    }
+                    else if (result.FailureReason == AffinityApplyFailureReason.AccessDenied)
+                    {
+                        this.SetStatus(result.Message, false);
+                        _ = this.notificationService.ShowNotificationAsync("Affinity blocked", result.Message, NotificationType.Warning);
                     }
                     else
                     {
-                        this.SetStatus($"Affinity adjusted by system for {this.SelectedProcess.Name} to 0x{this.SelectedProcess.ProcessorAffinity:X}.", false);
-                        _ = this.notificationService.ShowNotificationAsync("Affinity adjusted", $"{this.SelectedProcess.Name}: 0x{this.SelectedProcess.ProcessorAffinity:X}", NotificationType.Warning);
+                        this.SetStatus(result.Message, false);
+                        _ = this.notificationService.ShowNotificationAsync("Affinity error", result.Message, NotificationType.Error);
                     }
                 });
             }
             catch (Exception ex)
             {
                 var friendly = ex.Message;
-                if (friendly.Contains("access denied", StringComparison.OrdinalIgnoreCase) ||
-                    friendly.Contains("anti-cheat", StringComparison.OrdinalIgnoreCase))
-                {
-                    friendly = "Affinity change blocked (anti-cheat or insufficient privileges).";
-                    _ = this.notificationService.ShowNotificationAsync("Affinity blocked", friendly, NotificationType.Warning);
-                }
-                else if (friendly.Contains("invalid affinity", StringComparison.OrdinalIgnoreCase))
-                {
-                    _ = this.notificationService.ShowNotificationAsync("Affinity invalid", friendly, NotificationType.Error);
-                }
-                else
-                {
-                    _ = this.notificationService.ShowNotificationAsync("Affinity error", friendly, NotificationType.Error);
-                }
+                _ = this.notificationService.ShowNotificationAsync("Affinity error", friendly, NotificationType.Error);
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
@@ -733,11 +724,18 @@ namespace ThreadPilot.ViewModels
                 // Try to refresh process info even if setting failed, to show current state
                 try
                 {
-                    await this.processService.RefreshProcessInfo(this.SelectedProcess);
+                    if (this.SelectedProcess != null)
+                    {
+                        await this.processService.RefreshProcessInfo(this.SelectedProcess);
+                    }
+
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        this.UpdateCoreSelections(this.SelectedProcess.ProcessorAffinity, true);
-                        this.OnPropertyChanged(nameof(this.SelectedProcess));
+                        if (this.SelectedProcess != null)
+                        {
+                            this.UpdateCoreSelections(this.SelectedProcess.ProcessorAffinity, true);
+                            this.OnPropertyChanged(nameof(this.SelectedProcess));
+                        }
                     });
                 }
                 catch
@@ -848,7 +846,8 @@ namespace ThreadPilot.ViewModels
 
         private async Task ApplyCoreMaskToProcessAsync(CoreMask mask)
         {
-            if (this.SelectedProcess == null || mask == null)
+            var selectedProcess = this.SelectedProcess;
+            if (selectedProcess == null || mask == null)
             {
                 return;
             }
@@ -858,7 +857,7 @@ namespace ThreadPilot.ViewModels
             {
                 this.Logger.LogInformation(
                     "Applying mask '{MaskName}' to process {ProcessName} (PID: {ProcessId})",
-                    mask.Name, this.SelectedProcess.Name, this.SelectedProcess.ProcessId);
+                    mask.Name, selectedProcess.Name, selectedProcess.ProcessId);
 
                 // Convert mask to affinity
                 long affinity = mask.ToProcessorAffinity();
@@ -874,34 +873,34 @@ namespace ThreadPilot.ViewModels
                 // Game Mode can interfere with CPU Sets, particularly on AMD systems
                 await this.gameModeService.DisableGameModeForAffinityAsync();
 
-                // Apply affinity using ProcessService (which uses CPU Sets with fallback)
-                await this.processService.SetProcessorAffinity(this.SelectedProcess, affinity);
+                var result = await this.affinityApplyService.ApplyAsync(selectedProcess, affinity);
 
-                // Refresh process info to get actual system state
-                await this.processService.RefreshProcessInfo(this.SelectedProcess);
-
-                // CRITICAL: Force UI updates on UI thread
-                // RefreshProcessInfo runs on background thread, DataGrid won't receive PropertyChanged from non-UI threads
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
-                    // Force PropertyChanged notification for ProcessorAffinity property
-                    // This ensures the DataGrid Affinity column binding updates immediately
-                    this.SelectedProcess.ForceNotifyProcessorAffinityChanged();
-
-                    // Update Advanced CPU Affinity checkboxes to reflect the mask
-                    this.UpdateCoreSelectionsFromMask(mask);
-
-                    // Force complete refresh of SelectedProcess bindings in DataGrid
+                    selectedProcess.ForceNotifyProcessorAffinityChanged();
+                    this.UpdateCoreSelections(selectedProcess.ProcessorAffinity, true);
                     this.OnPropertyChanged(nameof(this.SelectedProcess));
                 });
 
-                this.SetStatus($"Applied mask '{mask.Name}' to {this.SelectedProcess.Name}");
-                this.Logger.LogInformation("Successfully applied mask '{MaskName}' to {ProcessName}", mask.Name, this.SelectedProcess.Name);
+                if (!result.Success)
+                {
+                    this.SetStatus(result.Message);
+                    this.Logger.LogWarning(
+                        "Failed to apply mask '{MaskName}' to process {ProcessName}: {Message}",
+                        mask.Name,
+                        selectedProcess.Name,
+                        result.Message);
+                    return;
+                }
+
+                this.hasPendingAffinityEdits = false;
+                this.SetStatus($"Applied mask '{mask.Name}' to {selectedProcess.Name}");
+                this.Logger.LogInformation("Successfully applied mask '{MaskName}' to {ProcessName}", mask.Name, selectedProcess.Name);
             }
             catch (Exception ex)
             {
                 this.Logger.LogError(ex, "Failed to apply mask '{MaskName}' to process {ProcessName}",
-                    mask.Name, this.SelectedProcess.Name);
+                    mask.Name, selectedProcess.Name);
                 this.SetStatus($"Error applying mask: {ex.Message}");
             }
             finally
@@ -938,7 +937,8 @@ namespace ThreadPilot.ViewModels
         [RelayCommand]
         private async Task QuickApplyAffinityAndPowerPlan()
         {
-            if (this.SelectedProcess == null)
+            var selectedProcess = this.SelectedProcess;
+            if (selectedProcess == null)
             {
                 return;
             }
@@ -947,14 +947,27 @@ namespace ThreadPilot.ViewModels
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    this.SetStatus($"Applying settings to {this.SelectedProcess.Name}...");
+                    this.SetStatus($"Applying settings to {selectedProcess.Name}...");
                 });
 
                 // Apply CPU affinity
                 var affinityMask = this.CalculateAffinityMask();
                 if (affinityMask > 0)
                 {
-                    await this.processService.SetProcessorAffinity(this.SelectedProcess, affinityMask);
+                    var result = await this.affinityApplyService.ApplyAsync(selectedProcess, affinityMask);
+                    if (!result.Success)
+                    {
+                        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            this.UpdateCoreSelections(selectedProcess.ProcessorAffinity, true);
+                            selectedProcess.ForceNotifyProcessorAffinityChanged();
+                            this.OnPropertyChanged(nameof(this.SelectedProcess));
+                            this.SetStatus(result.Message, false);
+                        });
+                        return;
+                    }
+
+                    this.hasPendingAffinityEdits = false;
                 }
 
                 // Apply power plan if selected
@@ -963,17 +976,18 @@ namespace ThreadPilot.ViewModels
                     await this.powerPlanService.SetActivePowerPlan(this.SelectedPowerPlan);
                 }
 
-                await this.processService.RefreshProcessInfo(this.SelectedProcess);
+                await this.processService.RefreshProcessInfo(selectedProcess);
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    this.UpdateCoreSelections(this.SelectedProcess.ProcessorAffinity, true);
+                    this.UpdateCoreSelections(selectedProcess.ProcessorAffinity, true);
+                    selectedProcess.ForceNotifyProcessorAffinityChanged();
                     this.OnPropertyChanged(nameof(this.SelectedProcess));
                 });
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    this.SetStatus($"Quick apply completed for {this.SelectedProcess.Name}.", false);
+                    this.SetStatus($"Quick apply completed for {selectedProcess.Name}.", false);
                 });
             }
             catch (Exception ex)
