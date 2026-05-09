@@ -44,6 +44,8 @@ namespace ThreadPilot.ViewModels
         private readonly IProcessPowerPlanAssociationService associationService;
         private readonly IGameModeService gameModeService;
         private System.Timers.Timer? refreshTimer;
+        private bool isUiRefreshPaused;
+        private bool isProcessViewActive = true;
         private readonly ThrottledRefreshCoordinator searchRefreshCoordinator;
         private readonly ThrottledRefreshCoordinator filterRefreshCoordinator;
         private bool isApplyingFilter;

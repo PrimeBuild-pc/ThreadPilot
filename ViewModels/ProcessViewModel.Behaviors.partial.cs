@@ -49,6 +49,11 @@ namespace ThreadPilot.ViewModels
 
         private void OnBatchLoadProgress(object? sender, BatchLoadProgressEventArgs e)
         {
+            if (this.isUiRefreshPaused || !this.isProcessViewActive)
+            {
+                return;
+            }
+
             _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 this.LoadingProgress = e.ProgressPercentage;
@@ -58,13 +63,9 @@ namespace ThreadPilot.ViewModels
 
         private void OnBackgroundBatchLoaded(object? sender, ProcessBatchResult e)
         {
-            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                // Background batch loaded - could update UI if needed
-                this.Logger.LogDebug(
-                    "Background batch {BatchIndex} loaded with {ProcessCount} processes",
-                    e.BatchIndex, e.Processes.Count);
-            });
+            this.Logger.LogDebug(
+                "Background batch {BatchIndex} loaded with {ProcessCount} processes",
+                e.BatchIndex, e.Processes.Count);
         }
 
         public override async Task InitializeAsync()
@@ -195,24 +196,8 @@ namespace ThreadPilot.ViewModels
                 // Update UI on main thread with fresh data
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
-                    // Update CPU affinity display
-                    // If a Core Mask is selected, show that instead of the process's current affinity
-                    // This ensures visual coherence between selected mask and Advanced CPU Affinity
-                    if (this.SelectedCoreMask != null)
-                    {
-                        this.UpdateCoreSelectionsFromMask(this.SelectedCoreMask);
-                        // Auto-apply the selected mask to the newly selected process
-                        _ = this.ApplyCoreMaskToProcessAsync(this.SelectedCoreMask);
-                    }
-                    else
-                    {
-                        // No mask selected - show process's current affinity
-                        this.UpdateCoreSelections(value.ProcessorAffinity);
-
-                        // Force ProcessorAffinity notification for DataGrid column
-                        // Ensures Affinity column displays the correct current value immediately
-                        value.ForceNotifyProcessorAffinityChanged();
-                    }
+                    this.UpdateCoreSelections(value.ProcessorAffinity);
+                    value.ForceNotifyProcessorAffinityChanged();
 
                     // Update priority display - trigger property change to refresh ComboBox
                     this.OnPropertyChanged(nameof(this.SelectedProcess));
@@ -944,23 +929,14 @@ namespace ThreadPilot.ViewModels
         }
 
         /// <summary>
-        /// Called when a CoreMask is selected from the ComboBox - applies it immediately to the selected process
-        /// Based on CPUSetSetter's OnMaskChanged pattern
+        /// Called when a CoreMask is selected from the ComboBox.
         /// </summary>
         partial void OnSelectedCoreMaskChanged(CoreMask? oldValue, CoreMask? newValue)
         {
             if (newValue == null)
                 return;
 
-            // ALWAYS update Advanced CPU Affinity visual representation to match the selected mask
-            // This ensures UI coherence even when no process is selected
             UpdateCoreSelectionsFromMask(newValue);
-
-            // If a process is selected, apply the mask to it
-            if (SelectedProcess != null)
-            {
-                _ = ApplyCoreMaskToProcessAsync(newValue);
-            }
         }
 
         private async Task ApplyCoreMaskToProcessAsync(CoreMask mask)
@@ -1317,11 +1293,21 @@ namespace ThreadPilot.ViewModels
             this.refreshTimer = new System.Timers.Timer(5000); // PERFORMANCE OPTIMIZATION: Increased to 5 second refresh for better performance
             this.refreshTimer.Elapsed += async (s, e) =>
             {
+                if (this.isUiRefreshPaused || !this.isProcessViewActive)
+                {
+                    return;
+                }
+
                 try
                 {
                     // Marshal timer callback to UI thread to prevent cross-thread access exceptions
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
                     {
+                        if (this.isUiRefreshPaused || !this.isProcessViewActive)
+                        {
+                            return;
+                        }
+
                         await this.RefreshProcessesCommand.ExecuteAsync(null);
                     });
                 }
@@ -1335,34 +1321,85 @@ namespace ThreadPilot.ViewModels
 
         public void PauseRefresh()
         {
-            this.refreshTimer?.Stop();
-            System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                // BUG FIX: Don't set busy state when pausing refresh
-                this.SetStatus("Process monitoring paused (minimized)", false);
-            });
+            this.SetUiRefreshEnabled(false, refreshImmediately: false);
         }
 
         public void ResumeRefresh()
         {
-            this.refreshTimer?.Start();
-            System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                // BUG FIX: Clear busy state when resuming refresh to prevent stuck loading state
-                this.ClearStatus();
-                this.SetStatus("Process monitoring resumed", false);
+            this.SetUiRefreshEnabled(true, refreshImmediately: true);
+        }
 
-                // Clear the status after a short delay to avoid persistent status message
-                _ = Task.Delay(2000).ContinueWith(_ =>
+        public void SetProcessViewActive(bool isActive)
+        {
+            if (this.isProcessViewActive == isActive)
+            {
+                this.virtualizedProcessService.Configuration.EnableBackgroundLoading = isActive && !this.isUiRefreshPaused;
+                return;
+            }
+
+            this.isProcessViewActive = isActive;
+            this.virtualizedProcessService.Configuration.EnableBackgroundLoading = isActive && !this.isUiRefreshPaused;
+
+            if (!isActive)
+            {
+                this.refreshTimer?.Stop();
+                return;
+            }
+
+            if (!this.isUiRefreshPaused)
+            {
+                this.refreshTimer?.Start();
+                _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
                 {
-                    System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    try
                     {
-                        if (this.StatusMessage == "Process monitoring resumed")
-                        {
-                            this.ClearStatus();
-                        }
-                    });
+                        await this.RefreshProcessesCommand.ExecuteAsync(null);
+                    }
+                    catch (Exception ex)
+                    {
+                        this.Logger.LogDebug(ex, "Immediate process refresh after returning to process view failed");
+                    }
                 });
+            }
+        }
+
+        public void SetUiRefreshEnabled(bool enabled, bool refreshImmediately = true)
+        {
+            this.isUiRefreshPaused = !enabled;
+            this.virtualizedProcessService.Configuration.EnableBackgroundLoading = enabled && this.isProcessViewActive;
+
+            if (!enabled)
+            {
+                this.refreshTimer?.Stop();
+                return;
+            }
+
+            if (this.isProcessViewActive)
+            {
+                this.refreshTimer?.Start();
+            }
+
+            if (!refreshImmediately || !this.isProcessViewActive)
+            {
+                return;
+            }
+
+            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
+            {
+                if (this.isUiRefreshPaused)
+                {
+                    return;
+                }
+
+                try
+                {
+                    this.ClearStatus();
+                    await this.RefreshProcessesCommand.ExecuteAsync(null);
+                }
+                catch (Exception ex)
+                {
+                    this.Logger.LogDebug(ex, "Immediate process refresh after resume failed");
+                }
             });
         }
 

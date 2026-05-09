@@ -93,8 +93,17 @@ namespace ThreadPilot.Services
                 return false;
             }
 
-            return SystemProcessNames.Any(sp => process.Name.Equals(sp, StringComparison.OrdinalIgnoreCase)) ||
-                   process.Name.StartsWith("System", StringComparison.OrdinalIgnoreCase);
+            var processName = NormalizeProcessName(process.Name);
+
+            return SystemProcessNames.Any(sp => processName.Equals(NormalizeProcessName(sp), StringComparison.OrdinalIgnoreCase)) ||
+                   processName.StartsWith("system", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizeProcessName(string processName)
+        {
+            return processName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+                ? processName[..^4]
+                : processName;
         }
     }
 }

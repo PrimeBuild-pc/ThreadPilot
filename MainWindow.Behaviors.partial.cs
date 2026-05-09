@@ -969,6 +969,10 @@ namespace ThreadPilot
                     {
                         this.ShowInTaskbar = false;
                         this.Hide();
+                        this.SuspendHiddenModeRefreshes();
+                        this.processViewModel.PauseRefresh();
+                        this.processViewModel.SetProcessViewActive(false);
+                        _ = this.performanceViewModel.SuspendBackgroundMonitoringAsync();
                     }
                     else
                     {
@@ -1294,18 +1298,21 @@ namespace ThreadPilot
         {
             try
             {
-                if (this.WindowState == WindowState.Minimized && this.settingsService.Settings.MinimizeToTray)
+                if (this.WindowState == WindowState.Minimized)
                 {
-                    this.ShowInTaskbar = false;
-                    this.Hide();
-                    this.systemTrayService.Show();
+                    if (this.settingsService.Settings.MinimizeToTray)
+                    {
+                        this.ShowInTaskbar = false;
+                        this.Hide();
+                        this.systemTrayService.Show();
+                    }
 
                     this.SuspendHiddenModeRefreshes();
 
-                    // Pause process refresh when minimized to reduce resource usage
                     if (this.processViewModel != null)
                     {
                         this.processViewModel.PauseRefresh();
+                        this.processViewModel.SetProcessViewActive(false);
                     }
 
                     if (this.performanceViewModel != null)
@@ -1313,15 +1320,15 @@ namespace ThreadPilot
                         _ = this.performanceViewModel.SuspendBackgroundMonitoringAsync();
                     }
                 }
-                else if (this.WindowState == WindowState.Normal)
+                else if (this.WindowState == WindowState.Normal || this.WindowState == WindowState.Maximized)
                 {
                     this.ShowInTaskbar = true;
 
                     this.ResumeForegroundRefreshes();
 
-                    // Resume process refresh when restored
                     if (this.processViewModel != null)
                     {
+                        this.processViewModel.SetProcessViewActive(this.ProcessManagementTab.Visibility == Visibility.Visible);
                         this.processViewModel.ResumeRefresh();
                     }
 
@@ -1440,6 +1447,15 @@ namespace ThreadPilot
             this.Activate();
             this.Focus();
             this.Topmost = false;
+
+            var processViewWillBeActive = tabTag == null
+                ? this.ProcessManagementTab.Visibility == Visibility.Visible
+                : string.Equals(tabTag, "Process", StringComparison.Ordinal);
+
+            this.ResumeForegroundRefreshes();
+            this.processViewModel.SetProcessViewActive(processViewWillBeActive);
+            this.processViewModel.ResumeRefresh();
+            _ = this.performanceViewModel.ResumeBackgroundMonitoringAsync();
 
             if (tabTag != null)
             {
@@ -1647,6 +1663,11 @@ namespace ThreadPilot
             this.NavLogs.IsActive = tag == "Logs";
             this.NavTweaks.IsActive = tag == "Tweaks";
             this.NavSettings.IsActive = tag == "Settings";
+
+            this.processViewModel.SetProcessViewActive(
+                string.Equals(tag, "Process", StringComparison.Ordinal) &&
+                this.IsVisible &&
+                this.WindowState != WindowState.Minimized);
         }
 
         private void NavMenuItem_Click(object sender, RoutedEventArgs e)
@@ -1768,4 +1789,3 @@ namespace ThreadPilot
         }
     }
 }
-

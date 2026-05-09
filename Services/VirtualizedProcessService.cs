@@ -67,15 +67,10 @@ namespace ThreadPilot.Services
 
         public async Task InitializeAsync()
         {
-            this.logger.LogInformation("Initializing VirtualizedProcessService with batch size: {BatchSize}", this.Configuration.BatchSize);
+            this.logger.LogDebug("Initializing VirtualizedProcessService with batch size: {BatchSize}", this.Configuration.BatchSize);
 
             // Perform initial load to get total count
             await this.RefreshAllProcessesAsync(false);
-
-            if (this.Configuration.EnableBackgroundLoading)
-            {
-                this.backgroundPreloadTimer.Change(this.Configuration.RefreshInterval, this.Configuration.RefreshInterval);
-            }
         }
 
         public async Task<int> GetTotalProcessCountAsync(bool activeApplicationsOnly = false)
@@ -182,12 +177,17 @@ namespace ThreadPilot.Services
                 {
                     try
                     {
+                        if (!this.Configuration.EnableBackgroundLoading)
+                        {
+                            return;
+                        }
+
                         var batch = await this.LoadProcessBatchAsync(nextBatchIndex, activeApplicationsOnly);
                         this.BackgroundBatchLoaded?.Invoke(this, batch);
                     }
                     catch (Exception ex)
                     {
-                        this.logger.LogWarning(ex, "Failed to preload batch {BatchIndex}", nextBatchIndex);
+                        this.logger.LogDebug(ex, "Failed to preload batch {BatchIndex}", nextBatchIndex);
                     }
                 });
             }
@@ -256,7 +256,7 @@ namespace ThreadPilot.Services
                 // Clear batch cache since underlying data changed
                 this.batchCache.Clear();
 
-                this.logger.LogInformation("Refreshed {ProcessCount} processes", this.allProcesses.Count);
+                this.logger.LogDebug("Refreshed {ProcessCount} processes", this.allProcesses.Count);
             }
             finally
             {
@@ -282,12 +282,17 @@ namespace ThreadPilot.Services
         {
             try
             {
+                if (!this.Configuration.EnableBackgroundLoading)
+                {
+                    return;
+                }
+
                 // Refresh processes in background
                 await this.RefreshAllProcessesAsync(false);
             }
             catch (Exception ex)
             {
-                this.logger.LogWarning(ex, "Background process refresh failed");
+                this.logger.LogDebug(ex, "Background process refresh failed");
             }
         }
 
