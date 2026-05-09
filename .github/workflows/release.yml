@@ -630,10 +630,12 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $logsDir = (Resolve-Path "release-channel-logs").Path
-          $packLogPath = Join-Path $logsDir "choco-pack-log.txt"
+          $logsDir = "release-channel-logs"
           $artifactRoot = "release-channel-artifacts/chocolatey"
+          New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
           New-Item -ItemType Directory -Force -Path $artifactRoot | Out-Null
+          $logsDir = (Resolve-Path $logsDir).Path
+          $packLogPath = Join-Path $logsDir "choco-pack-log.txt"
 
           $installer = Get-ChildItem "release-assets/installer/*.exe" -File | Select-Object -First 1
           if (-not $installer)
@@ -661,10 +663,12 @@ jobs:
           CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
         run: |
           $ErrorActionPreference = "Stop"
-          $logsDir = (Resolve-Path "release-channel-logs").Path
-          $pushLogPath = Join-Path $logsDir "choco-push-log.txt"
+          $logsDir = "release-channel-logs"
           $artifactRoot = "release-channel-artifacts/chocolatey"
+          New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
           New-Item -ItemType Directory -Force -Path $artifactRoot | Out-Null
+          $logsDir = (Resolve-Path $logsDir).Path
+          $pushLogPath = Join-Path $logsDir "choco-push-log.txt"
           $installer = Get-ChildItem "release-assets/installer/*.exe" -File | Select-Object -First 1
           if (-not $installer)
           {
