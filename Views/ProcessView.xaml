@@ -201,20 +201,63 @@
                                 BorderThickness="1"
                                 Margin="0,0,0,12">
                             <StackPanel>
-                                <TextBlock Text="{Binding SelectedProcess.Name, TargetNullValue=No process selected}"
+                                <TextBlock Text="No process selected"
                                            FontWeight="SemiBold"
-                                           TextTrimming="CharacterEllipsis"/>
-                                <TextBlock FontSize="{StaticResource ProcessFontSmall}" Foreground="{DynamicResource TextSecondaryBrush}">
-                                    <Run Text="PID "/>
-                                    <Run Text="{Binding SelectedProcess.ProcessId, TargetNullValue=-}"/>
-                                    <Run Text="  Priority "/>
-                                    <Run Text="{Binding SelectedProcess.Priority, TargetNullValue=-}"/>
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           TextWrapping="Wrap">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedProcess}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
                                 </TextBlock>
-                                <TextBlock Text="{Binding SelectedProcess.MainWindowTitle, TargetNullValue=Select a process from the table to enable actions.}"
+                                <TextBlock Text="Select a process from the table to enable affinity, priority, power plan, and rule actions."
                                            FontSize="{StaticResource ProcessFontSmall}"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                            TextWrapping="Wrap"
-                                           Margin="0,4,0,0"/>
+                                           Margin="0,4,0,0">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedProcess}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <StackPanel>
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedProcess}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                    <TextBlock Text="{Binding SelectedProcess.Name}"
+                                               FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock FontSize="{StaticResource ProcessFontSmall}" Foreground="{DynamicResource TextSecondaryBrush}">
+                                        <Run Text="PID "/>
+                                        <Run Text="{Binding SelectedProcess.ProcessId}"/>
+                                        <Run Text="  Priority "/>
+                                        <Run Text="{Binding SelectedProcess.Priority}"/>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding SelectedProcess.MainWindowTitle, TargetNullValue=No visible window title}"
+                                               FontSize="{StaticResource ProcessFontSmall}"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               TextWrapping="Wrap"
+                                               Margin="0,4,0,0"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 
@@ -349,7 +392,7 @@
                             </StackPanel>
                         </GroupBox>
 
-                        <GroupBox Header="Power Plan / Quick Apply" Margin="0,0,0,12">
+                        <GroupBox Header="Power Plan / Pending Settings" Margin="0,0,0,12">
                             <StackPanel Margin="8">
                                 <TextBlock Text="Selected power plan"
                                            FontSize="{StaticResource ProcessFontSmall}"
@@ -373,10 +416,10 @@
                                             ToolTip="Activate the selected Windows power plan"/>
                                     <Button Grid.Column="2"
                                             Command="{Binding QuickApplyAffinityAndPowerPlanCommand}"
-                                            Content="Quick Apply"
+                                            Content="Apply Pending Settings"
                                             Padding="10,6"
                                             IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
-                                            ToolTip="Apply pending affinity and selected power plan to the selected process"/>
+                                            ToolTip="Apply the pending affinity and selected power plan to the selected process"/>
                                 </Grid>
                             </StackPanel>
                         </GroupBox>

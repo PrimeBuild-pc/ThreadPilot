@@ -79,19 +79,23 @@
                                     Command="{Binding StartMonitoringCommand}"
                                     IsEnabled="{Binding IsMonitoring, Converter={StaticResource InverseBooleanConverter}}"
                                     MinWidth="128"
-                                    Margin="0,0,8,0"/>
+                                    Margin="0,0,8,0"
+                                    ToolTip="Start live metrics collection for this dashboard"/>
                             <Button Content="Stop Live Metrics"
                                     Command="{Binding StopMonitoringCommand}"
                                     IsEnabled="{Binding IsMonitoring}"
                                     MinWidth="120"
-                                    Margin="0,0,8,0"/>
+                                    Margin="0,0,8,0"
+                                    ToolTip="Pause live metrics collection; background automation is separate"/>
                             <Button Content="Refresh"
                                     Command="{Binding RefreshMetricsCommand}"
                                     MinWidth="84"
-                                    Margin="0,0,8,0"/>
+                                    Margin="0,0,8,0"
+                                    ToolTip="Refresh the current dashboard snapshot"/>
                             <Button Content="Clear History"
                                     MinWidth="104"
-                                    Command="{Binding ClearHistoricalDataCommand}"/>
+                                    Command="{Binding ClearHistoricalDataCommand}"
+                                    ToolTip="Clear the displayed metrics and timeline history"/>
                         </WrapPanel>
                     </Grid>
                 </Border>
@@ -167,7 +171,8 @@
                                     <Button Content="Create/Update Rule from Selection"
                                             Command="{Binding CreateRuleFromSelectedProcessCommand}"
                                             IsEnabled="{Binding CanCreateRuleFromSelectedProcess}"
-                                            Margin="0,0,8,0"/>
+                                            Margin="0,0,8,0"
+                                            ToolTip="Create or update an automation rule from the selected hotspot process"/>
                                     <Button Content="Toggle Core Panel"
                                             Command="{Binding ToggleCoreDetailsCommand}"
                                             Margin="0,0,8,0"/>

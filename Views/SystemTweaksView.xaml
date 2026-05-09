@@ -156,33 +156,28 @@
 
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <GroupBox Margin="5" Padding="10">
+                        <GroupBox Margin="5" Padding="8">
                             <GroupBox.Header>
-                                <!-- Enhanced Tweak Name Styling -->
                                  <TextBlock Text="{Binding Name}"
-                                            FontSize="15"
-                                            FontWeight="Bold"
+                                            FontSize="14"
+                                            FontWeight="SemiBold"
                                             Foreground="{DynamicResource TextPrimaryBrush}"/>
                             </GroupBox.Header>
 
-                            <!-- Main Card Content with Two-Column Layout -->
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                 <TextBlock Text="{Binding Description}"
+                                            FontSize="11"
+                                            Foreground="{DynamicResource TextSecondaryBrush}"
+                                            TextWrapping="Wrap"
+                                            Margin="0,0,0,8"/>
 
-                                <!-- Left Column: Content -->
-                                <StackPanel Grid.Column="0" Margin="0,0,15,0">
-                                    <!-- Description -->
-                                     <TextBlock Text="{Binding Description}"
-                                                FontSize="11"
-                                                Foreground="{DynamicResource TextSecondaryBrush}"
-                                                TextWrapping="Wrap"
-                                                Margin="0,0,0,8"/>
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
 
-                                    <!-- Status Indicator -->
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                         <Ellipse Width="8" Height="8"
                                                  VerticalAlignment="Center"
                                                  Margin="0,0,8,0">
@@ -215,21 +210,12 @@
                                                             <Setter Property="Text" Value="Disabled"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
+                                                   </Style>
+                                               </TextBlock.Style>
+                                           </TextBlock>
                                     </StackPanel>
 
-                                    <!-- Error Message -->
-                                     <TextBlock Text="{Binding ErrorMessage}"
-                                                FontSize="11"
-                                                Foreground="{DynamicResource ErrorTextBrush}"
-                                                TextWrapping="Wrap"
-                                                Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
-                                </StackPanel>
-
-                                <!-- Right Column: Toggle Button -->
-                                <ToggleButton Grid.Column="1"
+                                    <ToggleButton Grid.Column="1"
                                               Style="{StaticResource PillToggleButtonStyle}"
                                               IsChecked="{Binding IsEnabled, Mode=OneWay}"
                                               IsEnabled="{Binding IsAvailable}"
@@ -237,8 +223,16 @@
                                               CommandParameter="{Binding}"
                                               VerticalAlignment="Center"
                                               HorizontalAlignment="Right"
-                                              Margin="10,0,10,0"/>
-                            </Grid>
+                                              Margin="10,0,0,0"
+                                              ToolTip="Toggle this Windows tweak"/>
+                                </Grid>
+
+                                 <TextBlock Text="{Binding ErrorMessage}"
+                                            FontSize="11"
+                                            Foreground="{DynamicResource ErrorTextBrush}"
+                                            TextWrapping="Wrap"
+                                            Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
+                            </StackPanel>
                         </GroupBox>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

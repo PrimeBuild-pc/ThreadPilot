@@ -20,7 +20,7 @@
         </Grid.RowDefinitions>
 
         <!-- Standardized Header -->
-        <GroupBox Grid.Row="0" Header="📐 Rules &amp; Automation" Margin="0,0,0,10">
+        <GroupBox Grid.Row="0" Header="Rules &amp; Automation" Margin="0,0,0,10">
             <Grid Margin="5">
                 <TextBlock Text="Define per-process rules. Power plans are global; masks and priorities apply to matching processes."
                            FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
@@ -68,7 +68,7 @@
             </TabControl.Resources>
 
             <!-- Rules Tab -->
-            <TabItem Header="📐 Rules">
+            <TabItem Header="Rules">
                 <Grid Margin="10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="2*"/>
@@ -77,7 +77,7 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- Rules List -->
-                    <GroupBox Grid.Column="0" Header="📋 Current Rules">
+                    <GroupBox Grid.Column="0" Header="Current Rules">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*"/>
@@ -120,6 +120,34 @@
                                 </DataGrid.Columns>
                             </DataGrid>
 
+                            <Border Grid.Row="0"
+                                    Padding="18"
+                                    IsHitTestVisible="False"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Associations.Count}" Value="0">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <StackPanel>
+                                    <TextBlock Text="No automation rules yet"
+                                               FontWeight="SemiBold"
+                                               HorizontalAlignment="Center"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="Create a rule from an executable or running process to automate power plan, CPU mask, and priority behavior."
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               TextWrapping="Wrap"
+                                               TextAlignment="Center"
+                                               MaxWidth="360"/>
+                                </StackPanel>
+                            </Border>
+
                             <StackPanel Grid.Row="1" Orientation="Horizontal" 
                                        HorizontalAlignment="Right" Margin="0,10,0,0">
                                 <Button Content="Update"
@@ -139,10 +167,15 @@
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <StackPanel>
                             <!-- Executable Selection Section -->
-                            <TextBlock Text="Select Executable:" FontWeight="Bold" Margin="0,0,0,5"/>
+                            <TextBlock Text="Executable Match:" FontWeight="Bold" Margin="0,0,0,5"/>
+                            <TextBlock Text="Choose an executable. Match by path is more precise; matching by name applies to any process with that executable name."
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       FontSize="10"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,8"/>
 
                             <!-- Browse Button -->
-                            <Button Content="📁 Browse for Executable"
+                            <Button Content="Browse for Executable"
                                    Command="{Binding BrowseExecutableCommand}"
                                    Padding="10,8" Margin="0,0,0,10"
                                    HorizontalAlignment="Left"
@@ -162,7 +195,7 @@
                              </Border>
 
                             <!-- Clear Selection Button -->
-                            <Button Content="✖ Clear Selection"
+                            <Button Content="Clear Selection"
                                    Command="{Binding ClearSelectedExecutableCommand}"
                                    Padding="5,3" Margin="0,0,0,15"
                                    HorizontalAlignment="Left" FontSize="10"
@@ -175,7 +208,7 @@
                                      ToolTip="Match processes by full path instead of just executable name"/>
 
                              <TextBlock Text="Rule Power Plan (global switch):" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                             <TextBlock Text="Changing this rule changes the system power plan when matched."
+                             <TextBlock Text="When this rule matches, Windows switches the global active power plan."
                                         Foreground="{DynamicResource WarningTextBrush}"
                                         FontSize="10"
                                         TextWrapping="Wrap"
@@ -186,6 +219,11 @@
                                      Padding="5" Margin="0,0,0,10"/>
 
                             <TextBlock Text="Rule CPU Mask:" Margin="0,0,0,5"/>
+                            <TextBlock Text="Applied only to matching processes; it does not change the global Windows power plan."
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       FontSize="10"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,5"/>
                             <ComboBox ItemsSource="{Binding AvailableCoreMasks}"
                                      SelectedItem="{Binding SelectedCoreMask}"
                                      DisplayMemberPath="Name"
@@ -193,6 +231,11 @@
                                      ToolTip="Optional: Select a CPU mask to apply when this process starts"/>
 
                             <TextBlock Text="Process Priority:" Margin="0,0,0,5"/>
+                            <TextBlock Text="Applied to each matching process when the automation rule runs."
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       FontSize="10"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,5"/>
                             <ComboBox ItemsSource="{Binding AvailablePriorities}"
                                      SelectedItem="{Binding SelectedProcessPriority}"
                                      Padding="5" Margin="0,0,0,10"
@@ -227,7 +270,7 @@
                                      Padding="5" Margin="0,0,0,10"
                                      ToolTip="Select a currently running process to use its executable"/>
 
-                            <Button Content="📋 Use Selected Process"
+                            <Button Content="Use Selected Process"
                                     Command="{Binding UseSelectedProcessForAssociationCommand}"
                                     Padding="10,5"
                                     ToolTip="Use the executable from the selected running process"/>

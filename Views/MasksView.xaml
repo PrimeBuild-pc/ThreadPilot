@@ -19,9 +19,8 @@
                  <ColumnDefinition Width="3*" MinWidth="300"/>
              </Grid.ColumnDefinitions>
 
-            <!-- LISTA MASCHERE SINISTRA -->
             <DockPanel Grid.Column="0">
-                <!-- Header con bottoni -->
+                <!-- Mask list actions -->
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
                     <Button Content="➕ New" Command="{Binding CreateMaskCommand}"
                             Padding="10,5" FontSize="13" Margin="0,0,5,0"
@@ -31,7 +30,6 @@
                             ToolTip="Delete selected mask"/>
                 </StackPanel>
 
-                <!-- ListBox delle maschere -->
                 <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
                     <ListBox ItemsSource="{Binding CoreMasks}"
                              SelectedItem="{Binding SelectedCoreMask, Mode=TwoWay}"
@@ -84,7 +82,6 @@
             <!-- DIVIDER -->
             <GridSplitter Grid.Column="1" Width="8" HorizontalAlignment="Stretch" Background="Transparent"/>
 
-            <!-- EDITOR MASK DESTRA -->
             <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="10,0,0,0">
                     <StackPanel.Style>
@@ -98,16 +95,20 @@
                         </Style>
                     </StackPanel.Style>
 
-                      <!-- Nome e Descrizione -->
-                      <GroupBox Header="Mask Information" Padding="10" Margin="0,10,0,10">
+                      <GroupBox Header="Mask Information" Padding="10" Margin="0,0,0,10">
                         <StackPanel>
+                            <TextBlock Text="Mask names, descriptions, CPU selections, and options are saved automatically."
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,10"/>
                             <TextBlock Text="Name:" FontWeight="SemiBold" Margin="0,0,0,5"/>
                             <TextBox Text="{Binding SelectedCoreMask.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                      Padding="8,6" FontSize="13" Margin="0,0,0,10"/>
 
                             <TextBlock Text="Description:" FontWeight="SemiBold" Margin="0,0,0,5"/>
                             <TextBox Text="{Binding SelectedCoreMask.Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                     Padding="8,6" MinHeight="72" TextWrapping="Wrap" AcceptsReturn="True"
+                                     Padding="8,6" MinHeight="52" MaxHeight="90" TextWrapping="Wrap" AcceptsReturn="True"
                                      VerticalScrollBarVisibility="Auto"/>
                         </StackPanel>
                     </GroupBox>
@@ -115,9 +116,11 @@
                     <!-- CPU Selection Grid -->
                     <GroupBox Header="Select CPUs" Padding="10" Margin="0,10,0,10">
                         <StackPanel>
-                            <!-- CPU checkboxes - direct binding to BoolMask like CPUSetSetter -->
-                            <TextBlock Text="Click checkboxes to toggle CPUs. Changes are saved automatically."
-                                       FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,10"/>
+                            <TextBlock Text="Toggle CPUs to update this mask. Changes are saved automatically; All Cores remains the protected default mask."
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,10"/>
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
                                 <ItemsControl x:Name="CoreItemsControl" ItemsSource="{Binding CoreBits}">
                                     <ItemsControl.ItemsPanel>
@@ -158,10 +161,9 @@
                         </StackPanel>
                     </GroupBox>
 
-                    <!-- Actions -->
-                    <GroupBox Header="Actions" Padding="10">
+                    <GroupBox Header="Mask Options" Padding="10">
                         <StackPanel>
-                            <Button Content="📋 Duplicate Mask" Command="{Binding DuplicateMaskCommand}"
+                            <Button Content="Duplicate Mask" Command="{Binding DuplicateMaskCommand}"
                                     HorizontalAlignment="Left" Padding="10,6" Margin="0,0,0,5"/>
 
                             <CheckBox Content="Set as Default Mask"
