@@ -140,19 +140,20 @@
             </Grid>
         </Border>
 
-        <!-- Log Entries List -->
-        <ListView Grid.Row="2" ItemsSource="{Binding LogEntries}"
-                  SelectedItem="{Binding SelectedLogEntry}"
-                  Style="{StaticResource LogListViewStyle}"
-                  ItemContainerStyle="{StaticResource LogEntryStyle}"
-                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                  ScrollViewer.VerticalScrollBarVisibility="Auto"
-                  VirtualizingPanel.IsVirtualizing="True"
-                  VirtualizingPanel.VirtualizationMode="Recycling"
-                  VirtualizingPanel.ScrollUnit="Item"
-                  ScrollViewer.CanContentScroll="True">
-            <ListView.View>
-                <GridView ColumnHeaderContainerStyle="{StaticResource LogGridViewHeaderStyle}">
+        <Grid Grid.Row="2">
+            <!-- Log Entries List -->
+            <ListView ItemsSource="{Binding LogEntries}"
+                      SelectedItem="{Binding SelectedLogEntry}"
+                      Style="{StaticResource LogListViewStyle}"
+                      ItemContainerStyle="{StaticResource LogEntryStyle}"
+                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                      VirtualizingPanel.IsVirtualizing="True"
+                      VirtualizingPanel.VirtualizationMode="Recycling"
+                      VirtualizingPanel.ScrollUnit="Item"
+                      ScrollViewer.CanContentScroll="True">
+                <ListView.View>
+                    <GridView ColumnHeaderContainerStyle="{StaticResource LogGridViewHeaderStyle}">
                     <GridViewColumn Header="Time" Width="150">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
@@ -215,18 +216,46 @@
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                </GridView>
-            </ListView.View>
-            
-            <ListView.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="Copy Entry" Command="{Binding CopyLogEntryCommand}" 
-                              CommandParameter="{Binding SelectedLogEntry}"/>
-                    <Separator/>
-                    <MenuItem Header="Refresh" Command="{Binding RefreshLogsCommand}"/>
-                </ContextMenu>
-            </ListView.ContextMenu>
-        </ListView>
+                    </GridView>
+                </ListView.View>
+
+                <ListView.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Copy Entry" Command="{Binding CopyLogEntryCommand}"
+                                  CommandParameter="{Binding SelectedLogEntry}"/>
+                        <Separator/>
+                        <MenuItem Header="Refresh" Command="{Binding RefreshLogsCommand}"/>
+                    </ContextMenu>
+                </ListView.ContextMenu>
+            </ListView>
+
+            <Border Padding="18"
+                    IsHitTestVisible="False"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding LogEntries.Count}" Value="0">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel>
+                    <TextBlock Text="No log entries to display"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,4"/>
+                    <TextBlock Text="Adjust filters or refresh logs to load recent ThreadPilot activity."
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               MaxWidth="360"/>
+                </StackPanel>
+            </Border>
+        </Grid>
 
         <!-- Splitter -->
         <GridSplitter Grid.Row="3" Height="5" HorizontalAlignment="Stretch"

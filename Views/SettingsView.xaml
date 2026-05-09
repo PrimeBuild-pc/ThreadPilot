@@ -154,12 +154,12 @@
                             
                             <Separator Margin="0,10"/>
                             
-                            <CheckBox Content="Enable quick apply from tray" 
+                            <CheckBox Content="Enable pending settings apply from tray"
                                       IsChecked="{Binding Settings.EnableQuickApplyFromTray}"
                                       IsEnabled="{Binding Settings.ShowTrayIcon}"
                                       Margin="0,5"/>
                             
-                            <CheckBox Content="Enable monitoring controls from tray" 
+                            <CheckBox Content="Enable automation monitoring controls from tray"
                                       IsChecked="{Binding Settings.EnableMonitoringControlFromTray}"
                                       IsEnabled="{Binding Settings.ShowTrayIcon}"
                                       Margin="0,0,0,5"/>
@@ -198,22 +198,22 @@
                     </Border>
                 </StackPanel>
 
-                <!-- Monitoring Section -->
+                <!-- Process Event Settings Section -->
                 <StackPanel Width="360" Margin="10">
-                    <TextBlock Text="Monitoring Settings" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
+                    <TextBlock Text="Process Event Settings" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
                     <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="5" Padding="15" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
                         <StackPanel>
-                            <CheckBox Content="Enable WMI monitoring"
+                            <CheckBox Content="Enable WMI process events"
                                       IsChecked="{Binding Settings.EnableWmiMonitoring}"
                                       Margin="0,0,0,5"/>
-                            <TextBlock Text="Use Windows Management Instrumentation for real-time process monitoring"
+                            <TextBlock Text="Use Windows Management Instrumentation for process start/stop events"
                                        Style="{StaticResource DescriptionStyle}"
                                        Margin="20,0,0,15"/>
 
                             <CheckBox Content="Enable fallback polling"
                                       IsChecked="{Binding Settings.EnableFallbackPolling}"
                                       Margin="0,0,0,5"/>
-                            <TextBlock Text="Use polling as backup when WMI monitoring fails"
+                            <TextBlock Text="Use polling as backup when WMI process events fail"
                                        Style="{StaticResource DescriptionStyle}"
                                        Margin="20,0,0,15"/>
 

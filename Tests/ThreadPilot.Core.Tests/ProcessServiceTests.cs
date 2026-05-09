@@ -4,6 +4,7 @@
 namespace ThreadPilot.Core.Tests
 {
     using System.Collections.Concurrent;
+    using System.ComponentModel;
     using System.Diagnostics;
     using System.Text.Json;
     using ThreadPilot.Models;
@@ -65,6 +66,48 @@ namespace ThreadPilot.Core.Tests
             {
                 DeleteDirectory(profilesDirectory);
             }
+        }
+
+        [Fact]
+        public void IsPassiveProcessAccessException_ReturnsTrue_ForModuleEnumerationFailure()
+        {
+            var exception = new Win32Exception(299, "Unable to enumerate the process modules.");
+
+            var result = ProcessService.IsPassiveProcessAccessException(exception);
+
+            Assert.True(result);
+        }
+
+        [Fact]
+        public void IsPassiveProcessAccessException_ReturnsTrue_ForUnauthorizedAccess()
+        {
+            var exception = new UnauthorizedAccessException("Access denied.");
+
+            var result = ProcessService.IsPassiveProcessAccessException(exception);
+
+            Assert.True(result);
+        }
+
+        [Theory]
+        [InlineData("Unable to access modules for this process.")]
+        [InlineData("ReadProcessMemory failed for protected process.")]
+        public void IsPassiveProcessAccessException_ReturnsTrue_ForKnownPassiveMessages(string message)
+        {
+            var exception = new InvalidOperationException(message);
+
+            var result = ProcessService.IsPassiveProcessAccessException(exception);
+
+            Assert.True(result);
+        }
+
+        [Fact]
+        public void IsPassiveProcessAccessException_ReturnsFalse_ForUnrelatedException()
+        {
+            var exception = new InvalidOperationException("Unexpected parse failure.");
+
+            var result = ProcessService.IsPassiveProcessAccessException(exception);
+
+            Assert.False(result);
         }
 
         [Fact]

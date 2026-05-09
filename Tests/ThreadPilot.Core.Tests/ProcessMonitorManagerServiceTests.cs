@@ -25,13 +25,15 @@ namespace ThreadPilot.Core.Tests
             var notificationService = CreateNotificationService();
             var processService = CreateProcessService();
             var coreMaskService = CreateCoreMaskService();
+            var affinityApplyService = CreateAffinityApplyService();
             var manager = CreateService(
                 processMonitor,
                 associationService,
                 powerPlanService,
                 notificationService,
                 processService,
-                coreMaskService);
+                coreMaskService,
+                affinityApplyService);
 
             await manager.StartAsync();
 
@@ -68,13 +70,15 @@ namespace ThreadPilot.Core.Tests
             var notificationService = CreateNotificationService();
             var processService = CreateProcessService();
             var coreMaskService = CreateCoreMaskService();
+            var affinityApplyService = CreateAffinityApplyService();
             var manager = CreateService(
                 processMonitor,
                 associationService,
                 powerPlanService,
                 notificationService,
                 processService,
-                coreMaskService);
+                coreMaskService,
+                affinityApplyService);
 
             await manager.StartAsync();
 
@@ -104,13 +108,15 @@ namespace ThreadPilot.Core.Tests
             var notificationService = CreateNotificationService();
             var processService = CreateProcessService();
             var coreMaskService = CreateCoreMaskService();
+            var affinityApplyService = CreateAffinityApplyService();
             var manager = CreateService(
                 processMonitor,
                 associationService,
                 powerPlanService,
                 notificationService,
                 processService,
-                coreMaskService);
+                coreMaskService,
+                affinityApplyService);
 
             await manager.StartAsync();
             processMonitor.RaiseProcessStarted(new ProcessModel { ProcessId = 10, Name = "game" });
@@ -121,6 +127,90 @@ namespace ThreadPilot.Core.Tests
             powerPlanService.Verify(
                 x => x.SetActivePowerPlanByGuidAsync("plan-game", true),
                 Times.Once);
+        }
+
+        [Fact]
+        public async Task ProcessStarted_SamePlanRequest_IsSuppressedWithinDuplicateWindow()
+        {
+            var processMonitor = new FakeProcessMonitorService();
+            var configuration = new ProcessMonitorConfiguration
+            {
+                PowerPlanChangeDelayMs = 0,
+                Associations =
+                {
+                    new ProcessPowerPlanAssociation("game", "plan-game", "Game") { Priority = 5 },
+                },
+            };
+
+            var associationService = CreateAssociationService(configuration);
+            var powerPlanService = CreatePowerPlanService();
+            var notificationService = CreateNotificationService();
+            var processService = CreateProcessService();
+            var coreMaskService = CreateCoreMaskService();
+            var affinityApplyService = CreateAffinityApplyService();
+            var manager = CreateService(
+                processMonitor,
+                associationService,
+                powerPlanService,
+                notificationService,
+                processService,
+                coreMaskService,
+                affinityApplyService);
+
+            await manager.StartAsync();
+            processMonitor.RaiseProcessStarted(new ProcessModel { ProcessId = 10, Name = "game" });
+            processMonitor.RaiseProcessStarted(new ProcessModel { ProcessId = 11, Name = "game" });
+
+            await Task.Delay(100);
+
+            powerPlanService.Verify(
+                x => x.SetActivePowerPlanByGuidAsync("plan-game", true),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task ProcessStarted_WhenPowerPlanChangeFails_DoesNotRetrySamePlanImmediately()
+        {
+            var processMonitor = new FakeProcessMonitorService();
+            var configuration = new ProcessMonitorConfiguration
+            {
+                PowerPlanChangeDelayMs = 0,
+                Associations =
+                {
+                    new ProcessPowerPlanAssociation("game", "plan-game", "Game") { Priority = 5 },
+                },
+            };
+
+            var associationService = CreateAssociationService(configuration);
+            var powerPlanService = CreatePowerPlanService();
+            powerPlanService
+                .Setup(x => x.SetActivePowerPlanByGuidAsync("plan-game", true))
+                .ReturnsAsync(false);
+            var notificationService = CreateNotificationService();
+            var processService = CreateProcessService();
+            var coreMaskService = CreateCoreMaskService();
+            var affinityApplyService = CreateAffinityApplyService();
+            var manager = CreateService(
+                processMonitor,
+                associationService,
+                powerPlanService,
+                notificationService,
+                processService,
+                coreMaskService,
+                affinityApplyService);
+
+            await manager.StartAsync();
+            processMonitor.RaiseProcessStarted(new ProcessModel { ProcessId = 10, Name = "game" });
+            processMonitor.RaiseProcessStarted(new ProcessModel { ProcessId = 11, Name = "game" });
+
+            await Task.Delay(100);
+
+            powerPlanService.Verify(
+                x => x.SetActivePowerPlanByGuidAsync("plan-game", true),
+                Times.Once);
+            notificationService.Verify(
+                x => x.ShowPowerPlanChangeNotificationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+                Times.Never);
         }
 
         [Fact]
@@ -150,13 +240,15 @@ namespace ThreadPilot.Core.Tests
             var notificationService = CreateNotificationService();
             var processService = CreateProcessService();
             var coreMaskService = CreateCoreMaskService();
+            var affinityApplyService = CreateAffinityApplyService();
             var manager = CreateService(
                 processMonitor,
                 associationService,
                 powerPlanService,
                 notificationService,
                 processService,
-                coreMaskService);
+                coreMaskService,
+                affinityApplyService);
 
             await manager.StartAsync();
             await manager.StopAsync();
@@ -166,6 +258,60 @@ namespace ThreadPilot.Core.Tests
                 Times.AtLeastOnce);
             processService.Verify(x => x.UntrackProcess(21), Times.Once);
             coreMaskService.Verify(x => x.UnregisterMaskApplication(21), Times.Once);
+        }
+
+        [Fact]
+        public async Task ProcessStarted_AppliesConfiguredCoreMaskForMatchingProcess()
+        {
+            var process = new ProcessModel { ProcessId = 31, Name = "game" };
+            var processMonitor = new FakeProcessMonitorService();
+
+            var configuration = new ProcessMonitorConfiguration
+            {
+                PowerPlanChangeDelayMs = 0,
+                Associations =
+                {
+                    new ProcessPowerPlanAssociation("game", "plan-game", "Game")
+                    {
+                        CoreMaskId = "mask-game",
+                        Priority = 5,
+                    },
+                },
+            };
+
+            var associationService = CreateAssociationService(configuration);
+            var powerPlanService = CreatePowerPlanService();
+            var notificationService = CreateNotificationService();
+            var processService = CreateProcessService();
+            processService.Setup(x => x.TrackAppliedMask(31, "mask-game"));
+            var coreMaskService = CreateCoreMaskService();
+            coreMaskService.SetupGet(x => x.AvailableMasks).Returns(new ObservableCollection<CoreMask>
+            {
+                new()
+                {
+                    Id = "mask-game",
+                    Name = "Game Mask",
+                    BoolMask = new ObservableCollection<bool> { true, false },
+                },
+            });
+            coreMaskService.Setup(x => x.RegisterMaskApplication(31, "mask-game"));
+            var affinityApplyService = CreateAffinityApplyService();
+            var manager = CreateService(
+                processMonitor,
+                associationService,
+                powerPlanService,
+                notificationService,
+                processService,
+                coreMaskService,
+                affinityApplyService);
+
+            await manager.StartAsync();
+            processMonitor.RaiseProcessStarted(process);
+            await Task.Delay(100);
+
+            affinityApplyService.Verify(x => x.ApplyAsync(process, 1), Times.Once);
+            processService.Verify(x => x.TrackAppliedMask(31, "mask-game"), Times.Once);
+            coreMaskService.Verify(x => x.RegisterMaskApplication(31, "mask-game"), Times.Once);
         }
 
         [Fact]
@@ -185,13 +331,15 @@ namespace ThreadPilot.Core.Tests
             var notificationService = CreateNotificationService();
             var processService = CreateProcessService();
             var coreMaskService = CreateCoreMaskService();
+            var affinityApplyService = CreateAffinityApplyService();
             var manager = CreateService(
                 processMonitor,
                 associationService,
                 powerPlanService,
                 notificationService,
                 processService,
-                coreMaskService);
+                coreMaskService,
+                affinityApplyService);
 
             await manager.StartAsync();
 
@@ -229,7 +377,8 @@ namespace ThreadPilot.Core.Tests
             Mock<IPowerPlanService> powerPlanService,
             Mock<INotificationService> notificationService,
             Mock<IProcessService> processService,
-            Mock<ICoreMaskService> coreMaskService)
+            Mock<ICoreMaskService> coreMaskService,
+            Mock<IAffinityApplyService> affinityApplyService)
         {
             var enhancedLogger = new Mock<IEnhancedLoggingService>(MockBehavior.Loose);
             enhancedLogger
@@ -253,6 +402,8 @@ namespace ThreadPilot.Core.Tests
                 settingsService.Object,
                 processService.Object,
                 coreMaskService.Object,
+                affinityApplyService.Object,
+                new PowerPlanTransitionGate(TimeSpan.FromSeconds(2), () => DateTimeOffset.UtcNow),
                 NullLogger<ProcessMonitorManagerService>.Instance,
                 enhancedLogger.Object);
         }
@@ -301,6 +452,16 @@ namespace ThreadPilot.Core.Tests
             coreMaskService.SetupGet(x => x.AvailableMasks).Returns(new ObservableCollection<CoreMask>());
             coreMaskService.Setup(x => x.UnregisterMaskApplication(It.IsAny<int>()));
             return coreMaskService;
+        }
+
+        private static Mock<IAffinityApplyService> CreateAffinityApplyService()
+        {
+            var affinityApplyService = new Mock<IAffinityApplyService>(MockBehavior.Strict);
+            affinityApplyService
+                .Setup(x => x.ApplyAsync(It.IsAny<ProcessModel>(), It.IsAny<long>()))
+                .ReturnsAsync((ProcessModel process, long affinity) =>
+                    AffinityApplyResult.Succeeded(affinity, affinity));
+            return affinityApplyService;
         }
 
         private sealed class FakeProcessMonitorService : IProcessMonitorService

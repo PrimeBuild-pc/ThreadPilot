@@ -38,6 +38,9 @@ namespace ThreadPilot.Services
         private readonly ConcurrentDictionary<int, IProcessCpuSetHandler> cpuSetHandlers = new();
         private readonly ILogger<ProcessService>? logger;
         private readonly ISecurityService? securityService;
+        private readonly IForegroundProcessService? foregroundProcessService;
+        private readonly IProcessClassifier processClassifier;
+        private readonly IPassiveProcessErrorThrottle passiveProcessErrorThrottle;
         private readonly Func<string> profilesDirectoryProvider;
 
         private string ProfilesDirectory => this.profilesDirectoryProvider();
@@ -51,10 +54,16 @@ namespace ThreadPilot.Services
         public ProcessService(
             ILogger<ProcessService>? logger = null,
             ISecurityService? securityService = null,
-            Func<string>? profilesDirectoryProvider = null)
+            Func<string>? profilesDirectoryProvider = null,
+            IForegroundProcessService? foregroundProcessService = null,
+            IProcessClassifier? processClassifier = null,
+            IPassiveProcessErrorThrottle? passiveProcessErrorThrottle = null)
         {
             this.logger = logger;
             this.securityService = securityService;
+            this.foregroundProcessService = foregroundProcessService;
+            this.processClassifier = processClassifier ?? new ProcessClassifier(new ProcessFilterService());
+            this.passiveProcessErrorThrottle = passiveProcessErrorThrottle ?? new PassiveProcessErrorThrottle();
             this.profilesDirectoryProvider = profilesDirectoryProvider ?? (() => StoragePaths.ProfilesDirectory);
 
             StoragePaths.EnsureAppDataDirectories();
@@ -72,9 +81,10 @@ namespace ThreadPilot.Services
         {
             return await Task.Run(() =>
             {
+                var foregroundProcessId = this.foregroundProcessService?.TryGetForegroundProcessId();
                 var processes = Process.GetProcesses()
-                    .Select(this.CreateProcessModel)
-                    .Where(p => p != null)
+                    .Select(process => this.TryCreateProcessModel(process, foregroundProcessId))
+                    .OfType<ProcessModel>()
                     .OrderBy(p => p.Name);
 
                 return new ObservableCollection<ProcessModel>(processes);
@@ -140,39 +150,211 @@ namespace ThreadPilot.Services
 
         public ProcessModel CreateProcessModel(Process process)
         {
+            return this.CreateProcessModel(process, this.foregroundProcessService?.TryGetForegroundProcessId());
+        }
+
+        private ProcessModel? TryCreateProcessModel(Process process, int? foregroundProcessId)
+        {
+            try
+            {
+                return this.CreateProcessModel(process, foregroundProcessId);
+            }
+            catch (Exception ex) when (IsTerminatedProcessException(ex))
+            {
+                var processId = TryGetProcessId(process);
+                if (processId.HasValue)
+                {
+                    this.CleanupProcessResources(processId.Value);
+                    this.LogPassiveProcessReadFailure(processId.Value, PassiveProcessErrorKind.Terminated, ex);
+                }
+
+                return CreateMinimalProcessModel(process, processId, ProcessClassification.Terminated);
+            }
+            catch (Exception ex) when (IsPassiveProcessAccessException(ex))
+            {
+                var processId = TryGetProcessId(process);
+                if (processId.HasValue)
+                {
+                    this.LogPassiveProcessReadFailure(processId.Value, PassiveProcessErrorKind.AccessDenied, ex);
+                }
+
+                return CreateMinimalProcessModel(process, processId, ProcessClassification.ProtectedOrAccessDenied);
+            }
+            catch (Exception ex)
+            {
+                var processId = TryGetProcessId(process);
+                if (processId.HasValue)
+                {
+                    this.LogPassiveProcessReadFailure(processId.Value, PassiveProcessErrorKind.Unknown, ex);
+                }
+
+                return CreateMinimalProcessModel(process, processId, ProcessClassification.Unknown);
+            }
+        }
+
+        private ProcessModel CreateProcessModel(Process process, int? foregroundProcessId)
+        {
             var model = new ProcessModel();
+            var accessDenied = false;
+            var terminated = false;
+
             try
             {
                 model.ProcessId = process.Id;
-                model.Name = process.ProcessName;
-                model.MemoryUsage = process.PrivateMemorySize64;
-                model.Priority = process.PriorityClass;
-                model.ProcessorAffinity = (long)process.ProcessorAffinity;
-                model.CpuUsage = this.CalculateCpuUsage(process);
-
-                // Capture window information
-                model.MainWindowHandle = process.MainWindowHandle;
-                model.MainWindowTitle = process.MainWindowTitle ?? string.Empty;
-                model.HasVisibleWindow = model.MainWindowHandle != IntPtr.Zero && !string.IsNullOrWhiteSpace(model.MainWindowTitle);
-
-                // Try to get executable path
-                try
-                {
-                    model.ExecutablePath = process.MainModule?.FileName ?? string.Empty;
-                }
-                catch
-                {
-                    model.ExecutablePath = string.Empty;
-                }
             }
             catch
             {
-                // Process may have terminated or access denied
-                // Return a minimal model
-                model.ProcessId = process.Id;
-                model.Name = process.ProcessName;
+                model.Classification = ProcessClassification.Unknown;
+                return model;
             }
 
+            try
+            {
+                model.Name = process.ProcessName;
+            }
+            catch (Exception ex) when (IsAccessDeniedException(ex))
+            {
+                accessDenied = true;
+                model.Name = $"PID_{model.ProcessId}";
+                this.LogPassiveProcessReadFailure(model.ProcessId, PassiveProcessErrorKind.AccessDenied, ex);
+            }
+            catch (Exception ex) when (IsTerminatedProcessException(ex))
+            {
+                terminated = true;
+                model.Name = $"PID_{model.ProcessId}";
+            }
+
+            if (!terminated)
+            {
+                try
+                {
+                    if (process.HasExited)
+                    {
+                        terminated = true;
+                    }
+                }
+                catch (Exception ex) when (IsTerminatedProcessException(ex))
+                {
+                    terminated = true;
+                }
+                catch (Exception ex) when (IsAccessDeniedException(ex))
+                {
+                    accessDenied = true;
+                    this.LogPassiveProcessReadFailure(model.ProcessId, PassiveProcessErrorKind.AccessDenied, ex);
+                }
+            }
+
+            if (!terminated)
+            {
+                try
+                {
+                    model.MemoryUsage = process.PrivateMemorySize64;
+                }
+                catch (Exception ex) when (IsAccessDeniedException(ex))
+                {
+                    accessDenied = true;
+                    this.LogPassiveProcessReadFailure(model.ProcessId, PassiveProcessErrorKind.AccessDenied, ex);
+                }
+                catch (Exception ex) when (IsTerminatedProcessException(ex))
+                {
+                    terminated = true;
+                }
+
+                if (!terminated)
+                {
+                    try
+                    {
+                        model.Priority = process.PriorityClass;
+                    }
+                    catch (Exception ex) when (IsAccessDeniedException(ex))
+                    {
+                        accessDenied = true;
+                        model.MainWindowHandle = IntPtr.Zero;
+                        model.MainWindowTitle = string.Empty;
+                        model.HasVisibleWindow = false;
+                        this.LogPassiveProcessReadFailure(model.ProcessId, PassiveProcessErrorKind.AccessDenied, ex);
+                    }
+                    catch (Exception ex) when (IsPassiveProcessAccessException(ex))
+                    {
+                        accessDenied = true;
+                        model.MainWindowHandle = IntPtr.Zero;
+                        model.MainWindowTitle = string.Empty;
+                        model.HasVisibleWindow = false;
+                        this.LogPassiveProcessReadFailure(model.ProcessId, PassiveProcessErrorKind.AccessDenied, ex);
+                    }
+                    catch (Exception ex) when (IsTerminatedProcessException(ex))
+                    {
+                        terminated = true;
+                    }
+                }
+
+                if (!terminated)
+                {
+                    try
+                    {
+                        model.ProcessorAffinity = (long)process.ProcessorAffinity;
+                    }
+                    catch (Exception ex) when (IsAccessDeniedException(ex))
+                    {
+                        accessDenied = true;
+                        this.LogPassiveProcessReadFailure(model.ProcessId, PassiveProcessErrorKind.AccessDenied, ex);
+                    }
+                    catch (Exception ex) when (IsTerminatedProcessException(ex))
+                    {
+                        terminated = true;
+                    }
+                }
+
+                if (!terminated)
+                {
+                    model.CpuUsage = this.CalculateCpuUsage(process);
+                }
+
+                if (!terminated)
+                {
+                    try
+                    {
+                        model.MainWindowHandle = process.MainWindowHandle;
+                        model.MainWindowTitle = process.MainWindowTitle ?? string.Empty;
+                        model.HasVisibleWindow = model.MainWindowHandle != IntPtr.Zero && !string.IsNullOrWhiteSpace(model.MainWindowTitle);
+                    }
+                    catch (Exception ex) when (IsTerminatedProcessException(ex))
+                    {
+                        terminated = true;
+                    }
+                }
+
+                if (!terminated)
+                {
+                    try
+                    {
+                        model.ExecutablePath = process.MainModule?.FileName ?? string.Empty;
+                    }
+                    catch (Exception ex) when (IsAccessDeniedException(ex))
+                    {
+                        accessDenied = true;
+                        model.ExecutablePath = string.Empty;
+                        this.LogPassiveProcessReadFailure(model.ProcessId, PassiveProcessErrorKind.AccessDenied, ex);
+                    }
+                    catch (Exception ex) when (IsPassiveProcessAccessException(ex))
+                    {
+                        accessDenied = true;
+                        model.ExecutablePath = string.Empty;
+                        this.LogPassiveProcessReadFailure(model.ProcessId, PassiveProcessErrorKind.AccessDenied, ex);
+                    }
+                    catch (Exception ex) when (IsTerminatedProcessException(ex))
+                    {
+                        terminated = true;
+                    }
+                }
+            }
+
+            if (terminated)
+            {
+                this.CleanupProcessResources(model.ProcessId);
+            }
+
+            this.ApplyProcessClassification(model, foregroundProcessId, accessDenied, terminated);
             return model;
         }
 
@@ -384,20 +566,126 @@ namespace ThreadPilot.Services
                     process.MainWindowHandle = p.MainWindowHandle;
                     process.MainWindowTitle = p.MainWindowTitle ?? string.Empty;
                     process.HasVisibleWindow = process.MainWindowHandle != IntPtr.Zero && !string.IsNullOrWhiteSpace(process.MainWindowTitle);
+                    this.ApplyProcessClassification(
+                        process,
+                        this.foregroundProcessService?.TryGetForegroundProcessId(),
+                        accessDenied: false,
+                        terminated: false);
                 }
                 catch (ArgumentException)
                 {
                     // Process with the specified ID does not exist
                     this.CleanupProcessResources(process.ProcessId);
+                    this.ApplyProcessClassification(process, null, accessDenied: false, terminated: true);
                     throw new InvalidOperationException("Process no longer exists");
+                }
+                catch (Exception ex) when (IsAccessDeniedException(ex))
+                {
+                    this.ApplyProcessClassification(process, null, accessDenied: true, terminated: false);
+                    throw new InvalidOperationException("Access denied while refreshing process information.", ex);
                 }
                 catch (Exception ex) when (ex.Message.Contains("exited") || ex.Message.Contains("terminated"))
                 {
                     // Process has terminated
                     this.CleanupProcessResources(process.ProcessId);
+                    this.ApplyProcessClassification(process, null, accessDenied: false, terminated: true);
                     throw new InvalidOperationException("Process has terminated");
                 }
             }).ConfigureAwait(false);
+        }
+
+        private void ApplyProcessClassification(
+            ProcessModel process,
+            int? foregroundProcessId,
+            bool accessDenied,
+            bool terminated)
+        {
+            process.IsForeground = foregroundProcessId == process.ProcessId && !accessDenied && !terminated;
+            process.Classification = this.processClassifier.Classify(
+                process,
+                new ProcessClassificationContext(foregroundProcessId, accessDenied, terminated));
+        }
+
+        private void LogPassiveProcessReadFailure(int processId, PassiveProcessErrorKind errorKind, Exception exception)
+        {
+            if (this.passiveProcessErrorThrottle.ShouldLog(processId, errorKind))
+            {
+                this.logger?.LogDebug(
+                    exception,
+                    "Passive process read returned {ErrorKind} for PID {ProcessId}",
+                    errorKind,
+                    processId);
+            }
+        }
+
+        internal static bool IsPassiveProcessAccessException(Exception exception)
+        {
+            return IsAccessDeniedException(exception) ||
+                   exception is Win32Exception { NativeErrorCode: 299 } ||
+                   exception.Message.Contains("enumerate the process modules", StringComparison.OrdinalIgnoreCase) ||
+                   exception.Message.Contains("access modules", StringComparison.OrdinalIgnoreCase) ||
+                   exception.Message.Contains("ReadProcessMemory", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsAccessDeniedException(Exception exception)
+        {
+            return exception is UnauthorizedAccessException ||
+                   exception is Win32Exception { NativeErrorCode: 5 };
+        }
+
+        private static bool IsTerminatedProcessException(Exception exception)
+        {
+            return exception is ArgumentException ||
+                   (exception is InvalidOperationException invalidOperationException &&
+                   (invalidOperationException.Message.Contains("exited", StringComparison.OrdinalIgnoreCase) ||
+                    invalidOperationException.Message.Contains("terminated", StringComparison.OrdinalIgnoreCase) ||
+                    invalidOperationException.Message.Contains("no longer exists", StringComparison.OrdinalIgnoreCase)));
+        }
+
+        private static int? TryGetProcessId(Process process)
+        {
+            try
+            {
+                return process.Id;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static ProcessModel? CreateMinimalProcessModel(
+            Process process,
+            int? processId,
+            ProcessClassification classification)
+        {
+            if (!processId.HasValue)
+            {
+                return null;
+            }
+
+            return new ProcessModel
+            {
+                ProcessId = processId.Value,
+                Name = TryGetProcessName(process, processId.Value),
+                ExecutablePath = string.Empty,
+                MainWindowHandle = IntPtr.Zero,
+                MainWindowTitle = string.Empty,
+                HasVisibleWindow = false,
+                Classification = classification,
+            };
+        }
+
+        private static string TryGetProcessName(Process process, int processId)
+        {
+            try
+            {
+                return process.ProcessName;
+            }
+            catch
+            {
+                return $"PID_{processId}";
+            }
         }
 
         /// <summary>
@@ -518,9 +806,10 @@ namespace ThreadPilot.Services
             {
                 try
                 {
+                    var foregroundProcessId = this.foregroundProcessService?.TryGetForegroundProcessId();
                     var processes = Process.GetProcessesByName(executableName)
-                        .Select(this.CreateProcessModel)
-                        .Where(p => p != null);
+                        .Select(process => this.TryCreateProcessModel(process, foregroundProcessId))
+                        .OfType<ProcessModel>();
 
                     return processes;
                 }
@@ -541,9 +830,11 @@ namespace ThreadPilot.Services
         {
             return await Task.Run(() =>
             {
+                var foregroundProcessId = this.foregroundProcessService?.TryGetForegroundProcessId();
                 var processes = Process.GetProcesses()
-                    .Select(this.CreateProcessModel)
-                    .Where(p => p != null && !string.IsNullOrEmpty(p.ExecutablePath))
+                    .Select(process => this.TryCreateProcessModel(process, foregroundProcessId))
+                    .OfType<ProcessModel>()
+                    .Where(p => !string.IsNullOrEmpty(p.ExecutablePath))
                     .OrderBy(p => p.Name);
 
                 return processes;
@@ -554,9 +845,11 @@ namespace ThreadPilot.Services
         {
             return await Task.Run(() =>
             {
+                var foregroundProcessId = this.foregroundProcessService?.TryGetForegroundProcessId();
                 var processes = Process.GetProcesses()
-                    .Select(this.CreateProcessModel)
-                    .Where(p => p != null && p.HasVisibleWindow)
+                    .Select(process => this.TryCreateProcessModel(process, foregroundProcessId))
+                    .OfType<ProcessModel>()
+                    .Where(p => p.HasVisibleWindow)
                     .OrderBy(p => p.Name);
 
                 return new ObservableCollection<ProcessModel>(processes);

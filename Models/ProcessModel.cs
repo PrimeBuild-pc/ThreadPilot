@@ -20,6 +20,17 @@ namespace ThreadPilot.Models
     using System.Diagnostics;
     using CommunityToolkit.Mvvm.ComponentModel;
 
+    public enum ProcessClassification
+    {
+        ForegroundApp,
+        VisibleWindowApp,
+        BackgroundUser,
+        System,
+        ProtectedOrAccessDenied,
+        Terminated,
+        Unknown,
+    }
+
     public partial class ProcessModel : ObservableObject
     {
         [ObservableProperty]
@@ -51,6 +62,12 @@ namespace ThreadPilot.Models
 
         [ObservableProperty]
         private bool hasVisibleWindow;
+
+        [ObservableProperty]
+        private bool isForeground;
+
+        [ObservableProperty]
+        private ProcessClassification classification = ProcessClassification.Unknown;
 
         [ObservableProperty]
         private bool isIdleServerDisabled;

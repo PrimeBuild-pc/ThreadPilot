@@ -323,7 +323,7 @@
                                    Margin="0,0,0,6"/>
 
                         <TextBlock x:Name="PerformanceIntroTip1"
-                                   Text="1. Start monitoring to collect a live snapshot."
+                                   Text="1. Start live metrics to collect a current system snapshot."
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Margin="0,0,0,4"/>
                         <TextBlock x:Name="PerformanceIntroTip2"

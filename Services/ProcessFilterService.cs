@@ -66,7 +66,7 @@ namespace ThreadPilot.Services
 
             if (criteria.HideSystemProcesses)
             {
-                filtered = filtered.Where(p => !IsSystemProcess(p));
+                filtered = filtered.Where(p => !this.IsSystemProcess(p));
             }
 
             if (criteria.HideIdleProcesses)
@@ -86,7 +86,7 @@ namespace ThreadPilot.Services
             return sorted.ToList();
         }
 
-        private static bool IsSystemProcess(ProcessModel process)
+        public bool IsSystemProcess(ProcessModel process)
         {
             if (process == null)
             {

@@ -134,7 +134,7 @@ namespace ThreadPilot.Services
             this.performanceMenuItem.Click += this.OnPerformanceDashboardClick;
             this.contextMenu.Items.Add(this.performanceMenuItem);
 
-            this.monitoringToggleMenuItem = new ToolStripMenuItem("Pause Monitoring");
+            this.monitoringToggleMenuItem = new ToolStripMenuItem("Pause Automation Monitoring");
             this.monitoringToggleMenuItem.Click += this.OnMonitoringToggleClick;
             this.contextMenu.Items.Add(this.monitoringToggleMenuItem);
 
@@ -157,7 +157,7 @@ namespace ThreadPilot.Services
             this.contextMenu.Items.Add(this.selectedProcessMenuItem);
 
             // Quick apply command
-            this.quickApplyMenuItem = new ToolStripMenuItem("Quick Apply to Selected Process")
+            this.quickApplyMenuItem = new ToolStripMenuItem("Apply Pending Settings to Selected Process")
             {
                 Enabled = false,
             };
@@ -237,13 +237,13 @@ namespace ThreadPilot.Services
             {
                 this.selectedProcessMenuItem.Text = $"Selected: {selectedProcessName}";
                 this.quickApplyMenuItem.Enabled = true;
-                this.quickApplyMenuItem.Text = $"Quick Apply to {selectedProcessName}";
+                this.quickApplyMenuItem.Text = $"Apply Pending Settings to {selectedProcessName}";
             }
             else
             {
                 this.selectedProcessMenuItem.Text = "No process selected";
                 this.quickApplyMenuItem.Enabled = false;
-                this.quickApplyMenuItem.Text = "Quick Apply to Selected Process";
+                this.quickApplyMenuItem.Text = "Apply Pending Settings to Selected Process";
             }
         }
 
@@ -307,7 +307,7 @@ namespace ThreadPilot.Services
 
             if (this.monitoringToggleMenuItem != null)
             {
-                this.monitoringToggleMenuItem.Text = isMonitoring ? "Pause Monitoring" : "Resume Monitoring";
+                this.monitoringToggleMenuItem.Text = isMonitoring ? "Pause Automation Monitoring" : "Resume Automation Monitoring";
                 this.monitoringToggleMenuItem.Enabled = isWmiAvailable;
             }
 
@@ -317,8 +317,8 @@ namespace ThreadPilot.Services
             this.UpdateTrayIcon(iconState);
 
             // Update tooltip
-            var status = !isWmiAvailable ? "WMI Error" :
-                        isMonitoring ? "Monitoring Active" : "Monitoring Disabled";
+            var status = !isWmiAvailable ? "Automation WMI Error" :
+                        isMonitoring ? "Automation Active" : "Automation Disabled";
             this.UpdateTooltip($"ThreadPilot - {status}");
         }
 

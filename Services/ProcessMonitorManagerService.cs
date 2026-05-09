@@ -38,6 +38,8 @@ namespace ThreadPilot.Services
         private readonly IApplicationSettingsService settingsService;
         private readonly IProcessService processService;
         private readonly ICoreMaskService coreMaskService;
+        private readonly IAffinityApplyService affinityApplyService;
+        private readonly PowerPlanTransitionGate powerPlanTransitionGate;
         private readonly ILogger<ProcessMonitorManagerService> logger;
         private readonly IEnhancedLoggingService enhancedLogger;
         private readonly object lockObject = new();
@@ -71,6 +73,8 @@ namespace ThreadPilot.Services
             IApplicationSettingsService settingsService,
             IProcessService processService,
             ICoreMaskService coreMaskService,
+            IAffinityApplyService affinityApplyService,
+            PowerPlanTransitionGate powerPlanTransitionGate,
             ILogger<ProcessMonitorManagerService> logger,
             IEnhancedLoggingService enhancedLogger)
         {
@@ -81,6 +85,8 @@ namespace ThreadPilot.Services
             this.settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
             this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
             this.coreMaskService = coreMaskService ?? throw new ArgumentNullException(nameof(coreMaskService));
+            this.affinityApplyService = affinityApplyService ?? throw new ArgumentNullException(nameof(affinityApplyService));
+            this.powerPlanTransitionGate = powerPlanTransitionGate ?? throw new ArgumentNullException(nameof(powerPlanTransitionGate));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.enhancedLogger = enhancedLogger ?? throw new ArgumentNullException(nameof(enhancedLogger));
 
@@ -264,6 +270,19 @@ namespace ThreadPilot.Services
                 await this.powerPlanChangeSemaphore.WaitAsync();
 
                 var currentPowerPlan = await this.powerPlanService.GetActivePowerPlan();
+                var decision = this.powerPlanTransitionGate.ShouldApply(
+                    this.configuration.DefaultPowerPlanGuid,
+                    currentPowerPlan?.Guid);
+                if (!decision.ShouldApply)
+                {
+                    this.logger.LogDebug(
+                        "Default power plan restore suppressed for {PowerPlanGuid}: {Reason}",
+                        this.configuration.DefaultPowerPlanGuid,
+                        decision.SuppressionReason);
+                    return;
+                }
+
+                this.powerPlanTransitionGate.RecordAttempt(this.configuration.DefaultPowerPlanGuid);
                 var success = await this.powerPlanService.SetActivePowerPlanByGuidAsync(
                     this.configuration.DefaultPowerPlanGuid,
                     this.configuration.PreventDuplicatePowerPlanChanges);
@@ -283,6 +302,12 @@ namespace ThreadPilot.Services
                         currentPowerPlan?.Name ?? "Unknown",
                         newPowerPlan?.Name ?? this.configuration.DefaultPowerPlanName,
                         string.Empty);
+                }
+                else
+                {
+                    this.logger.LogWarning(
+                        "Failed to restore default power plan {PowerPlanGuid}",
+                        this.configuration.DefaultPowerPlanGuid);
                 }
             }
             catch (Exception ex)
@@ -505,6 +530,19 @@ namespace ThreadPilot.Services
                 await this.powerPlanChangeSemaphore.WaitAsync();
 
                 var currentPowerPlan = await this.powerPlanService.GetActivePowerPlan();
+                var decision = this.powerPlanTransitionGate.ShouldApply(
+                    association.PowerPlanGuid,
+                    currentPowerPlan?.Guid);
+                if (!decision.ShouldApply)
+                {
+                    this.logger.LogDebug(
+                        "Power plan change suppressed for {PowerPlanGuid}: {Reason}",
+                        association.PowerPlanGuid,
+                        decision.SuppressionReason);
+                    return;
+                }
+
+                this.powerPlanTransitionGate.RecordAttempt(association.PowerPlanGuid);
                 var success = await this.powerPlanService.SetActivePowerPlanByGuidAsync(
                     association.PowerPlanGuid,
                     this.configuration?.PreventDuplicatePowerPlanChanges ?? true);
@@ -520,6 +558,14 @@ namespace ThreadPilot.Services
                         currentPowerPlan?.Name ?? "Unknown",
                         newPowerPlan?.Name ?? association.PowerPlanName,
                         process.Name);
+                }
+                else
+                {
+                    this.logger.LogWarning(
+                        "Failed to change power plan to {PowerPlanGuid} for process {ProcessName} (PID: {ProcessId})",
+                        association.PowerPlanGuid,
+                        process.Name,
+                        process.ProcessId);
                 }
             }
             catch (Exception ex)
@@ -583,18 +629,30 @@ namespace ThreadPilot.Services
                             var affinity = coreMask.ToProcessorAffinity();
                             if (affinity > 0)
                             {
-                                await this.processService.SetProcessorAffinity(process, affinity);
-                                this.processService.TrackAppliedMask(process.ProcessId, coreMask.Id);
-                                this.coreMaskService.RegisterMaskApplication(process.ProcessId, coreMask.Id);
+                                var result = await this.affinityApplyService.ApplyAsync(process, affinity);
+                                if (!result.Success)
+                                {
+                                    this.logger.LogWarning(
+                                        "Failed to apply CPU mask '{MaskName}' to process {ProcessName} (PID: {ProcessId}): {Message}",
+                                        coreMask.Name,
+                                        process.Name,
+                                        process.ProcessId,
+                                        result.Message);
+                                }
+                                else
+                                {
+                                    this.processService.TrackAppliedMask(process.ProcessId, coreMask.Id);
+                                    this.coreMaskService.RegisterMaskApplication(process.ProcessId, coreMask.Id);
 
-                                this.logger.LogInformation(
-                                    "Applied CPU mask '{MaskName}' (affinity: 0x{Affinity:X}) to process {ProcessName} (PID: {ProcessId})",
-                                    coreMask.Name, affinity, process.Name, process.ProcessId);
+                                    this.logger.LogInformation(
+                                        "Applied CPU mask '{MaskName}' (affinity: 0x{Affinity:X}) to process {ProcessName} (PID: {ProcessId})",
+                                        coreMask.Name, affinity, process.Name, process.ProcessId);
 
-                                await this.enhancedLogger.LogProcessMonitoringEventAsync(
-                                    LogEventTypes.ProcessMonitoring.AssociationTriggered,
-                                    process.Name, process.ProcessId,
-                                    $"CPU mask '{coreMask.Name}' applied automatically from association");
+                                    await this.enhancedLogger.LogProcessMonitoringEventAsync(
+                                        LogEventTypes.ProcessMonitoring.AssociationTriggered,
+                                        process.Name, process.ProcessId,
+                                        $"CPU mask '{coreMask.Name}' applied automatically from association");
+                                }
                             }
                         }
                         catch (Exception ex)

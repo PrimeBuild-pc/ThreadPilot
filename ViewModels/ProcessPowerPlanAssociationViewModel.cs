@@ -371,12 +371,12 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                this.SetStatus("Starting monitoring service...");
+                this.SetStatus("Starting automation monitoring...");
                 await this.monitorManagerService.StartAsync();
             }
             catch (Exception ex)
             {
-                this.SetStatus($"Error starting monitoring: {ex.Message}", false);
+                this.SetStatus($"Error starting automation monitoring: {ex.Message}", false);
             }
         }
 
@@ -385,12 +385,12 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                this.SetStatus("Stopping monitoring service...");
+                this.SetStatus("Stopping automation monitoring...");
                 await this.monitorManagerService.StopAsync();
             }
             catch (Exception ex)
             {
-                this.SetStatus($"Error stopping monitoring: {ex.Message}", false);
+                this.SetStatus($"Error stopping automation monitoring: {ex.Message}", false);
             }
         }
 
