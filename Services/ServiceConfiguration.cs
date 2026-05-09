@@ -99,6 +99,10 @@ namespace ThreadPilot.Services
         private static IServiceCollection ConfigureCoreSystemServices(this IServiceCollection services)
         {
             // Core system interaction services
+            services.AddSingleton<IForegroundWindowProvider, WindowsForegroundWindowProvider>();
+            services.AddSingleton<IForegroundProcessService, ForegroundProcessService>();
+            services.AddSingleton<IPassiveProcessErrorThrottle, PassiveProcessErrorThrottle>();
+            services.AddSingleton<IProcessClassifier, ProcessClassifier>();
             services.AddSingleton<IProcessService, ProcessService>();
             services.AddSingleton<ProcessFilterService>();
             services.AddSingleton<IVirtualizedProcessService, VirtualizedProcessService>();

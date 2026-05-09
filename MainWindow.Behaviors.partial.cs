@@ -969,10 +969,7 @@ namespace ThreadPilot
                     {
                         this.ShowInTaskbar = false;
                         this.Hide();
-                        this.SuspendHiddenModeRefreshes();
-                        this.processViewModel.PauseRefresh();
-                        this.processViewModel.SetProcessViewActive(false);
-                        _ = this.performanceViewModel.SuspendBackgroundMonitoringAsync();
+                        this.ApplyAppRefreshPolicy(AppActivityState.TrayHidden);
                     }
                     else
                     {
@@ -1300,42 +1297,22 @@ namespace ThreadPilot
             {
                 if (this.WindowState == WindowState.Minimized)
                 {
+                    var activityState = AppActivityState.Minimized;
                     if (this.settingsService.Settings.MinimizeToTray)
                     {
                         this.ShowInTaskbar = false;
                         this.Hide();
                         this.systemTrayService.Show();
+                        activityState = AppActivityState.TrayHidden;
                     }
 
-                    this.SuspendHiddenModeRefreshes();
-
-                    if (this.processViewModel != null)
-                    {
-                        this.processViewModel.PauseRefresh();
-                        this.processViewModel.SetProcessViewActive(false);
-                    }
-
-                    if (this.performanceViewModel != null)
-                    {
-                        _ = this.performanceViewModel.SuspendBackgroundMonitoringAsync();
-                    }
+                    this.ApplyAppRefreshPolicy(activityState);
                 }
                 else if (this.WindowState == WindowState.Normal || this.WindowState == WindowState.Maximized)
                 {
                     this.ShowInTaskbar = true;
 
-                    this.ResumeForegroundRefreshes();
-
-                    if (this.processViewModel != null)
-                    {
-                        this.processViewModel.SetProcessViewActive(this.ProcessManagementTab.Visibility == Visibility.Visible);
-                        this.processViewModel.ResumeRefresh();
-                    }
-
-                    if (this.performanceViewModel != null)
-                    {
-                        _ = this.performanceViewModel.ResumeBackgroundMonitoringAsync();
-                    }
+                    this.ApplyAppRefreshPolicy(this.GetForegroundActivityState());
                 }
             }
             catch (Exception ex)
@@ -1364,7 +1341,6 @@ namespace ThreadPilot
                 this.systemTrayUpdateTimer.Interval = SystemTrayUpdateBaseIntervalMs;
             }
             this.systemTrayUpdateTimer?.Start();
-            this.powerPlanViewModel.ResumeAutoRefresh(refreshImmediately: true);
 
             _ = this.Dispatcher.InvokeAsync(async () =>
             {
@@ -1378,6 +1354,52 @@ namespace ThreadPilot
                     System.Diagnostics.Debug.WriteLine($"Failed to refresh tray status after resume: {ex.Message}");
                 }
             });
+        }
+
+        private AppActivityState GetForegroundActivityState()
+        {
+            return this.ProcessManagementTab.Visibility == Visibility.Visible
+                ? AppActivityState.ForegroundProcessView
+                : AppActivityState.ForegroundOtherTab;
+        }
+
+        private void ApplyAppRefreshPolicy(AppActivityState state)
+        {
+            var decision = AppRefreshPolicy.Evaluate(state);
+            var isHiddenState = state is AppActivityState.Minimized or AppActivityState.TrayHidden;
+            var isProcessViewActive = state == AppActivityState.ForegroundProcessView;
+
+            if (isHiddenState)
+            {
+                this.isSystemTrayUpdatesSuspended = true;
+                this.systemTrayUpdateTimer?.Stop();
+                Interlocked.Exchange(ref this.isSystemTrayUpdateInProgress, 0);
+            }
+            else
+            {
+                this.ResumeForegroundRefreshes();
+            }
+
+            this.processViewModel.SetProcessViewActive(isProcessViewActive);
+            this.processViewModel.ApplyRefreshDecision(decision);
+
+            if (decision.PowerPlanUiRefreshEnabled)
+            {
+                this.powerPlanViewModel.ResumeAutoRefresh(refreshImmediately: state != AppActivityState.ForegroundOtherTab);
+            }
+            else
+            {
+                this.powerPlanViewModel.PauseAutoRefresh();
+            }
+
+            if (decision.PerformanceUiMonitoringEnabled)
+            {
+                _ = this.performanceViewModel.ResumeBackgroundMonitoringAsync();
+            }
+            else
+            {
+                _ = this.performanceViewModel.SuspendBackgroundMonitoringAsync();
+            }
         }
 
         protected override void OnSourceInitialized(EventArgs e)
@@ -1452,10 +1474,9 @@ namespace ThreadPilot
                 ? this.ProcessManagementTab.Visibility == Visibility.Visible
                 : string.Equals(tabTag, "Process", StringComparison.Ordinal);
 
-            this.ResumeForegroundRefreshes();
-            this.processViewModel.SetProcessViewActive(processViewWillBeActive);
-            this.processViewModel.ResumeRefresh();
-            _ = this.performanceViewModel.ResumeBackgroundMonitoringAsync();
+            this.ApplyAppRefreshPolicy(processViewWillBeActive
+                ? AppActivityState.ForegroundProcessView
+                : AppActivityState.ForegroundOtherTab);
 
             if (tabTag != null)
             {
@@ -1664,10 +1685,21 @@ namespace ThreadPilot
             this.NavTweaks.IsActive = tag == "Tweaks";
             this.NavSettings.IsActive = tag == "Settings";
 
-            this.processViewModel.SetProcessViewActive(
-                string.Equals(tag, "Process", StringComparison.Ordinal) &&
-                this.IsVisible &&
-                this.WindowState != WindowState.Minimized);
+            if (!this.IsVisible)
+            {
+                this.ApplyAppRefreshPolicy(AppActivityState.TrayHidden);
+                return;
+            }
+
+            if (this.WindowState == WindowState.Minimized)
+            {
+                this.ApplyAppRefreshPolicy(AppActivityState.Minimized);
+                return;
+            }
+
+            this.ApplyAppRefreshPolicy(string.Equals(tag, "Process", StringComparison.Ordinal)
+                ? AppActivityState.ForegroundProcessView
+                : AppActivityState.ForegroundOtherTab);
         }
 
         private void NavMenuItem_Click(object sender, RoutedEventArgs e)

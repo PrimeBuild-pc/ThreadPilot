@@ -274,7 +274,7 @@ namespace ThreadPilot.Services
         {
             TaskSafety.FireAndForget(this.BackgroundPreloadCallbackAsync(), ex =>
             {
-                this.logger.LogWarning(ex, "Background process refresh failed");
+                this.logger.LogDebug(ex, "Background process refresh failed");
             });
         }
 

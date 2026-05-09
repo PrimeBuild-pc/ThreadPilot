@@ -324,61 +324,6 @@ namespace ThreadPilot.ViewModels
             this.Logger.LogDebug("Core property changed but cores are read-only - no action taken");
         }
 
-        private async Task AutoApplyAffinityAsync()
-        {
-            if (this.SelectedProcess == null || !this.hasPendingAffinityEdits)
-            {
-                return;
-            }
-
-            try
-            {
-                var affinityMask = this.CalculateAffinityMask();
-                if (affinityMask == 0)
-                {
-                    this.Logger.LogDebug("Affinity mask is zero, skipping auto-apply");
-                    return;
-                }
-
-                this.Logger.LogInformation(
-                    "Auto-applying affinity 0x{AffinityMask:X} to process {ProcessName} (PID: {ProcessId})",
-                    affinityMask, this.SelectedProcess.Name, this.SelectedProcess.ProcessId);
-
-                // Apply the affinity change
-                await this.processService.SetProcessorAffinity(this.SelectedProcess, affinityMask);
-
-                // Immediately refresh the process to get the actual system state
-                await this.processService.RefreshProcessInfo(this.SelectedProcess);
-
-                // Update UI to reflect the actual system affinity
-                this.UpdateCoreSelections(this.SelectedProcess.ProcessorAffinity, true);
-
-                // Notify UI of all changes
-                this.OnPropertyChanged(nameof(this.SelectedProcess));
-
-                // Clear pending edits flag
-                this.hasPendingAffinityEdits = false;
-
-                this.Logger.LogInformation("Auto-applied affinity successfully to {ProcessName}", this.SelectedProcess.Name);
-            }
-            catch (Exception ex)
-            {
-                this.Logger.LogWarning(ex, "Failed to auto-apply affinity to {ProcessName}", this.SelectedProcess.Name);
-
-                // Try to refresh process info even if setting failed, to show current state
-                try
-                {
-                    await this.processService.RefreshProcessInfo(this.SelectedProcess);
-                    this.UpdateCoreSelections(this.SelectedProcess.ProcessorAffinity, true);
-                    this.OnPropertyChanged(nameof(this.SelectedProcess));
-                }
-                catch
-                {
-                    // Process may have terminated
-                }
-            }
-        }
-
         private void UpdateHyperThreadingStatus()
         {
             if (this.CpuTopology == null)
@@ -669,67 +614,32 @@ namespace ThreadPilot.ViewModels
 
             try
             {
-                // Store the currently selected process ID to preserve selection
                 var selectedProcessId = this.SelectedProcess?.ProcessId;
 
                 var currentProcesses = this.ShowActiveApplicationsOnly
                     ? await this.processService.GetActiveApplicationsAsync()
                     : await this.processService.GetProcessesAsync();
 
-                // Update UI on the UI thread
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    // Update existing processes or add new ones
-                    foreach (var process in currentProcesses)
-                    {
-                        var existingProcess = this.Processes.FirstOrDefault(p => p.ProcessId == process.ProcessId);
-                        if (existingProcess != null)
-                        {
-                            // Update existing process data by copying properties
-                            existingProcess.MemoryUsage = process.MemoryUsage;
-                            existingProcess.Priority = process.Priority;
-                            existingProcess.ProcessorAffinity = process.ProcessorAffinity;
-                            existingProcess.MainWindowHandle = process.MainWindowHandle;
-                            existingProcess.MainWindowTitle = process.MainWindowTitle;
-                            existingProcess.HasVisibleWindow = process.HasVisibleWindow;
-                            existingProcess.CpuUsage = process.CpuUsage;
-                        }
-                        else
-                        {
-                            this.Processes.Add(process);
-                        }
-                    }
-
-                    // Remove terminated processes
-                    var terminatedProcesses = this.Processes
-                        .Where(p => !currentProcesses.Any(cp => cp.ProcessId == p.ProcessId))
-                        .ToList();
-
-                    // Check if selected process was terminated
-                    bool selectedProcessTerminated = false;
-                    foreach (var terminated in terminatedProcesses)
-                    {
-                        if (terminated.ProcessId == selectedProcessId)
-                        {
-                            selectedProcessTerminated = true;
-                        }
-                        this.Processes.Remove(terminated);
-                    }
+                    var deltaResult = ProcessListDeltaUpdater.ApplyDelta(
+                        this.Processes,
+                        currentProcesses,
+                        selectedProcessId);
 
                     this.FilterProcesses();
 
-                    // Restore selection if the process still exists
-                    if (selectedProcessId.HasValue && !selectedProcessTerminated)
+                    if (deltaResult.SelectedProcess != null)
                     {
-                        var processToSelect = this.FilteredProcesses.FirstOrDefault(p => p.ProcessId == selectedProcessId.Value);
+                        var processToSelect = this.FilteredProcesses.FirstOrDefault(
+                            p => p.ProcessId == deltaResult.SelectedProcess.ProcessId);
                         if (processToSelect != null)
                         {
                             this.SelectedProcess = processToSelect;
                         }
                     }
-                    else if (selectedProcessTerminated)
+                    else if (deltaResult.SelectedProcessTerminated)
                     {
-                        // Clear selection and reset UI if selected process was terminated
                         this.SelectedProcess = null;
                         this.ClearProcessSelection();
                     }
@@ -879,11 +789,8 @@ namespace ThreadPilot.ViewModels
                     this.suppressCoreSelectionEvents = false;
                 }
 
-                // Trigger auto-apply with the preset mask
+                // Keep the preset as a pending selection; affinity changes require an explicit apply command.
                 this.hasPendingAffinityEdits = true;
-
-                // Apply immediately for presets (no debounce needed)
-                _ = this.AutoApplyAffinityAsync();
             });
         }
 
@@ -1327,6 +1234,14 @@ namespace ThreadPilot.ViewModels
         public void ResumeRefresh()
         {
             this.SetUiRefreshEnabled(true, refreshImmediately: true);
+        }
+
+        public void ApplyRefreshDecision(AppRefreshDecision decision)
+        {
+            ArgumentNullException.ThrowIfNull(decision);
+
+            this.virtualizedProcessService.Configuration.EnableBackgroundLoading = decision.VirtualizedPreloadEnabled;
+            this.SetUiRefreshEnabled(decision.ProcessUiRefreshEnabled, decision.ImmediateProcessRefresh);
         }
 
         public void SetProcessViewActive(bool isActive)
