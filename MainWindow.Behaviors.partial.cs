@@ -782,23 +782,23 @@ namespace ThreadPilot
                 {
                     await this.processMonitorManagerService.StartAsync();
                     await this.notificationService.ShowSuccessNotificationAsync(
-                        "Monitoring Enabled",
-                        "Process monitoring and power plan management has been enabled");
+                        "Automation Monitoring Enabled",
+                        "Process rule automation and power plan management have been enabled.");
                 }
                 else
                 {
                     await this.processMonitorManagerService.StopAsync();
                     await this.notificationService.ShowNotificationAsync(
-                        "Monitoring Disabled",
-                        "Process monitoring and power plan management has been disabled",
+                        "Automation Monitoring Disabled",
+                        "Process rule automation and power plan management have been disabled.",
                         Models.NotificationType.Warning);
                 }
             }
             catch (Exception ex)
             {
                 await this.notificationService.ShowErrorNotificationAsync(
-                    "Monitoring Error",
-                    "Failed to toggle process monitoring",
+                    "Automation Monitoring Error",
+                    "Failed to toggle automation monitoring.",
                     ex);
             }
         }
@@ -1270,8 +1270,8 @@ namespace ThreadPilot
             if (e.Error != null && this.settingsService.Settings.EnableErrorNotifications)
             {
                 this.notificationService.ShowErrorNotificationAsync(
-                    "Monitoring Error",
-                    e.StatusMessage ?? "An error occurred with process monitoring",
+                    "Automation Monitoring Error",
+                    e.StatusMessage ?? "An error occurred with automation monitoring.",
                     e.Error);
             }
         }
@@ -1285,8 +1285,8 @@ namespace ThreadPilot
             if (!e.IsRunning && e.Error != null && this.settingsService.Settings.EnableErrorNotifications)
             {
                 this.notificationService.ShowErrorNotificationAsync(
-                    "Process Monitoring Error",
-                    e.Details ?? "Process monitoring manager encountered an error",
+                    "Automation Monitoring Error",
+                    e.Details ?? "Automation monitoring encountered an error.",
                     e.Error);
             }
         }
@@ -1469,6 +1469,8 @@ namespace ThreadPilot
             this.Activate();
             this.Focus();
             this.Topmost = false;
+            this.Activate();
+            this.Focus();
 
             var processViewWillBeActive = tabTag == null
                 ? this.ProcessManagementTab.Visibility == Visibility.Visible

@@ -4,6 +4,7 @@
 namespace ThreadPilot.Core.Tests
 {
     using System.Collections.Concurrent;
+    using System.ComponentModel;
     using System.Diagnostics;
     using System.Text.Json;
     using ThreadPilot.Models;
@@ -65,6 +66,16 @@ namespace ThreadPilot.Core.Tests
             {
                 DeleteDirectory(profilesDirectory);
             }
+        }
+
+        [Fact]
+        public void IsPassiveProcessAccessException_ReturnsTrue_ForModuleEnumerationFailure()
+        {
+            var exception = new Win32Exception(299, "Unable to enumerate the process modules.");
+
+            var result = ProcessService.IsPassiveProcessAccessException(exception);
+
+            Assert.True(result);
         }
 
         [Fact]
