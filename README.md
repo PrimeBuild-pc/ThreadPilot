@@ -21,8 +21,8 @@ Coverage badge tracks business/application code and excludes generated build art
 - Process management with live refresh, filtering, and high-volume process handling.
 - CPU affinity and priority controls with topology-aware logic.
 - I/O and scheduling related tuning utilities.
-- Rule-driven power plan switching based on process start/stop events.
-- Conditional profiles, system tray controls, and runtime monitoring.
+- Automation Monitoring for rule-driven power plan switching based on process start/stop events.
+- Conditional profiles, system tray controls, and Live Metrics.
 - Windows 11 first-class support.
 
 ## Screenshots
@@ -42,9 +42,9 @@ Coverage badge tracks business/application code and excludes generated build art
 
 ### Package Manager Status
 
-- GitHub Release v1.1.2 is live.
-- WinGet is pending review.
-- Chocolatey is pending verification/approval.
+- GitHub Release v1.1.3 is the target release.
+- WinGet publication for v1.1.3 follows the GitHub Release asset and checksum.
+- Chocolatey publication for v1.1.3 follows the GitHub Release asset and checksum.
 - PowerShell bootstrap (Admin): `iwr https://raw.githubusercontent.com/PrimeBuild-pc/ThreadPilot/main/build/install-threadpilot.ps1 -UseBasicParsing | iex`
 
 <details>
@@ -131,7 +131,7 @@ Notes:
 - ThreadPilot uses an administrator-required manifest (`requireAdministrator`) and requests elevation at startup.
 - If UAC elevation is declined at startup, the application exits and does not continue in limited mode.
 - In `Power Plans > Custom Power Plans`, use `Add .pow File` to add new custom plans directly from the app.
-- The first opening of Performance shows a blocking onboarding modal with blurred background for clarity.
+- Performance uses Live Metrics for dashboard refresh; Rules & Automation uses Automation Monitoring for process-driven rules.
 
 </details>
 

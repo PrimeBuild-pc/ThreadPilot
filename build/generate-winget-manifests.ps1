@@ -52,7 +52,7 @@ PackageIdentifier: PrimeBuild.ThreadPilot
 PackageVersion: $Version
 DefaultLocale: en-US
 ManifestType: version
-ManifestVersion: 1.4.0
+ManifestVersion: 1.5.0
 "@
 
 $defaultLocaleManifest = @"
@@ -75,7 +75,7 @@ Tags:
   - power-plan
   - performance
 ManifestType: defaultLocale
-ManifestVersion: 1.4.0
+ManifestVersion: 1.5.0
 "@
 
 $installerManifest = @"
@@ -87,7 +87,7 @@ Installers:
     InstallerUrl: $InstallerUrl
     InstallerSha256: $normalizedSha256
 ManifestType: installer
-ManifestVersion: 1.4.0
+ManifestVersion: 1.5.0
 "@
 
 Set-Content -LiteralPath $versionManifestPath -Value $versionManifest -Encoding utf8

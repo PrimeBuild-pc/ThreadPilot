@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.3] - 2026-05-09
+
+### Added
+
+- Expanded core service test coverage to 104 tests.
+
+### Changed
+
+- Hardened background refresh behavior while ThreadPilot is minimized or hidden to tray.
+- Improved process enumeration resilience for access-denied, protected, and rapidly terminating processes.
+- Added a verified affinity apply flow so UI state reflects the OS-confirmed affinity after explicit apply.
+- Added duplicate and debounce protection for process-driven power plan switching.
+- Redesigned Process Management into a clearer two-pane layout with selected-process actions on the right.
+- Clarified terminology between Automation Monitoring and Live Metrics.
+
+### Fixed
+
+- Prevented passive process read failures from emptying the process table.
+- Preserved explicit-only affinity changes so process selection and mask selection do not apply affinity automatically.
+
 ## [1.1.1] - 2026-04-15
 
 ### Added

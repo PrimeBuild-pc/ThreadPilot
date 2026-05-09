@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>threadpilot</id>
-    <version>1.1.2.1</version>
+    <version>1.1.3</version>
     <title>ThreadPilot</title>
     <authors>Prime Build</authors>
     <projectUrl>https://github.com/PrimeBuild-pc/ThreadPilot</projectUrl>
@@ -15,7 +15,7 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Advanced Windows process and power plan manager with rules automation and performance controls.</description>
     <summary>ThreadPilot process and power plan manager.</summary>
-    <releaseNotes>https://github.com/PrimeBuild-pc/ThreadPilot/releases/tag/v1.1.2</releaseNotes>
+    <releaseNotes>https://github.com/PrimeBuild-pc/ThreadPilot/releases/tag/v1.1.3</releaseNotes>
     <tags>threadpilot process powerplan performance windows</tags>
   </metadata>
   <files>
