@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2022
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
@@ -303,7 +303,7 @@ jobs:
           if-no-files-found: error
 
   smoke-test:
-    runs-on: windows-latest
+    runs-on: windows-2022
     needs: build
 
     steps:
@@ -423,7 +423,7 @@ jobs:
           generate_release_notes: true
 
   publish-winget:
-    runs-on: windows-latest
+    runs-on: windows-2022
     needs:
       - build
       - release
@@ -550,7 +550,7 @@ jobs:
           if-no-files-found: error
 
   publish-chocolatey:
-    runs-on: windows-latest
+    runs-on: windows-2022
     needs:
       - build
       - release
