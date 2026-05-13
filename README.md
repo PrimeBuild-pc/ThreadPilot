@@ -1,141 +1,104 @@
+<div align="center">
+
 # ThreadPilot ✈️
+
+**A free and open-source Windows process and power plan manager for deterministic performance workflows.**
 
 [![Build](https://github.com/PrimeBuild-pc/ThreadPilot/actions/workflows/ci-devsecops.yml/badge.svg)](https://github.com/PrimeBuild-pc/ThreadPilot/actions/workflows/ci-devsecops.yml)
 [![Release](https://img.shields.io/github/v/release/PrimeBuild-pc/ThreadPilot?sort=semver)](https://github.com/PrimeBuild-pc/ThreadPilot/releases)
-[![Coverage](https://codecov.io/gh/PrimeBuild-pc/ThreadPilot/branch/main/graph/badge.svg)](https://codecov.io/gh/PrimeBuild-pc/ThreadPilot)
-[![winget](https://img.shields.io/winget/v/PrimeBuild.ThreadPilot)](https://github.com/microsoft/winget-pkgs)
+[![winget](https://img.shields.io/winget/v/PrimeBuild.ThreadPilot?label=winget)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/p/PrimeBuild/ThreadPilot)
 [![Windows](https://img.shields.io/badge/Windows-11-blue?logo=windows)](https://www.microsoft.com/windows)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE)
+[![Issues](https://img.shields.io/github/issues/PrimeBuild-pc/ThreadPilot)](https://github.com/PrimeBuild-pc/ThreadPilot/issues)
+[![Discussions](https://img.shields.io/badge/Discussions-GitHub-6f42c1?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/discussions)
 
-ThreadPilot is a free and open-source Windows process and power plan manager focused on deterministic performance workflows.
+[Install](#-install) • [Features](#-features) • [Screenshots](#-screenshots) • [Build](#-build-from-source) • [Support](#-support-the-project)
 
-The project targets users who need Process Lasso style capabilities in a modern WPF desktop application with enterprise-grade reliability, security hardening, and automation support.
-
-Coverage badge tracks business/application code and excludes generated build artifacts.
+</div>
 
 [![Thread-Pilotbanner.png](https://i.postimg.cc/sDZLXMqr/Thread-Pilotbanner.png)](https://postimg.cc/cr0hkLd9)
 
-## ✨ Key Features
+## What is ThreadPilot?
 
-- Process management with live refresh, filtering, and high-volume process handling.
+ThreadPilot is a modern Windows desktop application for users who want predictable control over process behavior, CPU affinity, priority, power plans, and rule-driven performance workflows.
+
+It is designed as an open-source alternative for power users who need Process Lasso-style capabilities, automation support, system tray controls, and a Windows 11-first experience.
+
+## ✨ Features
+
+- Live process management with refresh, filtering, and high-volume process handling.
 - CPU affinity and priority controls with topology-aware logic.
-- I/O and scheduling related tuning utilities.
-- Automation Monitoring for rule-driven power plan switching based on process start/stop events.
-- Conditional profiles, system tray controls, and Live Metrics.
-- Windows 11 first-class support.
+- I/O and scheduler-related tuning utilities.
+- Rule-based automation for power plan switching when selected processes start or stop.
+- Conditional profiles, tray controls, Live Metrics, and dashboard views.
+- Administrator-aware Windows desktop workflow.
+- CI-backed release artifacts and package-manager distribution.
 
-## Screenshots
+## 📦 Install
 
-<img width="2470" height="1696" alt="Gemini_Generated_Image_xzgtdpxzgtdpxzgt" src="https://github.com/user-attachments/assets/e535e496-8b7d-4d38-883b-e0c7f68a610f" />
+### Install with WinGet
 
-## ⚙️ Requirements
+ThreadPilot is available on WinGet as `PrimeBuild.ThreadPilot`.
 
-- Windows 11 (Build 22000+).
-- .NET 8 SDK for source builds.
-- Administrator privileges are required to launch ThreadPilot.
+From **Command Prompt** or **PowerShell**:
 
-## 📦 Download
+```cmd
+winget install --id PrimeBuild.ThreadPilot -e
+```
+
+To refresh your local WinGet source first:
+
+```cmd
+winget source update
+winget search ThreadPilot
+```
+
+### Download from GitHub Releases
 
 [![Download Latest Release](https://img.shields.io/badge/Download-Latest%20Release-2ea44f?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest)
 [![Portable ZIP Assets](https://img.shields.io/badge/Portable%20ZIP-Release%20Assets-1f6feb?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest)
 
-### Package Manager Status
+| Package | Recommended use |
+|---|---|
+| `ThreadPilot_v<version>_Setup.exe` | Standard Windows installer for most users |
+| `ThreadPilot_v<version>_singlefile_win-x64.zip` | Portable/no-install deployment |
 
-- GitHub Release v1.1.3 is the target release.
-- WinGet publication for v1.1.3 follows the GitHub Release asset and checksum.
-- Chocolatey publication for v1.1.3 follows the GitHub Release asset and checksum.
-- PowerShell bootstrap (Admin): `iwr https://raw.githubusercontent.com/PrimeBuild-pc/ThreadPilot/main/build/install-threadpilot.ps1 -UseBasicParsing | iex`
-
-<details>
-<summary>Manual download files and checksum verification</summary>
-
-Latest artifacts are published on each tagged release in [GitHub Releases](https://github.com/PrimeBuild-pc/ThreadPilot/releases).
-
-| Package | File name | Recommended use |
-|---|---|---|
-| Installer (Recommended) | `ThreadPilot_v<version>_Setup.exe` | Standard Windows installer (Inno Setup) for most users |
-| Portable | `ThreadPilot_v<version>_singlefile_win-x64.zip` | No-install deployment for power users |
-
-Quick links:
-
-- Release page: https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest
-
-Verification examples:
+Optional checksum verification:
 
 ```powershell
 Get-FileHash .\ThreadPilot_v<version>_Setup.exe -Algorithm SHA256
 Get-FileHash .\ThreadPilot_v<version>_singlefile_win-x64.zip -Algorithm SHA256
 ```
 
-Compare hashes with `SHA256SUMS.txt` from the same release.
+Compare the result with `SHA256SUMS.txt` from the same release.
 
-</details>
+## 🖼️ Screenshots
 
-<details>
-<summary>Expanded PowerShell installer script (auditable)</summary>
+<img width="2470" height="1696" alt="Gemini_Generated_Image_xzgtdpxzgtdpxzgt" src="https://github.com/user-attachments/assets/e535e496-8b7d-4d38-883b-e0c7f68a610f" />
 
-```powershell
-# 1) Verify administrator permissions
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-  Write-Warning "Please run this command in a PowerShell window opened as Administrator."
-  exit 1
-}
+## ⚙️ Requirements
 
-Write-Host "Starting ThreadPilot installation..." -ForegroundColor Cyan
+- Windows 11, build 22000 or newer.
+- Administrator privileges to launch and manage system-level process settings.
+- .NET 8 SDK only if you want to build from source.
 
-# 2) Resolve latest installer asset from GitHub Releases
-$release = Invoke-RestMethod -Uri "https://api.github.com/repos/PrimeBuild-pc/ThreadPilot/releases/latest"
-$asset = $release.assets | Where-Object { $_.name -match '^ThreadPilot_v.*_Setup\.exe$' } | Select-Object -First 1
-if (-not $asset) {
-  throw "Unable to locate the latest ThreadPilot installer asset."
-}
+## 🚀 Usage Notes
 
-$url = $asset.browser_download_url
-$destPath = "$env:ProgramFiles\ThreadPilot"
-$exePath = Join-Path $destPath $asset.name
+ThreadPilot uses an administrator-required manifest and requests elevation at startup. If UAC elevation is declined, the application exits instead of continuing in a limited mode.
 
-# 3) Ensure destination folder exists
-if (-not (Test-Path $destPath)) { New-Item -ItemType Directory -Force -Path $destPath | Out-Null }
+Useful startup arguments:
 
-# 4) Download installer
-Write-Host "Downloading installer..."
-Invoke-WebRequest -Uri $url -OutFile $exePath -UseBasicParsing
-
-# 5) Optional: add install folder to machine PATH
-$currentPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
-if ($currentPath -notmatch [regex]::Escape($destPath)) {
-  [Environment]::SetEnvironmentVariable("Path", $currentPath + ";" + $destPath, "Machine")
-  Write-Host "Added install folder to machine PATH."
-}
-
-# 6) Run installer silently
-Start-Process -FilePath $exePath -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-" -Wait
-
-Write-Host "Installation completed successfully." -ForegroundColor Green
+```text
+--start-minimized
+--autostart
+--test
+--smoke-test
 ```
 
-Notes:
+In `Power Plans > Custom Power Plans`, use `Add .pow File` to import custom power plans directly from the app.
 
-- This installation flow is machine-wide (`Program Files`) and requires administrator rights.
-- The PATH update is optional but included in the script for command-line convenience.
-
-</details>
-
-<details>
-<summary>Channel availability and install notes</summary>
-
-- Winget visibility depends on microsoft/winget-pkgs publication and client source refresh.
-- Chocolatey visibility depends on moderation and verification approval state.
-- The release workflow can auto-submit winget and Chocolatey publication jobs when repository secrets are configured.
-- ThreadPilot uses an administrator-required manifest (`requireAdministrator`) and requests elevation at startup.
-- If UAC elevation is declined at startup, the application exits and does not continue in limited mode.
-- In `Power Plans > Custom Power Plans`, use `Add .pow File` to add new custom plans directly from the app.
-- Performance uses Live Metrics for dashboard refresh; Rules & Automation uses Automation Monitoring for process-driven rules.
-
-</details>
-
-### Build from Source
+## 🧱 Build from Source
 
 ```powershell
 git clone https://github.com/PrimeBuild-pc/ThreadPilot.git
@@ -145,79 +108,71 @@ dotnet build ThreadPilot_1.sln --configuration Release
 dotnet run --project ThreadPilot.csproj --configuration Release
 ```
 
-Useful startup arguments:
-
-- --start-minimized
-- --autostart
-- --test
-- --smoke-test
-
-## Usage Examples
-
 Run integrated runtime tests:
 
 ```powershell
 dotnet run --project ThreadPilot.csproj --configuration Release -- --test
 ```
 
-Publish a self-contained build:
+Publish a self-contained Windows build:
 
 ```powershell
 dotnet publish ThreadPilot.csproj --configuration Release --runtime win-x64 --self-contained true
 ```
 
-Build release artifacts via script:
+Build release artifacts with the project script:
 
 ```powershell
 ./build/build-release.ps1
 ```
 
-## Quality and Security
+## 🔐 Quality and Security
 
 - CI validates build, formatting, analyzers, vulnerability checks, and secret scanning.
-- Security disclosures are handled through private GitHub advisories. See docs/SECURITY.md.
-- Change history is tracked in docs/CHANGELOG.md.
+- Security disclosures are handled through private GitHub advisories. See [`docs/SECURITY.md`](docs/SECURITY.md).
+- Change history is tracked in [`docs/CHANGELOG.md`](docs/CHANGELOG.md).
+- Coverage focuses on business/application code and excludes generated build artifacts.
 
-## Comparison with Process Lasso
+## 🧭 Project Documentation
 
-| Capability | ThreadPilot | Process Lasso |
-|---|---|---|
-| Open source | Yes (AGPL v3) | No |
-| Rule-based power plan switching | Yes | Yes |
-| CPU affinity and priority controls | Yes | Yes |
-| Modern Windows 11 Fluent UI | Yes | Partial |
-| Scriptable CI release artifacts | Yes | Not applicable |
-| Package manager distribution | winget + Chocolatey | Varies by edition |
+- [`docs/README.md`](docs/README.md)
+- [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md)
+- [`docs/CODE_OF_CONDUCT.md`](docs/CODE_OF_CONDUCT.md)
+- [`docs/RELEASE_SIGNING.md`](docs/RELEASE_SIGNING.md)
+- [`docs/release/PACKAGING.md`](docs/release/PACKAGING.md)
+- [`docs/reference/ARCHITECTURE_GUIDE.md`](docs/reference/ARCHITECTURE_GUIDE.md)
+- [`docs/reference/DEVELOPER_GUIDE.md`](docs/reference/DEVELOPER_GUIDE.md)
+- [`docs/reference/API_REFERENCE.md`](docs/reference/API_REFERENCE.md)
+- [`docs/reference/PROJECT_STRUCTURE.md`](docs/reference/PROJECT_STRUCTURE.md)
+- [`docs/reference/UI_STYLE_GUIDE.md`](docs/reference/UI_STYLE_GUIDE.md)
 
-## Repository Docs
+## 🗺️ Roadmap
 
-- docs/README.md
-- docs/RELEASE_SIGNING.md
-- docs/reference/ARCHITECTURE_GUIDE.md
-- docs/reference/API_REFERENCE.md
-- docs/reference/DEVELOPER_GUIDE.md
-- docs/reference/PROJECT_STRUCTURE.md
-- docs/reference/UI_STYLE_GUIDE.md
-- docs/release/PACKAGING.md
-
-## Contributing
-
-See docs/CONTRIBUTING.md and docs/CODE_OF_CONDUCT.md before opening pull requests.
-
-## 🛠️ Roadmap
-
-- Expand dedicated unit and integration coverage for core services.
+- Expand unit and integration coverage for core services.
 - Continue async reliability refactoring for long-running monitoring paths.
-- Improve accessibility and localization readiness in all major views.
+- Improve accessibility and localization readiness across major views.
 - Formalize release signing and distribution hardening.
+
+## 🤝 Contributing
+
+Contributions are welcome. Before opening a pull request, please read [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) and [`docs/CODE_OF_CONDUCT.md`](docs/CODE_OF_CONDUCT.md).
+
+For bugs, feature requests, or packaging issues, open a GitHub issue with reproduction steps and your Windows version.
 
 ## 📄 License
 
-Licensed under GNU Affero General Public License v3.0. See LICENSE.
+ThreadPilot is licensed under the **GNU Affero General Public License v3.0**. See [`LICENSE`](LICENSE).
 
-## 📞 Support
+## 💬 Support the Project
 
-**Made with love for Windows power users☕** [PayPal.me](https://paypal.me/PrimeBuildOfficial?country.x=IT&locale.x=it_IT)
+<div align="center">
 
-  * **Issues**: [https://github.com/PrimeBuild-pc/ThreadPilot/issues](https://github.com/PrimeBuild-pc/ThreadPilot/issues)
-  * **Discussions**: [https://github.com/PrimeBuild-pc/ThreadPilot/discussions](https://github.com/PrimeBuild-pc/ThreadPilot/discussions)
+**Built with care for Windows power users.**
+
+[![GitHub Issues](https://img.shields.io/badge/Report%20a%20Bug-GitHub%20Issues-d73a49?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/issues)
+[![GitHub Discussions](https://img.shields.io/badge/Ask%20a%20Question-Discussions-6f42c1?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/discussions)
+[![PayPal](https://img.shields.io/badge/Support%20Development-PayPal-00457C?logo=paypal&logoColor=white)](https://paypal.me/PrimeBuildOfficial?country.x=IT&locale.x=it_IT)
+
+If ThreadPilot is useful to you, consider starring the repository, opening thoughtful issues, sharing feedback, or supporting development with a small donation.
+
+</div>
