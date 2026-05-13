@@ -75,7 +75,7 @@ Compare the result with `SHA256SUMS.txt` from the same release.
 
 ## 🖼️ Screenshots
 
-<img width="2470" height="1696" alt="Gemini_Generated_Image_xzgtdpxzgtdpxzgt" src="https://github.com/user-attachments/assets/e535e496-8b7d-4d38-883b-e0c7f68a610f" />
+<img width="1672" height="941" alt="banner" src="https://github.com/user-attachments/assets/b8504579-8cff-439d-a6a6-fcc73cfa2994" />
 
 ## ⚙️ Requirements
 
