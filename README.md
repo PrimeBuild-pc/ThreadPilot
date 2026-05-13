@@ -17,7 +17,7 @@
 
 </div>
 
-[![Thread-Pilotbanner.png](https://i.postimg.cc/sDZLXMqr/Thread-Pilotbanner.png)](https://postimg.cc/cr0hkLd9)
+https://i.postimg.cc/PJM9bMbK/cover.png
 
 ## What is ThreadPilot?
 
