@@ -17,7 +17,7 @@
 
 </div>
 
-https://i.postimg.cc/PJM9bMbK/cover.png
+<img width="1672" height="941" alt="cover" src="https://github.com/user-attachments/assets/858ec350-b997-4683-9df1-cc196307ede8" />
 
 ## What is ThreadPilot?
 
