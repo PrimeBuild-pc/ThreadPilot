@@ -18,6 +18,7 @@ x86/
 [Aa][Rr][Mm]64/
 bld/
 artifacts/
+uninstall.bat
 
 # Keep release documentation tracked
 !docs/release/
