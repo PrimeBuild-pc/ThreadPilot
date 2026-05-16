@@ -44,6 +44,23 @@ namespace ThreadPilot.Core.Tests
                 dictionary => ThemeDictionaryPolicy.IsThreadPilotThemeDictionary(dictionary.Source?.OriginalString));
         }
 
+        [Theory]
+        [InlineData("Themes/FluentDark.xaml")]
+        [InlineData("Themes/FluentLight.xaml")]
+        public void ThemeDictionaries_DefineSharedVisualResourceKeys(string themePath)
+        {
+            var themeText = File.ReadAllText(GetRepositoryFilePath(themePath));
+
+            Assert.Contains("StandardCardCornerRadius", themeText, StringComparison.Ordinal);
+            Assert.Contains("StandardCardPadding", themeText, StringComparison.Ordinal);
+            Assert.Contains("StandardCardStyle", themeText, StringComparison.Ordinal);
+            Assert.Contains("PageTitleTextStyle", themeText, StringComparison.Ordinal);
+            Assert.Contains("PageSubtitleTextStyle", themeText, StringComparison.Ordinal);
+            Assert.Contains("SectionTitleTextStyle", themeText, StringComparison.Ordinal);
+            Assert.Contains("QuietRowBackgroundBrush", themeText, StringComparison.Ordinal);
+            Assert.Contains("StatusPillBackgroundBrush", themeText, StringComparison.Ordinal);
+        }
+
         private static ResourceDictionary CreateDictionaryWithSource(Uri source)
         {
             var dictionary = new ResourceDictionary();
@@ -55,6 +72,22 @@ namespace ThreadPilot.Core.Tests
 
             sourceField.SetValue(dictionary, source);
             return dictionary;
+        }
+
+        private static string GetRepositoryFilePath(string relativePath)
+        {
+            var directory = new DirectoryInfo(AppContext.BaseDirectory);
+            while (directory != null && !File.Exists(Path.Combine(directory.FullName, "ThreadPilot.csproj")))
+            {
+                directory = directory.Parent;
+            }
+
+            if (directory == null)
+            {
+                throw new InvalidOperationException("Repository root was not found.");
+            }
+
+            return Path.Combine(directory.FullName, relativePath);
         }
     }
 }

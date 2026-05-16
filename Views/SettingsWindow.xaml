@@ -26,17 +26,17 @@
               Background="{DynamicResource OverlayBrush}"
               Panel.ZIndex="10"
               AutomationProperties.Name="Unsaved settings dialog">
-            <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+            <Border Background="{DynamicResource CardSurfaceBrush}"
+                    BorderBrush="{DynamicResource BorderSubtleBrush}"
                     BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="26"
+                    CornerRadius="{DynamicResource StandardCardCornerRadius}"
+                    Padding="24"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     MinWidth="420"
                     MaxWidth="560">
                 <Border.Effect>
-                    <DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity="0.35"/>
+                    <DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity="0.18"/>
                 </Border.Effect>
                 <StackPanel>
                     <TextBlock Text="Unsaved Settings"

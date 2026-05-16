@@ -51,7 +51,7 @@
                             <Setter Property="IsHitTestVisible" Value="False"/>
                             <Setter Property="Effect">
                                 <Setter.Value>
-                                    <BlurEffect Radius="15" KernelType="Gaussian"/>
+                                    <BlurEffect Radius="8" KernelType="Gaussian"/>
                                 </Setter.Value>
                             </Setter>
                         </DataTrigger>
@@ -59,7 +59,7 @@
                             <Setter Property="IsHitTestVisible" Value="False"/>
                             <Setter Property="Effect">
                                 <Setter.Value>
-                                    <BlurEffect Radius="15" KernelType="Gaussian"/>
+                                    <BlurEffect Radius="8" KernelType="Gaussian"/>
                                 </Setter.Value>
                             </Setter>
                         </DataTrigger>
@@ -89,16 +89,19 @@
                                AutomationProperties.Name="Primary navigation">
                 <ui:NavigationView.Resources>
                     <Style TargetType="ui:NavigationViewItem">
-                        <Setter Property="BorderThickness" Value="1"/>
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="BorderThickness" Value="0"/>
                         <Setter Property="BorderBrush" Value="Transparent"/>
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}"/>
+                                <Setter Property="Background" Value="{DynamicResource QuietRowBackgroundBrush}"/>
+                                <Setter Property="BorderThickness" Value="1"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
                             </Trigger>
                             <Trigger Property="IsActive" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}"/>
+                                <Setter Property="Background" Value="{DynamicResource SoftSelectionBackgroundBrush}"/>
+                                <Setter Property="BorderThickness" Value="3,0,0,0"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -151,7 +154,7 @@
                 </ui:NavigationView.FooterMenuItems>
 
                 <ui:NavigationView.ContentOverlay>
-                    <Grid x:Name="MainContent" Margin="10,0,10,10">
+                    <Grid x:Name="MainContent" Margin="12,0,12,12">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
@@ -174,18 +177,18 @@
 
                         <!-- Shell Login Popup -->
                         <Border x:Name="ElevationWarningCard"
-                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                Background="{DynamicResource CardSurfaceBrush}"
+                                BorderBrush="{DynamicResource BorderSubtleBrush}"
                                 BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="26"
+                                CornerRadius="{DynamicResource StandardCardCornerRadius}"
+                                Padding="24"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
                                 MinWidth="420"
                                 MaxWidth="560"
                                 IsHitTestVisible="True">
                             <Border.Effect>
-                                <DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity="0.35"/>
+                                <DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity="0.18"/>
                             </Border.Effect>
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
@@ -266,7 +269,7 @@
         </Grid>
 
         <!-- Status Bar -->
-        <Border Grid.Row="2" Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Padding="10,3">
+        <Border Grid.Row="2" Background="{DynamicResource SolidBackgroundFillColorBaseBrush}" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtleBrush}" Padding="12,4">
             <Border.Resources>
                 <Style TargetType="TextBlock">
                     <Setter Property="FontFamily" Value="Segoe UI Variable, Segoe UI"/>
@@ -297,18 +300,18 @@
                   Visibility="Collapsed"
                   AutomationProperties.Name="Performance introduction overlay">
                 <Border x:Name="PerformanceIntroCard"
-                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                        Background="{DynamicResource CardSurfaceBrush}"
+                        BorderBrush="{DynamicResource BorderSubtleBrush}"
                         BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="26"
+                        CornerRadius="{DynamicResource StandardCardCornerRadius}"
+                        Padding="24"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         MinWidth="360"
                         MaxWidth="560"
                         Opacity="1">
                     <Border.Effect>
-                        <DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity="0.35"/>
+                        <DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity="0.18"/>
                     </Border.Effect>
                     <StackPanel>
                         <TextBlock x:Name="PerformanceIntroTitle"
@@ -360,18 +363,18 @@
                   Panel.ZIndex="960"
                   Background="{DynamicResource OverlayBrush}"
                   AutomationProperties.Name="Unsaved settings dialog">
-                <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                <Border Background="{DynamicResource CardSurfaceBrush}"
+                        BorderBrush="{DynamicResource BorderSubtleBrush}"
                         BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="26"
+                        CornerRadius="{DynamicResource StandardCardCornerRadius}"
+                        Padding="24"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         MinWidth="420"
                         MaxWidth="560"
                         IsHitTestVisible="True">
                     <Border.Effect>
-                        <DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity="0.35"/>
+                        <DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity="0.18"/>
                     </Border.Effect>
                     <StackPanel>
                         <TextBlock Text="Unsaved Settings"
@@ -414,10 +417,10 @@
                   AutomationProperties.LiveSetting="Polite">
 
             <!-- Loading Popup -->
-            <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+            <Border Background="{DynamicResource CardSurfaceBrush}"
+                    BorderBrush="{DynamicResource BorderSubtleBrush}"
                     BorderThickness="1"
-                    CornerRadius="8"
+                    CornerRadius="{DynamicResource StandardCardCornerRadius}"
                     Padding="30"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
@@ -428,8 +431,8 @@
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <!-- Application Icon -->
                     <Border x:Name="LoadingIconBackground"
-                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
-                            CornerRadius="10"
+                            Background="{DynamicResource QuietRowBackgroundBrush}"
+                            CornerRadius="{DynamicResource StandardCardCornerRadius}"
                             Padding="10"
                             Margin="0,0,0,20"
                             HorizontalAlignment="Center">

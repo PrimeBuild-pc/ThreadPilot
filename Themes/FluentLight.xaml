@@ -1,24 +1,25 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework">
+                    xmlns:primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
     <!-- Theme values are self-contained so repeated Wpf.Ui theme replacement cannot leave stale card/control brushes. -->
-    <Color x:Key="ApplicationBackgroundColor">#FFF3F4F6</Color>
+    <Color x:Key="ApplicationBackgroundColor">#FFF3F3F3</Color>
     <Color x:Key="SolidBackgroundFillColorBase">#FFFFFFFF</Color>
     <Color x:Key="CardBackgroundFillColorDefault">#FFFFFFFF</Color>
-    <Color x:Key="CardBackgroundFillColorSecondary">#FFF8F9FB</Color>
+    <Color x:Key="CardBackgroundFillColorSecondary">#FFFAFAFA</Color>
     <Color x:Key="ControlFillColorDefault">#FFFFFFFF</Color>
-    <Color x:Key="ControlFillColorSecondary">#FFF1F3F6</Color>
-    <Color x:Key="ControlFillColorTertiary">#FFE8EBF0</Color>
-    <Color x:Key="ControlFillColorDisabled">#FFEDEFF3</Color>
-    <Color x:Key="ControlStrokeColorDefault">#FFD2D8E2</Color>
-    <Color x:Key="ControlStrokeColorSecondary">#FFE4E8EF</Color>
-    <Color x:Key="SurfaceStrokeColorDefault">#FFD2D8E2</Color>
-    <Color x:Key="TextFillColorPrimary">#FF171A21</Color>
-    <Color x:Key="TextFillColorSecondary">#FF5B6472</Color>
-    <Color x:Key="TextFillColorDisabled">#FF9AA2AE</Color>
-    <Color x:Key="SystemAccentColorPrimary">#FF2563EB</Color>
-    <Color x:Key="SystemAccentColorSecondary">#FF1D4ED8</Color>
-    <Color x:Key="AccentFillColorDefault">#FF2563EB</Color>
+    <Color x:Key="ControlFillColorSecondary">#FFF6F6F6</Color>
+    <Color x:Key="ControlFillColorTertiary">#FFEFEFEF</Color>
+    <Color x:Key="ControlFillColorDisabled">#FFF2F2F2</Color>
+    <Color x:Key="ControlStrokeColorDefault">#FFE5E5E5</Color>
+    <Color x:Key="ControlStrokeColorSecondary">#FFDADADA</Color>
+    <Color x:Key="SurfaceStrokeColorDefault">#FFE5E5E5</Color>
+    <Color x:Key="TextFillColorPrimary">#FF1A1A1A</Color>
+    <Color x:Key="TextFillColorSecondary">#FF5F5F5F</Color>
+    <Color x:Key="TextFillColorDisabled">#FF9A9A9A</Color>
+    <Color x:Key="SystemAccentColorPrimary">#FF0067C0</Color>
+    <Color x:Key="SystemAccentColorSecondary">#FF005A9E</Color>
+    <Color x:Key="AccentFillColorDefault">#FF0067C0</Color>
     <Color x:Key="TextOnAccentFillColorPrimary">#FFFFFFFF</Color>
 
     <SolidColorBrush x:Key="ApplicationBackgroundBrush" Color="{StaticResource ApplicationBackgroundColor}"/>
@@ -51,30 +52,44 @@
 
     <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource ControlStrokeColorDefault}"/>
     <SolidColorBrush x:Key="BorderSubtleBrush" Color="{StaticResource ControlStrokeColorSecondary}"/>
-    <SolidColorBrush x:Key="OverlayBrush" Color="#6618181B"/>
+    <SolidColorBrush x:Key="OverlayBrush" Color="#66000000"/>
     <SolidColorBrush x:Key="SpinnerTrackBrush" Color="{StaticResource ControlStrokeColorDefault}"/>
 
     <SolidColorBrush x:Key="InputBackgroundBrush" Color="{StaticResource ControlFillColorDefault}"/>
     <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource ControlStrokeColorDefault}"/>
     <SolidColorBrush x:Key="InputHoverBorderBrush" Color="{StaticResource ControlStrokeColorSecondary}"/>
     <SolidColorBrush x:Key="InputDisabledBackgroundBrush" Color="{StaticResource ControlFillColorDisabled}"/>
+
+    <CornerRadius x:Key="StandardCardCornerRadius">8</CornerRadius>
+    <Thickness x:Key="StandardCardPadding">16</Thickness>
+    <Thickness x:Key="CompactCardPadding">12</Thickness>
+    <sys:Double x:Key="PageTitleFontSize">24</sys:Double>
+    <sys:Double x:Key="PageSubtitleFontSize">14</sys:Double>
+    <sys:Double x:Key="SectionTitleFontSize">16</sys:Double>
+    <sys:Double x:Key="CaptionFontSize">12</sys:Double>
+
+    <SolidColorBrush x:Key="CardSurfaceBrush" Color="{StaticResource CardBackgroundFillColorDefault}"/>
+    <SolidColorBrush x:Key="QuietRowBackgroundBrush" Color="{StaticResource ControlFillColorSecondary}"/>
+    <SolidColorBrush x:Key="QuietRowHoverBackgroundBrush" Color="{StaticResource ControlFillColorTertiary}"/>
+    <SolidColorBrush x:Key="StatusPillBackgroundBrush" Color="{StaticResource ControlFillColorSecondary}"/>
+    <SolidColorBrush x:Key="StatusPillBorderBrush" Color="{StaticResource ControlStrokeColorDefault}"/>
     
     <!-- State Colors (system-derived, soft contrast) -->
-    <SolidColorBrush x:Key="InfoBackgroundBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.12"/>
-    <SolidColorBrush x:Key="InfoBorderBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.24"/>
-    <SolidColorBrush x:Key="InfoTextBrush" Color="{StaticResource TextFillColorPrimary}"/>
+    <SolidColorBrush x:Key="InfoBackgroundBrush" Color="#FFEFF6FC"/>
+    <SolidColorBrush x:Key="InfoBorderBrush" Color="#FFCFE4F7"/>
+    <SolidColorBrush x:Key="InfoTextBrush" Color="#FF005A9E"/>
 
-    <SolidColorBrush x:Key="SuccessBackgroundBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.10"/>
-    <SolidColorBrush x:Key="SuccessBorderBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.22"/>
-    <SolidColorBrush x:Key="SuccessTextBrush" Color="{StaticResource TextFillColorPrimary}"/>
+    <SolidColorBrush x:Key="SuccessBackgroundBrush" Color="#FFEAF6ED"/>
+    <SolidColorBrush x:Key="SuccessBorderBrush" Color="#FFC8E6D0"/>
+    <SolidColorBrush x:Key="SuccessTextBrush" Color="#FF0F6C2F"/>
 
-    <SolidColorBrush x:Key="WarningBackgroundBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.10"/>
-    <SolidColorBrush x:Key="WarningBorderBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.22"/>
-    <SolidColorBrush x:Key="WarningTextBrush" Color="{StaticResource TextFillColorPrimary}"/>
+    <SolidColorBrush x:Key="WarningBackgroundBrush" Color="#FFFFF4CE"/>
+    <SolidColorBrush x:Key="WarningBorderBrush" Color="#FFE5C365"/>
+    <SolidColorBrush x:Key="WarningTextBrush" Color="#FF7A4F00"/>
 
-    <SolidColorBrush x:Key="ErrorBackgroundBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.10"/>
-    <SolidColorBrush x:Key="ErrorBorderBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.22"/>
-    <SolidColorBrush x:Key="ErrorTextBrush" Color="{StaticResource TextFillColorPrimary}"/>
+    <SolidColorBrush x:Key="ErrorBackgroundBrush" Color="#FFFDE7E9"/>
+    <SolidColorBrush x:Key="ErrorBorderBrush" Color="#FFF3B7BE"/>
+    <SolidColorBrush x:Key="ErrorTextBrush" Color="#FFC42B1C"/>
 
     <SolidColorBrush x:Key="SoftSelectionBackgroundBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.12"/>
     <SolidColorBrush x:Key="SoftSelectionBorderBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.24"/>
@@ -116,19 +131,27 @@
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
     </Style>
 
+    <Style x:Key="StandardCardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource CardSurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource StandardCardCornerRadius}"/>
+        <Setter Property="Padding" Value="{DynamicResource StandardCardPadding}"/>
+    </Style>
+
     <Style TargetType="GroupBox">
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource CardSurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Padding" Value="6"/>
+        <Setter Property="Padding" Value="{DynamicResource CompactCardPadding}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="GroupBox">
                     <Border Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="10"
+                            CornerRadius="{DynamicResource StandardCardCornerRadius}"
                             Padding="{TemplateBinding Padding}">
                         <DockPanel LastChildFill="True">
                             <ContentPresenter ContentSource="Header"
@@ -147,6 +170,28 @@
 
     <!-- Preserved custom layouts/templates untouched -->
     <!-- Removed native implicit styles to allow Wpf.Ui to style them fully -->
+
+    <Style x:Key="PageTitleTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="Segoe UI Variable, Segoe UI"/>
+        <Setter Property="FontSize" Value="{DynamicResource PageTitleFontSize}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+
+    <Style x:Key="PageSubtitleTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="Segoe UI Variable, Segoe UI"/>
+        <Setter Property="FontSize" Value="{DynamicResource PageSubtitleFontSize}"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <Style x:Key="SectionTitleTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="Segoe UI Variable, Segoe UI"/>
+        <Setter Property="FontSize" Value="{DynamicResource SectionTitleFontSize}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
 
     <Style TargetType="TextBlock">
         <Setter Property="FontFamily" Value="Segoe UI Variable, Segoe UI"/>
