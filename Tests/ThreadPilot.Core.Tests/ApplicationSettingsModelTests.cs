@@ -5,6 +5,15 @@ namespace ThreadPilot.Core.Tests
     public sealed class ApplicationSettingsModelTests
     {
         [Fact]
+        public void Constructor_StartMinimizedDefaultsFalse_ForManualLaunchVisibility()
+        {
+            var settings = new ApplicationSettingsModel();
+
+            Assert.True(settings.AutostartWithWindows);
+            Assert.False(settings.StartMinimized);
+        }
+
+        [Fact]
         public void HasSameUserSettingsAs_ReturnsTrue_WhenChangedSettingIsRestored()
         {
             var savedSettings = new ApplicationSettingsModel

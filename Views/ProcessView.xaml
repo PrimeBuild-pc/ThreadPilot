@@ -32,8 +32,8 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
-            <TextBlock Text="Process Management" FontSize="{StaticResource ProcessFontLarge}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-            <TextBlock Text="Search, filter, and control active process configurations" FontSize="{StaticResource ProcessFontMedium}" Opacity="0.7"/>
+            <TextBlock Text="Process Management" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
+            <TextBlock Text="Search, filter, and control active process configurations" Style="{StaticResource PageSubtitleTextStyle}"/>
         </StackPanel>
 
         <Grid Grid.Row="1">
@@ -50,9 +50,9 @@
                 </Grid.RowDefinitions>
 
                 <Border Grid.Row="0"
-                        Background="{DynamicResource ControlFillColorDefaultBrush}"
-                        Padding="16"
-                        BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                        Background="{DynamicResource CardSurfaceBrush}"
+                        Padding="{DynamicResource StandardCardPadding}"
+                        BorderBrush="{DynamicResource BorderSubtleBrush}"
                         BorderThickness="1"
                         CornerRadius="8"
                         Margin="0,0,0,12">
@@ -161,16 +161,16 @@
                         </StackPanel>
                     </Border>
 
-                    <Border Background="{DynamicResource InfoBackgroundBrush}"
-                            BorderBrush="{DynamicResource InfoBorderBrush}"
+                    <Border Background="{DynamicResource StatusPillBackgroundBrush}"
+                            BorderBrush="{DynamicResource StatusPillBorderBrush}"
                             BorderThickness="1"
                             Visibility="{Binding IsVirtualizationEnabled, Converter={StaticResource BoolToVisibilityConverter}}"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Bottom"
                             Margin="10"
-                            Padding="6"
-                            CornerRadius="4">
-                        <TextBlock FontSize="{StaticResource ProcessFontSmall}" Foreground="{DynamicResource InfoTextBrush}">
+                            Padding="8,5"
+                            CornerRadius="{DynamicResource StandardCardCornerRadius}">
+                        <TextBlock FontSize="{StaticResource ProcessFontSmall}" Foreground="{DynamicResource TextSecondaryBrush}">
                             <Run Text="Batch "/>
                             <Run Text="{Binding CurrentBatchIndex, StringFormat={}{0:N0}}"/>
                             <Run Text="/"/>
@@ -184,8 +184,8 @@
             </Grid>
 
             <Border Grid.Column="2"
-                    Background="{DynamicResource ControlFillColorDefaultBrush}"
-                    BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                    Background="{DynamicResource CardSurfaceBrush}"
+                    BorderBrush="{DynamicResource BorderSubtleBrush}"
                     BorderThickness="1"
                     CornerRadius="8">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -196,9 +196,10 @@
                                    Margin="0,0,0,8"/>
 
                         <Border Padding="10"
-                                CornerRadius="6"
-                                BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                                CornerRadius="{DynamicResource StandardCardCornerRadius}"
+                                BorderBrush="{DynamicResource BorderSubtleBrush}"
                                 BorderThickness="1"
+                                Background="{DynamicResource QuietRowBackgroundBrush}"
                                 Margin="0,0,0,12">
                             <StackPanel>
                                 <TextBlock Text="No process selected"

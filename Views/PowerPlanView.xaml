@@ -16,20 +16,21 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
-            <TextBlock Text="Power Plans" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,4"/>
-            <TextBlock Text="Manage the active Windows power plan and import custom .pow profiles" FontSize="14" Opacity="0.7"/>
+            <TextBlock Text="Power Plans" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
+            <TextBlock Text="Manage the active Windows power plan and import custom .pow profiles" Style="{StaticResource PageSubtitleTextStyle}"/>
         </StackPanel>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="16"/>
                 <ColumnDefinition Width="3*"/>
             </Grid.ColumnDefinitions>
 
             <!-- System Power Plans -->
             <GroupBox Grid.Column="0"
                     Header="Windows Power Plans"
-                    Margin="0,0,5,0">
+                    Margin="0">
                 <Grid Margin="8">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -62,8 +63,8 @@
                     <ui:ListView Grid.Row="1"
                                  ItemsSource="{Binding PowerPlans}"
                                  SelectedItem="{Binding SelectedPowerPlan}"
-                                 Background="{DynamicResource ControlFillColorSecondaryBrush}"
-                                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                 Background="{DynamicResource QuietRowBackgroundBrush}"
+                                 BorderBrush="{DynamicResource BorderSubtleBrush}"
                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}">
                         <ui:ListView.ItemTemplate>
                             <DataTemplate>
@@ -81,9 +82,9 @@
             </GroupBox>
 
             <!-- Custom Power Plans -->
-            <GroupBox Grid.Column="1"
+            <GroupBox Grid.Column="2"
                     Header="Custom Power Plans"
-                    Margin="5,0,0,0">
+                    Margin="0">
                 <Grid Margin="8">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -116,8 +117,8 @@
                     <ui:ListView Grid.Row="1"
                                  ItemsSource="{Binding CustomPowerPlans}"
                                  SelectedItem="{Binding SelectedCustomPlan}"
-                                 Background="{DynamicResource ControlFillColorSecondaryBrush}"
-                                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                 Background="{DynamicResource QuietRowBackgroundBrush}"
+                                 BorderBrush="{DynamicResource BorderSubtleBrush}"
                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}">
                         <ui:ListView.ItemTemplate>
                             <DataTemplate>

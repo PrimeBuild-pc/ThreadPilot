@@ -11,44 +11,48 @@
     
     <UserControl.Resources>
         <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontSize" Value="{DynamicResource SectionTitleFontSize}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="0,15,0,8"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
         
         <Style x:Key="DescriptionStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontSize" Value="{DynamicResource CaptionFontSize}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
             <Setter Property="Margin" Value="0,2,0,0"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
+
+        <Style x:Key="SettingsCardStyle" TargetType="Border" BasedOn="{StaticResource StandardCardStyle}">
+            <Setter Property="Background" Value="{DynamicResource CardSurfaceBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+            <Setter Property="Padding" Value="{DynamicResource StandardCardPadding}"/>
+        </Style>
     </UserControl.Resources>
 
-    <Grid Margin="10">
+    <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Standardized Header -->
-        <GroupBox Grid.Row="0" Header="Application Settings" Margin="0,0,0,10">
-            <Grid Margin="5">
-                <TextBlock Text="Configure notifications, system tray, and application behavior"
-                           FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
-            </Grid>
-        </GroupBox>
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="Application Settings" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
+            <TextBlock Text="Configure notifications, system tray, and application behavior"
+                       Style="{StaticResource PageSubtitleTextStyle}"/>
+        </StackPanel>
 
         <!-- Settings Content -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <WrapPanel HorizontalAlignment="Center">
+            <WrapPanel HorizontalAlignment="Left">
                 
                  <!-- Notifications Section -->
-                 <StackPanel Width="360" Margin="10">
+                 <StackPanel Width="372" Margin="0,0,16,16">
                      <TextBlock Text="Notifications" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
-                     <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="5" Padding="15" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+                     <Border Style="{StaticResource SettingsCardStyle}">
                         <StackPanel>
                             <CheckBox Content="Enable notifications" 
                                       IsChecked="{Binding Settings.EnableNotifications}"
@@ -130,9 +134,9 @@
                  </StackPanel>
 
                 <!-- System Tray Section -->
-                <StackPanel Width="360" Margin="10">
+                <StackPanel Width="372" Margin="0,0,16,16">
                     <TextBlock Text="System Tray" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
-                    <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="5" Padding="15" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+                    <Border Style="{StaticResource SettingsCardStyle}">
                         <StackPanel>
                             <CheckBox Content="Show tray icon" 
                                       IsChecked="{Binding Settings.ShowTrayIcon}"
@@ -173,9 +177,9 @@
                 </StackPanel>
 
                 <!-- Basic Preferences Section -->
-                <StackPanel Width="360" Margin="10">
+                <StackPanel Width="372" Margin="0,0,16,16">
                     <TextBlock Text="Basic Preferences" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
-                    <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="5" Padding="15" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+                    <Border Style="{StaticResource SettingsCardStyle}">
                         <StackPanel>
                             <TextBlock Text="Autostart" FontWeight="SemiBold" Margin="0,0,0,5"/>
                             <CheckBox Content="Start with Windows"
@@ -206,9 +210,9 @@
                 </StackPanel>
 
                 <!-- Process Event Settings Section -->
-                <StackPanel Width="360" Margin="10">
+                <StackPanel Width="372" Margin="0,0,16,16">
                     <TextBlock Text="Process Event Settings" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
-                    <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="5" Padding="15" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+                    <Border Style="{StaticResource SettingsCardStyle}">
                         <StackPanel>
                             <CheckBox Content="Enable WMI process events"
                                       IsChecked="{Binding Settings.EnableWmiMonitoring}"
@@ -268,9 +272,9 @@
                 </StackPanel>
 
                 <!-- Advanced Section -->
-                <StackPanel Width="360" Margin="10">
+                <StackPanel Width="372" Margin="0,0,16,16">
                     <TextBlock Text="Advanced" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
-                    <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="5" Padding="15" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+                    <Border Style="{StaticResource SettingsCardStyle}">
                         <StackPanel>
                             <CheckBox Content="Enable notification history"
                                       IsChecked="{Binding Settings.EnableNotificationHistory}"
@@ -315,9 +319,9 @@
                 </StackPanel>
 
                 <!-- About Section -->
-                <StackPanel Width="360" Margin="10">
+                <StackPanel Width="372" Margin="0,0,16,16">
                     <TextBlock Text="About" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
-                    <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="5" Padding="15" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+                    <Border Style="{StaticResource SettingsCardStyle}">
                         <StackPanel>
                             <TextBlock Text="ThreadPilot" FontWeight="SemiBold" FontSize="14"/>
                             <TextBlock Text="Version:" FontWeight="SemiBold" Margin="0,8,0,0"/>
@@ -353,7 +357,7 @@
             <Border Grid.Row="0"
                     Margin="0,0,0,10"
                     Padding="10,7"
-                    CornerRadius="6"
+                    CornerRadius="{DynamicResource StandardCardCornerRadius}"
                     BorderThickness="1"
                     Opacity="{Binding StatusOpacity}"
                     Visibility="{Binding StatusMessage, Converter={x:Static converters:StringToVisibilityConverter.Instance}}">

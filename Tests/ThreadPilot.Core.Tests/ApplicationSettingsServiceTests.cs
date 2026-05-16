@@ -24,6 +24,8 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal(5000, service.Settings.BalloonNotificationTimeoutMs);
             Assert.True(service.Settings.EnableSelfLowImpactMode);
             Assert.False(service.Settings.EnableSelfAffinityLimit);
+            Assert.True(service.Settings.AutostartWithWindows);
+            Assert.False(service.Settings.StartMinimized);
         }
 
         [Fact]
@@ -75,6 +77,59 @@ namespace ThreadPilot.Core.Tests
 
             Assert.False(service.Settings.EnableSelfLowImpactMode);
             Assert.True(service.Settings.EnableSelfAffinityLimit);
+        }
+
+        [Fact]
+        public async Task LoadSettingsAsync_DefaultsStartMinimizedFalse_ForOlderAutostartSettingsJson()
+        {
+            var storage = new FakeSettingsStorage();
+            storage.Files[TestPaths.SettingsFilePath] = """
+                {
+                  "autostartWithWindows": true
+                }
+                """;
+            var service = CreateService(storage);
+
+            await service.LoadSettingsAsync();
+
+            Assert.True(service.Settings.AutostartWithWindows);
+            Assert.False(service.Settings.StartMinimized);
+        }
+
+        [Fact]
+        public async Task LoadSettingsAsync_PreservesExplicitStartMinimizedOptOut()
+        {
+            var storage = new FakeSettingsStorage();
+            storage.Files[TestPaths.SettingsFilePath] = """
+                {
+                  "autostartWithWindows": true,
+                  "startMinimized": false
+                }
+                """;
+            var service = CreateService(storage);
+
+            await service.LoadSettingsAsync();
+
+            Assert.True(service.Settings.AutostartWithWindows);
+            Assert.False(service.Settings.StartMinimized);
+        }
+
+        [Fact]
+        public async Task LoadSettingsAsync_PreservesExplicitStartMinimizedOptIn()
+        {
+            var storage = new FakeSettingsStorage();
+            storage.Files[TestPaths.SettingsFilePath] = """
+                {
+                  "autostartWithWindows": true,
+                  "startMinimized": true
+                }
+                """;
+            var service = CreateService(storage);
+
+            await service.LoadSettingsAsync();
+
+            Assert.True(service.Settings.AutostartWithWindows);
+            Assert.True(service.Settings.StartMinimized);
         }
 
         [Fact]

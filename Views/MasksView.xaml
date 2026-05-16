@@ -8,11 +8,17 @@
 
     <Grid Margin="12">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0">
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="CPU Masks" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
+            <TextBlock Text="Create and maintain reusable CPU affinity masks" Style="{StaticResource PageSubtitleTextStyle}"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1">
              <Grid.ColumnDefinitions>
                  <ColumnDefinition Width="2*" MinWidth="200"/>
                  <ColumnDefinition Width="Auto"/>
@@ -22,18 +28,21 @@
             <DockPanel Grid.Column="0">
                 <!-- Mask list actions -->
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
-                    <Button Content="➕ New" Command="{Binding CreateMaskCommand}"
+                    <Button Content="New" Command="{Binding CreateMaskCommand}"
                             Padding="10,5" FontSize="13" Margin="0,0,5,0"
                             ToolTip="Create a new CPU mask"/>
-                    <Button Content="🗑️ Delete" Command="{Binding DeleteMaskCommand}"
+                    <Button Content="Delete" Command="{Binding DeleteMaskCommand}"
                             Padding="10,5" FontSize="13"
                             ToolTip="Delete selected mask"/>
                 </StackPanel>
 
-                <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+                <Border BorderBrush="{DynamicResource BorderSubtleBrush}"
+                        Background="{DynamicResource CardSurfaceBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{DynamicResource StandardCardCornerRadius}">
                     <ListBox ItemsSource="{Binding CoreMasks}"
                              SelectedItem="{Binding SelectedCoreMask, Mode=TwoWay}"
-                             Background="{DynamicResource ControlFillColorDefaultBrush}"
+                             Background="{DynamicResource CardSurfaceBrush}"
                              BorderThickness="0">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
@@ -95,7 +104,7 @@
                         </Style>
                     </StackPanel.Style>
 
-                      <GroupBox Header="Mask Information" Padding="10" Margin="0,0,0,10">
+                      <GroupBox Header="Mask Information" Padding="{DynamicResource CompactCardPadding}" Margin="0,0,0,10">
                         <StackPanel>
                             <TextBlock Text="Mask names, descriptions, CPU selections, and options are saved automatically."
                                        FontSize="11"
@@ -114,7 +123,7 @@
                     </GroupBox>
 
                     <!-- CPU Selection Grid -->
-                    <GroupBox Header="Select CPUs" Padding="10" Margin="0,10,0,10">
+                    <GroupBox Header="Select CPUs" Padding="{DynamicResource CompactCardPadding}" Margin="0,10,0,10">
                         <StackPanel>
                             <TextBlock Text="Toggle CPUs to update this mask. Changes are saved automatically; All Cores remains the protected default mask."
                                        FontSize="11"
@@ -130,12 +139,12 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"
-                                                    Margin="2" Padding="4" CornerRadius="3">
+                                            <Border BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1"
+                                                    Margin="2" Padding="4" CornerRadius="4">
                                                 <Border.Style>
                                                     <Style TargetType="Border">
-                                                        <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}"/>
-                                                        <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}"/>
+                                                        <Setter Property="Background" Value="{DynamicResource QuietRowBackgroundBrush}"/>
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
                                                                 <Setter Property="Background" Value="{DynamicResource SoftSelectionBackgroundBrush}"/>
@@ -161,7 +170,7 @@
                         </StackPanel>
                     </GroupBox>
 
-                    <GroupBox Header="Mask Options" Padding="10">
+                    <GroupBox Header="Mask Options" Padding="{DynamicResource CompactCardPadding}">
                         <StackPanel>
                             <Button Content="Duplicate Mask" Command="{Binding DuplicateMaskCommand}"
                                     HorizontalAlignment="Left" Padding="10,6" Margin="0,0,0,5"/>
@@ -182,7 +191,13 @@
         </Grid>
 
         <!-- Status Bar -->
-        <Border Grid.Row="1" Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}" Padding="10,5" Margin="0,10,0,0" CornerRadius="6">
+        <Border Grid.Row="2"
+                Background="{DynamicResource StatusPillBackgroundBrush}"
+                BorderBrush="{DynamicResource StatusPillBorderBrush}"
+                BorderThickness="1"
+                Padding="10,5"
+                Margin="0,10,0,0"
+                CornerRadius="{DynamicResource StandardCardCornerRadius}">
             <TextBlock Text="{Binding StatusMessage}"
                        FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                        Opacity="{Binding StatusOpacity}"

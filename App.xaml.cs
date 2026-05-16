@@ -31,6 +31,7 @@ namespace ThreadPilot
     using System.Windows.Threading;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
+    using ThreadPilot.Helpers;
     using ThreadPilot.Models;
 
     public partial class App : System.Windows.Application
@@ -248,28 +249,20 @@ namespace ThreadPilot
                     throw new InvalidOperationException("MainWindow could not be created");
                 }
 
-                if (isAutostart)
+                var startupWindowBehavior = StartupWindowBehavior.Resolve(isAutostart, startMinimized);
+                mainWindow.ShowInTaskbar = startupWindowBehavior.ShowInTaskbar;
+                mainWindow.Visibility = startupWindowBehavior.Visibility;
+                mainWindow.WindowState = startupWindowBehavior.WindowState;
+                mainWindow.Show();
+
+                if (startupWindowBehavior.HideAfterShow)
                 {
-                    mainWindow.ShowInTaskbar = false;
-                    mainWindow.Visibility = Visibility.Hidden;
-                    mainWindow.WindowState = WindowState.Minimized;
-                    mainWindow.Show();
                     mainWindow.Hide();
                 }
-                else
+                else if (startupWindowBehavior.ActivateAfterShow)
                 {
-                    // Show the window with explicit visibility settings
-                    mainWindow.ShowInTaskbar = true;
-                    mainWindow.Visibility = Visibility.Visible;
-                    mainWindow.WindowState = startMinimized
-                        ? WindowState.Minimized
-                        : WindowState.Normal;
-                    mainWindow.Show();
-                    if (mainWindow.WindowState != WindowState.Minimized)
-                    {
-                        mainWindow.EnsureDashboardVisibleOnScreen();
-                        mainWindow.Activate();
-                    }
+                    mainWindow.EnsureDashboardVisibleOnScreen();
+                    mainWindow.Activate();
                 }
 
                 logger.LogInformation("Main window displayed successfully");
@@ -457,5 +450,4 @@ namespace ThreadPilot
         }
     }
 }
-
 
