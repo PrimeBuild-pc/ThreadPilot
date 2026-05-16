@@ -348,7 +348,7 @@ namespace ThreadPilot.Services
             }
         }
 
-        private static ISettingsStorage CreateDefaultStorage()
+        private static FileSettingsStorage CreateDefaultStorage()
         {
             StoragePaths.EnsureAppDataDirectories();
             return new FileSettingsStorage();

@@ -25,19 +25,19 @@ using ThreadPilot.ViewModels;
 namespace ThreadPilot.Views
 {
     /// <summary>
-    /// Interaction logic for LogViewerView.xaml
+    /// Interaction logic for LogViewerView.xaml.
     /// </summary>
     public partial class LogViewerView : System.Windows.Controls.UserControl
     {
         public LogViewerView()
         {
-            InitializeComponent();
-            Loaded += OnLoaded;
+            this.InitializeComponent();
+            this.Loaded += this.OnLoaded;
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            TaskSafety.FireAndForget(OnLoadedAsync(), _ =>
+            TaskSafety.FireAndForget(this.OnLoadedAsync(), _ =>
             {
                 // Keep the view loaded even if background initialization fails.
             });
@@ -45,7 +45,7 @@ namespace ThreadPilot.Views
 
         private async Task OnLoadedAsync()
         {
-            if (DataContext is LogViewerViewModel viewModel)
+            if (this.DataContext is LogViewerViewModel viewModel)
             {
                 await viewModel.InitializeAsync();
             }
@@ -53,7 +53,7 @@ namespace ThreadPilot.Views
     }
 
     /// <summary>
-    /// Converter to convert bytes to megabytes for display
+    /// Converter to convert bytes to megabytes for display.
     /// </summary>
     public class BytesToMegabytesConverter : IValueConverter
     {
@@ -75,7 +75,7 @@ namespace ThreadPilot.Views
     }
 
     /// <summary>
-    /// Converter to invert boolean values
+    /// Converter to invert boolean values.
     /// </summary>
     public class InverseBooleanConverter : IValueConverter
     {
@@ -101,7 +101,7 @@ namespace ThreadPilot.Views
     }
 
     /// <summary>
-    /// Converter to invert boolean values for visibility
+    /// Converter to invert boolean values for visibility.
     /// </summary>
     public class InverseBooleanToVisibilityConverter : IValueConverter
     {

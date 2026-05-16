@@ -22,8 +22,8 @@ namespace ThreadPilot.Services
     using System.IO;
     using System.Linq;
     using System.Runtime.InteropServices;
-    using Microsoft.Win32.SafeHandles;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Win32.SafeHandles;
 
     /// <summary>
     /// Service for security validation and auditing of elevated operations.
