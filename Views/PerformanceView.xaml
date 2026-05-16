@@ -13,7 +13,7 @@
             <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="CornerRadius" Value="{DynamicResource StandardCardCornerRadius}"/>
             <Setter Property="Padding" Value="16"/>
             <Setter Property="Margin" Value="0,0,0,12"/>
         </Style>
@@ -29,7 +29,13 @@
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
         </Style>
 
-        <Style x:Key="ValueTextStyle" TargetType="TextBlock">
+        <Style x:Key="MetricValueTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="22"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+
+        <Style x:Key="AccentValueTextStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="22"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
@@ -44,7 +50,7 @@
                         <DataTrigger Binding="{Binding IsPopupVisible}" Value="True">
                             <Setter Property="Effect">
                                 <Setter.Value>
-                                    <BlurEffect Radius="15" KernelType="Gaussian" />
+                                    <BlurEffect Radius="8" KernelType="Gaussian" />
                                 </Setter.Value>
                             </Setter>
                             <Setter Property="IsEnabled" Value="False" />
@@ -111,7 +117,7 @@
                     <Border Grid.Column="0" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
                         <StackPanel>
                             <TextBlock Text="CPU" Style="{StaticResource LabelTextStyle}"/>
-                            <TextBlock Text="{Binding CpuUsageText}" Style="{StaticResource ValueTextStyle}"/>
+                            <TextBlock Text="{Binding CpuUsageText}" Style="{StaticResource AccentValueTextStyle}"/>
                             <TextBlock Text="{Binding LastManualRefreshText}" Style="{StaticResource LabelTextStyle}"/>
                         </StackPanel>
                     </Border>
@@ -119,7 +125,7 @@
                     <Border Grid.Column="1" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
                         <StackPanel>
                             <TextBlock Text="Memory" Style="{StaticResource LabelTextStyle}"/>
-                            <TextBlock Text="{Binding MemoryUsageText}" Style="{StaticResource ValueTextStyle}" FontSize="18"/>
+                            <TextBlock Text="{Binding MemoryUsageText}" Style="{StaticResource MetricValueTextStyle}" FontSize="18"/>
                             <TextBlock Text="{Binding MemoryUsagePercentage, StringFormat={}{0:F1}% utilized}" Style="{StaticResource LabelTextStyle}"/>
                         </StackPanel>
                     </Border>
@@ -127,7 +133,7 @@
                     <Border Grid.Column="2" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
                         <StackPanel>
                             <TextBlock Text="Active Processes" Style="{StaticResource LabelTextStyle}"/>
-                            <TextBlock Text="{Binding ProcessCountText}" Style="{StaticResource ValueTextStyle}"/>
+                            <TextBlock Text="{Binding ProcessCountText}" Style="{StaticResource MetricValueTextStyle}"/>
                             <TextBlock Text="{Binding MonitoringStateText, StringFormat=Live metrics: {0}}" Style="{StaticResource LabelTextStyle}"/>
                         </StackPanel>
                     </Border>
@@ -135,7 +141,7 @@
                     <Border Grid.Column="3" Style="{StaticResource CardStyle}" Margin="0">
                         <StackPanel>
                             <TextBlock Text="Global Power Plan" Style="{StaticResource LabelTextStyle}"/>
-                            <TextBlock Text="{Binding CurrentGlobalPowerPlanText}" Style="{StaticResource ValueTextStyle}" FontSize="16"/>
+                            <TextBlock Text="{Binding CurrentGlobalPowerPlanText}" Style="{StaticResource MetricValueTextStyle}" FontSize="16"/>
                             <TextBlock Text="{Binding LastUpdateTime, StringFormat=Last metric update: {0:HH:mm:ss}}" Style="{StaticResource LabelTextStyle}"/>
                         </StackPanel>
                     </Border>
@@ -256,7 +262,7 @@
                             <Border Grid.Row="3"
                                     Margin="0,10,0,0"
                                     Padding="10,7"
-                                    CornerRadius="6"
+                                    CornerRadius="{DynamicResource StandardCardCornerRadius}"
                                     BorderThickness="1"
                                     Opacity="{Binding StatusOpacity}"
                                     Visibility="{Binding StatusMessage, Converter={x:Static converters:StringToVisibilityConverter.Instance}}">
@@ -329,7 +335,7 @@
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="8" Margin="0,0,6,6" Background="{DynamicResource SurfaceAltBrush}">
+                                                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource StandardCardCornerRadius}" Padding="8" Margin="0,0,6,6" Background="{DynamicResource SurfaceAltBrush}">
                                                     <StackPanel>
                                                         <TextBlock Text="{Binding CoreId, StringFormat=Core {0}}" FontWeight="SemiBold"/>
                                                         <TextBlock Text="{Binding CoreType}" Style="{StaticResource LabelTextStyle}"/>
@@ -413,12 +419,12 @@
             </Grid.InputBindings>
             <Border HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    CornerRadius="12"
+                    CornerRadius="{DynamicResource StandardCardCornerRadius}"
                     Padding="32,24"
                     MaxWidth="500"
                     BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1"
-                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+                    Background="{DynamicResource CardSurfaceBrush}">
                 <StackPanel>
                     <TextBlock Text="{Binding PopupTitle}"
                                FontSize="18"

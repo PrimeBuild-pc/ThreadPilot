@@ -1,17 +1,17 @@
-<UserControl x:Class="ThreadPilot.Views.LogViewerView"
+﻿<UserControl x:Class="ThreadPilot.Views.LogViewerView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:viewmodels="clr-namespace:ThreadPilot.ViewModels"
              xmlns:local="clr-namespace:ThreadPilot.Views"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="1000"
              d:DataContext="{d:DesignInstance Type=viewmodels:LogViewerViewModel}">
-    
+
     <UserControl.Resources>
         <Style x:Key="LogLevelTextStyle" TargetType="TextBlock">
-            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Padding" Value="4,2"/>
             <Setter Property="HorizontalAlignment" Value="Center"/>
         </Style>
@@ -32,7 +32,7 @@
             <Setter Property="BorderBrush" Value="{DynamicResource SurfaceStrokeColorDefaultBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
         </Style>
-        
+
         <Style x:Key="LogEntryStyle" TargetType="ListViewItem">
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Padding" Value="2"/>
@@ -63,12 +63,12 @@
 
         <!-- Standardized Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
-            <TextBlock Text="Activity Logs" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,4"/>
-            <TextBlock Text="View and filter application logs and system events" FontSize="14" Opacity="0.7"/>
+            <TextBlock Text="Activity Logs" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
+            <TextBlock Text="View and filter application logs and system events" Style="{StaticResource PageSubtitleTextStyle}"/>
         </StackPanel>
 
         <!-- Filter and Control Panel -->
-        <Border Grid.Row="1" Background="{DynamicResource ControlFillColorDefaultBrush}" Padding="16" BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Margin="0,0,0,16">
+        <Border Grid.Row="1" Background="{DynamicResource ControlFillColorDefaultBrush}" Padding="16" BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="{DynamicResource StandardCardCornerRadius}" Margin="0,0,0,16">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -91,16 +91,16 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    
+
                     <TextBlock Grid.Column="0" Text="Search:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <TextBox Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
-                    
+
                     <TextBlock Grid.Column="3" Text="Category:" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <ComboBox Grid.Column="4" ItemsSource="{Binding AvailableCategories}" 
+                    <ComboBox Grid.Column="4" ItemsSource="{Binding AvailableCategories}"
                               SelectedItem="{Binding SelectedCategory}" HorizontalAlignment="Stretch"/>
-                    
+
                     <TextBlock Grid.Column="6" Text="Level:" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <ComboBox Grid.Column="7" ItemsSource="{Binding AvailableLogLevels}" 
+                    <ComboBox Grid.Column="7" ItemsSource="{Binding AvailableLogLevels}"
                               SelectedItem="{Binding SelectedLogLevel}" HorizontalAlignment="Stretch"/>
                 </Grid>
 
@@ -116,7 +116,7 @@
 
                     <TextBlock Grid.Column="0" Text="From:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <DatePicker Grid.Column="1" SelectedDate="{Binding FromDate}" HorizontalAlignment="Stretch"/>
-                    
+
                     <TextBlock Grid.Column="3" Text="To:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <DatePicker Grid.Column="4" SelectedDate="{Binding ToDate}" HorizontalAlignment="Stretch"/>
                 </Grid>
@@ -161,17 +161,17 @@
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    
+
                     <GridViewColumn Header="Level" Width="80">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding Level}" 
+                                <TextBlock Text="{Binding Level}"
                                            Foreground="{Binding LevelColor}"
                                            Style="{StaticResource LogLevelTextStyle}"/>
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    
+
                     <GridViewColumn Header="Category" Width="120">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
@@ -179,7 +179,7 @@
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    
+
                     <GridViewColumn Header="Message" Width="500">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
@@ -187,16 +187,16 @@
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    
+
                     <GridViewColumn Header="Exception" Width="60">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Foreground="Red" FontWeight="Bold">
+                                <TextBlock Foreground="{DynamicResource ErrorTextBrush}" FontWeight="Bold">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding HasException}" Value="True">
-                                                    <Setter Property="Text" Value="⚠"/>
+                                                    <Setter Property="Text" Value="!"/>
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding HasException}" Value="False">
                                                     <Setter Property="Text" Value=""/>
@@ -208,7 +208,7 @@
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    
+
                     <GridViewColumn Header="ID" Width="60">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
@@ -266,7 +266,7 @@
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                 <StackPanel Margin="16" DataContext="{Binding SelectedLogEntry}">
                     <TextBlock Text="Log Entry Details" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,16"/>
-                    
+
                     <Grid>
                         <Grid.Style>
                             <Style TargetType="Grid">
@@ -290,22 +290,22 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Timestamp:" FontWeight="Bold" Margin="0,0,10,5"/>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Timestamp:" FontWeight="SemiBold" Margin="0,0,10,5"/>
                         <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding FormattedTimestamp}" Margin="0,0,0,5"/>
 
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Level:" FontWeight="Bold" Margin="0,0,10,5"/>
-                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Level}" 
-                                   Foreground="{Binding LevelColor}" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Level:" FontWeight="SemiBold" Margin="0,0,10,5"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Level}"
+                                   Foreground="{Binding LevelColor}" FontWeight="SemiBold" Margin="0,0,0,5"/>
 
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Category:" FontWeight="Bold" Margin="0,0,10,5"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Category:" FontWeight="SemiBold" Margin="0,0,10,5"/>
                         <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Category}" Margin="0,0,0,5"/>
 
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Message:" FontWeight="Bold" Margin="0,0,10,5" VerticalAlignment="Top"/>
-                        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Message, Mode=OneWay}" 
-                                 IsReadOnly="True" TextWrapping="Wrap" Background="Transparent" 
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Message:" FontWeight="SemiBold" Margin="0,0,10,5" VerticalAlignment="Top"/>
+                        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Message, Mode=OneWay}"
+                                 IsReadOnly="True" TextWrapping="Wrap" Background="Transparent"
                                  BorderThickness="0" Margin="0,0,0,10"/>
 
-                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Exception:" FontWeight="Bold" Margin="0,0,10,5"
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Exception:" FontWeight="SemiBold" Margin="0,0,10,5"
                                    VerticalAlignment="Top">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -331,10 +331,10 @@
                             </TextBox.Style>
                         </TextBox>
 
-                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Correlation ID:" FontWeight="Bold" Margin="0,0,10,5"/>
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Correlation ID:" FontWeight="SemiBold" Margin="0,0,10,5"/>
                         <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding CorrelationId}"/>
                     </Grid>
-                    
+
                     <TextBlock Text="No log entry selected"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                Foreground="{DynamicResource TextSecondaryBrush}" FontStyle="Italic">
@@ -364,11 +364,11 @@
                 <!-- Status and Statistics -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
                     <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" Margin="0,0,20,0" Opacity="{Binding StatusOpacity}"/>
-                    
-                    <TextBlock Text="Files:" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="Bold"/>
+
+                    <TextBlock Text="Files:" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="SemiBold"/>
                     <TextBlock Text="{Binding LogStatistics.TotalLogFiles}" VerticalAlignment="Center" Margin="0,0,15,0"/>
-                    
-                    <TextBlock Text="Size:" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="Bold"/>
+
+                    <TextBlock Text="Size:" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="SemiBold"/>
                     <TextBlock VerticalAlignment="Center" Margin="0,0,15,0">
                         <TextBlock.Text>
                             <MultiBinding StringFormat="{}{0:F1} MB">
@@ -376,7 +376,7 @@
                             </MultiBinding>
                         </TextBlock.Text>
                     </TextBlock>
-                    
+
                     <ProgressBar IsIndeterminate="{Binding IsLoading}" Width="100" Height="16">
                         <ProgressBar.Style>
                             <Style TargetType="ProgressBar">
@@ -392,16 +392,16 @@
 
                 <!-- Settings Panel -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <CheckBox Content="Debug Logging" IsChecked="{Binding EnableDebugLogging}" 
+                    <CheckBox Content="Debug Logging" IsChecked="{Binding EnableDebugLogging}"
                               VerticalAlignment="Center" Margin="0,0,15,0"/>
-                    
+
                     <TextBlock Text="Max Size (MB):" VerticalAlignment="Center" Margin="0,0,5,0"/>
                     <TextBox Text="{Binding MaxLogFileSizeMb}" Width="50" Margin="0,0,15,0"/>
-                    
+
                     <TextBlock Text="Retention (Days):" VerticalAlignment="Center" Margin="0,0,5,0"/>
                     <TextBox Text="{Binding LogRetentionDays}" Width="50" Margin="0,0,15,0"/>
-                    
-                    <Button Content="Save Settings" Command="{Binding SaveSettingsCommand}" 
+
+                    <Button Content="Save Settings" Command="{Binding SaveSettingsCommand}"
                             Padding="10,5" Margin="5,0"/>
                 </StackPanel>
             </Grid>

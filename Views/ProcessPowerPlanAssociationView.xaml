@@ -20,12 +20,11 @@
         </Grid.RowDefinitions>
 
         <!-- Standardized Header -->
-        <GroupBox Grid.Row="0" Header="Rules &amp; Automation" Margin="0,0,0,10">
-            <Grid Margin="5">
-                <TextBlock Text="Define per-process rules. Power plans are global; masks and priorities apply to matching processes."
-                           FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
-            </Grid>
-        </GroupBox>
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="Rules &amp; Automation" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
+            <TextBlock Text="Define per-process rules. Power plans are global; masks and priorities apply to matching processes."
+                       Style="{StaticResource PageSubtitleTextStyle}"/>
+        </StackPanel>
 
         <!-- Main Content -->
         <TabControl Grid.Row="1" Background="{DynamicResource SurfaceBrush}" BorderThickness="0">
@@ -54,11 +53,6 @@
                                         <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource SoftSelectionBackgroundBrush}"/>
                                         <Setter TargetName="TabBorder" Property="BorderBrush" Value="{DynamicResource SoftSelectionBorderBrush}"/>
                                         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
-                                        <Setter TargetName="TabBorder" Property="Effect">
-                                            <Setter.Value>
-                                                <DropShadowEffect BlurRadius="10" ShadowDepth="1" Opacity="0.2"/>
-                                            </Setter.Value>
-                                        </Setter>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -167,7 +161,7 @@
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <StackPanel>
                             <!-- Executable Selection Section -->
-                            <TextBlock Text="Executable Match:" FontWeight="Bold" Margin="0,0,0,5"/>
+                            <TextBlock Text="Executable Match:" FontWeight="SemiBold" Margin="0,0,0,5"/>
                             <TextBlock Text="Choose an executable. Match by path is more precise; matching by name applies to any process with that executable name."
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        FontSize="10"
@@ -188,7 +182,7 @@
                                  <StackPanel>
                                      <TextBlock Text="Selected Executable:" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,2"/>
                                      <TextBlock Text="{Binding SelectedExecutableDisplayName}"
-                                               FontWeight="Bold" Margin="0,0,0,2"/>
+                                               FontWeight="SemiBold" Margin="0,0,0,2"/>
                                      <TextBlock Text="{Binding SelectedExecutableFullPath}"
                                                FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
                                  </StackPanel>
@@ -209,7 +203,7 @@
 
                              <TextBlock Text="Rule Power Plan (global switch):" Margin="0,0,0,5" FontWeight="SemiBold"/>
                              <TextBlock Text="When this rule matches, Windows switches the global active power plan."
-                                        Foreground="{DynamicResource WarningTextBrush}"
+                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                         FontSize="10"
                                         TextWrapping="Wrap"
                                         Margin="0,0,0,5"/>
@@ -262,7 +256,7 @@
                             <Separator Margin="0,15,0,15"/>
 
                             <TextBlock Text="Use Running Process:"
-                                       FontWeight="Bold" Margin="0,0,0,10"/>
+                                       FontWeight="SemiBold" Margin="0,0,0,10"/>
 
                             <ComboBox ItemsSource="{Binding RunningProcesses}"
                                      SelectedItem="{Binding SelectedProcess}"
@@ -295,7 +289,7 @@
                                     <TextBlock Text="Status: " VerticalAlignment="Center"/>
                                     <TextBlock Text="{Binding ServiceStatus}"
                                               Foreground="{Binding IsServiceRunning, Converter={StaticResource BoolToColorConverter}}"
-                                              FontWeight="Bold" VerticalAlignment="Center"/>
+                                              FontWeight="SemiBold" VerticalAlignment="Center"/>
                                 </StackPanel>
 
                                 <StackPanel Orientation="Horizontal">
@@ -371,7 +365,7 @@
                 VerticalAlignment="Bottom"
                 Margin="10"
                 Padding="10,7"
-                CornerRadius="6"
+                CornerRadius="{StaticResource StandardCardCornerRadius}"
                 BorderThickness="1"
             Opacity="{Binding StatusOpacity}"
                 Visibility="{Binding StatusMessage, Converter={x:Static converters:StringToVisibilityConverter.Instance}}">
