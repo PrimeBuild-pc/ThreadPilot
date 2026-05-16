@@ -1,0 +1,186 @@
+name: Publish Chocolatey
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing GitHub release tag to package, for example v1.1.5"
+        required: true
+      publish:
+        description: "Push to Chocolatey after packaging validation"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+permissions:
+  contents: read
+
+jobs:
+  publish-chocolatey:
+    runs-on: windows-2022
+
+    steps:
+      - name: Resolve release metadata
+        id: release
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $tag = "${{ github.event.inputs.tag }}".Trim()
+          if ($tag -notmatch '^v\d+\.\d+\.\d+$')
+          {
+            throw "Tag must match vX.Y.Z. Received '$tag'."
+          }
+
+          $version = $tag.Substring(1)
+          $publish = "${{ github.event.inputs.publish }}" -eq "true"
+          $installerName = "ThreadPilot_$($tag)_Setup.exe"
+
+          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "publish=$($publish.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "installer_name=$installerName" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download installer from GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          New-Item -ItemType Directory -Force -Path "release-assets/installer" | Out-Null
+          gh release download "${{ steps.release.outputs.tag }}" `
+            --repo "${{ github.repository }}" `
+            --pattern "${{ steps.release.outputs.installer_name }}" `
+            --dir "release-assets/installer"
+
+          $installerPath = Join-Path "release-assets/installer" "${{ steps.release.outputs.installer_name }}"
+          if (-not (Test-Path -LiteralPath $installerPath))
+          {
+            throw "Installer asset was not downloaded: $installerPath"
+          }
+
+      - name: Validate chocolatey package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $logsDir = "release-channel-logs"
+          $artifactRoot = "release-channel-artifacts/chocolatey"
+          New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
+          New-Item -ItemType Directory -Force -Path $artifactRoot | Out-Null
+
+          $packLogPath = Join-Path (Resolve-Path $logsDir).Path "choco-pack-log.txt"
+          $installerPath = Join-Path "release-assets/installer" "${{ steps.release.outputs.installer_name }}"
+
+          & ./build/publish-chocolatey.ps1 `
+            -Version "${{ steps.release.outputs.version }}" `
+            -Tag "${{ steps.release.outputs.tag }}" `
+            -InstallerPath $installerPath `
+            -DryRun `
+            -PackageOutputDirectory $artifactRoot `
+            -MetadataOutputPath (Join-Path $artifactRoot "chocolatey-package-metadata.json") *>&1 | Tee-Object -FilePath $packLogPath
+
+          if ($LASTEXITCODE -ne 0)
+          {
+            throw "Chocolatey dry-run validation failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Record skipped chocolatey publish
+        if: steps.release.outputs.publish != 'true'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $logsDir = "release-channel-logs"
+          New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
+          "Manual Chocolatey workflow ran with publish=false. Package push was intentionally skipped." |
+            Set-Content -Path (Join-Path $logsDir "choco-push-log.txt") -Encoding utf8
+
+          @(
+            "## chocolatey publish",
+            "- attempted: false",
+            "- version: ${{ steps.release.outputs.version }}",
+            "- result: packaged-only",
+            "- reason: workflow_dispatch input publish=false"
+          ) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+
+      - name: Check chocolatey publish prerequisites
+        if: steps.release.outputs.publish == 'true'
+        shell: pwsh
+        env:
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          if ([string]::IsNullOrWhiteSpace($env:CHOCOLATEY_API_KEY))
+          {
+            throw "CHOCOLATEY_API_KEY is required when publish=true."
+          }
+
+      - name: Publish chocolatey package
+        if: steps.release.outputs.publish == 'true'
+        shell: pwsh
+        env:
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $logsDir = "release-channel-logs"
+          $artifactRoot = "release-channel-artifacts/chocolatey"
+          New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
+          New-Item -ItemType Directory -Force -Path $artifactRoot | Out-Null
+
+          $pushLogPath = Join-Path (Resolve-Path $logsDir).Path "choco-push-log.txt"
+          $installerPath = Join-Path "release-assets/installer" "${{ steps.release.outputs.installer_name }}"
+
+          try
+          {
+            & ./build/publish-chocolatey.ps1 `
+              -Version "${{ steps.release.outputs.version }}" `
+              -Tag "${{ steps.release.outputs.tag }}" `
+              -InstallerPath $installerPath `
+              -ApiKey "$env:CHOCOLATEY_API_KEY" `
+              -PackageOutputDirectory $artifactRoot `
+              -MetadataOutputPath (Join-Path $artifactRoot "chocolatey-publish-metadata.json") *>&1 | Tee-Object -FilePath $pushLogPath
+
+            if ($LASTEXITCODE -ne 0)
+            {
+              throw "publish-chocolatey.ps1 exited with code $LASTEXITCODE"
+            }
+
+            @(
+              "## chocolatey publish",
+              "- attempted: true",
+              "- version: ${{ steps.release.outputs.version }}",
+              "- result: published"
+            ) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+          }
+          catch
+          {
+            @(
+              "## chocolatey publish",
+              "- attempted: true",
+              "- version: ${{ steps.release.outputs.version }}",
+              "- result: failed"
+            ) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+            throw
+          }
+
+      - name: Upload chocolatey package artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chocolatey-package-artifacts
+          path: |
+            release-channel-logs/choco-pack-log.txt
+            release-channel-logs/choco-push-log.txt
+            release-channel-artifacts/chocolatey/*.nupkg
+            release-channel-artifacts/chocolatey/*.json
+          if-no-files-found: warn

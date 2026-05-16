@@ -42,9 +42,10 @@ Source-of-truth policy:
 - GitHub release tag and assets are the canonical release source.
 - Winget and Chocolatey metadata must reference an existing GitHub release tag and reachable asset URLs.
 - Changelog generation in CI must run with runner-native `git-cliff` binary (pinned version + checksum verification), not Docker-based changelog actions.
-- Tagged releases are public-release mode: missing winget or Chocolatey publication secrets are a release blocker, not a silent skip.
-- `workflow_dispatch` may be run with `dry_run_publish=true` to validate build, assets, summaries, and packaging flow without external publication.
-- Every publish channel must leave evidence behind via `GITHUB_STEP_SUMMARY` plus uploaded log artifacts.
+- Tagged releases are public-release mode: missing winget publication secrets are a release blocker, not a silent skip.
+- `workflow_dispatch` may be run with `dry_run_publish=true` to validate build, assets, summaries, and winget flow without external publication.
+- Chocolatey publish is manual only through the `Publish Chocolatey` workflow, after prior ThreadPilot versions clear Chocolatey moderation.
+- Every publish channel that runs must leave evidence behind via `GITHUB_STEP_SUMMARY` plus uploaded log artifacts.
 
 Use script automation (requires authenticated gh CLI):
 
@@ -63,10 +64,10 @@ Package publication prechecks:
 1. Confirm `v<version>` exists in GitHub releases.
 2. Confirm installer URL resolves for the exact version.
 3. Confirm SHA256 in package metadata matches the published installer.
-4. Confirm winget and Chocolatey package versions match the GitHub release version.
+4. Confirm winget package version matches the GitHub release version.
 5. Confirm release workflow changelog step executed successfully with the pinned `git-cliff` version.
 6. Confirm release mode is intentional:
-   - tagged release: publish secrets present and external publication expected
+   - tagged release: winget publish secrets present and winget submission expected
    - manual dry run: `dry_run_publish=true` and no external publication expected
 7. Confirm the generated winget manifest artifact contains exactly:
    - `PrimeBuild.ThreadPilot.yaml`
@@ -78,17 +79,23 @@ Publication evidence checklist:
 
 1. Review the release workflow summary for a channel result line:
    - `submitted` for winget
-   - `published` for Chocolatey
    - `dry-run` only for manual dry-run executions
-2. Download and inspect the uploaded channel logs:
+2. Download and inspect the uploaded winget channel logs:
    - `winget-submit-log.txt`
-   - `choco-pack-log.txt`
-   - `choco-push-log.txt`
+3. Treat a tagged release with missing winget evidence as a failed release, even if GitHub release assets were created.
+
+Chocolatey manual publish checklist:
+
+1. Confirm previous ThreadPilot package versions have cleared Chocolatey moderation.
+2. Run GitHub Actions workflow `Publish Chocolatey` with `tag=v<version>` and `publish=false`.
 3. Download and inspect Chocolatey packaging artifacts:
    - generated `.nupkg`
    - `chocolatey-package-metadata.json`
-   - `chocolatey-publish-metadata.json` when publish was attempted
-4. Treat a tagged release with missing channel evidence as a failed release, even if GitHub release assets were created.
+   - `choco-pack-log.txt`
+4. If validation is correct and moderation state is clear, rerun `Publish Chocolatey` with `publish=true`.
+5. Download and inspect publish artifacts:
+   - `choco-push-log.txt`
+   - `chocolatey-publish-metadata.json`
 
 ## Post-Release (T+24h)
 

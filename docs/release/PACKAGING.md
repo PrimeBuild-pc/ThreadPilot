@@ -139,9 +139,8 @@ The release workflow currently publishes these GitHub release assets:
 - `ThreadPilot_v<version>_singlefile_win-x64.zip`
 - `ThreadPilot_v<version>_readytorun_win-x64.zip`
 - `SHA256SUMS.txt`
-- generated winget manifest YAML files
-- `manifest.spdx.json`
-- Chocolatey validation/publish artifacts (`.nupkg` + metadata JSON) in workflow artifacts
+
+Generated winget manifest YAML files and `manifest.spdx.json` are internal workflow artifacts only. They are retained for channel submission and release provenance, but they are not uploaded as public GitHub release assets.
 
 Prefer the release page over hardcoded asset URLs:
 
@@ -164,9 +163,9 @@ Current workflow scope:
 
 - `.github/workflows/release.yml` builds release artifacts, generates winget manifests from the version/tag/installer URL/SHA, and uploads those manifests as artifacts.
 - It automatically submits a PR to `microsoft/winget-pkgs` when release succeeds and winget secrets are configured.
-- It validates Chocolatey packaging by generating a real `.nupkg` plus metadata evidence before any push attempt.
-- It automatically publishes to Chocolatey community feed when release succeeds and Chocolatey API key is configured.
-- Tagged public releases fail if channel publication secrets are missing; only manual `workflow_dispatch` dry-runs may skip external publication.
+- `.github/workflows/publish-chocolatey.yml` validates Chocolatey packaging and can publish to the Chocolatey community feed, but it only runs through manual `workflow_dispatch`.
+- Tagged public releases fail if winget publication secrets are missing; only manual `workflow_dispatch` dry-runs may skip winget publication.
+- Chocolatey publication is intentionally decoupled from tagged public releases because older package versions can remain in Chocolatey moderation. Run it manually only after previous ThreadPilot versions clear moderation.
 
 ## winget Manifest Generation
 
@@ -200,11 +199,23 @@ Required repository secrets for full channel automation:
 
 - `WINGET_GITHUB_TOKEN`: PAT with permission to push to your `winget-pkgs` fork and create PRs.
 - `WINGET_FORK_OWNER`: GitHub username/org that owns your `winget-pkgs` fork.
-- `CHOCOLATEY_API_KEY`: API key for `https://push.chocolatey.org/`.
+- `CHOCOLATEY_API_KEY`: API key for `https://push.chocolatey.org/`. Required only by the manual Chocolatey workflow when `publish=true`.
 
-If secrets are missing on a tagged public release, the workflow fails by policy instead of staying ambiguously green.
+If winget secrets are missing on a tagged public release, the release workflow fails by policy instead of staying ambiguously green. Missing Chocolatey credentials do not block GitHub release creation.
 
 ## Chocolatey Validation and Publish
+
+Chocolatey publishing is manual. Use it after the GitHub release exists and after previous ThreadPilot package versions have cleared Chocolatey moderation.
+
+Manual workflow:
+
+1. Open GitHub Actions.
+2. Select `Publish Chocolatey`.
+3. Run workflow with `tag=vX.Y.Z`.
+4. Use `publish=false` to validate/package only.
+5. Use `publish=true` to push to Chocolatey, with `CHOCOLATEY_API_KEY` configured.
+
+The workflow downloads `ThreadPilot_vX.Y.Z_Setup.exe` from the existing GitHub release, runs `build/publish-chocolatey.ps1` in dry-run mode first, and uploads `.nupkg`, metadata JSON, and logs as workflow artifacts.
 
 Local packaging-only validation:
 
@@ -247,6 +258,7 @@ Moderation note:
 - A successful `choco push` means the package was submitted to Chocolatey.
 - It does not guarantee immediate discoverability in search results.
 - Moderation delay is an external queue, not automatically evidence of a repo or workflow failure.
+- Do not run the manual publish workflow for a new version while prior ThreadPilot versions are still blocked or pending in Chocolatey moderation.
 
 Optional automation for publishing the GitHub release after artifacts are ready:
 
