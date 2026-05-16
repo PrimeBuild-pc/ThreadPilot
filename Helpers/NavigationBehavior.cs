@@ -57,7 +57,10 @@ namespace ThreadPilot.Helpers
         /// <summary>
         /// Applies unsaved-settings policy before navigating away from the settings section.
         /// </summary>
-        public static async Task<bool> EnsureCanNavigateAsync(string targetTag, SettingsViewModel settingsViewModel)
+        public static async Task<bool> EnsureCanNavigateAsync(
+            string targetTag,
+            SettingsViewModel settingsViewModel,
+            Func<Task<MessageBoxResult>>? showUnsavedSettingsPromptAsync = null)
         {
             ArgumentNullException.ThrowIfNull(targetTag);
             ArgumentNullException.ThrowIfNull(settingsViewModel);
@@ -67,11 +70,13 @@ namespace ThreadPilot.Helpers
                 return true;
             }
 
-            var result = MessageBox.Show(
-                "You have unsaved changes in Settings.\n\nChoose an action:\n- Yes: Save changes\n- No: Discard changes\n- Cancel: Stay on current tab",
-                "Unsaved Settings",
-                MessageBoxButton.YesNoCancel,
-                MessageBoxImage.Warning);
+            var result = showUnsavedSettingsPromptAsync != null
+                ? await showUnsavedSettingsPromptAsync().ConfigureAwait(false)
+                : MessageBox.Show(
+                    "You have unsaved changes in Settings.\n\nChoose an action:\n- Yes: Save changes\n- No: Discard changes\n- Cancel: Stay on current tab",
+                    "Unsaved Settings",
+                    MessageBoxButton.YesNoCancel,
+                    MessageBoxImage.Warning);
 
             return result switch
             {

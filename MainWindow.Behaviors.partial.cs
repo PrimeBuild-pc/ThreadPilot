@@ -731,11 +731,8 @@ namespace ThreadPilot
                 return true;
             }
 
-            var result = System.Windows.MessageBox.Show(
-                "You have unsaved changes in Settings.\n\nChoose an action:\n- Yes: Save and exit\n- No: Discard and exit\n- Cancel: Return to app",
-                "Unsaved Settings",
-                MessageBoxButton.YesNoCancel,
-                MessageBoxImage.Warning);
+            var result = await this.ShowUnsavedSettingsDialogAsync(
+                "You have unsaved changes in Settings. Save before exiting, discard the changes, or cancel to return to ThreadPilot.");
 
             if (result == MessageBoxResult.Cancel)
             {
@@ -1582,6 +1579,53 @@ namespace ThreadPilot
             this.PerformanceIntroOverlay.Visibility = Visibility.Collapsed;
         }
 
+        private Task<MessageBoxResult> ShowUnsavedSettingsDialogAsync(string message)
+        {
+            if (!this.Dispatcher.CheckAccess())
+            {
+                return this.Dispatcher.InvokeAsync(() => this.ShowUnsavedSettingsDialogAsync(message)).Task.Unwrap();
+            }
+
+            if (this.unsavedSettingsDialogCompletionSource != null)
+            {
+                return Task.FromResult(MessageBoxResult.Cancel);
+            }
+
+            this.UnsavedSettingsDialogMessage.Text = message;
+            this.unsavedSettingsDialogCompletionSource = new TaskCompletionSource<MessageBoxResult>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            this.UnsavedSettingsOverlay.Visibility = Visibility.Visible;
+            return this.unsavedSettingsDialogCompletionSource.Task;
+        }
+
+        private void CompleteUnsavedSettingsDialog(MessageBoxResult result)
+        {
+            var completionSource = this.unsavedSettingsDialogCompletionSource;
+            if (completionSource == null)
+            {
+                return;
+            }
+
+            this.unsavedSettingsDialogCompletionSource = null;
+            this.UnsavedSettingsOverlay.Visibility = Visibility.Collapsed;
+            completionSource.TrySetResult(result);
+        }
+
+        private void UnsavedSettingsSave_Click(object sender, RoutedEventArgs e)
+        {
+            this.CompleteUnsavedSettingsDialog(MessageBoxResult.Yes);
+        }
+
+        private void UnsavedSettingsDiscard_Click(object sender, RoutedEventArgs e)
+        {
+            this.CompleteUnsavedSettingsDialog(MessageBoxResult.No);
+        }
+
+        private void UnsavedSettingsCancel_Click(object sender, RoutedEventArgs e)
+        {
+            this.CompleteUnsavedSettingsDialog(MessageBoxResult.Cancel);
+        }
+
         private async void PerformanceIntroContinue_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -1786,7 +1830,11 @@ namespace ThreadPilot
                     return;
                 }
 
-                var canNavigate = await NavigationBehavior.EnsureCanNavigateAsync(tag, this.settingsViewModel);
+                var canNavigate = await NavigationBehavior.EnsureCanNavigateAsync(
+                    tag,
+                    this.settingsViewModel,
+                    () => this.ShowUnsavedSettingsDialogAsync(
+                        "You have unsaved changes in Settings. Save before switching tabs, discard the changes, or cancel to stay on Settings."));
                 if (!canNavigate)
                 {
                     return;

@@ -79,6 +79,7 @@ namespace ThreadPilot
         private readonly NavigationBehavior navigationBehavior = new();
         private bool isPerformanceIntroVisible = false;
         private double previousAppContentOpacity = 1;
+        private TaskCompletionSource<MessageBoxResult>? unsavedSettingsDialogCompletionSource;
 
         public MainWindow(
             ProcessViewModel processViewModel,

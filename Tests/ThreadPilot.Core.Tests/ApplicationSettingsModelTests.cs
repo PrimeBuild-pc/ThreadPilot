@@ -1,0 +1,37 @@
+namespace ThreadPilot.Core.Tests
+{
+    using ThreadPilot.Models;
+
+    public sealed class ApplicationSettingsModelTests
+    {
+        [Fact]
+        public void HasSameUserSettingsAs_ReturnsTrue_WhenChangedSettingIsRestored()
+        {
+            var savedSettings = new ApplicationSettingsModel
+            {
+                EnableNotifications = true,
+            };
+
+            var editableSettings = (ApplicationSettingsModel)savedSettings.Clone();
+            editableSettings.EnableNotifications = false;
+            Assert.False(editableSettings.HasSameUserSettingsAs(savedSettings));
+
+            editableSettings.EnableNotifications = true;
+
+            Assert.True(editableSettings.HasSameUserSettingsAs(savedSettings));
+        }
+
+        [Fact]
+        public void HasSameUserSettingsAs_IgnoresMetadataTimestamps()
+        {
+            var savedSettings = new ApplicationSettingsModel
+            {
+                UpdatedAt = new System.DateTime(2026, 5, 16, 10, 0, 0, System.DateTimeKind.Utc),
+            };
+            var editableSettings = (ApplicationSettingsModel)savedSettings.Clone();
+            editableSettings.UpdatedAt = savedSettings.UpdatedAt.AddMinutes(5);
+
+            Assert.True(editableSettings.HasSameUserSettingsAs(savedSettings));
+        }
+    }
+}

@@ -20,5 +20,55 @@
 
     <Grid>
         <local:SettingsView x:Name="SettingsViewControl"/>
+
+        <Grid x:Name="UnsavedSettingsOverlay"
+              Visibility="Collapsed"
+              Background="{DynamicResource OverlayBrush}"
+              Panel.ZIndex="10"
+              AutomationProperties.Name="Unsaved settings dialog">
+            <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="26"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    MinWidth="420"
+                    MaxWidth="560">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity="0.35"/>
+                </Border.Effect>
+                <StackPanel>
+                    <TextBlock Text="Unsaved Settings"
+                               FontSize="22"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                               Margin="0,0,0,10"/>
+                    <TextBlock Text="You have unsaved changes. Save before closing, discard the changes, or cancel to keep editing."
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="0,0,0,18"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="Cancel"
+                                Click="UnsavedSettingsCancel_Click"
+                                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                Padding="16,8"
+                                Margin="0,0,10,0"/>
+                        <Button Content="Discard"
+                                Click="UnsavedSettingsDiscard_Click"
+                                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                Padding="16,8"
+                                Margin="0,0,10,0"/>
+                        <Button Content="Save"
+                                Click="UnsavedSettingsSave_Click"
+                                Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                Padding="16,8"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
     </Grid>
 </Window>

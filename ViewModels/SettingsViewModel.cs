@@ -49,6 +49,7 @@ namespace ThreadPilot.ViewModels
         private readonly IThemeService themeService;
         private readonly ISystemTrayService systemTrayService;
         private readonly GitHubUpdateChecker gitHubUpdateChecker;
+        private ApplicationSettingsModel savedSettingsSnapshot;
         private bool isSyncingFromService = false;
         private string cachedDefaultPowerPlanGuid = string.Empty;
         private string cachedDefaultPowerPlanName = string.Empty;
@@ -130,6 +131,7 @@ namespace ThreadPilot.ViewModels
 
             // Initialize with current settings
             this.settings = (ApplicationSettingsModel)this.settingsService.Settings.Clone();
+            this.savedSettingsSnapshot = (ApplicationSettingsModel)this.settings.Clone();
 
             // Initialize commands
             this.SaveSettingsCommand = new AsyncRelayCommand(this.SaveSettingsAsync);
@@ -171,8 +173,7 @@ namespace ThreadPilot.ViewModels
                 this.systemTrayService.ApplyTheme(useDarkTheme);
             }
 
-            this.HasUnsavedChanges = true;
-            this.StatusMessage = "Settings have been modified";
+            this.UpdatePendingChangesState();
         }
 
         partial void OnHasUnsavedChangesChanged(bool value)
@@ -239,7 +240,7 @@ namespace ThreadPilot.ViewModels
                 // Update monitoring services with new settings
                 this.processMonitorManagerService.UpdateSettings();
 
-                this.HasUnsavedChanges = false;
+                this.SetSavedSettingsSnapshot(this.Settings);
                 if (warnings.Count > 0)
                 {
                     this.StatusMessage = $"Settings saved with warnings: {string.Join(" ", warnings)}";
@@ -287,7 +288,7 @@ namespace ThreadPilot.ViewModels
                 var defaultSettings = new ApplicationSettingsModel();
                 this.Settings.CopyFrom(defaultSettings);
 
-                this.HasUnsavedChanges = true;
+                this.UpdatePendingChangesState();
                 this.StatusMessage = "Settings reset to defaults (not saved yet)";
 
                 this.Logger.LogInformation("Settings reset to defaults");
@@ -498,7 +499,7 @@ namespace ThreadPilot.ViewModels
                 this.themeService.ApplyTheme(useDarkTheme);
                 this.systemTrayService.ApplyTheme(useDarkTheme);
 
-                this.HasUnsavedChanges = false;
+                this.SetSavedSettingsSnapshot(this.Settings);
                 this.StatusMessage = "Settings loaded";
 
                 this.Logger.LogInformation("Settings refreshed");
@@ -537,7 +538,7 @@ namespace ThreadPilot.ViewModels
                         this.Settings.DefaultPowerPlanId = this.cachedDefaultPowerPlanGuid;
                         this.Settings.DefaultPowerPlanName = this.cachedDefaultPowerPlanName;
                     }
-                    this.HasUnsavedChanges = false;
+                    this.SetSavedSettingsSnapshot(this.Settings);
                     this.StatusMessage = "Settings synchronized";
                 }
                 finally
@@ -669,6 +670,20 @@ namespace ThreadPilot.ViewModels
             }
 
             await this.RefreshSettingsAsync();
+        }
+
+        private void UpdatePendingChangesState()
+        {
+            this.HasUnsavedChanges = !this.Settings.HasSameUserSettingsAs(this.savedSettingsSnapshot);
+            this.StatusMessage = this.HasUnsavedChanges
+                ? "Settings have been modified"
+                : "Settings match the saved configuration";
+        }
+
+        private void SetSavedSettingsSnapshot(ApplicationSettingsModel settingsSnapshot)
+        {
+            this.savedSettingsSnapshot = (ApplicationSettingsModel)settingsSnapshot.Clone();
+            this.HasUnsavedChanges = false;
         }
 
         private static bool TryParseBundle(string json, out ConfigurationBundle bundle)

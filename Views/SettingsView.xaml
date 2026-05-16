@@ -184,6 +184,13 @@
                             <TextBlock Text="Automatically start ThreadPilot when Windows starts"
                                        Style="{StaticResource DescriptionStyle}"
                                        Margin="20,0,0,15"/>
+
+                            <CheckBox Content="Low impact mode in background"
+                                      IsChecked="{Binding Settings.EnableSelfLowImpactMode}"
+                                      Margin="0,0,0,5"/>
+                            <TextBlock Text="Lower ThreadPilot's process priority while minimized or hidden to tray."
+                                       Style="{StaticResource DescriptionStyle}"
+                                       Margin="20,0,0,15"/>
                                        
                             <Separator Margin="0,0,0,15"/>
                             

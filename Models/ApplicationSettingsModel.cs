@@ -19,6 +19,7 @@ namespace ThreadPilot.Models
     using System;
     using System.Collections.Generic;
     using System.ComponentModel;
+    using System.Text.Json;
     using CommunityToolkit.Mvvm.ComponentModel;
     using ThreadPilot.Models.Core;
     using ThreadPilot.Services;
@@ -28,6 +29,11 @@ namespace ThreadPilot.Models
     /// </summary>
     public partial class ApplicationSettingsModel : ObservableObject, IModel
     {
+        private static readonly JsonSerializerOptions UserSettingsComparisonJsonOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        };
+
         [ObservableProperty]
         private string id = "ApplicationSettings"; // Singleton settings
 
@@ -291,6 +297,25 @@ namespace ThreadPilot.Models
             clone.CreatedAt = this.CreatedAt;
             clone.UpdatedAt = this.UpdatedAt;
             return clone;
+        }
+
+        public bool HasSameUserSettingsAs(ApplicationSettingsModel? other)
+        {
+            if (other == null)
+            {
+                return false;
+            }
+
+            var currentSnapshot = (ApplicationSettingsModel)this.Clone();
+            var otherSnapshot = (ApplicationSettingsModel)other.Clone();
+
+            currentSnapshot.Id = otherSnapshot.Id;
+            currentSnapshot.CreatedAt = otherSnapshot.CreatedAt;
+            currentSnapshot.UpdatedAt = otherSnapshot.UpdatedAt;
+
+            var currentJson = JsonSerializer.Serialize(currentSnapshot, UserSettingsComparisonJsonOptions);
+            var otherJson = JsonSerializer.Serialize(otherSnapshot, UserSettingsComparisonJsonOptions);
+            return string.Equals(currentJson, otherJson, StringComparison.Ordinal);
         }
     }
 

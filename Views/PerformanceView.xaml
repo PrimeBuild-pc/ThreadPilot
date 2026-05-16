@@ -417,10 +417,8 @@
                     Padding="32,24"
                     MaxWidth="500"
                     BorderBrush="{DynamicResource BorderBrush}"
-                    BorderThickness="1">
-                <Border.Background>
-                    <SolidColorBrush Color="#FF1E1E1E" />
-                </Border.Background>
+                    BorderThickness="1"
+                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
                 <StackPanel>
                     <TextBlock Text="{Binding PopupTitle}"
                                FontSize="18"

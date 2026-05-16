@@ -92,6 +92,38 @@ namespace ThreadPilot.Core.Tests
             }
         }
 
+        [Fact]
+        public async Task GetCustomPowerPlansAsync_DiscoversBundledPlansRecursively()
+        {
+            var tempRoot = Path.Combine(Path.GetTempPath(), $"threadpilot-powerplans-{Guid.NewGuid():N}");
+            var nestedDirectory = Path.Combine(tempRoot, "nested");
+            Directory.CreateDirectory(nestedDirectory);
+
+            var rootPlanPath = Path.Combine(tempRoot, "root.pow");
+            var nestedPlanPath = Path.Combine(nestedDirectory, "nested.pow");
+            await File.WriteAllTextAsync(rootPlanPath, "root");
+            await File.WriteAllTextAsync(nestedPlanPath, "nested");
+
+            try
+            {
+                var service = CreateService(
+                    new RecordingProcessRunner(),
+                    powerPlansPathProvider: () => tempRoot);
+
+                var result = await service.GetCustomPowerPlansAsync();
+
+                Assert.Contains(result, plan => plan.Name == "root" && plan.FilePath == rootPlanPath);
+                Assert.Contains(result, plan => plan.Name == "nested" && plan.FilePath == nestedPlanPath);
+            }
+            finally
+            {
+                if (Directory.Exists(tempRoot))
+                {
+                    Directory.Delete(tempRoot, recursive: true);
+                }
+            }
+        }
+
         private static PowerPlanService CreateService(
             IProcessRunner runner,
             Func<string>? powerPlansPathProvider = null)

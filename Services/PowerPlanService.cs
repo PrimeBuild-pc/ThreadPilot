@@ -80,7 +80,7 @@ namespace ThreadPilot.Services
             // Check portable mode first (Powerplans folder next to EXE)
             var exeDir = AppContext.BaseDirectory;
             var portablePath = Path.Combine(exeDir, "Powerplans");
-            if (Directory.Exists(portablePath) && Directory.GetFiles(portablePath, "*.pow").Length > 0)
+            if (Directory.Exists(portablePath) && Directory.EnumerateFiles(portablePath, "*.pow", SearchOption.AllDirectories).Any())
             {
                 return portablePath;
             }
@@ -97,13 +97,15 @@ namespace ThreadPilot.Services
                 // Copy any .pow files from portable location to AppData
                 if (Directory.Exists(portablePath))
                 {
-                    foreach (var file in Directory.GetFiles(portablePath, "*.pow"))
+                    foreach (var file in Directory.EnumerateFiles(portablePath, "*.pow", SearchOption.AllDirectories))
                     {
-                        var destFile = Path.Combine(appDataPath, Path.GetFileName(file));
+                        var relativePath = Path.GetRelativePath(portablePath, file);
+                        var destFile = Path.Combine(appDataPath, relativePath);
                         if (!File.Exists(destFile))
                         {
                             try
                             {
+                                Directory.CreateDirectory(Path.GetDirectoryName(destFile) ?? appDataPath);
                                 File.Copy(file, destFile);
                             }
                             catch
@@ -154,7 +156,7 @@ namespace ThreadPilot.Services
                 return customPlans;
             }
 
-            foreach (var file in Directory.GetFiles(powerPlansPath, "*.pow"))
+            foreach (var file in Directory.EnumerateFiles(powerPlansPath, "*.pow", SearchOption.AllDirectories))
             {
                 customPlans.Add(new PowerPlanModel
                 {

@@ -27,6 +27,7 @@ namespace ThreadPilot.Views
     public partial class SettingsWindow : Window
     {
         private readonly SettingsViewModel viewModel;
+        private bool isClosingAfterUnsavedPrompt;
 
         public SettingsWindow(SettingsViewModel viewModel)
         {
@@ -39,34 +40,41 @@ namespace ThreadPilot.Views
         protected override void OnClosing(CancelEventArgs e)
         {
             // Check for unsaved changes
-            if (!this.viewModel.CanClose())
+            if (!this.isClosingAfterUnsavedPrompt && !this.viewModel.CanClose())
             {
-                var result = System.Windows.MessageBox.Show(
-                    "You have unsaved changes. Do you want to save them before closing?",
-                    "Unsaved Changes",
-                    System.Windows.MessageBoxButton.YesNoCancel,
-                    System.Windows.MessageBoxImage.Question);
-
-                switch (result)
-                {
-                    case System.Windows.MessageBoxResult.Yes:
-                        // Save and close
-                        if (this.viewModel.SaveSettingsCommand.CanExecute(null))
-                        {
-                            this.viewModel.SaveSettingsCommand.Execute(null);
-                        }
-                        break;
-                    case System.Windows.MessageBoxResult.No:
-                        // Close without saving
-                        break;
-                    case System.Windows.MessageBoxResult.Cancel:
-                        // Cancel closing
-                        e.Cancel = true;
-                        return;
-                }
+                e.Cancel = true;
+                this.UnsavedSettingsOverlay.Visibility = Visibility.Visible;
+                return;
             }
 
             base.OnClosing(e);
+        }
+
+        private async void UnsavedSettingsSave_Click(object sender, RoutedEventArgs e)
+        {
+            var saved = await this.viewModel.SaveIfDirtyAsync();
+            if (saved)
+            {
+                this.CloseAfterUnsavedPrompt();
+            }
+        }
+
+        private async void UnsavedSettingsDiscard_Click(object sender, RoutedEventArgs e)
+        {
+            await this.viewModel.DiscardPendingChangesAsync();
+            this.CloseAfterUnsavedPrompt();
+        }
+
+        private void UnsavedSettingsCancel_Click(object sender, RoutedEventArgs e)
+        {
+            this.UnsavedSettingsOverlay.Visibility = Visibility.Collapsed;
+        }
+
+        private void CloseAfterUnsavedPrompt()
+        {
+            this.isClosingAfterUnsavedPrompt = true;
+            this.UnsavedSettingsOverlay.Visibility = Visibility.Collapsed;
+            this.Close();
         }
     }
 }

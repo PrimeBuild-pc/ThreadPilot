@@ -55,6 +55,14 @@
                                 </Setter.Value>
                             </Setter>
                         </DataTrigger>
+                        <DataTrigger Binding="{Binding ElementName=UnsavedSettingsOverlay, Path=Visibility}" Value="Visible">
+                            <Setter Property="IsHitTestVisible" Value="False"/>
+                            <Setter Property="Effect">
+                                <Setter.Value>
+                                    <BlurEffect Radius="15" KernelType="Gaussian"/>
+                                </Setter.Value>
+                            </Setter>
+                        </DataTrigger>
                     </Style.Triggers>
                 </Style>
             </Grid.Style>
@@ -289,7 +297,7 @@
                   Visibility="Collapsed"
                   AutomationProperties.Name="Performance introduction overlay">
                 <Border x:Name="PerformanceIntroCard"
-                        Background="#FF1E1E1E"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                         BorderThickness="1"
                         CornerRadius="8"
@@ -343,6 +351,57 @@
                                 Background="{DynamicResource AccentFillColorDefaultBrush}"
                                 Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                                 Padding="16,8"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <Grid x:Name="UnsavedSettingsOverlay"
+                  Visibility="Collapsed"
+                  Panel.ZIndex="960"
+                  Background="{DynamicResource OverlayBrush}"
+                  AutomationProperties.Name="Unsaved settings dialog">
+                <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="26"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        MinWidth="420"
+                        MaxWidth="560"
+                        IsHitTestVisible="True">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity="0.35"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <TextBlock Text="Unsaved Settings"
+                                   FontSize="22"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                   Margin="0,0,0,10"/>
+                        <TextBlock x:Name="UnsavedSettingsDialogMessage"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Margin="0,0,0,18"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="Cancel"
+                                    Click="UnsavedSettingsCancel_Click"
+                                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                    Padding="16,8"
+                                    Margin="0,0,10,0"/>
+                            <Button Content="Discard"
+                                    Click="UnsavedSettingsDiscard_Click"
+                                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                    Padding="16,8"
+                                    Margin="0,0,10,0"/>
+                            <Button Content="Save"
+                                    Click="UnsavedSettingsSave_Click"
+                                    Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                    Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                    Padding="16,8"/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
             </Grid>
