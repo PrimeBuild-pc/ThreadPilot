@@ -31,6 +31,7 @@ namespace ThreadPilot
     using System.Windows.Media.Imaging;
     using Microsoft.Extensions.DependencyInjection;
     using ThreadPilot.Helpers;
+    using ThreadPilot.Models;
     using ThreadPilot.Services;
     using ThreadPilot.ViewModels;
     using ThreadPilot.Views;
@@ -1105,7 +1106,13 @@ namespace ThreadPilot
                     }
                 };
                 this.systemTrayUpdateTimer.AutoReset = true;
-                this.systemTrayUpdateTimer.Start();
+
+                if (!this.isSystemTrayUpdatesSuspended &&
+                    this.IsVisible &&
+                    this.WindowState != WindowState.Minimized)
+                {
+                    this.systemTrayUpdateTimer.Start();
+                }
             }
             catch (Exception ex)
             {
@@ -1259,6 +1266,7 @@ namespace ThreadPilot
             this.mainWindowViewModel.IsDarkTheme = useDarkTheme;
             this.systemTrayService.ApplyTheme(useDarkTheme);
             DwmHelper.ApplyWindowCaptionTheme(this, useDarkTheme);
+            this.ApplySelfResourcePolicy(this.lastAppliedRefreshState ?? this.GetForegroundActivityState(), e.NewSettings);
         }
 
         private void OnMonitoringStatusChanged(object? sender, MonitoringStatusEventArgs e)
@@ -1366,6 +1374,13 @@ namespace ThreadPilot
 
         private void ApplyAppRefreshPolicy(AppActivityState state)
         {
+            if (!AppRefreshPolicy.ShouldApplyTransition(this.lastAppliedRefreshState, state))
+            {
+                return;
+            }
+
+            this.lastAppliedRefreshState = state;
+
             var decision = AppRefreshPolicy.Evaluate(state);
             var isHiddenState = state is AppActivityState.Minimized or AppActivityState.TrayHidden;
             var isProcessViewActive = state == AppActivityState.ForegroundProcessView;
@@ -1401,6 +1416,22 @@ namespace ThreadPilot
             {
                 _ = this.performanceViewModel.SuspendBackgroundMonitoringAsync();
             }
+
+            this.ApplySelfResourcePolicy(state);
+        }
+
+        private void ApplySelfResourcePolicy(AppActivityState state, ApplicationSettingsModel? settings = null)
+        {
+            var currentSettings = settings ?? this.settingsService.Settings;
+            var isHiddenState = state is AppActivityState.Minimized or AppActivityState.TrayHidden;
+
+            if (isHiddenState && currentSettings.EnableSelfLowImpactMode)
+            {
+                this.selfResourceManagementService.ApplyLowImpactMode(currentSettings.EnableSelfAffinityLimit);
+                return;
+            }
+
+            this.selfResourceManagementService.RestoreForegroundMode();
         }
 
         protected override void OnSourceInitialized(EventArgs e)

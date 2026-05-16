@@ -54,6 +54,7 @@ namespace ThreadPilot
         private readonly SettingsViewModel settingsViewModel;
         private readonly MainWindowViewModel mainWindowViewModel;
         private readonly SystemTweaksViewModel systemTweaksViewModel;
+        private readonly ISelfResourceManagementService selfResourceManagementService;
         private readonly IKeyboardShortcutService keyboardShortcutService;
         private readonly IServiceProvider serviceProvider;
         private readonly IThemeService themeService;
@@ -61,6 +62,7 @@ namespace ThreadPilot
         private bool isSystemTrayUpdatesSuspended;
         private int isSystemTrayUpdateInProgress;
         private int systemTrayUpdateFailureStreak;
+        private AppActivityState? lastAppliedRefreshState;
         private readonly IElevationService elevationService;
         private readonly ISecurityService securityService;
 
@@ -93,6 +95,7 @@ namespace ThreadPilot
             SettingsViewModel settingsViewModel,
             MainWindowViewModel mainWindowViewModel,
             SystemTweaksViewModel systemTweaksViewModel,
+            ISelfResourceManagementService selfResourceManagementService,
             IKeyboardShortcutService keyboardShortcutService,
             IThemeService themeService,
             IServiceProvider serviceProvider,
@@ -125,6 +128,7 @@ namespace ThreadPilot
                 this.settingsViewModel = settingsViewModel;
                 this.mainWindowViewModel = mainWindowViewModel;
                 this.systemTweaksViewModel = systemTweaksViewModel;
+                this.selfResourceManagementService = selfResourceManagementService;
                 this.keyboardShortcutService = keyboardShortcutService;
                 this.themeService = themeService;
                 this.serviceProvider = serviceProvider;
@@ -156,4 +160,3 @@ namespace ThreadPilot
         }
     }
 }
-

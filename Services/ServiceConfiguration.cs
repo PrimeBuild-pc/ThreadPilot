@@ -147,6 +147,7 @@ namespace ThreadPilot.Services
             // Application configuration and settings
             services.AddSingleton<IApplicationSettingsService, ApplicationSettingsService>();
             services.AddSingleton<IThemeService, ThemeService>();
+            services.AddSingleton<ISelfResourceManagementService, SelfResourceManagementService>();
 
             // User interface services
             services.AddSingleton<INotificationService, NotificationService>();

@@ -40,5 +40,21 @@ namespace ThreadPilot.Core.Tests
             Assert.False(decision.PowerPlanUiRefreshEnabled);
             Assert.True(decision.BackgroundAutomationEnabled);
         }
+
+        [Theory]
+        [InlineData(null, AppActivityState.ForegroundProcessView, true)]
+        [InlineData(AppActivityState.ForegroundProcessView, AppActivityState.ForegroundProcessView, false)]
+        [InlineData(AppActivityState.ForegroundOtherTab, AppActivityState.ForegroundOtherTab, false)]
+        [InlineData(AppActivityState.Minimized, AppActivityState.Minimized, false)]
+        [InlineData(AppActivityState.TrayHidden, AppActivityState.TrayHidden, false)]
+        [InlineData(AppActivityState.TrayHidden, AppActivityState.ForegroundProcessView, true)]
+        [InlineData(AppActivityState.ForegroundProcessView, AppActivityState.ForegroundOtherTab, true)]
+        public void ShouldApplyTransition_SkipsRedundantStateTransitions(
+            AppActivityState? previousState,
+            AppActivityState nextState,
+            bool expected)
+        {
+            Assert.Equal(expected, AppRefreshPolicy.ShouldApplyTransition(previousState, nextState));
+        }
     }
 }

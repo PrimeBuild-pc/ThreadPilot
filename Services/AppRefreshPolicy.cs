@@ -43,6 +43,11 @@ namespace ThreadPilot.Services
     /// </summary>
     public static class AppRefreshPolicy
     {
+        public static bool ShouldApplyTransition(AppActivityState? previousState, AppActivityState nextState)
+        {
+            return previousState != nextState;
+        }
+
         public static AppRefreshDecision Evaluate(AppActivityState state)
         {
             return state switch

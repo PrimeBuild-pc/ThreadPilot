@@ -51,6 +51,14 @@ namespace ThreadPilot.Services
 
             try
             {
+                if (this.IsDarkTheme == useDarkTheme &&
+                    this.activeThemeDictionary?.Source?.OriginalString != null &&
+                    string.Equals(this.activeThemeDictionary.Source.OriginalString, targetUri.OriginalString, StringComparison.OrdinalIgnoreCase) &&
+                    appResources.MergedDictionaries.Contains(this.activeThemeDictionary))
+                {
+                    return;
+                }
+
                 for (int i = appResources.MergedDictionaries.Count - 1; i >= 0; i--)
                 {
                     var dictionary = appResources.MergedDictionaries[i];

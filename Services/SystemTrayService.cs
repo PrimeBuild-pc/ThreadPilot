@@ -378,6 +378,11 @@ namespace ThreadPilot.Services
 
         public void ApplyTheme(bool useDarkTheme)
         {
+            if (this.isDarkTheme == useDarkTheme)
+            {
+                return;
+            }
+
             this.isDarkTheme = useDarkTheme;
             this.ApplyContextMenuTheme();
         }

@@ -34,7 +34,7 @@ namespace ThreadPilot.ViewModels
     {
         private readonly IPowerPlanService powerPlanService;
         private System.Timers.Timer? refreshTimer;
-        private bool isAutoRefreshPaused;
+        private bool isAutoRefreshPaused = true;
         private int isRefreshInProgress;
 
         [ObservableProperty]
@@ -97,7 +97,6 @@ namespace ThreadPilot.ViewModels
                     Interlocked.Exchange(ref this.isRefreshInProgress, 0);
                 }
             };
-            this.refreshTimer.Start();
         }
 
         public void PauseAutoRefresh()
@@ -108,10 +107,11 @@ namespace ThreadPilot.ViewModels
 
         public void ResumeAutoRefresh(bool refreshImmediately = true)
         {
+            var wasPaused = this.isAutoRefreshPaused;
             this.isAutoRefreshPaused = false;
             this.refreshTimer?.Start();
 
-            if (!refreshImmediately)
+            if (!refreshImmediately || !wasPaused)
             {
                 return;
             }
