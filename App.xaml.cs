@@ -267,6 +267,7 @@ namespace ThreadPilot
                     mainWindow.Show();
                     if (mainWindow.WindowState != WindowState.Minimized)
                     {
+                        mainWindow.EnsureDashboardVisibleOnScreen();
                         mainWindow.Activate();
                     }
                 }

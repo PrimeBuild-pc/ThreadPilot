@@ -1311,6 +1311,7 @@ namespace ThreadPilot
                 else if (this.WindowState == WindowState.Normal || this.WindowState == WindowState.Maximized)
                 {
                     this.ShowInTaskbar = true;
+                    this.EnsureDashboardVisibleOnScreen();
 
                     this.ApplyAppRefreshPolicy(this.GetForegroundActivityState());
                 }
@@ -1413,6 +1414,8 @@ namespace ThreadPilot
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to apply window caption theme: {ex.Message}");
             }
+
+            this.EnsureDashboardVisibleOnScreen();
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
@@ -1441,6 +1444,7 @@ namespace ThreadPilot
         private async Task OnWindowLoadedAsync()
         {
             this.Loaded -= this.OnWindowLoaded;
+            this.EnsureDashboardVisibleOnScreen();
             await this.InitializeKeyboardShortcutsAsync();
         }
 
@@ -1452,16 +1456,28 @@ namespace ThreadPilot
         private void ShowWindowFromTray(string? tabTag = null)
         {
             this.ShowInTaskbar = true;
-            this.Visibility = Visibility.Visible;
+            this.EnsureDashboardVisibleOnScreen();
 
             if (!this.IsVisible)
             {
                 this.Show();
             }
+            else
+            {
+                this.Visibility = Visibility.Visible;
+            }
 
             if (this.WindowState == WindowState.Minimized)
             {
                 this.WindowState = WindowState.Normal;
+            }
+
+            this.EnsureDashboardVisibleOnScreen();
+            this.ShowInTaskbar = true;
+
+            if (tabTag != null)
+            {
+                this.SelectMainTab(tabTag);
             }
 
             // Force foreground restoration when invoked from tray context menu.
@@ -1479,11 +1495,11 @@ namespace ThreadPilot
             this.ApplyAppRefreshPolicy(processViewWillBeActive
                 ? AppActivityState.ForegroundProcessView
                 : AppActivityState.ForegroundOtherTab);
+        }
 
-            if (tabTag != null)
-            {
-                _ = this.Dispatcher.InvokeAsync(() => this.SelectMainTab(tabTag));
-            }
+        internal bool EnsureDashboardVisibleOnScreen()
+        {
+            return WindowPlacementHelper.TryCorrectWindowPlacement(this);
         }
 
         private void SelectMainTab(string tag)
@@ -1494,9 +1510,6 @@ namespace ThreadPilot
             }
 
             this.ApplySectionVisibility(tag);
-
-            // Keep NavigationView internal state aligned when possible.
-            this.RootNavigation.Navigate(tag);
 
             if (string.Equals(tag, "Performance", StringComparison.Ordinal))
             {
