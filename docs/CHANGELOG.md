@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.6] - 2026-05-16
+
+### Added
+
+- Windows 11 native visual refresh: neutral Fluent surfaces, refined card styles, and reduced visual weight across Rules, Logs, Performance, Settings, Tweaks, Process, Power Plans, and CPU Masks views.
+- Sidebar navigation separator polish: horizontal separator lines softened for a cleaner Windows 11 Settings-like sidebar appearance.
+- Start minimized default clarification: `StartMinimized` now explicitly defaults to `false` for predictable manual-launch visibility.
+
+### Changed
+
+- Project version updated to 1.1.6.
+
+### Fixed
+
+- Older settings JSON without `startMinimized` field no longer risks unexpected minimized startup.
+
 ## [1.1.3] - 2026-05-09
 
 ### Added

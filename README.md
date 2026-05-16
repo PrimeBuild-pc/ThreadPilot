@@ -34,6 +34,7 @@ It is designed as an open-source alternative for power users who need Process La
 - Conditional profiles, tray controls, Live Metrics, and dashboard views.
 - Administrator-aware Windows desktop workflow.
 - CI-backed release artifacts and package-manager distribution.
+- Windows 11 native visual refresh with neutral Fluent surfaces and refined card-based layouts.
 
 ## 📦 Install
 

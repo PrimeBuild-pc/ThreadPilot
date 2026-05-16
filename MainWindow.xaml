@@ -92,6 +92,9 @@
                         <Setter Property="Background" Value="Transparent"/>
                         <Setter Property="BorderThickness" Value="0"/>
                         <Setter Property="BorderBrush" Value="Transparent"/>
+                        <Setter Property="Margin" Value="0"/>
+                        <Setter Property="Padding" Value="12,4"/>
+                        <Setter Property="MinHeight" Value="36"/>
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Background" Value="{DynamicResource QuietRowBackgroundBrush}"/>
@@ -104,6 +107,13 @@
                                 <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
                             </Trigger>
                         </Style.Triggers>
+                    </Style>
+
+                    <!-- Remove default NavigationViewItem horizontal separator lines -->
+                    <Style x:Key="NavigationViewItemSeparator" TargetType="Rectangle">
+                        <Setter Property="Fill" Value="Transparent"/>
+                        <Setter Property="Height" Value="0"/>
+                        <Setter Property="Margin" Value="0"/>
                     </Style>
                 </ui:NavigationView.Resources>
                 
