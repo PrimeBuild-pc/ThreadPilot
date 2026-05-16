@@ -23,6 +23,19 @@ namespace ThreadPilot.Services
 
     public static class SelfResourcePolicy
     {
+        public static bool ShouldApplyLowImpactMode(bool isHidden, bool enableSelfLowImpactMode)
+        {
+            return isHidden && enableSelfLowImpactMode;
+        }
+
+        public static bool ShouldLimitAffinity(
+            bool isHidden,
+            bool enableSelfLowImpactMode,
+            bool enableSelfAffinityLimit)
+        {
+            return ShouldApplyLowImpactMode(isHidden, enableSelfLowImpactMode) && enableSelfAffinityLimit;
+        }
+
         public static bool TryCreateLowImpactAffinityMask(int logicalProcessorCount, out long affinityMask)
         {
             affinityMask = 0;

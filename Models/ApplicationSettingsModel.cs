@@ -172,7 +172,7 @@ namespace ThreadPilot.Models
         private bool hasSeenElevationWarning = false;
 
         [ObservableProperty]
-        private bool enableSelfLowImpactMode = false;
+        private bool enableSelfLowImpactMode = true;
 
         [ObservableProperty]
         private bool enableSelfAffinityLimit = false;
@@ -340,4 +340,3 @@ namespace ThreadPilot.Models
         Custom,
     }
 }
-

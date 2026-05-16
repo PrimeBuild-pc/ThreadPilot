@@ -22,6 +22,8 @@ namespace ThreadPilot.Core.Tests
             Assert.True(storage.Writes.ContainsKey(TestPaths.SettingsFilePath));
             Assert.Equal(3000, service.Settings.NotificationDisplayDurationMs);
             Assert.Equal(5000, service.Settings.BalloonNotificationTimeoutMs);
+            Assert.True(service.Settings.EnableSelfLowImpactMode);
+            Assert.False(service.Settings.EnableSelfAffinityLimit);
         }
 
         [Fact]
@@ -35,6 +37,44 @@ namespace ThreadPilot.Core.Tests
 
             Assert.Equal(3000, service.Settings.NotificationDisplayDurationMs);
             Assert.Equal(string.Empty, service.Settings.CustomTrayIconPath);
+            Assert.True(service.Settings.EnableSelfLowImpactMode);
+            Assert.False(service.Settings.EnableSelfAffinityLimit);
+        }
+
+        [Fact]
+        public async Task LoadSettingsAsync_EnablesSafeSelfLowImpactDefault_ForOlderSettingsJson()
+        {
+            var storage = new FakeSettingsStorage();
+            storage.Files[TestPaths.SettingsFilePath] = """
+                {
+                  "notificationDisplayDurationMs": 3000,
+                  "balloonNotificationTimeoutMs": 5000
+                }
+                """;
+            var service = CreateService(storage);
+
+            await service.LoadSettingsAsync();
+
+            Assert.True(service.Settings.EnableSelfLowImpactMode);
+            Assert.False(service.Settings.EnableSelfAffinityLimit);
+        }
+
+        [Fact]
+        public async Task LoadSettingsAsync_PreservesExplicitSelfLowImpactOptOut()
+        {
+            var storage = new FakeSettingsStorage();
+            storage.Files[TestPaths.SettingsFilePath] = """
+                {
+                  "enableSelfLowImpactMode": false,
+                  "enableSelfAffinityLimit": true
+                }
+                """;
+            var service = CreateService(storage);
+
+            await service.LoadSettingsAsync();
+
+            Assert.False(service.Settings.EnableSelfLowImpactMode);
+            Assert.True(service.Settings.EnableSelfAffinityLimit);
         }
 
         [Fact]

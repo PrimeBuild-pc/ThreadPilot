@@ -33,5 +33,21 @@ namespace ThreadPilot.Core.Tests
         {
             Assert.False(SelfResourcePolicy.TryCreateLowImpactAffinityMask(logicalProcessorCount, out _));
         }
+
+        [Theory]
+        [InlineData(false, true, true, false)]
+        [InlineData(true, false, true, false)]
+        [InlineData(true, true, false, false)]
+        [InlineData(true, true, true, true)]
+        public void ShouldLimitAffinity_RequiresHiddenLowImpactModeAndAffinitySetting(
+            bool isHidden,
+            bool enableSelfLowImpactMode,
+            bool enableSelfAffinityLimit,
+            bool expected)
+        {
+            Assert.Equal(
+                expected,
+                SelfResourcePolicy.ShouldLimitAffinity(isHidden, enableSelfLowImpactMode, enableSelfAffinityLimit));
+        }
     }
 }

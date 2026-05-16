@@ -605,6 +605,7 @@ namespace ThreadPilot
             try
             {
                 this.LogDebug("Starting graceful shutdown...");
+                this.selfResourceManagementService.RestoreForegroundMode();
 
                 // 1. Stop monitoring services
                 try
@@ -1425,9 +1426,12 @@ namespace ThreadPilot
             var currentSettings = settings ?? this.settingsService.Settings;
             var isHiddenState = state is AppActivityState.Minimized or AppActivityState.TrayHidden;
 
-            if (isHiddenState && currentSettings.EnableSelfLowImpactMode)
+            if (SelfResourcePolicy.ShouldApplyLowImpactMode(isHiddenState, currentSettings.EnableSelfLowImpactMode))
             {
-                this.selfResourceManagementService.ApplyLowImpactMode(currentSettings.EnableSelfAffinityLimit);
+                this.selfResourceManagementService.ApplyLowImpactMode(SelfResourcePolicy.ShouldLimitAffinity(
+                    isHiddenState,
+                    currentSettings.EnableSelfLowImpactMode,
+                    currentSettings.EnableSelfAffinityLimit));
                 return;
             }
 
@@ -1844,6 +1848,7 @@ namespace ThreadPilot
                 this.initializationTimeoutTimer?.Stop();
                 this.initializationTimeoutTimer?.Dispose();
 
+                this.selfResourceManagementService.RestoreForegroundMode();
                 this.navigationBehavior.Dispose();
             }
             catch (Exception ex)
