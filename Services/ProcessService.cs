@@ -42,6 +42,7 @@ namespace ThreadPilot.Services
         private readonly IProcessClassifier processClassifier;
         private readonly IPassiveProcessErrorThrottle passiveProcessErrorThrottle;
         private readonly Func<string> profilesDirectoryProvider;
+        private readonly CpuSelectionAffinityApplier cpuSelectionAffinityApplier;
 
         private string ProfilesDirectory => this.profilesDirectoryProvider();
 
@@ -65,6 +66,11 @@ namespace ThreadPilot.Services
             this.processClassifier = processClassifier ?? new ProcessClassifier(new ProcessFilterService());
             this.passiveProcessErrorThrottle = passiveProcessErrorThrottle ?? new PassiveProcessErrorThrottle();
             this.profilesDirectoryProvider = profilesDirectoryProvider ?? (() => StoragePaths.ProfilesDirectory);
+            this.cpuSelectionAffinityApplier = new CpuSelectionAffinityApplier(
+                this.GetOrCreateCpuSetHandler,
+                this.ApplyLegacyProcessorAffinityDirectAsync,
+                logger ?? (ILogger)Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
+                process => this.cpuSetHandlers.TryRemove(process.ProcessId, out _));
 
             StoragePaths.EnsureAppDataDirectories();
             this.MigrateLegacyProfilesIfNeeded();
@@ -423,6 +429,52 @@ namespace ThreadPilot.Services
             }).ConfigureAwait(false);
         }
 
+        public async Task<AffinityApplyResult> SetProcessorAffinity(ProcessModel process, CpuSelection selection)
+        {
+            if (process == null)
+            {
+                return AffinityApplyResult.Failed(
+                    AffinityApplyErrorCodes.ProcessExited,
+                    "Process is no longer running.",
+                    "ProcessModel is null.",
+                    failureReason: AffinityApplyFailureReason.ProcessTerminated);
+            }
+
+            try
+            {
+                this.EnsureProcessOperationAllowed(process, "SetProcessAffinity");
+            }
+            catch (Exception ex) when (AffinityApplyExceptionClassifier.IsAccessDenied(ex))
+            {
+                this.AuditProcessOperation("SetProcessAffinity", process?.Name ?? string.Empty, success: false);
+                var antiCheatLikely = AffinityApplyExceptionClassifier.IsAntiCheatLikely(ex);
+                return AffinityApplyResult.Failed(
+                    antiCheatLikely
+                        ? AffinityApplyErrorCodes.AntiCheatOrProtectedProcessLikely
+                        : AffinityApplyErrorCodes.AccessDenied,
+                    antiCheatLikely
+                        ? CpuSelectionAffinityApplier.AntiCheatUserMessage
+                        : CpuSelectionAffinityApplier.AccessDeniedUserMessage,
+                    ex.Message,
+                    isAccessDenied: true,
+                    isAntiCheatLikely: antiCheatLikely,
+                    verifiedMask: process?.ProcessorAffinity ?? 0,
+                    failureReason: AffinityApplyFailureReason.AccessDenied);
+            }
+            catch (Exception ex) when (AffinityApplyExceptionClassifier.IsProcessExited(ex))
+            {
+                this.AuditProcessOperation("SetProcessAffinity", process?.Name ?? string.Empty, success: false);
+                return AffinityApplyResult.Failed(
+                    AffinityApplyErrorCodes.ProcessExited,
+                    "Process is no longer running.",
+                    ex.Message,
+                    verifiedMask: process?.ProcessorAffinity ?? 0,
+                    failureReason: AffinityApplyFailureReason.ProcessTerminated);
+            }
+
+            return await this.cpuSelectionAffinityApplier.ApplyAsync(process, selection).ConfigureAwait(false);
+        }
+
         /// <summary>
         /// Attempts to set process affinity using CPU Sets (Windows 10+ feature).
         /// </summary>
@@ -431,10 +483,7 @@ namespace ThreadPilot.Services
             try
             {
                 // Get or create CPU Set handler for this process
-                var handler = this.cpuSetHandlers.GetOrAdd(process.ProcessId, pid =>
-                {
-                    return new ProcessCpuSetHandler((uint)pid, process.Name, this.logger);
-                });
+                var handler = this.GetOrCreateCpuSetHandler(process);
 
                 // Check if handler is valid
                 if (!handler.IsValid)
@@ -468,6 +517,40 @@ namespace ThreadPilot.Services
                 this.cpuSetHandlers.TryRemove(process.ProcessId, out _);
                 return false;
             }
+        }
+
+        private IProcessCpuSetHandler GetOrCreateCpuSetHandler(ProcessModel process) =>
+            this.cpuSetHandlers.GetOrAdd(process.ProcessId, pid =>
+            {
+                return new ProcessCpuSetHandler((uint)pid, process.Name, this.logger);
+            });
+
+        private async Task<long> ApplyLegacyProcessorAffinityDirectAsync(ProcessModel process, long affinityMask)
+        {
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    using var targetProcess = Process.GetProcessById(process.ProcessId);
+                    targetProcess.ProcessorAffinity = new IntPtr(affinityMask);
+                    var verifiedMask = (long)targetProcess.ProcessorAffinity;
+                    process.ProcessorAffinity = verifiedMask;
+
+                    this.AuditProcessOperation("SetProcessAffinity", process.Name, success: true);
+                    this.logger?.LogInformation(
+                        "Successfully applied classic ProcessorAffinity 0x{AffinityMask:X} to process {ProcessName} (PID: {ProcessId})",
+                        affinityMask,
+                        process.Name,
+                        process.ProcessId);
+
+                    return verifiedMask;
+                }
+                catch
+                {
+                    this.AuditProcessOperation("SetProcessAffinity", process.Name, success: false);
+                    throw;
+                }
+            }).ConfigureAwait(false);
         }
 
         public async Task SetProcessPriority(ProcessModel process, ProcessPriorityClass priority)
