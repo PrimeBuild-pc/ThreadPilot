@@ -111,6 +111,7 @@ namespace ThreadPilot.Services
             services.AddSingleton<IPowerPlanService, PowerPlanService>();
             services.AddSingleton<PowerPlanTransitionGate>();
             services.AddSingleton<ICpuTopologyService, CpuTopologyService>();
+            services.AddSingleton<ICpuPresetGenerator, CpuPresetGenerator>();
 
             // CoreMaskService needs IServiceProvider for checking profile references
             services.AddSingleton<ICoreMaskService>(sp =>
@@ -238,4 +239,3 @@ namespace ThreadPilot.Services
         }
     }
 }
-
