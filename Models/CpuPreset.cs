@@ -31,6 +31,8 @@ namespace ThreadPilot.Models
 
         public string Reason { get; init; } = string.Empty;
 
+        public string? SourcePresetId { get; init; }
+
         public string? Warning { get; init; }
 
         public CpuTopologySignature? GeneratedByTopologySignature { get; init; }

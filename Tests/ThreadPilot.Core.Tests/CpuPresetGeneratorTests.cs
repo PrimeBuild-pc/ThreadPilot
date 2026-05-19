@@ -21,6 +21,7 @@ namespace ThreadPilot.Core.Tests
                 "best-gaming",
                 "safe-compatibility");
             Assert.Equal(4, GetPreset(presets, "all-physical-cores").Selection.LogicalProcessors.Count);
+            AssertBestGamingSource(GetPreset(presets, "best-gaming"), "all-physical-cores");
             AssertValidPresets(presets, topology);
             AssertStableIdsAndOrder(generator, topology, presets);
         }
@@ -41,7 +42,9 @@ namespace ThreadPilot.Core.Tests
                 Assert.NotEqual(allCores.Reason, physical.Reason);
             }
 
-            Assert.NotEmpty(GetPreset(presets, "best-gaming").Selection.LogicalProcessors);
+            var bestGaming = GetPreset(presets, "best-gaming");
+            Assert.NotEmpty(bestGaming.Selection.LogicalProcessors);
+            AssertBestGamingSource(bestGaming, "all-physical-cores");
             AssertValidPresets(presets, topology);
         }
 
@@ -57,7 +60,7 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal(8, GetPreset(presets, "p-cores-only").Selection.LogicalProcessors.Count);
             Assert.Equal(4, GetPreset(presets, "p-cores-no-smt").Selection.LogicalProcessors.Count);
             Assert.Equal(4, GetPreset(presets, "e-cores-only").Selection.LogicalProcessors.Count);
-            Assert.Equal("p-cores-no-smt", GetPreset(presets, "best-gaming").Reason);
+            AssertBestGamingSource(GetPreset(presets, "best-gaming"), "p-cores-no-smt");
             AssertValidPresets(presets, topology);
         }
 
@@ -91,7 +94,7 @@ namespace ThreadPilot.Core.Tests
             AssertPresetIdsContain(presets, "l3-group-0-physical", "l3-group-1-physical");
             Assert.Equal(6, GetPreset(presets, "l3-group-0-physical").Selection.LogicalProcessors.Count);
             Assert.Equal(6, GetPreset(presets, "l3-group-1-physical").Selection.LogicalProcessors.Count);
-            Assert.Equal("l3-group-0-physical", GetPreset(presets, "best-gaming").Reason);
+            AssertBestGamingSource(GetPreset(presets, "best-gaming"), "l3-group-0-physical");
             Assert.Contains("L3", GetPreset(presets, "l3-group-0-physical").Reason, StringComparison.OrdinalIgnoreCase);
             AssertValidPresets(presets, topology);
         }
@@ -106,7 +109,7 @@ namespace ThreadPilot.Core.Tests
 
             Assert.Equal(8, GetPreset(presets, "l3-group-0-physical").Selection.LogicalProcessors.Count);
             Assert.Equal(8, GetPreset(presets, "l3-group-1-physical").Selection.LogicalProcessors.Count);
-            Assert.Equal("l3-group-0-physical", GetPreset(presets, "best-gaming").Reason);
+            AssertBestGamingSource(GetPreset(presets, "best-gaming"), "l3-group-0-physical");
             AssertValidPresets(presets, topology);
         }
 
@@ -160,6 +163,7 @@ namespace ThreadPilot.Core.Tests
             Assert.DoesNotContain(presets, preset => preset.PresetId == "p-cores-no-smt");
             Assert.DoesNotContain(presets, preset => preset.PresetId.StartsWith("l3-group-", StringComparison.Ordinal));
             AssertPresetIdsContain(presets, "all-cores", "all-except-cpu0", "best-gaming", "safe-compatibility");
+            AssertBestGamingSource(GetPreset(presets, "best-gaming"), "all-except-cpu0");
             AssertValidPresets(presets, topology);
         }
 
@@ -189,6 +193,14 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal(
                 expected.Selection.GlobalLogicalProcessorIndexes,
                 actual.Selection.GlobalLogicalProcessorIndexes);
+
+        private static void AssertBestGamingSource(CpuPreset bestGaming, string expectedSourcePresetId)
+        {
+            Assert.Equal("best-gaming", bestGaming.PresetId);
+            Assert.Equal(expectedSourcePresetId, bestGaming.SourcePresetId);
+            Assert.NotEqual(bestGaming.SourcePresetId, bestGaming.Reason);
+            Assert.False(string.IsNullOrWhiteSpace(bestGaming.Reason));
+        }
 
         private static void AssertStableIdsAndOrder(
             CpuPresetGenerator generator,

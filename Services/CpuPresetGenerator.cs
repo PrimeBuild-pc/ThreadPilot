@@ -179,8 +179,9 @@ namespace ThreadPilot.Services
                         "Suggested topology-aware starting point for games.",
                         sourcePreset.Selection.LogicalProcessors,
                         topology,
-                        bestGamingSourceId,
-                        GamingWarning));
+                        CreateBestGamingReason(bestGamingSourceId),
+                        GamingWarning,
+                        sourcePresetId: bestGamingSourceId));
             }
 
             AddPreset(
@@ -223,6 +224,23 @@ namespace ThreadPilot.Services
             return orderedCandidates.FirstOrDefault(candidate =>
                 presets.Any(preset => preset.PresetId == candidate));
         }
+
+        private static string CreateBestGamingReason(string sourcePresetId) =>
+            sourcePresetId switch
+            {
+                "p-cores-no-smt" =>
+                    "Selected P-cores without SMT because the topology exposes distinct performance and efficiency core classes.",
+                "l3-group-0-physical" =>
+                    "Selected physical cores from L3/cache group 0 because the topology exposes multiple L3 groups and no P/E core classes.",
+                "all-physical-cores" =>
+                    "Selected one logical processor per physical core because reliable CoreIndex metadata is available.",
+                "all-except-cpu0" =>
+                    "Selected all logical processors except CPU0 as a conservative gaming-oriented fallback.",
+                "all-cores" =>
+                    "Selected all logical processors as the safest fallback because no more specific topology preset was available.",
+                _ =>
+                    "Selected the best available topology-aware preset for this CPU.",
+            };
 
         private static bool HasCoreIndexForAllProcessors(CpuTopologySnapshot topology) =>
             HasCoreIndexForProcessors(topology.LogicalProcessors, topology);
@@ -269,6 +287,7 @@ namespace ThreadPilot.Services
             CpuTopologySnapshot topology,
             string reason,
             string? warning = null,
+            string? sourcePresetId = null,
             bool reviewRequired = false)
         {
             var selectedProcessors = processors
@@ -285,6 +304,7 @@ namespace ThreadPilot.Services
                 Description = description,
                 Selection = CpuSelection.FromProcessors(selectedProcessors, topology, reason),
                 Reason = reason,
+                SourcePresetId = sourcePresetId,
                 Warning = warning,
                 GeneratedByTopologySignature = topology.Signature,
                 IsUserEditable = true,
