@@ -42,6 +42,8 @@ namespace ThreadPilot.Models
 
         public int LastLevelCacheGroupCount { get; init; }
 
+        public int PackageCount { get; init; }
+
         public string Source { get; init; } = "Unknown";
     }
 
@@ -73,16 +75,31 @@ namespace ThreadPilot.Models
     {
         private readonly IReadOnlyDictionary<ProcessorRef, uint> cpuSetIdsByProcessor;
         private readonly IReadOnlyDictionary<ProcessorRef, byte> efficiencyClassesByProcessor;
+        private readonly IReadOnlyDictionary<ProcessorRef, int> coreIndexesByProcessor;
+        private readonly IReadOnlyDictionary<ProcessorRef, int> numaNodeIndexesByProcessor;
+        private readonly IReadOnlyDictionary<ProcessorRef, int> lastLevelCacheIndexesByProcessor;
+        private readonly IReadOnlyDictionary<ProcessorRef, int> packageIndexesByProcessor;
+        private readonly IReadOnlyDictionary<ProcessorRef, IReadOnlyList<int>> smtSiblingGlobalIndexesByProcessor;
 
         private CpuTopologySnapshot(
             IReadOnlyList<ProcessorRef> logicalProcessors,
             IReadOnlyDictionary<ProcessorRef, uint> cpuSetIdsByProcessor,
             IReadOnlyDictionary<ProcessorRef, byte> efficiencyClassesByProcessor,
+            IReadOnlyDictionary<ProcessorRef, int> coreIndexesByProcessor,
+            IReadOnlyDictionary<ProcessorRef, int> numaNodeIndexesByProcessor,
+            IReadOnlyDictionary<ProcessorRef, int> lastLevelCacheIndexesByProcessor,
+            IReadOnlyDictionary<ProcessorRef, int> packageIndexesByProcessor,
+            IReadOnlyDictionary<ProcessorRef, IReadOnlyList<int>> smtSiblingGlobalIndexesByProcessor,
             CpuTopologySignature signature)
         {
             this.LogicalProcessors = logicalProcessors;
             this.cpuSetIdsByProcessor = cpuSetIdsByProcessor;
             this.efficiencyClassesByProcessor = efficiencyClassesByProcessor;
+            this.coreIndexesByProcessor = coreIndexesByProcessor;
+            this.numaNodeIndexesByProcessor = numaNodeIndexesByProcessor;
+            this.lastLevelCacheIndexesByProcessor = lastLevelCacheIndexesByProcessor;
+            this.packageIndexesByProcessor = packageIndexesByProcessor;
+            this.smtSiblingGlobalIndexesByProcessor = smtSiblingGlobalIndexesByProcessor;
             this.Signature = signature;
         }
 
@@ -94,7 +111,12 @@ namespace ThreadPilot.Models
             IEnumerable<ProcessorRef> logicalProcessors,
             IReadOnlyDictionary<ProcessorRef, uint>? cpuSetIds = null,
             IReadOnlyDictionary<ProcessorRef, byte>? efficiencyClasses = null,
-            CpuTopologySignature? signature = null)
+            CpuTopologySignature? signature = null,
+            IReadOnlyDictionary<ProcessorRef, int>? coreIndexes = null,
+            IReadOnlyDictionary<ProcessorRef, int>? numaNodeIndexes = null,
+            IReadOnlyDictionary<ProcessorRef, int>? lastLevelCacheIndexes = null,
+            IReadOnlyDictionary<ProcessorRef, int>? packageIndexes = null,
+            IReadOnlyDictionary<ProcessorRef, IReadOnlyList<int>>? smtSiblingGlobalIndexes = null)
         {
             ArgumentNullException.ThrowIfNull(logicalProcessors);
 
@@ -128,14 +150,45 @@ namespace ThreadPilot.Models
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
                 ?? new Dictionary<ProcessorRef, byte>();
 
+            var coreIndexMap = FilterKnownProcessorMap(coreIndexes, processorSet);
+            var numaNodeIndexMap = FilterKnownProcessorMap(numaNodeIndexes, processorSet);
+            var lastLevelCacheIndexMap = FilterKnownProcessorMap(lastLevelCacheIndexes, processorSet);
+            var packageIndexMap = FilterKnownProcessorMap(packageIndexes, processorSet);
+            var knownGlobalIndexes = processors.Select(processor => processor.GlobalIndex).ToHashSet();
+            var smtSiblingMap = smtSiblingGlobalIndexes?
+                .Where(kvp => processorSet.Contains(kvp.Key))
+                .ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => (IReadOnlyList<int>)kvp.Value
+                        .Where(knownGlobalIndexes.Contains)
+                        .Distinct()
+                        .OrderBy(index => index)
+                        .ToList())
+                ?? new Dictionary<ProcessorRef, IReadOnlyList<int>>();
+
             var resolvedSignature = signature ?? new CpuTopologySignature
             {
                 LogicalProcessorCount = processors.Count,
+                PhysicalCoreCount = coreIndexMap.Count == 0
+                    ? processors.Count
+                    : coreIndexMap.Values.Distinct().Count(),
                 ProcessorGroupCount = processors.Select(processor => processor.Group).Distinct().Count(),
+                NumaNodeCount = numaNodeIndexMap.Values.Distinct().Count(),
+                LastLevelCacheGroupCount = lastLevelCacheIndexMap.Values.Distinct().Count(),
+                PackageCount = packageIndexMap.Values.Distinct().Count(),
                 Source = "Snapshot",
             };
 
-            return new CpuTopologySnapshot(processors, cpuSetMap, efficiencyClassMap, resolvedSignature);
+            return new CpuTopologySnapshot(
+                processors,
+                cpuSetMap,
+                efficiencyClassMap,
+                coreIndexMap,
+                numaNodeIndexMap,
+                lastLevelCacheIndexMap,
+                packageIndexMap,
+                smtSiblingMap,
+                resolvedSignature);
         }
 
         public bool TryGetCpuSetId(ProcessorRef processor, out uint cpuSetId) =>
@@ -143,6 +196,23 @@ namespace ThreadPilot.Models
 
         public bool TryGetEfficiencyClass(ProcessorRef processor, out byte efficiencyClass) =>
             this.efficiencyClassesByProcessor.TryGetValue(processor, out efficiencyClass);
+
+        public bool TryGetCoreIndex(ProcessorRef processor, out int coreIndex) =>
+            this.coreIndexesByProcessor.TryGetValue(processor, out coreIndex);
+
+        public bool TryGetNumaNodeIndex(ProcessorRef processor, out int numaNodeIndex) =>
+            this.numaNodeIndexesByProcessor.TryGetValue(processor, out numaNodeIndex);
+
+        public bool TryGetLastLevelCacheIndex(ProcessorRef processor, out int lastLevelCacheIndex) =>
+            this.lastLevelCacheIndexesByProcessor.TryGetValue(processor, out lastLevelCacheIndex);
+
+        public bool TryGetPackageIndex(ProcessorRef processor, out int packageIndex) =>
+            this.packageIndexesByProcessor.TryGetValue(processor, out packageIndex);
+
+        public IReadOnlyList<int> GetSmtSiblingGlobalIndexes(ProcessorRef processor) =>
+            this.smtSiblingGlobalIndexesByProcessor.TryGetValue(processor, out var siblings)
+                ? siblings
+                : [];
 
         public byte? GetPerformanceEfficiencyClass()
         {
@@ -152,6 +222,16 @@ namespace ThreadPilot.Models
             }
 
             return this.efficiencyClassesByProcessor.Values.Max();
+        }
+
+        private static Dictionary<ProcessorRef, int> FilterKnownProcessorMap(
+            IReadOnlyDictionary<ProcessorRef, int>? source,
+            HashSet<ProcessorRef> processorSet)
+        {
+            return source?
+                .Where(kvp => processorSet.Contains(kvp.Key))
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
+                ?? new Dictionary<ProcessorRef, int>();
         }
     }
 
