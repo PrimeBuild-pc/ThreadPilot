@@ -1,5 +1,6 @@
 namespace ThreadPilot.Core.Tests
 {
+    using System.Runtime.InteropServices;
     using System.Threading;
     using ThreadPilot.Models;
     using ThreadPilot.Services;
@@ -184,6 +185,69 @@ namespace ThreadPilot.Core.Tests
             Assert.Contains(topology.LogicalProcessors, processor => processor.GlobalIndex == 64 && processor.Group == 1);
         }
 
+        [Fact]
+        public void NativeLayout_CacheRelationshipOffsets_MatchWin32Layout()
+        {
+            Assert.Equal(12, WindowsCpuTopologyNativeLayout.CacheReservedOffset);
+            Assert.Equal(30, WindowsCpuTopologyNativeLayout.CacheGroupCountOffset);
+            Assert.Equal(32, WindowsCpuTopologyNativeLayout.CacheGroupMaskOffset);
+        }
+
+        [Fact]
+        public void NativeLayout_NumaNodeRelationshipOffsets_MatchWin32Layout()
+        {
+            Assert.Equal(4, WindowsCpuTopologyNativeLayout.NumaReservedOffset);
+            Assert.Equal(22, WindowsCpuTopologyNativeLayout.NumaGroupCountOffset);
+            Assert.Equal(24, WindowsCpuTopologyNativeLayout.NumaGroupMaskOffset);
+        }
+
+        [Fact]
+        public void NativeLayout_NumaNodeWithZeroGroupCount_UsesSingleGroupMask()
+        {
+            using var buffer = NativeRelationshipBuffer.Allocate(WindowsCpuTopologyNativeLayout.NumaGroupMaskOffset + WindowsCpuTopologyNativeLayout.GroupAffinitySize);
+            buffer.WriteUInt32(0, 7);
+            buffer.WriteUInt16(WindowsCpuTopologyNativeLayout.NumaGroupCountOffset, 0);
+            buffer.WriteGroupAffinity(WindowsCpuTopologyNativeLayout.NumaGroupMaskOffset, group: 1, mask: 0b101UL);
+
+            var processors = WindowsCpuTopologyNativeLayout.ReadNumaNodeProcessors(buffer.Pointer, out var nodeNumber);
+
+            Assert.Equal(7, nodeNumber);
+            Assert.Equal(
+                [new ProcessorRef(1, 0, 64), new ProcessorRef(1, 2, 66)],
+                processors);
+        }
+
+        [Fact]
+        public void NativeLayout_L3CacheWithGroupCount_ReadsAllGroupMasks()
+        {
+            var size = WindowsCpuTopologyNativeLayout.CacheGroupMaskOffset + (WindowsCpuTopologyNativeLayout.GroupAffinitySize * 2);
+            using var buffer = NativeRelationshipBuffer.Allocate(size);
+            buffer.WriteByte(0, 3);
+            buffer.WriteUInt16(WindowsCpuTopologyNativeLayout.CacheGroupCountOffset, 2);
+            buffer.WriteGroupAffinity(WindowsCpuTopologyNativeLayout.CacheGroupMaskOffset, group: 0, mask: 0b11UL);
+            buffer.WriteGroupAffinity(
+                WindowsCpuTopologyNativeLayout.CacheGroupMaskOffset + WindowsCpuTopologyNativeLayout.GroupAffinitySize,
+                group: 1,
+                mask: 0b1UL);
+
+            var wasRead = WindowsCpuTopologyNativeLayout.TryReadL3CacheProcessors(buffer.Pointer, out var processors);
+
+            Assert.True(wasRead);
+            Assert.Equal(
+                [new ProcessorRef(0, 0, 0), new ProcessorRef(0, 1, 1), new ProcessorRef(1, 0, 64)],
+                processors);
+        }
+
+        [Fact]
+        public void NativeLayout_CreateFallbackProcessors_UsesProcessorGroupsBeyond64()
+        {
+            var processors = WindowsCpuTopologyNativeLayout.CreateFallbackProcessors(66).ToList();
+
+            Assert.Equal(new ProcessorRef(0, 63, 63), processors[63]);
+            Assert.Equal(new ProcessorRef(1, 0, 64), processors[64]);
+            Assert.Equal(new ProcessorRef(1, 1, 65), processors[65]);
+        }
+
         private static IEnumerable<ProcessorRef> CreateSequentialProcessors(int count)
         {
             return Enumerable.Range(0, count)
@@ -196,6 +260,50 @@ namespace ThreadPilot.Core.Tests
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 return Task.FromResult(snapshot);
+            }
+        }
+
+        private sealed class NativeRelationshipBuffer : IDisposable
+        {
+            private NativeRelationshipBuffer(IntPtr pointer)
+            {
+                this.Pointer = pointer;
+            }
+
+            public IntPtr Pointer { get; }
+
+            public static NativeRelationshipBuffer Allocate(int size)
+            {
+                var pointer = Marshal.AllocHGlobal(size);
+                var bytes = new byte[size];
+                Marshal.Copy(bytes, 0, pointer, bytes.Length);
+                return new NativeRelationshipBuffer(pointer);
+            }
+
+            public void WriteByte(int offset, byte value)
+            {
+                Marshal.WriteByte(this.Pointer, offset, value);
+            }
+
+            public void WriteUInt16(int offset, ushort value)
+            {
+                Marshal.WriteInt16(this.Pointer, offset, unchecked((short)value));
+            }
+
+            public void WriteUInt32(int offset, uint value)
+            {
+                Marshal.WriteInt32(this.Pointer, offset, unchecked((int)value));
+            }
+
+            public void WriteGroupAffinity(int offset, ushort group, ulong mask)
+            {
+                Marshal.WriteIntPtr(this.Pointer, offset, unchecked((nint)mask));
+                this.WriteUInt16(offset + IntPtr.Size, group);
+            }
+
+            public void Dispose()
+            {
+                Marshal.FreeHGlobal(this.Pointer);
             }
         }
     }

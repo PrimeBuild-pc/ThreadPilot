@@ -59,14 +59,6 @@ namespace ThreadPilot.Services
             RelationAll = 0xFFFF,
         }
 
-        private enum ProcessorCacheType
-        {
-            CacheUnified = 0,
-            CacheInstruction = 1,
-            CacheData = 2,
-            CacheTrace = 3,
-        }
-
         [StructLayout(LayoutKind.Sequential)]
         private struct SystemCpuSetInformation
         {
@@ -82,47 +74,6 @@ namespace ThreadPilot.Services
             public byte AllFlags;
             public uint SchedulingClassOrReserved;
             public ulong AllocationTag;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct GroupAffinity
-        {
-            public UIntPtr Mask;
-            public ushort Group;
-            public ushort Reserved0;
-            public ushort Reserved1;
-            public ushort Reserved2;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private unsafe struct ProcessorRelationship
-        {
-            public byte Flags;
-            public byte EfficiencyClass;
-            public fixed byte Reserved[20];
-            public ushort GroupCount;
-            public GroupAffinity GroupMask;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct CacheRelationship
-        {
-            public byte Level;
-            public byte Associativity;
-            public ushort LineSize;
-            public uint CacheSize;
-            public ProcessorCacheType Type;
-            public ushort GroupCount;
-            public GroupAffinity GroupMask;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private unsafe struct NumaNodeRelationship
-        {
-            public uint NodeNumber;
-            public fixed byte Reserved[20];
-            public ushort GroupCount;
-            public GroupAffinity GroupMask;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -190,7 +141,7 @@ namespace ThreadPilot.Services
             if (logicalProcessors.Count == 0)
             {
                 this.logger.LogWarning("CPU topology provider could not read Windows topology APIs; using Environment.ProcessorCount fallback");
-                foreach (var processor in CreateFallbackProcessors(Environment.ProcessorCount))
+                foreach (var processor in WindowsCpuTopologyNativeLayout.CreateFallbackProcessors(Environment.ProcessorCount))
                 {
                     logicalProcessors.Add(processor);
                     coreIndexes[processor] = processor.GlobalIndex;
@@ -273,7 +224,7 @@ namespace ThreadPilot.Services
 
                     if (info.Type == CpuSetInformationType.CpuSetInformation)
                     {
-                        var processor = CreateProcessorRef(info.Group, info.LogicalProcessorIndex);
+                        var processor = WindowsCpuTopologyNativeLayout.CreateProcessorRef(info.Group, info.LogicalProcessorIndex);
                         logicalProcessors.Add(processor);
                         cpuSetIds[processor] = info.Id;
                         efficiencyClasses[processor] = info.EfficiencyClass;
@@ -392,8 +343,11 @@ namespace ThreadPilot.Services
             IDictionary<ProcessorRef, int> coreIndexes,
             IDictionary<ProcessorRef, IReadOnlyList<int>> smtSiblingGlobalIndexes)
         {
-            var processor = Marshal.PtrToStructure<ProcessorRelationship>(IntPtr.Add(itemPtr, 8));
-            var processorsInCore = ReadProcessorRelationshipProcessors(itemPtr, processor.GroupCount).ToList();
+            var relationshipPtr = IntPtr.Add(itemPtr, 8);
+            var processor = Marshal.PtrToStructure<WindowsCpuTopologyNativeLayout.ProcessorRelationship>(relationshipPtr);
+            var processorsInCore = WindowsCpuTopologyNativeLayout
+                .ReadProcessorRelationshipProcessors(relationshipPtr, processor.GroupCount)
+                .ToList();
             var siblingIndexes = processorsInCore.Select(item => item.GlobalIndex).ToList();
 
             foreach (var logicalProcessor in processorsInCore)
@@ -414,32 +368,18 @@ namespace ThreadPilot.Services
             HashSet<ProcessorRef> logicalProcessors,
             IDictionary<ProcessorRef, int> indexMap)
         {
-            var processor = Marshal.PtrToStructure<ProcessorRelationship>(IntPtr.Add(itemPtr, 8));
-            foreach (var logicalProcessor in ReadProcessorRelationshipProcessors(itemPtr, processor.GroupCount))
+            var relationshipPtr = IntPtr.Add(itemPtr, 8);
+            var processor = Marshal.PtrToStructure<WindowsCpuTopologyNativeLayout.ProcessorRelationship>(relationshipPtr);
+            foreach (var logicalProcessor in WindowsCpuTopologyNativeLayout.ReadProcessorRelationshipProcessors(relationshipPtr, processor.GroupCount))
             {
                 logicalProcessors.Add(logicalProcessor);
                 indexMap[logicalProcessor] = index;
             }
         }
 
-        private static IEnumerable<ProcessorRef> ReadProcessorRelationshipProcessors(IntPtr itemPtr, ushort groupCount)
-        {
-            var groupMaskOffset = Marshal.OffsetOf<ProcessorRelationship>(nameof(ProcessorRelationship.GroupMask)).ToInt32();
-            return ReadProcessorsFromGroupMasks(itemPtr, groupMaskOffset, groupCount);
-        }
-
         private static bool TryReadL3CacheProcessors(IntPtr itemPtr, out IReadOnlyList<ProcessorRef> processors)
         {
-            var cache = Marshal.PtrToStructure<CacheRelationship>(IntPtr.Add(itemPtr, 8));
-            if (cache.Level != 3 || cache.GroupCount == 0)
-            {
-                processors = [];
-                return false;
-            }
-
-            var groupMaskOffset = Marshal.OffsetOf<CacheRelationship>(nameof(CacheRelationship.GroupMask)).ToInt32();
-            processors = ReadProcessorsFromGroupMasks(itemPtr, groupMaskOffset, cache.GroupCount).ToList();
-            return processors.Count > 0;
+            return WindowsCpuTopologyNativeLayout.TryReadL3CacheProcessors(IntPtr.Add(itemPtr, 8), out processors);
         }
 
         private void ReadNumaNodeRelationship(
@@ -447,53 +387,12 @@ namespace ThreadPilot.Services
             HashSet<ProcessorRef> logicalProcessors,
             IDictionary<ProcessorRef, int> numaNodeIndexes)
         {
-            var numaNode = Marshal.PtrToStructure<NumaNodeRelationship>(IntPtr.Add(itemPtr, 8));
-            var groupMaskOffset = Marshal.OffsetOf<NumaNodeRelationship>(nameof(NumaNodeRelationship.GroupMask)).ToInt32();
-            foreach (var processor in ReadProcessorsFromGroupMasks(itemPtr, groupMaskOffset, numaNode.GroupCount))
+            var processors = WindowsCpuTopologyNativeLayout.ReadNumaNodeProcessors(IntPtr.Add(itemPtr, 8), out var nodeNumber);
+            foreach (var processor in processors)
             {
                 logicalProcessors.Add(processor);
-                numaNodeIndexes[processor] = unchecked((int)numaNode.NodeNumber);
+                numaNodeIndexes[processor] = nodeNumber;
             }
-        }
-
-        private static IEnumerable<ProcessorRef> ReadProcessorsFromGroupMasks(
-            IntPtr itemPtr,
-            int groupMaskOffset,
-            ushort groupCount)
-        {
-            var firstGroupMaskPtr = IntPtr.Add(itemPtr, 8 + groupMaskOffset);
-            var stride = Marshal.SizeOf<GroupAffinity>();
-            for (var index = 0; index < groupCount; index++)
-            {
-                var groupAffinity = Marshal.PtrToStructure<GroupAffinity>(IntPtr.Add(firstGroupMaskPtr, index * stride));
-                foreach (var logicalProcessor in ReadProcessorsFromGroupAffinity(groupAffinity))
-                {
-                    yield return logicalProcessor;
-                }
-            }
-        }
-
-        private static IEnumerable<ProcessorRef> ReadProcessorsFromGroupAffinity(GroupAffinity groupAffinity)
-        {
-            var mask = groupAffinity.Mask.ToUInt64();
-            for (var bit = 0; bit < 64; bit++)
-            {
-                if ((mask & (1UL << bit)) != 0)
-                {
-                    yield return CreateProcessorRef(groupAffinity.Group, (byte)bit);
-                }
-            }
-        }
-
-        private static ProcessorRef CreateProcessorRef(ushort group, byte logicalProcessorNumber)
-        {
-            return new ProcessorRef(group, logicalProcessorNumber, (group * 64) + logicalProcessorNumber);
-        }
-
-        private static IEnumerable<ProcessorRef> CreateFallbackProcessors(int logicalProcessorCount)
-        {
-            return Enumerable.Range(0, logicalProcessorCount)
-                .Select(index => new ProcessorRef(0, (byte)index, index));
         }
     }
 }
