@@ -17,6 +17,7 @@
 namespace ThreadPilot.Platforms.Windows
 {
     using System;
+    using ThreadPilot.Models;
 
     /// <summary>
     /// Interface for handling CPU Set operations on a specific process.
@@ -35,11 +36,22 @@ namespace ThreadPilot.Platforms.Windows
 
         /// <summary>
         /// Applies a CPU affinity mask to the process using CPU Sets.
+        /// This legacy path is valid only for single-processor-group systems with up to
+        /// 64 logical processors. It will be superseded by <see cref="ApplyCpuSelection"/>
+        /// for topology-aware CPU Set selection.
         /// </summary>
         /// <param name="affinityMask">The affinity mask where each bit represents a logical processor.</param>
         /// <param name="clearMask">If true, clears the CPU Set (allows all cores); if false, applies the mask.</param>
         /// <returns>True if the operation succeeded, false otherwise.</returns>
         bool ApplyCpuSetMask(long affinityMask, bool clearMask = false);
+
+        /// <summary>
+        /// Applies a topology-aware CPU selection to the process using CPU Sets.
+        /// </summary>
+        /// <param name="selection">The CPU selection to apply.</param>
+        /// <param name="clearSelection">If true, clears the CPU Set selection and ignores <paramref name="selection"/>.</param>
+        /// <returns>True if the operation succeeded, false otherwise.</returns>
+        bool ApplyCpuSelection(CpuSelection selection, bool clearSelection = false);
 
         /// <summary>
         /// Gets the average CPU usage for this process.
@@ -53,4 +65,3 @@ namespace ThreadPilot.Platforms.Windows
         bool IsValid { get; }
     }
 }
-
