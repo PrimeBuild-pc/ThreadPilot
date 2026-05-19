@@ -57,5 +57,26 @@ namespace ThreadPilot.Core.Tests
 
             security.VerifyAll();
         }
+
+        [Fact]
+        public async Task SetProcessorAffinity_WithInvalidCpuSelection_AuditsFailure()
+        {
+            var security = new Mock<ISecurityService>(MockBehavior.Strict);
+            security
+                .Setup(s => s.ValidateProcessOperation("Game", "SetProcessAffinity"))
+                .Returns(true);
+            security
+                .Setup(s => s.AuditElevatedAction("SetProcessAffinity", "Game", false))
+                .Returns(Task.CompletedTask);
+
+            var service = new ProcessService(null, security.Object);
+            var process = new ProcessModel { Name = "Game", ProcessId = int.MaxValue };
+
+            var result = await service.SetProcessorAffinity(process, new CpuSelection());
+
+            Assert.False(result.Success);
+            Assert.Equal(AffinityApplyErrorCodes.InvalidSelection, result.ErrorCode);
+            security.VerifyAll();
+        }
     }
 }

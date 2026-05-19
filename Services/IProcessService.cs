@@ -28,6 +28,8 @@ namespace ThreadPilot.Services
 
         Task SetProcessorAffinity(ProcessModel process, long affinityMask);
 
+        Task<AffinityApplyResult> SetProcessorAffinity(ProcessModel process, CpuSelection selection);
+
         Task SetProcessPriority(ProcessModel process, ProcessPriorityClass priority);
 
         Task<bool> SaveProcessProfile(string profileName, ProcessModel process);
