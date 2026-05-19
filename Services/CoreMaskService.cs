@@ -45,6 +45,8 @@ namespace ThreadPilot.Services
         private readonly ILogger<CoreMaskService> logger;
         private readonly ICpuTopologyService cpuTopologyService;
         private readonly IServiceProvider serviceProvider;
+        private readonly ICpuTopologyProvider? cpuTopologyProvider;
+        private readonly CpuSelectionMigrationService cpuSelectionMigrationService;
         private readonly string masksFilePath;
         private bool initialized = false;
 
@@ -63,11 +65,15 @@ namespace ThreadPilot.Services
         public CoreMaskService(
             ILogger<CoreMaskService> logger,
             ICpuTopologyService cpuTopologyService,
-            IServiceProvider serviceProvider)
+            IServiceProvider serviceProvider,
+            ICpuTopologyProvider? cpuTopologyProvider = null,
+            CpuSelectionMigrationService? cpuSelectionMigrationService = null)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.cpuTopologyService = cpuTopologyService ?? throw new ArgumentNullException(nameof(cpuTopologyService));
             this.serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+            this.cpuTopologyProvider = cpuTopologyProvider;
+            this.cpuSelectionMigrationService = cpuSelectionMigrationService ?? new CpuSelectionMigrationService();
 
             StoragePaths.EnsureAppDataDirectories();
             this.masksFilePath = StoragePaths.CoreMasksFilePath;
@@ -184,12 +190,17 @@ namespace ThreadPilot.Services
         {
             try
             {
+                await this.ApplyCpuSelectionMigrationAsync().ConfigureAwait(false);
+
                 var data = this.AvailableMasks.Select(m => new
                 {
                     id = m.Id,
                     name = m.Name,
                     description = m.Description,
                     boolMask = m.BoolMask.ToList(),
+                    profileSchemaVersion = m.ProfileSchemaVersion,
+                    cpuSelection = m.CpuSelection,
+                    cpuSelectionMigration = m.CpuSelectionMigration,
                     isDefault = m.IsDefault,
                     isEnabled = m.IsEnabled,
                     createdAt = m.CreatedAt,
@@ -238,6 +249,9 @@ namespace ThreadPilot.Services
                             Id = item.GetProperty("id").GetString() ?? Guid.NewGuid().ToString(),
                             Name = item.GetProperty("name").GetString() ?? "Unnamed",
                             Description = item.GetProperty("description").GetString() ?? string.Empty,
+                            ProfileSchemaVersion = item.TryGetProperty("profileSchemaVersion", out var schemaVersion)
+                                ? schemaVersion.GetInt32()
+                                : CpuAffinityProfileSchemaVersions.Legacy,
                             IsDefault = item.GetProperty("isDefault").GetBoolean(),
                             IsEnabled = item.GetProperty("isEnabled").GetBoolean(),
                             CreatedAt = item.GetProperty("createdAt").GetDateTime(),
@@ -250,6 +264,18 @@ namespace ThreadPilot.Services
                             mask.BoolMask.Add(bit.GetBoolean());
                         }
 
+                        if (item.TryGetProperty("cpuSelection", out var cpuSelectionElement) &&
+                            cpuSelectionElement.ValueKind != JsonValueKind.Null)
+                        {
+                            mask.CpuSelection = cpuSelectionElement.Deserialize<CpuSelection>(JsonOptions);
+                        }
+
+                        if (item.TryGetProperty("cpuSelectionMigration", out var migrationElement) &&
+                            migrationElement.ValueKind != JsonValueKind.Null)
+                        {
+                            mask.CpuSelectionMigration = migrationElement.Deserialize<CpuSelectionMigrationMetadata>(JsonOptions);
+                        }
+
                         this.AvailableMasks.Add(mask);
                     }
                     catch (Exception ex)
@@ -258,6 +284,7 @@ namespace ThreadPilot.Services
                     }
                 }
 
+                await this.ApplyCpuSelectionMigrationAsync().ConfigureAwait(false);
                 this.logger.LogInformation("Loaded {Count} masks from {Path}", this.AvailableMasks.Count, this.masksFilePath);
             }
             catch (Exception ex)
@@ -277,6 +304,54 @@ namespace ThreadPilot.Services
             {
                 this.logger.LogError(ex, "Failed to check if mask {MaskId} is referenced by profiles", maskId);
                 return false;
+            }
+        }
+
+        private async Task ApplyCpuSelectionMigrationAsync()
+        {
+            var topology = await this.TryGetTopologySnapshotAsync().ConfigureAwait(false);
+            if (topology == null)
+            {
+                return;
+            }
+
+            foreach (var mask in this.AvailableMasks)
+            {
+                if (mask.CpuSelection != null)
+                {
+                    mask.ProfileSchemaVersion = CpuAffinityProfileSchemaVersions.CpuSelection;
+                    continue;
+                }
+
+                if (mask.BoolMask.Count == 0)
+                {
+                    continue;
+                }
+
+                var migrated = this.cpuSelectionMigrationService.MigrateFromLegacyCoreMask(
+                    mask.BoolMask.ToList(),
+                    topology);
+                mask.ProfileSchemaVersion = CpuAffinityProfileSchemaVersions.CpuSelection;
+                mask.CpuSelection = migrated.Selection;
+                mask.CpuSelectionMigration = migrated.Metadata;
+            }
+        }
+
+        private async Task<CpuTopologySnapshot?> TryGetTopologySnapshotAsync()
+        {
+            if (this.cpuTopologyProvider == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                return await this.cpuTopologyProvider.GetTopologySnapshotAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogWarning(ex, "Failed to get CPU topology snapshot for core mask CpuSelection migration");
+                return null;
             }
         }
 
@@ -732,4 +807,3 @@ namespace ThreadPilot.Services
         }
     }
 }
-

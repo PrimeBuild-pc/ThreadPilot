@@ -50,6 +50,49 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task SaveProcessProfile_WithTopologyProvider_WritesCpuSelectionSchema()
+        {
+            var profilesDirectory = CreateTemporaryDirectory();
+            var profileName = $"profile-{Guid.NewGuid():N}";
+            var topology = CpuTopologySnapshot.Create(
+            [
+                new ProcessorRef(0, 0, 0),
+                new ProcessorRef(0, 1, 1),
+                new ProcessorRef(0, 2, 2),
+            ]);
+            var process = new ProcessModel
+            {
+                Name = "game.exe",
+                Priority = ProcessPriorityClass.High,
+                ProcessorAffinity = 0b101,
+            };
+
+            try
+            {
+                var service = CreateService(profilesDirectory, new FakeCpuTopologyProvider(topology));
+
+                var result = await service.SaveProcessProfile(profileName, process);
+
+                Assert.True(result);
+
+                var filePath = Path.Combine(profilesDirectory, $"{profileName}.json");
+                var profile = JsonSerializer.Deserialize<ProcessProfileSnapshot>(
+                    await File.ReadAllTextAsync(filePath),
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                Assert.NotNull(profile);
+                Assert.Equal(CpuAffinityProfileSchemaVersions.CpuSelection, profile.ProfileSchemaVersion);
+                Assert.Equal(0b101, profile.ProcessorAffinity);
+                Assert.NotNull(profile.CpuSelection);
+                Assert.Equal([0, 2], profile.CpuSelection!.GlobalLogicalProcessorIndexes);
+            }
+            finally
+            {
+                DeleteDirectory(profilesDirectory);
+            }
+        }
+
+        [Fact]
         public async Task LoadProcessProfile_ReturnsFalse_WhenFileIsMissing()
         {
             var profilesDirectory = CreateTemporaryDirectory();
@@ -153,8 +196,10 @@ namespace ThreadPilot.Core.Tests
             }
         }
 
-        private static ProcessService CreateService(string profilesDirectory) =>
-            new(null, null, () => profilesDirectory);
+        private static ProcessService CreateService(
+            string profilesDirectory,
+            ICpuTopologyProvider? topologyProvider = null) =>
+            new(null, null, () => profilesDirectory, cpuTopologyProvider: topologyProvider);
 
         private static string CreateTemporaryDirectory()
         {
@@ -182,6 +227,13 @@ namespace ThreadPilot.Core.Tests
         {
             var field = typeof(ProcessService).GetField(fieldName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
             return (ConcurrentDictionary<TKey, TValue>)(field?.GetValue(service) ?? throw new InvalidOperationException($"Field '{fieldName}' not found."));
+        }
+
+        private sealed class FakeCpuTopologyProvider(CpuTopologySnapshot snapshot) : ICpuTopologyProvider
+        {
+            public Task<CpuTopologySnapshot> GetTopologySnapshotAsync(
+                CancellationToken cancellationToken = default) =>
+                Task.FromResult(snapshot);
         }
     }
 }

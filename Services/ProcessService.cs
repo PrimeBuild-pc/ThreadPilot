@@ -43,6 +43,8 @@ namespace ThreadPilot.Services
         private readonly IPassiveProcessErrorThrottle passiveProcessErrorThrottle;
         private readonly Func<string> profilesDirectoryProvider;
         private readonly CpuSelectionAffinityApplier cpuSelectionAffinityApplier;
+        private readonly ICpuTopologyProvider? cpuTopologyProvider;
+        private readonly CpuSelectionMigrationService cpuSelectionMigrationService;
 
         private string ProfilesDirectory => this.profilesDirectoryProvider();
 
@@ -58,7 +60,9 @@ namespace ThreadPilot.Services
             Func<string>? profilesDirectoryProvider = null,
             IForegroundProcessService? foregroundProcessService = null,
             IProcessClassifier? processClassifier = null,
-            IPassiveProcessErrorThrottle? passiveProcessErrorThrottle = null)
+            IPassiveProcessErrorThrottle? passiveProcessErrorThrottle = null,
+            ICpuTopologyProvider? cpuTopologyProvider = null,
+            CpuSelectionMigrationService? cpuSelectionMigrationService = null)
         {
             this.logger = logger;
             this.securityService = securityService;
@@ -66,6 +70,8 @@ namespace ThreadPilot.Services
             this.processClassifier = processClassifier ?? new ProcessClassifier(new ProcessFilterService());
             this.passiveProcessErrorThrottle = passiveProcessErrorThrottle ?? new PassiveProcessErrorThrottle();
             this.profilesDirectoryProvider = profilesDirectoryProvider ?? (() => StoragePaths.ProfilesDirectory);
+            this.cpuTopologyProvider = cpuTopologyProvider;
+            this.cpuSelectionMigrationService = cpuSelectionMigrationService ?? new CpuSelectionMigrationService();
             this.cpuSelectionAffinityApplier = new CpuSelectionAffinityApplier(
                 this.GetOrCreateCpuSetHandler,
                 this.ApplyLegacyProcessorAffinityDirectAsync,
@@ -109,15 +115,6 @@ namespace ThreadPilot.Services
             public TimeSpan TotalProcessorTime { get; set; }
 
             public DateTime Timestamp { get; set; }
-        }
-
-        private sealed class ProcessProfileSnapshot
-        {
-            public string ProcessName { get; set; } = string.Empty;
-
-            public ProcessPriorityClass Priority { get; set; }
-
-            public long ProcessorAffinity { get; set; }
         }
 
         private double CalculateCpuUsage(Process process)
@@ -588,12 +585,18 @@ namespace ThreadPilot.Services
 
         public async Task<bool> SaveProcessProfile(string profileName, ProcessModel process)
         {
-            var profile = new
+            var profile = new ProcessProfileSnapshot
             {
                 ProcessName = process.Name,
                 Priority = process.Priority,
                 ProcessorAffinity = process.ProcessorAffinity,
             };
+
+            var topology = await this.TryGetTopologySnapshotAsync().ConfigureAwait(false);
+            if (topology != null)
+            {
+                this.cpuSelectionMigrationService.PrepareProcessProfileForSave(profile, topology);
+            }
 
             var filePath = Path.Combine(this.ProfilesDirectory, $"{profileName}.json");
             var json = JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true });
@@ -623,8 +626,40 @@ namespace ThreadPilot.Services
             }
 
             await this.SetProcessPriority(process, profile.Priority).ConfigureAwait(false);
-            await this.SetProcessorAffinity(process, profile.ProcessorAffinity).ConfigureAwait(false);
+            var topology = await this.TryGetTopologySnapshotAsync().ConfigureAwait(false);
+            if (topology != null)
+            {
+                this.cpuSelectionMigrationService.MigrateProcessProfile(profile, topology);
+            }
+
+            if (profile.CpuSelection != null)
+            {
+                await this.SetProcessorAffinity(process, profile.CpuSelection).ConfigureAwait(false);
+            }
+            else
+            {
+                await this.SetProcessorAffinity(process, profile.ProcessorAffinity).ConfigureAwait(false);
+            }
+
             return true;
+        }
+
+        private async Task<CpuTopologySnapshot?> TryGetTopologySnapshotAsync()
+        {
+            if (this.cpuTopologyProvider == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                return await this.cpuTopologyProvider.GetTopologySnapshotAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                this.logger?.LogWarning(ex, "Failed to get CPU topology snapshot for profile CpuSelection migration");
+                return null;
+            }
         }
 
         public async Task RefreshProcessInfo(ProcessModel process)
