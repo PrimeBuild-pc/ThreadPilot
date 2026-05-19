@@ -186,17 +186,20 @@ namespace ThreadPilot.Services
         private readonly Func<ProcessModel, long, Task<long>> legacyAffinityApplier;
         private readonly ILogger logger;
         private readonly Action<ProcessModel>? cpuSetFailureCallback;
+        private readonly Action<ProcessModel, bool>? auditCallback;
 
         public CpuSelectionAffinityApplier(
             Func<ProcessModel, IProcessCpuSetHandler> cpuSetHandlerFactory,
             Func<ProcessModel, long, Task<long>> legacyAffinityApplier,
             ILogger logger,
-            Action<ProcessModel>? cpuSetFailureCallback = null)
+            Action<ProcessModel>? cpuSetFailureCallback = null,
+            Action<ProcessModel, bool>? auditCallback = null)
         {
             this.cpuSetHandlerFactory = cpuSetHandlerFactory ?? throw new ArgumentNullException(nameof(cpuSetHandlerFactory));
             this.legacyAffinityApplier = legacyAffinityApplier ?? throw new ArgumentNullException(nameof(legacyAffinityApplier));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.cpuSetFailureCallback = cpuSetFailureCallback;
+            this.auditCallback = auditCallback;
         }
 
         public async Task<AffinityApplyResult> ApplyAsync(ProcessModel process, CpuSelection selection)
@@ -208,6 +211,7 @@ namespace ThreadPilot.Services
 
             if (selection == null || (selection.CpuSetIds.Count == 0 && selection.LogicalProcessors.Count == 0))
             {
+                this.Audit(process, success: false);
                 return AffinityApplyResult.Failed(
                     AffinityApplyErrorCodes.InvalidSelection,
                     InvalidSelectionUserMessage,
@@ -226,6 +230,7 @@ namespace ThreadPilot.Services
             var legacyMask = CpuSelection.ToLegacyAffinityMaskOrNull(selection);
             if (!legacyMask.HasValue || legacyMask.Value <= 0)
             {
+                this.Audit(process, success: false);
                 return AffinityApplyResult.Failed(
                     AffinityApplyErrorCodes.LegacyFallbackUnsafe,
                     LegacyFallbackBlockedUserMessage,
@@ -279,18 +284,24 @@ namespace ThreadPilot.Services
 
                 if (handler.ApplyCpuSelection(selection))
                 {
+                    this.Audit(process, success: true);
                     return AffinityApplyResult.SucceededWithCpuSets(
                         $"CPU Sets applied to process {process.Name} (PID: {process.ProcessId}).");
                 }
 
+                // ProcessCpuSetHandler.ApplyCpuSelection currently returns only bool. A false
+                // can mean CPU Sets unavailable, access denied without detailed error, or
+                // a native apply failure. Later UX/error-model work will classify this more precisely.
                 return null;
             }
             catch (Exception ex) when (AffinityApplyExceptionClassifier.IsAccessDenied(ex))
             {
+                this.Audit(process, success: false);
                 return AccessDenied(ex, 0, process.ProcessorAffinity);
             }
             catch (Exception ex) when (AffinityApplyExceptionClassifier.IsProcessExited(ex))
             {
+                this.Audit(process, success: false);
                 return ProcessExited("Process exited before CPU Sets could be applied.", process);
             }
             catch (Exception ex)
@@ -303,6 +314,9 @@ namespace ThreadPilot.Services
                 return null;
             }
         }
+
+        private void Audit(ProcessModel process, bool success) =>
+            this.auditCallback?.Invoke(process, success);
 
         private static AffinityApplyResult AccessDenied(Exception ex, long requestedMask, long verifiedMask)
         {
@@ -391,7 +405,19 @@ namespace ThreadPilot.Services
         }
 
         public Task<AffinityApplyResult> ApplyAsync(ProcessModel process, CpuSelection selection) =>
-            this.processService.SetProcessorAffinity(process, selection);
+            process == null
+                ? Task.FromResult(AffinityApplyResult.Failed(
+                    AffinityApplyErrorCodes.ProcessExited,
+                    "Process is no longer running.",
+                    "ProcessModel is null.",
+                    failureReason: AffinityApplyFailureReason.ProcessTerminated))
+                : selection == null
+                    ? Task.FromResult(AffinityApplyResult.Failed(
+                        AffinityApplyErrorCodes.InvalidSelection,
+                        CpuSelectionAffinityApplier.InvalidSelectionUserMessage,
+                        "CpuSelection is null.",
+                        failureReason: AffinityApplyFailureReason.InvalidMask))
+                    : this.processService.SetProcessorAffinity(process, selection);
 
         public async Task<AffinityApplyResult> ApplyAsync(ProcessModel process, long requestedMask)
         {

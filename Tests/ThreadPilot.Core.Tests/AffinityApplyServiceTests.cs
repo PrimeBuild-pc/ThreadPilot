@@ -261,6 +261,25 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task CpuSelectionApply_WhenCpuSetsSucceed_AuditsSuccessAndSkipsLegacyFallback()
+        {
+            var process = new ProcessModel { ProcessId = 42, Name = "Game" };
+            var cpuSets = new FakeCpuSetHandler { ApplyCpuSelectionResult = true };
+            var legacy = new RecordingLegacyAffinityApplier();
+            var audit = new RecordingAffinityAudit();
+            var service = CreateCpuSelectionApplier(cpuSets, legacy, audit);
+            var selection = CreateSelection(new ProcessorRef(0, 0, 0));
+
+            var result = await service.ApplyAsync(process, selection);
+
+            Assert.True(result.Success);
+            Assert.True(result.UsedCpuSets);
+            Assert.False(result.UsedLegacyAffinity);
+            Assert.Equal(0, legacy.CallCount);
+            Assert.Equal([(process, true)], audit.Calls);
+        }
+
+        [Fact]
         public async Task CpuSelectionApply_WhenSelectionIsEmpty_ReturnsInvalidSelection()
         {
             var process = new ProcessModel { ProcessId = 42, Name = "Game" };
@@ -276,6 +295,58 @@ namespace ThreadPilot.Core.Tests
             Assert.False(result.UsedLegacyAffinity);
             Assert.Equal(0, cpuSets.ApplyCpuSelectionCalls);
             Assert.Equal(0, legacy.CallCount);
+        }
+
+        [Fact]
+        public async Task CpuSelectionApply_WhenSelectionIsEmpty_AuditsFailure()
+        {
+            var process = new ProcessModel { ProcessId = 42, Name = "Game" };
+            var cpuSets = new FakeCpuSetHandler();
+            var legacy = new RecordingLegacyAffinityApplier();
+            var audit = new RecordingAffinityAudit();
+            var service = CreateCpuSelectionApplier(cpuSets, legacy, audit);
+
+            var result = await service.ApplyAsync(process, new CpuSelection());
+
+            Assert.False(result.Success);
+            Assert.Equal(AffinityApplyErrorCodes.InvalidSelection, result.ErrorCode);
+            Assert.Equal([(process, false)], audit.Calls);
+        }
+
+        [Fact]
+        public async Task CpuSelectionApply_WhenLegacyFallbackIsUnsafe_AuditsFailure()
+        {
+            var process = new ProcessModel { ProcessId = 42, Name = "Game" };
+            var cpuSets = new FakeCpuSetHandler { ApplyCpuSelectionResult = false };
+            var legacy = new RecordingLegacyAffinityApplier();
+            var audit = new RecordingAffinityAudit();
+            var service = CreateCpuSelectionApplier(cpuSets, legacy, audit);
+            var selection = CreateSelection(new ProcessorRef(1, 64, 64));
+
+            var result = await service.ApplyAsync(process, selection);
+
+            Assert.False(result.Success);
+            Assert.True(result.IsLegacyFallbackBlocked);
+            Assert.Equal(0, legacy.CallCount);
+            Assert.Equal([(process, false)], audit.Calls);
+        }
+
+        [Fact]
+        public async Task CpuSelectionApply_WhenLegacyFallbackSucceeds_DoesNotAuditTwice()
+        {
+            var process = new ProcessModel { ProcessId = 42, Name = "Game" };
+            var cpuSets = new FakeCpuSetHandler { ApplyCpuSelectionResult = false };
+            var legacy = new RecordingLegacyAffinityApplier();
+            var audit = new RecordingAffinityAudit();
+            var service = CreateCpuSelectionApplier(cpuSets, legacy, audit);
+            var selection = CreateSelection(new ProcessorRef(0, 0, 0));
+
+            var result = await service.ApplyAsync(process, selection);
+
+            Assert.True(result.Success);
+            Assert.True(result.UsedLegacyAffinity);
+            Assert.Equal(1, legacy.CallCount);
+            Assert.Empty(audit.Calls);
         }
 
         [Fact]
@@ -337,6 +408,37 @@ namespace ThreadPilot.Core.Tests
             Assert.False(result.UsedLegacyAffinity);
         }
 
+        [Fact]
+        public async Task ApplyCpuSelectionAsync_WhenProcessIsNull_ReturnsProcessExitedWithoutDelegating()
+        {
+            var processService = new Mock<IProcessService>(MockBehavior.Strict);
+            var service = CreateService(processService);
+
+            var result = await service.ApplyAsync(null!, CreateSelection(new ProcessorRef(0, 0, 0)));
+
+            Assert.False(result.Success);
+            Assert.Equal(AffinityApplyErrorCodes.ProcessExited, result.ErrorCode);
+            processService.Verify(
+                service => service.SetProcessorAffinity(It.IsAny<ProcessModel>(), It.IsAny<CpuSelection>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task ApplyCpuSelectionAsync_WhenSelectionIsNull_ReturnsInvalidSelectionWithoutDelegating()
+        {
+            var process = new ProcessModel { ProcessId = 42, Name = "Game" };
+            var processService = new Mock<IProcessService>(MockBehavior.Strict);
+            var service = CreateService(processService);
+
+            var result = await service.ApplyAsync(process, null!);
+
+            Assert.False(result.Success);
+            Assert.Equal(AffinityApplyErrorCodes.InvalidSelection, result.ErrorCode);
+            processService.Verify(
+                service => service.SetProcessorAffinity(It.IsAny<ProcessModel>(), It.IsAny<CpuSelection>()),
+                Times.Never);
+        }
+
         private static AffinityApplyService CreateService(Mock<IProcessService> processService)
         {
             var topologyService = new Mock<ICpuTopologyService>(MockBehavior.Loose);
@@ -357,11 +459,14 @@ namespace ThreadPilot.Core.Tests
 
         private static CpuSelectionAffinityApplier CreateCpuSelectionApplier(
             FakeCpuSetHandler cpuSets,
-            RecordingLegacyAffinityApplier legacy) =>
+            RecordingLegacyAffinityApplier legacy,
+            RecordingAffinityAudit? audit = null) =>
             new(
                 _ => cpuSets,
                 legacy.ApplyAsync,
-                NullLogger<CpuSelectionAffinityApplier>.Instance);
+                NullLogger<CpuSelectionAffinityApplier>.Instance,
+                null,
+                audit is null ? null : audit.Record);
 
         private static Mock<IProcessService> CreateProcessService(bool processStillRunning)
         {
@@ -400,6 +505,14 @@ namespace ThreadPilot.Core.Tests
                 process.ProcessorAffinity = affinityMask;
                 return Task.FromResult(affinityMask);
             }
+        }
+
+        private sealed class RecordingAffinityAudit
+        {
+            public List<(ProcessModel Process, bool Success)> Calls { get; } = new();
+
+            public void Record(ProcessModel process, bool success) =>
+                this.Calls.Add((process, success));
         }
 
         private sealed class FakeCpuSetHandler : IProcessCpuSetHandler

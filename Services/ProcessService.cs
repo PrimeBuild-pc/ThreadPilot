@@ -70,7 +70,8 @@ namespace ThreadPilot.Services
                 this.GetOrCreateCpuSetHandler,
                 this.ApplyLegacyProcessorAffinityDirectAsync,
                 logger ?? (ILogger)Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
-                process => this.cpuSetHandlers.TryRemove(process.ProcessId, out _));
+                process => this.cpuSetHandlers.TryRemove(process.ProcessId, out _),
+                (process, success) => this.AuditProcessOperation("SetProcessAffinity", process.Name, success));
 
             StoragePaths.EnsureAppDataDirectories();
             this.MigrateLegacyProfilesIfNeeded();
