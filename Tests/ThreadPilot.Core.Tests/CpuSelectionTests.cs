@@ -60,6 +60,19 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void CpuTopologySnapshot_Create_ThrowsWhenGlobalIndexIsDuplicated()
+        {
+            var processors = new[]
+            {
+                new ProcessorRef(0, 0, 0),
+                new ProcessorRef(0, 1, 0),
+            };
+
+            var exception = Assert.Throws<ArgumentException>(() => CpuTopologySnapshot.Create(processors));
+            Assert.Contains("GlobalIndex", exception.Message, StringComparison.Ordinal);
+        }
+
+        [Fact]
         public void CpuTopologySnapshot_PerformanceEfficiencyClass_IsHighestNumericValue()
         {
             var eCore = new ProcessorRef(0, 8, 8);
@@ -104,6 +117,18 @@ namespace ThreadPilot.Core.Tests
             var legacyMask = CpuSelection.ToLegacyAffinityMaskOrNull(selection);
 
             Assert.Equal(0b1001, legacyMask);
+        }
+
+        [Fact]
+        public void FromProcessors_ThrowsWhenProcessorIsNotInTopology()
+        {
+            var topology = CpuTopologySnapshot.Create([new ProcessorRef(0, 0, 0)]);
+            var missingProcessor = new ProcessorRef(0, 1, 1);
+
+            var exception = Assert.Throws<ArgumentException>(() =>
+                CpuSelection.FromProcessors([missingProcessor], topology));
+
+            Assert.Contains("topology", exception.Message, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]

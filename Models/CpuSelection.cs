@@ -105,6 +105,18 @@ namespace ThreadPilot.Models
                 .ThenBy(processor => processor.LogicalProcessorNumber)
                 .ToList();
 
+            var duplicatedGlobalIndexes = processors
+                .GroupBy(processor => processor.GlobalIndex)
+                .Where(group => group.Count() > 1)
+                .Select(group => group.Key)
+                .ToList();
+            if (duplicatedGlobalIndexes.Count > 0)
+            {
+                throw new ArgumentException(
+                    $"GlobalIndex must be unique in a CPU topology snapshot. Duplicates: {string.Join(", ", duplicatedGlobalIndexes)}.",
+                    nameof(logicalProcessors));
+            }
+
             var processorSet = processors.ToHashSet();
             var cpuSetMap = cpuSetIds?
                 .Where(kvp => processorSet.Contains(kvp.Key))
@@ -170,6 +182,17 @@ namespace ThreadPilot.Models
                 .ThenBy(processor => processor.Group)
                 .ThenBy(processor => processor.LogicalProcessorNumber)
                 .ToList();
+
+            var topologyProcessors = topology.LogicalProcessors.ToHashSet();
+            var missingProcessors = selectedProcessors
+                .Where(processor => !topologyProcessors.Contains(processor))
+                .ToList();
+            if (missingProcessors.Count > 0)
+            {
+                throw new ArgumentException(
+                    $"CPU selection contains processor(s) not present in the topology: {string.Join(", ", missingProcessors)}.",
+                    nameof(processors));
+            }
 
             var cpuSetIds = selectedProcessors
                 .Select(processor => topology.TryGetCpuSetId(processor, out var cpuSetId) ? (uint?)cpuSetId : null)
