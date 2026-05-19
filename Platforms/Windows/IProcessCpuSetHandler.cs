@@ -48,10 +48,10 @@ namespace ThreadPilot.Platforms.Windows
         /// <summary>
         /// Applies a topology-aware CPU selection to the process using CPU Sets.
         /// </summary>
-        /// <param name="selection">The CPU selection to apply.</param>
+        /// <param name="selection">The CPU selection to apply. Ignored and allowed to be null when <paramref name="clearSelection"/> is true.</param>
         /// <param name="clearSelection">If true, clears the CPU Set selection and ignores <paramref name="selection"/>.</param>
         /// <returns>True if the operation succeeded, false otherwise.</returns>
-        bool ApplyCpuSelection(CpuSelection selection, bool clearSelection = false);
+        bool ApplyCpuSelection(CpuSelection? selection, bool clearSelection = false);
 
         /// <summary>
         /// Gets the average CPU usage for this process.

@@ -117,6 +117,29 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void ProcessCpuSetHandler_ApplyCpuSelection_WithClearSelectionAndNullSelection_ClearsCpuSets()
+        {
+            var nativeApi = new FakeProcessCpuSetNativeApi();
+            using var handler = CreateHandler(nativeApi, CpuSetMapping.Empty);
+
+            var result = handler.ApplyCpuSelection(null!, clearSelection: true);
+
+            Assert.True(result);
+            Assert.Null(nativeApi.LastAppliedCpuSetIds);
+            Assert.Equal(0U, nativeApi.LastAppliedCpuSetCount);
+        }
+
+        [Fact]
+        public void ProcessCpuSetHandler_ApplyCpuSelection_WithNullSelectionAndClearFalse_ThrowsArgumentNullException()
+        {
+            var nativeApi = new FakeProcessCpuSetNativeApi();
+            using var handler = CreateHandler(nativeApi, CpuSetMapping.Empty);
+
+            Assert.Throws<ArgumentNullException>(() =>
+                handler.ApplyCpuSelection(null!, clearSelection: false));
+        }
+
+        [Fact]
         public void ProcessCpuSetHandler_ApplyCpuSelection_WithExplicitCpuSetIds_AppliesThoseIds()
         {
             var nativeApi = new FakeProcessCpuSetNativeApi();

@@ -231,10 +231,8 @@ namespace ThreadPilot.Platforms.Windows
             return false;
         }
 
-        public bool ApplyCpuSelection(CpuSelection selection, bool clearSelection = false)
+        public bool ApplyCpuSelection(CpuSelection? selection, bool clearSelection = false)
         {
-            ArgumentNullException.ThrowIfNull(selection);
-
             if (this.disposed)
             {
                 throw new ObjectDisposedException(nameof(ProcessCpuSetHandler));
@@ -249,6 +247,8 @@ namespace ThreadPilot.Platforms.Windows
             {
                 return this.ApplyCpuSetIds(null, 0, "clear CPU Set selection");
             }
+
+            ArgumentNullException.ThrowIfNull(selection);
 
             var cpuSetIds = this.cpuSetMapping.ResolveCpuSetIds(selection);
             if (cpuSetIds.Count == 0)
@@ -393,4 +393,3 @@ namespace ThreadPilot.Platforms.Windows
         }
     }
 }
-
