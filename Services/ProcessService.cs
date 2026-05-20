@@ -587,7 +587,17 @@ namespace ThreadPilot.Services
         public async Task SetProcessPriority(ProcessModel process, ProcessPriorityClass priority)
         {
             ArgumentNullException.ThrowIfNull(process);
-            ProcessPriorityGuardrails.ThrowIfBlocked(priority);
+            if (ProcessPriorityGuardrails.IsBlocked(priority))
+            {
+                this.logger?.LogWarning(
+                    "Blocked priority change for process {ProcessName} (PID: {ProcessId}): {Message}",
+                    process.Name,
+                    process.ProcessId,
+                    ProcessOperationUserMessages.RealtimePriorityBlocked);
+                this.AuditProcessOperation("SetProcessPriority", process.Name, success: false);
+                throw new InvalidOperationException(ProcessOperationUserMessages.RealtimePriorityBlocked);
+            }
+
             this.EnsureProcessOperationAllowed(process, "SetProcessPriority");
 
             var warning = ProcessPriorityGuardrails.GetWarning(priority);

@@ -7,6 +7,8 @@ namespace ThreadPilot.Core.Tests
     using System.ComponentModel;
     using System.Diagnostics;
     using System.Text.Json;
+    using Microsoft.Extensions.Logging;
+    using Moq;
     using ThreadPilot.Models;
     using ThreadPilot.Services;
 
@@ -259,16 +261,28 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public async Task SetProcessPriority_WithRealtime_ThrowsBlockedMessageBeforeApplying()
+        public async Task SetProcessPriority_WithRealtime_AuditsFailureAndThrowsBlockedMessage()
         {
-            var service = CreateService(CreateTemporaryDirectory());
+            var logger = new Mock<ILogger<ProcessService>>();
+            var security = new Mock<ISecurityService>(MockBehavior.Strict);
+            security
+                .Setup(s => s.AuditElevatedAction("SetProcessPriority", "game.exe", false))
+                .Returns(Task.CompletedTask);
+
+            var service = CreateService(CreateTemporaryDirectory(), logger: logger.Object, securityService: security.Object);
+            var process = CreateProcess();
 
             try
             {
                 var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-                    () => service.SetProcessPriority(CreateProcess(), ProcessPriorityClass.RealTime));
+                    () => service.SetProcessPriority(process, ProcessPriorityClass.RealTime));
 
                 Assert.Equal(ProcessOperationUserMessages.RealtimePriorityBlocked, ex.Message);
+                Assert.Equal(ProcessPriorityClass.Normal, process.Priority);
+                security.Verify(
+                    s => s.AuditElevatedAction("SetProcessPriority", "game.exe", false),
+                    Times.Once);
+                VerifyWarningLogged(logger, ProcessOperationUserMessages.RealtimePriorityBlocked);
             }
             finally
             {
@@ -382,16 +396,18 @@ namespace ThreadPilot.Core.Tests
         private static ProcessService CreateService(
             string profilesDirectory,
             ICpuTopologyProvider? topologyProvider = null,
-            FakeLoadProcessProfileApplier? profileApplier = null)
+            FakeLoadProcessProfileApplier? profileApplier = null,
+            ILogger<ProcessService>? logger = null,
+            ISecurityService? securityService = null)
         {
             if (profileApplier == null)
             {
-                return new(null, null, () => profilesDirectory, cpuTopologyProvider: topologyProvider);
+                return new(logger, securityService, () => profilesDirectory, cpuTopologyProvider: topologyProvider);
             }
 
             return new ProcessService(
-                null,
-                null,
+                logger,
+                securityService,
                 () => profilesDirectory,
                 foregroundProcessService: null,
                 processClassifier: null,
@@ -455,6 +471,18 @@ namespace ThreadPilot.Core.Tests
         {
             var field = typeof(ProcessService).GetField(fieldName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
             return (ConcurrentDictionary<TKey, TValue>)(field?.GetValue(service) ?? throw new InvalidOperationException($"Field '{fieldName}' not found."));
+        }
+
+        private static void VerifyWarningLogged(Mock<ILogger<ProcessService>> logger, string message)
+        {
+            logger.Verify(
+                l => l.Log(
+                    LogLevel.Warning,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((state, _) => state.ToString() != null && state.ToString()!.Contains(message, StringComparison.Ordinal)),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
         }
 
         private sealed class FakeCpuTopologyProvider(CpuTopologySnapshot snapshot) : ICpuTopologyProvider
