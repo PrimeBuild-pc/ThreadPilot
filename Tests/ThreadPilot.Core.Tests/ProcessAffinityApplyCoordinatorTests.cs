@@ -105,6 +105,30 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task ApplyCoreMaskAsync_WithCpu64BoolMaskAndTopology_UsesCpuSelectionPath()
+        {
+            var process = CreateProcess();
+            var processors = Enumerable.Range(0, 65)
+                .Select(index => index < 64
+                    ? new ProcessorRef(0, (byte)index, index)
+                    : new ProcessorRef(1, 0, index))
+                .ToList();
+            var topology = CpuTopologySnapshot.Create(processors);
+            var boolMask = Enumerable.Range(0, 65).Select(index => index == 64).ToList();
+            var affinity = new RecordingAffinityApplyService();
+            var coordinator = CreateCoordinator(affinity, new FakeCpuTopologyProvider(topology));
+
+            var result = await coordinator.ApplyCoreMaskAsync(process, CreateMask(boolMask));
+
+            Assert.True(result.Success);
+            Assert.Equal(1, affinity.CpuSelectionApplyCalls);
+            Assert.Equal(0, affinity.LegacyApplyCalls);
+            var applied = Assert.Single(affinity.LastSelection!.LogicalProcessors);
+            Assert.Equal(new ProcessorRef(1, 0, 64), applied);
+            Assert.DoesNotContain(affinity.LastSelection.LogicalProcessors, processor => processor.GlobalIndex == 0);
+        }
+
+        [Fact]
         public async Task ApplyCoreMaskAsync_WhenTopologyUnavailableAndMaskIsUnsafe_BlocksLegacyFallback()
         {
             var process = CreateProcess();

@@ -61,7 +61,39 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal("Core mask staged. Use Apply Affinity to change Windows affinity.", viewModel.AffinityEditStateText);
         }
 
+        [Fact]
+        public void ConstructorFallbackCoordinator_ReceivesTopologyProviderWhenProvided()
+        {
+            var processService = new Mock<IProcessService>(MockBehavior.Loose);
+            var gameModeService = new Mock<IGameModeService>(MockBehavior.Loose);
+            var topologyProvider = new Mock<ICpuTopologyProvider>(MockBehavior.Strict);
+
+            var viewModel = CreateViewModel(
+                processService.Object,
+                gameModeService.Object,
+                cpuTopologyProvider: topologyProvider.Object);
+
+            var coordinator = typeof(ProcessViewModel)
+                .GetField(
+                    "processAffinityApplyCoordinator",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .GetValue(viewModel);
+            var provider = typeof(ProcessAffinityApplyCoordinator)
+                .GetField(
+                    "cpuTopologyProvider",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .GetValue(coordinator);
+
+            Assert.Same(topologyProvider.Object, provider);
+        }
+
         private static ProcessViewModel CreateViewModel(IProcessService processService, IGameModeService gameModeService)
+            => CreateViewModel(processService, gameModeService, cpuTopologyProvider: null);
+
+        private static ProcessViewModel CreateViewModel(
+            IProcessService processService,
+            IGameModeService gameModeService,
+            ICpuTopologyProvider? cpuTopologyProvider)
         {
             var virtualizedProcessService = new Mock<IVirtualizedProcessService>(MockBehavior.Loose);
             virtualizedProcessService.SetupProperty(
@@ -86,7 +118,8 @@ namespace ThreadPilot.Core.Tests
                 systemTrayService.Object,
                 coreMaskService.Object,
                 associationService.Object,
-                gameModeService);
+                gameModeService,
+                cpuTopologyProvider: cpuTopologyProvider);
         }
 
         private static CpuTopologyModel CreateTwoCoreTopology()

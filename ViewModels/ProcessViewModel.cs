@@ -179,6 +179,7 @@ namespace ThreadPilot.ViewModels
             IGameModeService gameModeService,
             IAffinityApplyService? affinityApplyService = null,
             IProcessAffinityApplyCoordinator? processAffinityApplyCoordinator = null,
+            ICpuTopologyProvider? cpuTopologyProvider = null,
             IEnhancedLoggingService? enhancedLoggingService = null)
             : base(logger, enhancedLoggingService)
         {
@@ -198,7 +199,7 @@ namespace ThreadPilot.ViewModels
                 NullLogger<AffinityApplyService>.Instance);
             this.processAffinityApplyCoordinator = processAffinityApplyCoordinator ?? new ProcessAffinityApplyCoordinator(
                 this.affinityApplyService,
-                null,
+                cpuTopologyProvider,
                 new CpuSelectionMigrationService(),
                 NullLogger<ProcessAffinityApplyCoordinator>.Instance);
 
