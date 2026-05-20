@@ -45,6 +45,7 @@ namespace ThreadPilot.ViewModels
         private readonly IProcessPowerPlanAssociationService associationService;
         private readonly IGameModeService gameModeService;
         private readonly IAffinityApplyService affinityApplyService;
+        private readonly IProcessAffinityApplyCoordinator processAffinityApplyCoordinator;
         private System.Timers.Timer? refreshTimer;
         private bool isUiRefreshPaused;
         private bool isProcessViewActive = true;
@@ -177,6 +178,8 @@ namespace ThreadPilot.ViewModels
             IProcessPowerPlanAssociationService associationService,
             IGameModeService gameModeService,
             IAffinityApplyService? affinityApplyService = null,
+            IProcessAffinityApplyCoordinator? processAffinityApplyCoordinator = null,
+            ICpuTopologyProvider? cpuTopologyProvider = null,
             IEnhancedLoggingService? enhancedLoggingService = null)
             : base(logger, enhancedLoggingService)
         {
@@ -194,6 +197,11 @@ namespace ThreadPilot.ViewModels
                 this.processService,
                 this.cpuTopologyService,
                 NullLogger<AffinityApplyService>.Instance);
+            this.processAffinityApplyCoordinator = processAffinityApplyCoordinator ?? new ProcessAffinityApplyCoordinator(
+                this.affinityApplyService,
+                cpuTopologyProvider,
+                new CpuSelectionMigrationService(),
+                NullLogger<ProcessAffinityApplyCoordinator>.Instance);
 
             // Subscribe to topology detection events
             this.cpuTopologyService.TopologyDetected += this.OnTopologyDetected;
@@ -217,4 +225,3 @@ namespace ThreadPilot.ViewModels
         }
     }
 }
-

@@ -71,7 +71,9 @@ namespace ThreadPilot.Models
         public int SelectedCoreCount => this.BoolMask.Count(b => b);
 
         /// <summary>
-        /// Converts the boolean mask to a processor affinity value.
+        /// Converts the boolean mask to a legacy 64-bit processor affinity value.
+        /// This is only safe for single processor-group selections below CPU 64;
+        /// topology-aware apply paths must prefer <see cref="CpuSelection"/>.
         /// </summary>
         public long ToProcessorAffinity()
         {
@@ -162,4 +164,3 @@ namespace ThreadPilot.Models
         }
     }
 }
-
