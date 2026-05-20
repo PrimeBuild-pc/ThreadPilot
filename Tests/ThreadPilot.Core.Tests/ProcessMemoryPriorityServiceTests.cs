@@ -62,12 +62,14 @@ namespace ThreadPilot.Core.Tests
 
             Assert.False(result.Success);
             Assert.Equal("InvalidProcess", result.ErrorCode);
+            Assert.Equal(ProcessOperationUserMessages.ProcessExited, result.UserMessage);
+            Assert.NotEqual(ProcessMemoryPriorityService.UnsupportedUserMessage, result.UserMessage);
             Assert.False(result.IsAccessDenied);
             Assert.False(result.IsProcessExited);
         }
 
         [Fact]
-        public async Task SetMemoryPriorityAsync_WithInvalidPid_ReturnsControlledFailure()
+        public async Task SetMemoryPriorityAsync_WithInvalidProcess_DoesNotReturnUnsupportedWindowsMessage()
         {
             var service = CreateService(new FakeProcessMemoryPriorityNativeApi());
 
@@ -75,6 +77,21 @@ namespace ThreadPilot.Core.Tests
 
             Assert.False(result.Success);
             Assert.Equal("InvalidProcess", result.ErrorCode);
+            Assert.Equal(ProcessOperationUserMessages.ProcessExited, result.UserMessage);
+            Assert.NotEqual(ProcessMemoryPriorityService.UnsupportedUserMessage, result.UserMessage);
+        }
+
+        [Fact]
+        public async Task SetMemoryPriorityAsync_WithInvalidPriority_ReturnsInvalidPriorityMessage()
+        {
+            var service = CreateService(new FakeProcessMemoryPriorityNativeApi());
+
+            var result = await service.SetMemoryPriorityAsync(CreateProcess(), (ProcessMemoryPriority)99);
+
+            Assert.False(result.Success);
+            Assert.Equal("InvalidMemoryPriority", result.ErrorCode);
+            Assert.Equal("This memory priority value is not supported.", result.UserMessage);
+            Assert.NotEqual(ProcessMemoryPriorityService.UnsupportedUserMessage, result.UserMessage);
         }
 
         [Fact]
@@ -124,7 +141,11 @@ namespace ThreadPilot.Core.Tests
             Assert.True(result.IsAntiCheatLikely);
             Assert.Equal(AffinityApplyErrorCodes.AntiCheatOrProtectedProcessLikely, result.ErrorCode);
             Assert.Equal(ProcessOperationUserMessages.AntiCheatProtectedLikely, result.UserMessage);
-            Assert.DoesNotContain("bypass", result.UserMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(
+                "The process appears protected by anti-cheat or process protection. ThreadPilot will not try to bypass it.",
+                ProcessOperationUserMessages.AntiCheatProtectedLikely);
+            Assert.DoesNotContain("disable anti-cheat", result.UserMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("administrator", result.UserMessage, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("cannot bypass anti-cheat", ProcessOperationUserMessages.AdminClarification);
         }
 

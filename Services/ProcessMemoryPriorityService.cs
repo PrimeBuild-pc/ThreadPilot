@@ -14,6 +14,9 @@ namespace ThreadPilot.Services
         public const string UnsupportedUserMessage =
             "Memory priority is not supported on this Windows version or process.";
 
+        private const string InvalidMemoryPriorityUserMessage =
+            "This memory priority value is not supported.";
+
         private const string InvalidProcessErrorCode = "InvalidProcess";
         private const string UnsupportedErrorCode = "Unsupported";
         private const string InvalidPriorityErrorCode = "InvalidMemoryPriority";
@@ -90,7 +93,7 @@ namespace ThreadPilot.Services
             {
                 return Task.FromResult(ProcessOperationResult.Failed(
                     InvalidProcessErrorCode,
-                    UnsupportedUserMessage,
+                    ProcessOperationUserMessages.ProcessExited,
                     "Process is null or has an invalid PID."));
             }
 
@@ -98,7 +101,7 @@ namespace ThreadPilot.Services
             {
                 return Task.FromResult(ProcessOperationResult.Failed(
                     InvalidPriorityErrorCode,
-                    UnsupportedUserMessage,
+                    InvalidMemoryPriorityUserMessage,
                     $"Memory priority value '{priority}' is not supported."));
             }
 
