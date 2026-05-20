@@ -38,8 +38,10 @@ namespace ThreadPilot.Core.Tests
                 },
                 LegacyAffinityMask = 3,
                 Priority = ProcessPriorityClass.AboveNormal,
+                MemoryPriority = ProcessMemoryPriority.BelowNormal,
                 ApplyAffinityOnStart = true,
                 ApplyPriorityOnStart = true,
+                ApplyMemoryPriorityOnStart = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 Description = ProcessOperationUserMessages.PersistentRulesDescription,
@@ -54,6 +56,9 @@ namespace ThreadPilot.Core.Tests
                 var loadedRule = Assert.Single(loaded);
                 Assert.Equal("rule-a", loadedRule.Id);
                 Assert.Equal(3, loadedRule.LegacyAffinityMask);
+                Assert.Equal(ProcessPriorityClass.AboveNormal, loadedRule.Priority);
+                Assert.Equal(ProcessMemoryPriority.BelowNormal, loadedRule.MemoryPriority);
+                Assert.True(loadedRule.ApplyMemoryPriorityOnStart);
                 Assert.NotNull(loadedRule.CpuSelection);
                 Assert.Equal(0, loadedRule.CpuSelection.GlobalLogicalProcessorIndexes.Single());
             }

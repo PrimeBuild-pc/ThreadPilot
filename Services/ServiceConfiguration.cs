@@ -20,6 +20,7 @@ namespace ThreadPilot.Services
     using System.Net.Http.Headers;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
+    using ThreadPilot.Platforms.Windows;
     using ThreadPilot.Services.Abstractions;
     using ThreadPilot.ViewModels;
 
@@ -105,6 +106,8 @@ namespace ThreadPilot.Services
             services.AddSingleton<IProcessClassifier, ProcessClassifier>();
             services.AddSingleton<IProcessService, ProcessService>();
             services.AddSingleton<IAffinityApplyService, AffinityApplyService>();
+            services.AddSingleton<IProcessMemoryPriorityNativeApi>(ProcessMemoryPriorityNativeApi.Instance);
+            services.AddSingleton<IProcessMemoryPriorityService, ProcessMemoryPriorityService>();
             services.AddSingleton<IPersistentProcessRuleStore, PersistentProcessRuleJsonStore>();
             services.AddSingleton<IPersistentProcessRuleMatcher, PersistentProcessRuleMatcher>();
             services.AddSingleton<IPersistentRulesEngine, PersistentRulesEngine>();

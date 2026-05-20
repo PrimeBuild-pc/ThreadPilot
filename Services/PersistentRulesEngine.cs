@@ -17,7 +17,9 @@ namespace ThreadPilot.Services
     public sealed class PersistentRulesEngine : IPersistentRulesEngine
     {
         private const string MissingAffinityErrorCode = "PersistentRuleMissingAffinity";
+        private const string MissingMemoryPriorityErrorCode = "PersistentRuleMissingMemoryPriority";
         private const string MissingPriorityErrorCode = "PersistentRuleMissingPriority";
+        private const string MemoryPriorityApplyFailedErrorCode = "MemoryPriorityApplyFailed";
         private const string NoActionsErrorCode = "PersistentRuleNoActions";
         private const string PriorityApplyFailedErrorCode = "PriorityApplyFailed";
         private const string RealtimePriorityBlockedErrorCode = "RealtimePriorityBlocked";
@@ -26,6 +28,7 @@ namespace ThreadPilot.Services
         private readonly IPersistentProcessRuleMatcher matcher;
         private readonly IAffinityApplyService affinityApplyService;
         private readonly IProcessService processService;
+        private readonly IProcessMemoryPriorityService memoryPriorityService;
         private readonly ILogger<PersistentRulesEngine> logger;
 
         public PersistentRulesEngine(
@@ -33,12 +36,14 @@ namespace ThreadPilot.Services
             IPersistentProcessRuleMatcher matcher,
             IAffinityApplyService affinityApplyService,
             IProcessService processService,
+            IProcessMemoryPriorityService memoryPriorityService,
             ILogger<PersistentRulesEngine> logger)
         {
             this.ruleStore = ruleStore ?? throw new ArgumentNullException(nameof(ruleStore));
             this.matcher = matcher ?? throw new ArgumentNullException(nameof(matcher));
             this.affinityApplyService = affinityApplyService ?? throw new ArgumentNullException(nameof(affinityApplyService));
             this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
+            this.memoryPriorityService = memoryPriorityService ?? throw new ArgumentNullException(nameof(memoryPriorityService));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -68,7 +73,7 @@ namespace ThreadPilot.Services
             var result = CreateSuccessResult(rule, process);
             var success = true;
 
-            if (!rule.ApplyAffinityOnStart && !rule.ApplyPriorityOnStart)
+            if (!rule.ApplyAffinityOnStart && !rule.ApplyPriorityOnStart && !rule.ApplyMemoryPriorityOnStart)
             {
                 return MarkRuleConfigurationFailure(
                     result,
@@ -130,11 +135,66 @@ namespace ThreadPilot.Services
                 }
             }
 
+            if (rule.ApplyMemoryPriorityOnStart && !result.IsProcessExited)
+            {
+                if (!rule.MemoryPriority.HasValue)
+                {
+                    success = false;
+                    result = MarkRuleConfigurationFailure(
+                        result,
+                        rule,
+                        MissingMemoryPriorityErrorCode,
+                        "This saved rule has no memory priority value to apply.");
+                }
+                else
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var memoryPriorityResult = await this.memoryPriorityService
+                        .SetMemoryPriorityAsync(process, rule.MemoryPriority.Value)
+                        .ConfigureAwait(false);
+                    if (memoryPriorityResult.Success)
+                    {
+                        result = result with { MemoryPriorityApplied = true };
+                    }
+                    else
+                    {
+                        success = false;
+                        result = this.MergeMemoryPriorityFailure(result, memoryPriorityResult);
+                    }
+                }
+            }
+
             return result with
             {
                 Success = success,
                 UserMessage = success ? "Persistent rule applied." : result.UserMessage,
                 TechnicalMessage = success ? $"Persistent rule '{rule.Name}' applied to process {process.Name}." : result.TechnicalMessage,
+            };
+        }
+
+        private PersistentRuleApplyResult MergeMemoryPriorityFailure(
+            PersistentRuleApplyResult result,
+            ProcessOperationResult memoryPriorityResult)
+        {
+            this.logger.LogWarning(
+                "Persistent rule memory priority apply failed for rule {RuleId} on process {ProcessName} (PID: {ProcessId}): {Message}",
+                result.RuleId,
+                result.ProcessName,
+                result.ProcessId,
+                memoryPriorityResult.TechnicalMessage);
+
+            return result with
+            {
+                ErrorCode = string.IsNullOrWhiteSpace(memoryPriorityResult.ErrorCode)
+                    ? MemoryPriorityApplyFailedErrorCode
+                    : memoryPriorityResult.ErrorCode,
+                UserMessage = string.IsNullOrWhiteSpace(memoryPriorityResult.UserMessage)
+                    ? "ThreadPilot could not apply the saved memory priority rule."
+                    : memoryPriorityResult.UserMessage,
+                TechnicalMessage = memoryPriorityResult.TechnicalMessage,
+                IsAccessDenied = result.IsAccessDenied || memoryPriorityResult.IsAccessDenied,
+                IsAntiCheatLikely = result.IsAntiCheatLikely || memoryPriorityResult.IsAntiCheatLikely,
+                IsProcessExited = result.IsProcessExited || memoryPriorityResult.IsProcessExited,
             };
         }
 

@@ -17,7 +17,7 @@ namespace ThreadPilot.Core.Tests
             var rule = CreateRule(cpuSelection: selection, applyAffinity: true);
             var affinity = CreateAffinityService();
             var processService = CreateProcessService();
-            var engine = CreateEngine([rule], affinity.Object, processService.Object);
+            var engine = CreateEngine([rule], affinity.Object, processService.Object, CreateMemoryPriorityService().Object);
             var process = CreateProcess();
 
             var results = await engine.ApplyMatchingRulesAsync(process);
@@ -35,7 +35,7 @@ namespace ThreadPilot.Core.Tests
             var rule = CreateRule(legacyAffinityMask: 3, applyAffinity: true);
             var affinity = CreateAffinityService();
             var processService = CreateProcessService();
-            var engine = CreateEngine([rule], affinity.Object, processService.Object);
+            var engine = CreateEngine([rule], affinity.Object, processService.Object, CreateMemoryPriorityService().Object);
             var process = CreateProcess();
 
             var results = await engine.ApplyMatchingRulesAsync(process);
@@ -53,7 +53,8 @@ namespace ThreadPilot.Core.Tests
             var rule = CreateRule(priority: ProcessPriorityClass.High, applyPriority: true);
             var affinity = CreateAffinityService();
             var processService = CreateProcessService();
-            var engine = CreateEngine([rule], affinity.Object, processService.Object);
+            var memoryPriorityService = CreateMemoryPriorityService();
+            var engine = CreateEngine([rule], affinity.Object, processService.Object, memoryPriorityService.Object);
             var process = CreateProcess();
 
             var results = await engine.ApplyMatchingRulesAsync(process);
@@ -65,6 +66,26 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task ApplyMatchingRulesAsync_WithMemoryPriority_AppliesMemoryPriority()
+        {
+            var rule = CreateRule(memoryPriority: ProcessMemoryPriority.Low, applyMemoryPriority: true);
+            var affinity = CreateAffinityService();
+            var processService = CreateProcessService();
+            var memoryPriorityService = CreateMemoryPriorityService();
+            var engine = CreateEngine([rule], affinity.Object, processService.Object, memoryPriorityService.Object);
+            var process = CreateProcess();
+
+            var results = await engine.ApplyMatchingRulesAsync(process);
+
+            Assert.Single(results);
+            Assert.True(results[0].Success);
+            Assert.True(results[0].MemoryPriorityApplied);
+            memoryPriorityService.Verify(
+                s => s.SetMemoryPriorityAsync(process, ProcessMemoryPriority.Low),
+                Times.Once);
+        }
+
+        [Fact]
         public async Task ApplyMatchingRulesAsync_WithRealtimePriority_ReturnsControlledFailure()
         {
             var rule = CreateRule(priority: ProcessPriorityClass.RealTime, applyPriority: true);
@@ -73,7 +94,7 @@ namespace ThreadPilot.Core.Tests
             processService
                 .Setup(s => s.SetProcessPriority(It.IsAny<ProcessModel>(), ProcessPriorityClass.RealTime))
                 .ThrowsAsync(new InvalidOperationException(ProcessOperationUserMessages.RealtimePriorityBlocked));
-            var engine = CreateEngine([rule], affinity.Object, processService.Object);
+            var engine = CreateEngine([rule], affinity.Object, processService.Object, CreateMemoryPriorityService().Object);
 
             var results = await engine.ApplyMatchingRulesAsync(CreateProcess());
 
@@ -92,7 +113,7 @@ namespace ThreadPilot.Core.Tests
                 ProcessOperationUserMessages.AccessDenied,
                 "Access is denied.",
                 isAccessDenied: true));
-            var engine = CreateEngine([rule], affinity.Object, CreateProcessService().Object);
+            var engine = CreateEngine([rule], affinity.Object, CreateProcessService().Object, CreateMemoryPriorityService().Object);
 
             var results = await engine.ApplyMatchingRulesAsync(CreateProcess());
 
@@ -112,7 +133,7 @@ namespace ThreadPilot.Core.Tests
                 "Protected process.",
                 isAccessDenied: true,
                 isAntiCheatLikely: true));
-            var engine = CreateEngine([rule], affinity.Object, CreateProcessService().Object);
+            var engine = CreateEngine([rule], affinity.Object, CreateProcessService().Object, CreateMemoryPriorityService().Object);
 
             var results = await engine.ApplyMatchingRulesAsync(CreateProcess());
 
@@ -131,7 +152,7 @@ namespace ThreadPilot.Core.Tests
                 ProcessOperationUserMessages.ProcessExited,
                 "Process exited.",
                 failureReason: AffinityApplyFailureReason.ProcessTerminated));
-            var engine = CreateEngine([rule], affinity.Object, CreateProcessService().Object);
+            var engine = CreateEngine([rule], affinity.Object, CreateProcessService().Object, CreateMemoryPriorityService().Object);
 
             var results = await engine.ApplyMatchingRulesAsync(CreateProcess());
 
@@ -147,13 +168,17 @@ namespace ThreadPilot.Core.Tests
             var rule = CreateRule(legacyAffinityMask: 3, applyAffinity: true) with { IsEnabled = false };
             var affinity = CreateAffinityService();
             var processService = CreateProcessService();
-            var engine = CreateEngine([rule], affinity.Object, processService.Object);
+            var memoryPriorityService = CreateMemoryPriorityService();
+            var engine = CreateEngine([rule], affinity.Object, processService.Object, memoryPriorityService.Object);
 
             var results = await engine.ApplyMatchingRulesAsync(CreateProcess());
 
             Assert.Empty(results);
             affinity.Verify(s => s.ApplyAsync(It.IsAny<ProcessModel>(), It.IsAny<long>()), Times.Never);
             processService.Verify(s => s.SetProcessPriority(It.IsAny<ProcessModel>(), It.IsAny<ProcessPriorityClass>()), Times.Never);
+            memoryPriorityService.Verify(
+                s => s.SetMemoryPriorityAsync(It.IsAny<ProcessModel>(), It.IsAny<ProcessMemoryPriority>()),
+                Times.Never);
         }
 
         [Fact]
@@ -162,7 +187,7 @@ namespace ThreadPilot.Core.Tests
             var rule = CreateRule(applyAffinity: true);
             var affinity = CreateAffinityService();
             var processService = CreateProcessService();
-            var engine = CreateEngine([rule], affinity.Object, processService.Object);
+            var engine = CreateEngine([rule], affinity.Object, processService.Object, CreateMemoryPriorityService().Object);
 
             var results = await engine.ApplyMatchingRulesAsync(CreateProcess());
 
@@ -170,6 +195,7 @@ namespace ThreadPilot.Core.Tests
             Assert.False(result.Success);
             Assert.False(result.AffinityApplied);
             Assert.False(result.PriorityApplied);
+            Assert.False(result.MemoryPriorityApplied);
             Assert.Equal("PersistentRuleMissingAffinity", result.ErrorCode);
             Assert.Equal("This saved rule has no affinity selection to apply.", result.UserMessage);
             affinity.Verify(s => s.ApplyAsync(It.IsAny<ProcessModel>(), It.IsAny<long>()), Times.Never);
@@ -183,7 +209,7 @@ namespace ThreadPilot.Core.Tests
             var rule = CreateRule(applyPriority: true);
             var affinity = CreateAffinityService();
             var processService = CreateProcessService();
-            var engine = CreateEngine([rule], affinity.Object, processService.Object);
+            var engine = CreateEngine([rule], affinity.Object, processService.Object, CreateMemoryPriorityService().Object);
 
             var results = await engine.ApplyMatchingRulesAsync(CreateProcess());
 
@@ -191,6 +217,7 @@ namespace ThreadPilot.Core.Tests
             Assert.False(result.Success);
             Assert.False(result.AffinityApplied);
             Assert.False(result.PriorityApplied);
+            Assert.False(result.MemoryPriorityApplied);
             Assert.Equal("PersistentRuleMissingPriority", result.ErrorCode);
             Assert.Equal("This saved rule has no priority value to apply.", result.UserMessage);
             affinity.Verify(s => s.ApplyAsync(It.IsAny<ProcessModel>(), It.IsAny<long>()), Times.Never);
@@ -199,12 +226,13 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public async Task ApplyMatchingRulesAsync_WithNoActions_ReturnsControlledFailure()
+        public async Task ApplyMatchingRulesAsync_WithMemoryPriorityEnabledButNoMemoryPriorityPayload_ReturnsFailure()
         {
-            var rule = CreateRule();
+            var rule = CreateRule(applyMemoryPriority: true);
             var affinity = CreateAffinityService();
             var processService = CreateProcessService();
-            var engine = CreateEngine([rule], affinity.Object, processService.Object);
+            var memoryPriorityService = CreateMemoryPriorityService();
+            var engine = CreateEngine([rule], affinity.Object, processService.Object, memoryPriorityService.Object);
 
             var results = await engine.ApplyMatchingRulesAsync(CreateProcess());
 
@@ -212,6 +240,76 @@ namespace ThreadPilot.Core.Tests
             Assert.False(result.Success);
             Assert.False(result.AffinityApplied);
             Assert.False(result.PriorityApplied);
+            Assert.False(result.MemoryPriorityApplied);
+            Assert.Equal("PersistentRuleMissingMemoryPriority", result.ErrorCode);
+            Assert.Equal("This saved rule has no memory priority value to apply.", result.UserMessage);
+            memoryPriorityService.Verify(
+                s => s.SetMemoryPriorityAsync(It.IsAny<ProcessModel>(), It.IsAny<ProcessMemoryPriority>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task ApplyMatchingRulesAsync_WithAffinityPriorityAndMemoryPriority_AppliesAllFlags()
+        {
+            var rule = CreateRule(
+                legacyAffinityMask: 3,
+                priority: ProcessPriorityClass.AboveNormal,
+                memoryPriority: ProcessMemoryPriority.BelowNormal,
+                applyAffinity: true,
+                applyPriority: true,
+                applyMemoryPriority: true);
+            var affinity = CreateAffinityService();
+            var processService = CreateProcessService();
+            var memoryPriorityService = CreateMemoryPriorityService();
+            var engine = CreateEngine([rule], affinity.Object, processService.Object, memoryPriorityService.Object);
+
+            var result = Assert.Single(await engine.ApplyMatchingRulesAsync(CreateProcess()));
+
+            Assert.True(result.Success);
+            Assert.True(result.AffinityApplied);
+            Assert.True(result.PriorityApplied);
+            Assert.True(result.MemoryPriorityApplied);
+        }
+
+        [Fact]
+        public async Task ApplyMatchingRulesAsync_WithMemoryPriorityAccessDenied_PropagatesAccessDeniedResult()
+        {
+            var rule = CreateRule(memoryPriority: ProcessMemoryPriority.Low, applyMemoryPriority: true);
+            var memoryPriorityService = CreateMemoryPriorityService(ProcessOperationResult.Failed(
+                AffinityApplyErrorCodes.AccessDenied,
+                ProcessOperationUserMessages.AccessDenied,
+                "Access is denied.",
+                isAccessDenied: true));
+            var engine = CreateEngine(
+                [rule],
+                CreateAffinityService().Object,
+                CreateProcessService().Object,
+                memoryPriorityService.Object);
+
+            var result = Assert.Single(await engine.ApplyMatchingRulesAsync(CreateProcess()));
+
+            Assert.False(result.Success);
+            Assert.False(result.MemoryPriorityApplied);
+            Assert.True(result.IsAccessDenied);
+            Assert.Equal(AffinityApplyErrorCodes.AccessDenied, result.ErrorCode);
+            Assert.Equal(ProcessOperationUserMessages.AccessDenied, result.UserMessage);
+        }
+
+        [Fact]
+        public async Task ApplyMatchingRulesAsync_WithNoActions_ReturnsControlledFailure()
+        {
+            var rule = CreateRule();
+            var affinity = CreateAffinityService();
+            var processService = CreateProcessService();
+            var engine = CreateEngine([rule], affinity.Object, processService.Object, CreateMemoryPriorityService().Object);
+
+            var results = await engine.ApplyMatchingRulesAsync(CreateProcess());
+
+            var result = Assert.Single(results);
+            Assert.False(result.Success);
+            Assert.False(result.AffinityApplied);
+            Assert.False(result.PriorityApplied);
+            Assert.False(result.MemoryPriorityApplied);
             Assert.Equal("PersistentRuleNoActions", result.ErrorCode);
             affinity.Verify(s => s.ApplyAsync(It.IsAny<ProcessModel>(), It.IsAny<long>()), Times.Never);
             affinity.Verify(s => s.ApplyAsync(It.IsAny<ProcessModel>(), It.IsAny<CpuSelection>()), Times.Never);
@@ -228,7 +326,7 @@ namespace ThreadPilot.Core.Tests
             };
             var affinity = CreateAffinityService();
             var processService = CreateProcessService();
-            var engine = CreateEngine(rules, affinity.Object, processService.Object);
+            var engine = CreateEngine(rules, affinity.Object, processService.Object, CreateMemoryPriorityService().Object);
 
             var results = await engine.ApplyMatchingRulesAsync(CreateProcess());
 
@@ -242,12 +340,14 @@ namespace ThreadPilot.Core.Tests
         private static PersistentRulesEngine CreateEngine(
             IReadOnlyList<PersistentProcessRule> rules,
             IAffinityApplyService affinityApplyService,
-            IProcessService processService) =>
+            IProcessService processService,
+            IProcessMemoryPriorityService memoryPriorityService) =>
             new(
                 new FakePersistentProcessRuleStore(rules),
                 new PersistentProcessRuleMatcher(),
                 affinityApplyService,
                 processService,
+                memoryPriorityService,
                 Microsoft.Extensions.Logging.Abstractions.NullLogger<PersistentRulesEngine>.Instance);
 
         private static Mock<IAffinityApplyService> CreateAffinityService(AffinityApplyResult? result = null)
@@ -272,13 +372,26 @@ namespace ThreadPilot.Core.Tests
             return mock;
         }
 
+        private static Mock<IProcessMemoryPriorityService> CreateMemoryPriorityService(ProcessOperationResult? result = null)
+        {
+            var mock = new Mock<IProcessMemoryPriorityService>(MockBehavior.Strict);
+            mock
+                .Setup(s => s.SetMemoryPriorityAsync(It.IsAny<ProcessModel>(), It.IsAny<ProcessMemoryPriority>()))
+                .ReturnsAsync(result ?? ProcessOperationResult.Succeeded(
+                    "Memory priority applied.",
+                    "Memory priority applied in test."));
+            return mock;
+        }
+
         private static PersistentProcessRule CreateRule(
             string id = "rule",
             CpuSelection? cpuSelection = null,
             long? legacyAffinityMask = null,
             ProcessPriorityClass? priority = null,
+            ProcessMemoryPriority? memoryPriority = null,
             bool applyAffinity = false,
-            bool applyPriority = false) =>
+            bool applyPriority = false,
+            bool applyMemoryPriority = false) =>
             new()
             {
                 Id = id,
@@ -288,8 +401,10 @@ namespace ThreadPilot.Core.Tests
                 CpuSelection = cpuSelection,
                 LegacyAffinityMask = legacyAffinityMask,
                 Priority = priority,
+                MemoryPriority = memoryPriority,
                 ApplyAffinityOnStart = applyAffinity,
                 ApplyPriorityOnStart = applyPriority,
+                ApplyMemoryPriorityOnStart = applyMemoryPriority,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
             };

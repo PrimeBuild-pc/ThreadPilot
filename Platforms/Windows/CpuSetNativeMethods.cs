@@ -44,6 +44,7 @@ namespace ThreadPilot.Platforms.Windows
     [Flags]
     public enum ProcessAccessFlags : uint
     {
+        PROCESS_SET_INFORMATION = 0x00000200,
         PROCESS_QUERY_LIMITED_INFORMATION = 0x00001000,
         PROCESS_SET_LIMITED_INFORMATION = 0x00002000,
     }

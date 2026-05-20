@@ -89,7 +89,10 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal(ProcessOperationUserMessages.AntiCheatProtectedLikely, result.UserMessage);
             Assert.True(result.IsAccessDenied);
             Assert.True(result.IsAntiCheatLikely);
-            Assert.Contains("will not try to bypass", result.UserMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(
+                "The process appears protected by anti-cheat or process protection. ThreadPilot will not try to bypass it.",
+                ProcessOperationUserMessages.AntiCheatProtectedLikely);
+            Assert.DoesNotContain("disable anti-cheat", result.UserMessage, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("administrator", result.UserMessage, StringComparison.OrdinalIgnoreCase);
         }
 
