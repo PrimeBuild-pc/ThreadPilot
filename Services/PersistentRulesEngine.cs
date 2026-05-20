@@ -16,6 +16,9 @@ namespace ThreadPilot.Services
 
     public sealed class PersistentRulesEngine : IPersistentRulesEngine
     {
+        private const string MissingAffinityErrorCode = "PersistentRuleMissingAffinity";
+        private const string MissingPriorityErrorCode = "PersistentRuleMissingPriority";
+        private const string NoActionsErrorCode = "PersistentRuleNoActions";
         private const string PriorityApplyFailedErrorCode = "PriorityApplyFailed";
         private const string RealtimePriorityBlockedErrorCode = "RealtimePriorityBlocked";
 
@@ -65,34 +68,65 @@ namespace ThreadPilot.Services
             var result = CreateSuccessResult(rule, process);
             var success = true;
 
+            if (!rule.ApplyAffinityOnStart && !rule.ApplyPriorityOnStart)
+            {
+                return MarkRuleConfigurationFailure(
+                    result,
+                    rule,
+                    NoActionsErrorCode,
+                    "This saved rule has no actions to apply.");
+            }
+
             if (rule.ApplyAffinityOnStart)
             {
-                var affinityResult = await this.ApplyAffinityAsync(rule, process).ConfigureAwait(false);
-                if (affinityResult.Success)
+                if (rule.CpuSelection == null && !rule.LegacyAffinityMask.HasValue)
                 {
-                    result = result with { AffinityApplied = true };
+                    success = false;
+                    result = MarkRuleConfigurationFailure(
+                        result,
+                        rule,
+                        MissingAffinityErrorCode,
+                        "This saved rule has no affinity selection to apply.");
                 }
                 else
                 {
-                    success = false;
-                    result = MergeAffinityFailure(result, affinityResult);
+                    var affinityResult = await this.ApplyAffinityAsync(rule, process).ConfigureAwait(false);
+                    if (affinityResult.Success)
+                    {
+                        result = result with { AffinityApplied = true };
+                    }
+                    else
+                    {
+                        success = false;
+                        result = MergeAffinityFailure(result, affinityResult);
+                    }
                 }
             }
 
-            if (rule.ApplyPriorityOnStart &&
-                rule.Priority.HasValue &&
-                !result.IsProcessExited)
+            if (rule.ApplyPriorityOnStart && !result.IsProcessExited)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                try
-                {
-                    await this.processService.SetProcessPriority(process, rule.Priority.Value).ConfigureAwait(false);
-                    result = result with { PriorityApplied = true };
-                }
-                catch (Exception ex)
+                if (!rule.Priority.HasValue)
                 {
                     success = false;
-                    result = this.MergePriorityFailure(result, ex);
+                    result = MarkRuleConfigurationFailure(
+                        result,
+                        rule,
+                        MissingPriorityErrorCode,
+                        "This saved rule has no priority value to apply.");
+                }
+                else
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    try
+                    {
+                        await this.processService.SetProcessPriority(process, rule.Priority.Value).ConfigureAwait(false);
+                        result = result with { PriorityApplied = true };
+                    }
+                    catch (Exception ex)
+                    {
+                        success = false;
+                        result = this.MergePriorityFailure(result, ex);
+                    }
                 }
             }
 
@@ -118,6 +152,19 @@ namespace ThreadPilot.Services
 
             return Task.FromResult(AffinityApplyResult.Succeeded(0, process.ProcessorAffinity));
         }
+
+        private static PersistentRuleApplyResult MarkRuleConfigurationFailure(
+            PersistentRuleApplyResult result,
+            PersistentProcessRule rule,
+            string errorCode,
+            string userMessage) =>
+            result with
+            {
+                Success = false,
+                ErrorCode = errorCode,
+                UserMessage = userMessage,
+                TechnicalMessage = $"Persistent rule '{rule.Name}' ({rule.Id}) is incomplete: {userMessage}",
+            };
 
         private PersistentRuleApplyResult MergePriorityFailure(PersistentRuleApplyResult result, Exception ex)
         {

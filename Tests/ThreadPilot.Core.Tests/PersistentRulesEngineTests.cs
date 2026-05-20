@@ -157,6 +157,68 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task ApplyMatchingRulesAsync_WithAffinityEnabledButNoAffinityPayload_ReturnsFailure()
+        {
+            var rule = CreateRule(applyAffinity: true);
+            var affinity = CreateAffinityService();
+            var processService = CreateProcessService();
+            var engine = CreateEngine([rule], affinity.Object, processService.Object);
+
+            var results = await engine.ApplyMatchingRulesAsync(CreateProcess());
+
+            var result = Assert.Single(results);
+            Assert.False(result.Success);
+            Assert.False(result.AffinityApplied);
+            Assert.False(result.PriorityApplied);
+            Assert.Equal("PersistentRuleMissingAffinity", result.ErrorCode);
+            Assert.Equal("This saved rule has no affinity selection to apply.", result.UserMessage);
+            affinity.Verify(s => s.ApplyAsync(It.IsAny<ProcessModel>(), It.IsAny<long>()), Times.Never);
+            affinity.Verify(s => s.ApplyAsync(It.IsAny<ProcessModel>(), It.IsAny<CpuSelection>()), Times.Never);
+            processService.Verify(s => s.SetProcessPriority(It.IsAny<ProcessModel>(), It.IsAny<ProcessPriorityClass>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task ApplyMatchingRulesAsync_WithPriorityEnabledButNoPriorityPayload_ReturnsFailure()
+        {
+            var rule = CreateRule(applyPriority: true);
+            var affinity = CreateAffinityService();
+            var processService = CreateProcessService();
+            var engine = CreateEngine([rule], affinity.Object, processService.Object);
+
+            var results = await engine.ApplyMatchingRulesAsync(CreateProcess());
+
+            var result = Assert.Single(results);
+            Assert.False(result.Success);
+            Assert.False(result.AffinityApplied);
+            Assert.False(result.PriorityApplied);
+            Assert.Equal("PersistentRuleMissingPriority", result.ErrorCode);
+            Assert.Equal("This saved rule has no priority value to apply.", result.UserMessage);
+            affinity.Verify(s => s.ApplyAsync(It.IsAny<ProcessModel>(), It.IsAny<long>()), Times.Never);
+            affinity.Verify(s => s.ApplyAsync(It.IsAny<ProcessModel>(), It.IsAny<CpuSelection>()), Times.Never);
+            processService.Verify(s => s.SetProcessPriority(It.IsAny<ProcessModel>(), It.IsAny<ProcessPriorityClass>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task ApplyMatchingRulesAsync_WithNoActions_ReturnsControlledFailure()
+        {
+            var rule = CreateRule();
+            var affinity = CreateAffinityService();
+            var processService = CreateProcessService();
+            var engine = CreateEngine([rule], affinity.Object, processService.Object);
+
+            var results = await engine.ApplyMatchingRulesAsync(CreateProcess());
+
+            var result = Assert.Single(results);
+            Assert.False(result.Success);
+            Assert.False(result.AffinityApplied);
+            Assert.False(result.PriorityApplied);
+            Assert.Equal("PersistentRuleNoActions", result.ErrorCode);
+            affinity.Verify(s => s.ApplyAsync(It.IsAny<ProcessModel>(), It.IsAny<long>()), Times.Never);
+            affinity.Verify(s => s.ApplyAsync(It.IsAny<ProcessModel>(), It.IsAny<CpuSelection>()), Times.Never);
+            processService.Verify(s => s.SetProcessPriority(It.IsAny<ProcessModel>(), It.IsAny<ProcessPriorityClass>()), Times.Never);
+        }
+
+        [Fact]
         public async Task ApplyMatchingRulesAsync_WithMultipleMatchingRules_ReturnsResultPerRuleWithoutRetry()
         {
             var rules = new[]
