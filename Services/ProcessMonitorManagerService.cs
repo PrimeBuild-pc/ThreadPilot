@@ -791,7 +791,14 @@ namespace ThreadPilot.Services
                 lowered.Contains("insufficient privileges") ||
                 ex is UnauthorizedAccessException)
             {
-                return $"{operation} change blocked by Anti-Cheat/System for '{processName}'.";
+                return lowered.Contains("anti-cheat") || lowered.Contains("anti cheat") || lowered.Contains("protected")
+                    ? ProcessOperationUserMessages.AntiCheatProtectedLikely
+                    : ProcessOperationUserMessages.AccessDenied;
+            }
+
+            if (lowered.Contains("realtime priority is blocked"))
+            {
+                return ProcessOperationUserMessages.RealtimePriorityBlocked;
             }
 
             return string.Empty;

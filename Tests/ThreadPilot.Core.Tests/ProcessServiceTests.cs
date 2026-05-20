@@ -220,6 +220,81 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task LoadProcessProfile_WithRealtimePriority_ReturnsFalseWithoutApplyingPriorityOrAffinity()
+        {
+            var profilesDirectory = CreateTemporaryDirectory();
+            var profileName = $"profile-{Guid.NewGuid():N}";
+            var profile = new ProcessProfileSnapshot
+            {
+                ProcessName = "game.exe",
+                Priority = ProcessPriorityClass.RealTime,
+                ProcessorAffinity = 0b11,
+            };
+            var profileApplier = new FakeLoadProcessProfileApplier();
+            var service = CreateService(profilesDirectory, topologyProvider: null, profileApplier);
+
+            try
+            {
+                await WriteProfileAsync(profilesDirectory, profileName, profile);
+
+                var result = await service.LoadProcessProfile(profileName, CreateProcess());
+
+                Assert.False(result);
+                Assert.Equal(0, profileApplier.PriorityApplyCalls);
+                Assert.Equal(0, profileApplier.LegacyAffinityApplyCalls);
+                Assert.Equal(0, profileApplier.CpuSelectionApplyCalls);
+            }
+            finally
+            {
+                DeleteDirectory(profilesDirectory);
+            }
+        }
+
+        [Fact]
+        public void PriorityGuardrails_HighPriorityReturnsUserFacingWarning()
+        {
+            var warning = ProcessPriorityGuardrails.GetWarning(ProcessPriorityClass.High);
+
+            Assert.Equal(ProcessOperationUserMessages.HighPriorityWarning, warning);
+        }
+
+        [Fact]
+        public async Task SetProcessPriority_WithRealtime_ThrowsBlockedMessageBeforeApplying()
+        {
+            var service = CreateService(CreateTemporaryDirectory());
+
+            try
+            {
+                var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+                    () => service.SetProcessPriority(CreateProcess(), ProcessPriorityClass.RealTime));
+
+                Assert.Equal(ProcessOperationUserMessages.RealtimePriorityBlocked, ex.Message);
+            }
+            finally
+            {
+                DeleteDirectory(GetProfilesDirectory(service));
+            }
+        }
+
+        [Fact]
+        public async Task SetRegistryPriorityAsync_WithRealtime_ReturnsFalse()
+        {
+            var service = CreateService(CreateTemporaryDirectory());
+
+            try
+            {
+                var result = await service.SetRegistryPriorityAsync(CreateProcess(), enable: true, ProcessPriorityClass.RealTime);
+
+                Assert.False(result);
+                Assert.Contains("does not bypass", ProcessOperationUserMessages.PersistentLaunchTimePriorityNotice, StringComparison.OrdinalIgnoreCase);
+            }
+            finally
+            {
+                DeleteDirectory(GetProfilesDirectory(service));
+            }
+        }
+
+        [Fact]
         public void IsPassiveProcessAccessException_ReturnsTrue_ForModuleEnumerationFailure()
         {
             var exception = new Win32Exception(299, "Unable to enumerate the process modules.");
@@ -398,6 +473,8 @@ namespace ThreadPilot.Core.Tests
                 this.cpuSelectionResult = cpuSelectionResult ?? AffinityApplyResult.Succeeded(0, 0);
             }
 
+            public int PriorityApplyCalls { get; private set; }
+
             public int CpuSelectionApplyCalls { get; private set; }
 
             public int LegacyAffinityApplyCalls { get; private set; }
@@ -406,6 +483,7 @@ namespace ThreadPilot.Core.Tests
 
             public Task SetPriorityAsync(ProcessModel process, ProcessPriorityClass priority)
             {
+                this.PriorityApplyCalls++;
                 process.Priority = priority;
                 return Task.CompletedTask;
             }

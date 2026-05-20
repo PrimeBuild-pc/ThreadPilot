@@ -730,12 +730,17 @@ namespace ThreadPilot.ViewModels
                     {
                         this.SelectedProcess = null;
                         this.ClearProcessSelection();
-                        this.SetStatus(result.Message, false);
+                        this.SetCriticalStatus(result.Message);
                         _ = this.notificationService.ShowNotificationAsync("Affinity failed", result.Message, NotificationType.Warning);
                     }
                     else if (result.FailureReason == AffinityApplyFailureReason.AccessDenied)
                     {
-                        this.SetStatus(result.Message, false);
+                        this.SetCriticalStatus(result.Message);
+                        _ = this.notificationService.ShowNotificationAsync("Affinity blocked", result.Message, NotificationType.Warning);
+                    }
+                    else if (result.IsInvalidTopology || result.IsLegacyFallbackBlocked)
+                    {
+                        this.SetCriticalStatus(result.Message);
                         _ = this.notificationService.ShowNotificationAsync("Affinity blocked", result.Message, NotificationType.Warning);
                     }
                     else
@@ -752,7 +757,7 @@ namespace ThreadPilot.ViewModels
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    this.SetStatus($"Error setting affinity: {friendly}", false);
+                    this.SetCriticalStatus($"Error setting affinity: {friendly}");
                 });
 
                 // Try to refresh process info even if setting failed, to show current state
@@ -1141,8 +1146,17 @@ namespace ThreadPilot.ViewModels
                     // Verify the priority was set correctly
                     if (this.SelectedProcess.Priority == priority)
                     {
-                        this.SetStatus($"Priority applied successfully to {this.SelectedProcess.Name}: {priority}.", false);
-                        _ = this.notificationService.ShowNotificationAsync("Priority applied", $"{this.SelectedProcess.Name}: {priority}", NotificationType.Success);
+                        var warning = ProcessPriorityGuardrails.GetWarning(priority);
+                        if (!string.IsNullOrWhiteSpace(warning))
+                        {
+                            this.SetCriticalStatus(warning);
+                            _ = this.notificationService.ShowNotificationAsync("Priority warning", warning, NotificationType.Warning);
+                        }
+                        else
+                        {
+                            this.SetStatus($"Priority applied successfully to {this.SelectedProcess.Name}: {priority}.", false);
+                            _ = this.notificationService.ShowNotificationAsync("Priority applied", $"{this.SelectedProcess.Name}: {priority}", NotificationType.Success);
+                        }
                     }
                     else
                     {
@@ -1154,10 +1168,15 @@ namespace ThreadPilot.ViewModels
             catch (Exception ex)
             {
                 var message = ex.Message;
-                if (message.Contains("Access denied", StringComparison.OrdinalIgnoreCase) ||
+                if (message.Contains("Realtime priority is blocked", StringComparison.OrdinalIgnoreCase))
+                {
+                    message = ProcessOperationUserMessages.RealtimePriorityBlocked;
+                    _ = this.notificationService.ShowNotificationAsync("Priority blocked", message, NotificationType.Warning);
+                }
+                else if (message.Contains("Access denied", StringComparison.OrdinalIgnoreCase) ||
                     message.Contains("anti-cheat", StringComparison.OrdinalIgnoreCase))
                 {
-                    message = "Priority change blocked (anti-cheat or insufficient privileges).";
+                    message = ProcessOperationUserMessages.AccessDenied;
                     _ = this.notificationService.ShowNotificationAsync("Priority blocked", message, NotificationType.Warning);
                 }
                 else
@@ -1167,7 +1186,7 @@ namespace ThreadPilot.ViewModels
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    this.SetStatus($"Error setting priority: {message}", false);
+                    this.SetCriticalStatus($"Error setting priority: {message}");
                 });
 
                 // Try to refresh process info even if setting failed, to show current state
@@ -1233,17 +1252,24 @@ namespace ThreadPilot.ViewModels
                 {
                     this.SetStatus($"Loading profile {this.ProfileName}...");
                 });
-                await this.processService.LoadProcessProfile(this.ProfileName, this.SelectedProcess);
+                var success = await this.processService.LoadProcessProfile(this.ProfileName, this.SelectedProcess);
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    this.ClearStatus();
+                    if (success)
+                    {
+                        this.ClearStatus();
+                    }
+                    else
+                    {
+                        this.SetCriticalStatus($"Profile {this.ProfileName} could not be fully applied.");
+                    }
                 });
             }
             catch (Exception ex)
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    this.SetStatus($"Error loading profile: {ex.Message}", false);
+                    this.SetCriticalStatus($"Error loading profile: {ex.Message}");
                 });
             }
         }
@@ -1600,6 +1626,7 @@ namespace ThreadPilot.ViewModels
                             System.Windows.MessageBox.Show(
                                 $"Registry priority has been set for {this.SelectedProcess.Name}.\n\n" +
                                 "The process must be restarted for the registry changes to take effect.\n\n" +
+                                $"{ProcessOperationUserMessages.PersistentLaunchTimePriorityNotice}\n\n" +
                                 "This setting will persist across system reboots and will automatically apply the selected priority when the process starts.",
                                 "Registry Priority Set - Restart Required",
                                 System.Windows.MessageBoxButton.OK,

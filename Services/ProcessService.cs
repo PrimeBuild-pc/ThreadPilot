@@ -586,7 +586,19 @@ namespace ThreadPilot.Services
 
         public async Task SetProcessPriority(ProcessModel process, ProcessPriorityClass priority)
         {
+            ArgumentNullException.ThrowIfNull(process);
+            ProcessPriorityGuardrails.ThrowIfBlocked(priority);
             this.EnsureProcessOperationAllowed(process, "SetProcessPriority");
+
+            var warning = ProcessPriorityGuardrails.GetWarning(priority);
+            if (!string.IsNullOrWhiteSpace(warning))
+            {
+                this.logger?.LogWarning(
+                    "Applying High priority to process {ProcessName} (PID: {ProcessId}): {Message}",
+                    process.Name,
+                    process.ProcessId,
+                    warning);
+            }
 
             await Task.Run(() =>
             {
@@ -601,12 +613,12 @@ namespace ThreadPilot.Services
                 catch (Win32Exception ex) when (ex.NativeErrorCode == 5)
                 {
                     this.AuditProcessOperation("SetProcessPriority", process.Name, success: false);
-                    throw new InvalidOperationException("Access denied while setting process priority. The process may be protected (e.g., anti-cheat).", ex);
+                    throw new InvalidOperationException(ProcessOperationUserMessages.AccessDenied, ex);
                 }
                 catch (UnauthorizedAccessException ex)
                 {
                     this.AuditProcessOperation("SetProcessPriority", process.Name, success: false);
-                    throw new InvalidOperationException("Access denied while setting process priority. The process may be protected (e.g., anti-cheat).", ex);
+                    throw new InvalidOperationException(ProcessOperationUserMessages.AccessDenied, ex);
                 }
                 catch (Exception ex)
                 {
@@ -655,6 +667,18 @@ namespace ThreadPilot.Services
 
             if (profile == null)
             {
+                return false;
+            }
+
+            if (ProcessPriorityGuardrails.IsBlocked(profile.Priority))
+            {
+                this.logger?.LogWarning(
+                    "Profile {ProfileName} requested blocked priority {Priority} for process {ProcessName} (PID: {ProcessId}). {Message}",
+                    profileName,
+                    profile.Priority,
+                    process.Name,
+                    process.ProcessId,
+                    ProcessOperationUserMessages.RealtimePriorityBlocked);
                 return false;
             }
 
@@ -1096,6 +1120,19 @@ namespace ThreadPilot.Services
 
         public async Task<bool> SetRegistryPriorityAsync(ProcessModel process, bool enable, ProcessPriorityClass priority)
         {
+            ArgumentNullException.ThrowIfNull(process);
+
+            if (enable && ProcessPriorityGuardrails.IsBlocked(priority))
+            {
+                this.logger?.LogWarning(
+                    "Registry priority request blocked for process {ProcessName} (PID: {ProcessId}). {Message}",
+                    process.Name,
+                    process.ProcessId,
+                    ProcessOperationUserMessages.RealtimePriorityBlocked);
+                this.AuditProcessOperation("SetProcessPriority", process.Name, success: false);
+                return false;
+            }
+
             this.EnsureProcessOperationAllowed(process, "SetProcessPriority");
 
             return await Task.Run(() =>

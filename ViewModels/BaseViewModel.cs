@@ -32,6 +32,7 @@ namespace ThreadPilot.ViewModels
         protected readonly IEnhancedLoggingService? EnhancedLoggingService;
         private bool disposed;
         private CancellationTokenSource? statusLifetimeCts;
+        private bool preserveStatusUntilReplaced;
         private const int StatusVisibleDurationMs = 1500;
         private const int StatusFadeDurationMs = 500;
 
@@ -61,7 +62,21 @@ namespace ThreadPilot.ViewModels
         /// </summary>
         protected void SetStatus(string message, bool isBusyState = true)
         {
+            this.SetStatus(message, isBusyState, preserveUntilReplaced: false);
+        }
+
+        /// <summary>
+        /// Set a critical status that should not be cleared by immediate cleanup paths.
+        /// </summary>
+        protected void SetCriticalStatus(string message)
+        {
+            this.SetStatus(message, isBusyState: false, preserveUntilReplaced: true);
+        }
+
+        private void SetStatus(string message, bool isBusyState, bool preserveUntilReplaced)
+        {
             this.CancelStatusLifetime();
+            this.preserveStatusUntilReplaced = preserveUntilReplaced;
             this.StatusOpacity = 1.0;
             this.StatusMessage = message;
             this.IsBusy = isBusyState;
@@ -78,6 +93,12 @@ namespace ThreadPilot.ViewModels
         /// </summary>
         protected void ClearStatus()
         {
+            if (this.preserveStatusUntilReplaced)
+            {
+                this.IsBusy = false;
+                return;
+            }
+
             this.CancelStatusLifetime();
             this.StatusMessage = string.Empty;
             this.StatusOpacity = 1.0;

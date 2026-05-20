@@ -43,6 +43,7 @@ namespace ThreadPilot.Core.Tests
 
             Assert.False(result.Success);
             Assert.Equal(AffinityApplyFailureReason.ProcessTerminated, result.FailureReason);
+            Assert.Equal(ProcessOperationUserMessages.ProcessExited, result.UserMessage);
             processService.Verify(
                 service => service.SetProcessorAffinity(It.IsAny<ProcessModel>(), It.IsAny<long>()),
                 Times.Never);
@@ -63,7 +64,33 @@ namespace ThreadPilot.Core.Tests
 
             Assert.False(result.Success);
             Assert.Equal(AffinityApplyFailureReason.AccessDenied, result.FailureReason);
+            Assert.Equal(AffinityApplyErrorCodes.AccessDenied, result.ErrorCode);
+            Assert.Equal(ProcessOperationUserMessages.AccessDenied, result.UserMessage);
+            Assert.True(result.IsAccessDenied);
+            Assert.False(result.UserMessage.Contains("bypass", StringComparison.OrdinalIgnoreCase));
             Assert.Equal(3, result.VerifiedMask);
+        }
+
+        [Fact]
+        public async Task ApplyAsync_WhenAntiCheatProtected_ReturnsProtectedMessageWithoutBypassSuggestion()
+        {
+            var process = new ProcessModel { ProcessId = 42, Name = "Game", ProcessorAffinity = 3 };
+            var processService = CreateProcessService(processStillRunning: true);
+            processService
+                .Setup(service => service.SetProcessorAffinity(process, 1))
+                .ThrowsAsync(new InvalidOperationException("Protected by anti-cheat."));
+
+            var service = CreateService(processService);
+
+            var result = await service.ApplyAsync(process, 1);
+
+            Assert.False(result.Success);
+            Assert.Equal(AffinityApplyErrorCodes.AntiCheatOrProtectedProcessLikely, result.ErrorCode);
+            Assert.Equal(ProcessOperationUserMessages.AntiCheatProtectedLikely, result.UserMessage);
+            Assert.True(result.IsAccessDenied);
+            Assert.True(result.IsAntiCheatLikely);
+            Assert.Contains("will not try to bypass", result.UserMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("administrator", result.UserMessage, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]
@@ -100,6 +127,7 @@ namespace ThreadPilot.Core.Tests
 
             Assert.False(result.Success);
             Assert.Equal(AffinityApplyFailureReason.InvalidMask, result.FailureReason);
+            Assert.Equal(ProcessOperationUserMessages.InvalidTopology, result.UserMessage);
         }
 
         [Fact]
@@ -115,9 +143,19 @@ namespace ThreadPilot.Core.Tests
 
             Assert.False(result.Success);
             Assert.Equal(AffinityApplyFailureReason.InvalidMask, result.FailureReason);
+            Assert.Equal(AffinityApplyErrorCodes.InvalidTopology, result.ErrorCode);
+            Assert.True(result.IsInvalidTopology);
+            Assert.Equal(ProcessOperationUserMessages.InvalidTopology, result.UserMessage);
             processService.Verify(
                 service => service.SetProcessorAffinity(It.IsAny<ProcessModel>(), It.IsAny<long>()),
                 Times.Never);
+        }
+
+        [Fact]
+        public void AdminClarification_DoesNotPromiseAntiCheatBypass()
+        {
+            Assert.Contains("Administrator mode may help", ProcessOperationUserMessages.AdminClarification);
+            Assert.Contains("cannot bypass anti-cheat", ProcessOperationUserMessages.AdminClarification);
         }
 
         [Fact]
@@ -221,6 +259,7 @@ namespace ThreadPilot.Core.Tests
             Assert.False(result.Success);
             Assert.Equal(AffinityApplyErrorCodes.LegacyFallbackUnsafe, result.ErrorCode);
             Assert.True(result.IsLegacyFallbackBlocked);
+            Assert.Equal(ProcessOperationUserMessages.LegacyFallbackBlocked, result.UserMessage);
             Assert.False(result.UsedLegacyAffinity);
             Assert.Equal(0, legacy.CallCount);
         }
@@ -291,6 +330,8 @@ namespace ThreadPilot.Core.Tests
 
             Assert.False(result.Success);
             Assert.Equal(AffinityApplyErrorCodes.InvalidSelection, result.ErrorCode);
+            Assert.Equal(ProcessOperationUserMessages.InvalidTopology, result.UserMessage);
+            Assert.True(result.IsInvalidTopology);
             Assert.False(result.UsedCpuSets);
             Assert.False(result.UsedLegacyAffinity);
             Assert.Equal(0, cpuSets.ApplyCpuSelectionCalls);
@@ -365,6 +406,7 @@ namespace ThreadPilot.Core.Tests
 
             Assert.False(result.Success);
             Assert.Equal(AffinityApplyErrorCodes.AccessDenied, result.ErrorCode);
+            Assert.Equal(ProcessOperationUserMessages.AccessDenied, result.UserMessage);
             Assert.True(result.IsAccessDenied);
             Assert.Equal(0, legacy.CallCount);
         }
@@ -405,6 +447,7 @@ namespace ThreadPilot.Core.Tests
 
             Assert.False(result.Success);
             Assert.Equal(AffinityApplyErrorCodes.ProcessExited, result.ErrorCode);
+            Assert.Equal(ProcessOperationUserMessages.ProcessExited, result.UserMessage);
             Assert.False(result.UsedLegacyAffinity);
         }
 
@@ -418,6 +461,7 @@ namespace ThreadPilot.Core.Tests
 
             Assert.False(result.Success);
             Assert.Equal(AffinityApplyErrorCodes.ProcessExited, result.ErrorCode);
+            Assert.Equal(ProcessOperationUserMessages.ProcessExited, result.UserMessage);
             processService.Verify(
                 service => service.SetProcessorAffinity(It.IsAny<ProcessModel>(), It.IsAny<CpuSelection>()),
                 Times.Never);
@@ -434,6 +478,7 @@ namespace ThreadPilot.Core.Tests
 
             Assert.False(result.Success);
             Assert.Equal(AffinityApplyErrorCodes.InvalidSelection, result.ErrorCode);
+            Assert.Equal(ProcessOperationUserMessages.InvalidTopology, result.UserMessage);
             processService.Verify(
                 service => service.SetProcessorAffinity(It.IsAny<ProcessModel>(), It.IsAny<CpuSelection>()),
                 Times.Never);
@@ -533,6 +578,12 @@ namespace ThreadPilot.Core.Tests
 
             public bool ApplyCpuSetMask(long affinityMask, bool clearMask = false) => false;
 
+            public CpuSetApplyResult ApplyCpuSetMaskDetailed(long affinityMask, bool clearMask = false) =>
+                CpuSetApplyResult.Failed(
+                    AffinityApplyErrorCodes.CpuSetsUnavailable,
+                    ProcessOperationUserMessages.CpuSetsUnavailable,
+                    "Fake CPU Sets handler rejected the legacy mask.");
+
             public bool ApplyCpuSelection(CpuSelection? selection, bool clearSelection = false)
             {
                 this.ApplyCpuSelectionCalls++;
@@ -544,6 +595,24 @@ namespace ThreadPilot.Core.Tests
                 }
 
                 return this.ApplyCpuSelectionResult;
+            }
+
+            public CpuSetApplyResult ApplyCpuSelectionDetailed(CpuSelection? selection, bool clearSelection = false)
+            {
+                this.ApplyCpuSelectionCalls++;
+                this.LastSelection = selection;
+
+                if (this.ApplyCpuSelectionException != null)
+                {
+                    throw this.ApplyCpuSelectionException;
+                }
+
+                return this.ApplyCpuSelectionResult
+                    ? CpuSetApplyResult.Succeeded("Fake CPU Sets handler applied the selection.")
+                    : CpuSetApplyResult.Failed(
+                        AffinityApplyErrorCodes.CpuSetsUnavailable,
+                        ProcessOperationUserMessages.CpuSetsUnavailable,
+                        "Fake CPU Sets handler rejected the selection.");
             }
 
             public double GetAverageCpuUsage() => 0;
