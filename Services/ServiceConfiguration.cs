@@ -106,6 +106,7 @@ namespace ThreadPilot.Services
             services.AddSingleton<IProcessClassifier, ProcessClassifier>();
             services.AddSingleton<IProcessService, ProcessService>();
             services.AddSingleton<IAffinityApplyService, AffinityApplyService>();
+            services.AddSingleton<IProcessAffinityApplyCoordinator, ProcessAffinityApplyCoordinator>();
             services.AddSingleton<IProcessMemoryPriorityNativeApi>(ProcessMemoryPriorityNativeApi.Instance);
             services.AddSingleton<IProcessMemoryPriorityService, ProcessMemoryPriorityService>();
             services.AddSingleton<IPersistentProcessRuleStore, PersistentProcessRuleJsonStore>();

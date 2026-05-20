@@ -460,6 +460,14 @@ namespace ThreadPilot.ViewModels
             return selectedCores.Aggregate(0L, (mask, core) => mask | core.AffinityMask);
         }
 
+        private List<bool> GetPendingCoreSelectionMask()
+        {
+            return this.CpuCores
+                .OrderBy(core => core.LogicalCoreId)
+                .Select(core => core.IsSelected)
+                .ToList();
+        }
+
         private void UpdateAffinityDisplayState()
         {
             var currentMask = this.SelectedProcess?.ProcessorAffinity;
@@ -697,18 +705,25 @@ namespace ThreadPilot.ViewModels
 
             try
             {
-                var affinityMask = this.CalculateAffinityMask();
+                var pendingSelection = this.GetPendingCoreSelectionMask();
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     this.SetStatus($"Setting affinity for {selectedProcess.Name}...");
                 });
 
-                var result = await this.affinityApplyService.ApplyAsync(selectedProcess, affinityMask);
+                var result = await this.processAffinityApplyCoordinator.ApplyCoreSelectionAsync(
+                    selectedProcess,
+                    pendingSelection,
+                    "Manual Process tab CPU selection");
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    this.UpdateCoreSelections(selectedProcess.ProcessorAffinity, true);
+                    if (!result.UsedCpuSets)
+                    {
+                        this.UpdateCoreSelections(selectedProcess.ProcessorAffinity, true);
+                    }
+
                     selectedProcess.ForceNotifyProcessorAffinityChanged();
                     this.OnPropertyChanged(nameof(this.SelectedProcess));
 
@@ -899,26 +914,20 @@ namespace ThreadPilot.ViewModels
                     "Applying mask '{MaskName}' to process {ProcessName} (PID: {ProcessId})",
                     mask.Name, selectedProcess.Name, selectedProcess.ProcessId);
 
-                // Convert mask to affinity
-                long affinity = mask.ToProcessorAffinity();
-
-                if (affinity == 0)
-                {
-                    this.Logger.LogWarning("Mask '{MaskName}' produces zero affinity, skipping", mask.Name);
-                    this.SetStatus("Invalid mask: no cores selected");
-                    return;
-                }
-
                 // Disable Windows Game Mode for better CPU affinity control
                 // Game Mode can interfere with CPU Sets, particularly on AMD systems
                 await this.gameModeService.DisableGameModeForAffinityAsync();
 
-                var result = await this.affinityApplyService.ApplyAsync(selectedProcess, affinity);
+                var result = await this.processAffinityApplyCoordinator.ApplyCoreMaskAsync(selectedProcess, mask);
 
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
                     selectedProcess.ForceNotifyProcessorAffinityChanged();
-                    this.UpdateCoreSelections(selectedProcess.ProcessorAffinity, true);
+                    if (!result.UsedCpuSets)
+                    {
+                        this.UpdateCoreSelections(selectedProcess.ProcessorAffinity, true);
+                    }
+
                     this.OnPropertyChanged(nameof(this.SelectedProcess));
                 });
 
@@ -988,21 +997,30 @@ namespace ThreadPilot.ViewModels
 
             try
             {
+                var affinityAppliedWithCpuSets = false;
+
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     this.SetStatus($"Applying pending settings to {selectedProcess.Name}...");
                 });
 
                 // Apply CPU affinity
-                var affinityMask = this.CalculateAffinityMask();
-                if (affinityMask > 0)
+                var pendingSelection = this.GetPendingCoreSelectionMask();
+                if (pendingSelection.Any(selected => selected))
                 {
-                    var result = await this.affinityApplyService.ApplyAsync(selectedProcess, affinityMask);
+                    var result = await this.processAffinityApplyCoordinator.ApplyCoreSelectionAsync(
+                        selectedProcess,
+                        pendingSelection,
+                        "Manual Process tab quick apply CPU selection");
                     if (!result.Success)
                     {
                         await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                         {
-                            this.UpdateCoreSelections(selectedProcess.ProcessorAffinity, true);
+                            if (!result.UsedCpuSets)
+                            {
+                                this.UpdateCoreSelections(selectedProcess.ProcessorAffinity, true);
+                            }
+
                             selectedProcess.ForceNotifyProcessorAffinityChanged();
                             this.OnPropertyChanged(nameof(this.SelectedProcess));
                             this.SetStatus(result.Message, false);
@@ -1012,6 +1030,7 @@ namespace ThreadPilot.ViewModels
 
                     this.HasPendingAffinityEdits = false;
                     this.UpdateAffinityDisplayState();
+                    affinityAppliedWithCpuSets = result.UsedCpuSets;
                 }
 
                 // Apply power plan if selected
@@ -1024,7 +1043,15 @@ namespace ThreadPilot.ViewModels
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    this.UpdateCoreSelections(selectedProcess.ProcessorAffinity, true);
+                    if (!affinityAppliedWithCpuSets)
+                    {
+                        this.UpdateCoreSelections(selectedProcess.ProcessorAffinity, true);
+                    }
+                    else
+                    {
+                        this.UpdateAffinityDisplayState();
+                    }
+
                     selectedProcess.ForceNotifyProcessorAffinityChanged();
                     this.OnPropertyChanged(nameof(this.SelectedProcess));
                 });
@@ -1786,4 +1813,3 @@ namespace ThreadPilot.ViewModels
         }
     }
 }
-
