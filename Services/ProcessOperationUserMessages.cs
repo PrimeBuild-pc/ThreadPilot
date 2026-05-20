@@ -8,7 +8,7 @@ namespace ThreadPilot.Services
             "Windows denied this change. The process may require administrator rights or may be protected.";
 
         public const string AntiCheatProtectedLikely =
-            "The process appears protected by anti-cheat or process protection. ThreadPilot will not try to bypass it.";
+            "The process appears protected by anti-cheat or process protection. ThreadPilot will not try to override it.";
 
         public const string AdminClarification =
             "Administrator mode may help with normal permission issues, but cannot bypass anti-cheat or protected process restrictions.";

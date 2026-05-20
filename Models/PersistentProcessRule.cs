@@ -24,9 +24,13 @@ namespace ThreadPilot.Models
 
         public ProcessPriorityClass? Priority { get; init; }
 
+        public ProcessMemoryPriority? MemoryPriority { get; init; }
+
         public bool ApplyAffinityOnStart { get; init; }
 
         public bool ApplyPriorityOnStart { get; init; }
+
+        public bool ApplyMemoryPriorityOnStart { get; init; }
 
         public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
 
@@ -48,6 +52,8 @@ namespace ThreadPilot.Models
         public bool AffinityApplied { get; init; }
 
         public bool PriorityApplied { get; init; }
+
+        public bool MemoryPriorityApplied { get; init; }
 
         public string? ErrorCode { get; init; }
 
