@@ -105,6 +105,9 @@ namespace ThreadPilot.Services
             services.AddSingleton<IProcessClassifier, ProcessClassifier>();
             services.AddSingleton<IProcessService, ProcessService>();
             services.AddSingleton<IAffinityApplyService, AffinityApplyService>();
+            services.AddSingleton<IPersistentProcessRuleStore, PersistentProcessRuleJsonStore>();
+            services.AddSingleton<IPersistentProcessRuleMatcher, PersistentProcessRuleMatcher>();
+            services.AddSingleton<IPersistentRulesEngine, PersistentRulesEngine>();
             services.AddSingleton<ProcessFilterService>();
             services.AddSingleton<IVirtualizedProcessService, VirtualizedProcessService>();
             services.AddSingleton<IConditionalProfileService, ConditionalProfileService>();

@@ -33,6 +33,8 @@ namespace ThreadPilot.Services
 
         public static string CoreMasksFilePath => Path.Combine(AppDataRoot, "core_masks.json");
 
+        public static string PersistentRulesFilePath => Path.Combine(AppDataRoot, "persistent_rules.json");
+
         public static string PowerPlansDirectory => Path.Combine(AppDataRoot, "Powerplans");
 
         public static void EnsureAppDataDirectories()
