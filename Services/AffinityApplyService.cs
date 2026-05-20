@@ -144,8 +144,8 @@ namespace ThreadPilot.Services
                 TechnicalMessage = technicalMessage,
                 IsAccessDenied = isAccessDenied,
                 IsAntiCheatLikely = isAntiCheatLikely,
-                IsInvalidTopology = isInvalidTopology,
-                IsLegacyFallbackBlocked = isLegacyFallbackBlocked,
+                IsInvalidTopology = isInvalidTopology || errorCode == AffinityApplyErrorCodes.InvalidTopology,
+                IsLegacyFallbackBlocked = isLegacyFallbackBlocked || errorCode == AffinityApplyErrorCodes.LegacyFallbackUnsafe,
             };
 
         private static string MapFailureReason(AffinityApplyFailureReason failureReason) =>
@@ -171,16 +171,16 @@ namespace ThreadPilot.Services
     internal sealed class CpuSelectionAffinityApplier
     {
         internal const string AccessDeniedUserMessage =
-            "Windows denied this change. The process may require administrator rights or may be protected.";
+            ProcessOperationUserMessages.AccessDenied;
 
         internal const string AntiCheatUserMessage =
-            "The process appears protected by anti-cheat or process protection. ThreadPilot will not try to bypass it.";
+            ProcessOperationUserMessages.AntiCheatProtectedLikely;
 
         internal const string LegacyFallbackBlockedUserMessage =
-            "This CPU selection cannot be safely represented by legacy affinity APIs on this topology. CPU Sets are required for this selection.";
+            ProcessOperationUserMessages.LegacyFallbackBlocked;
 
         internal const string InvalidSelectionUserMessage =
-            "This CPU selection is empty or does not match the current CPU topology.";
+            ProcessOperationUserMessages.InvalidTopology;
 
         private readonly Func<ProcessModel, IProcessCpuSetHandler> cpuSetHandlerFactory;
         private readonly Func<ProcessModel, long, Task<long>> legacyAffinityApplier;
@@ -216,6 +216,7 @@ namespace ThreadPilot.Services
                     AffinityApplyErrorCodes.InvalidSelection,
                     InvalidSelectionUserMessage,
                     "CpuSelection contains neither CPU Set IDs nor logical processors.",
+                    isInvalidTopology: true,
                     failureReason: AffinityApplyFailureReason.InvalidMask);
             }
 
@@ -282,16 +283,48 @@ namespace ThreadPilot.Services
                     return null;
                 }
 
-                if (handler.ApplyCpuSelection(selection))
+                var result = handler.ApplyCpuSelectionDetailed(selection);
+                if (result.Success)
                 {
                     this.Audit(process, success: true);
                     return AffinityApplyResult.SucceededWithCpuSets(
-                        $"CPU Sets applied to process {process.Name} (PID: {process.ProcessId}).");
+                        string.IsNullOrWhiteSpace(result.TechnicalMessage)
+                            ? $"CPU Sets applied to process {process.Name} (PID: {process.ProcessId})."
+                            : result.TechnicalMessage);
                 }
 
-                // ProcessCpuSetHandler.ApplyCpuSelection currently returns only bool. A false
-                // can mean CPU Sets unavailable, access denied without detailed error, or
-                // a native apply failure. Later UX/error-model work will classify this more precisely.
+                if (result.IsAccessDenied || result.ErrorCode == AffinityApplyErrorCodes.AccessDenied)
+                {
+                    this.Audit(process, success: false);
+                    return AffinityApplyResult.Failed(
+                        result.IsAntiCheatLikely
+                            ? AffinityApplyErrorCodes.AntiCheatOrProtectedProcessLikely
+                            : AffinityApplyErrorCodes.AccessDenied,
+                        result.IsAntiCheatLikely ? AntiCheatUserMessage : AccessDeniedUserMessage,
+                        result.TechnicalMessage,
+                        isAccessDenied: true,
+                        isAntiCheatLikely: result.IsAntiCheatLikely,
+                        verifiedMask: process.ProcessorAffinity,
+                        failureReason: AffinityApplyFailureReason.AccessDenied);
+                }
+
+                if (result.ErrorCode == AffinityApplyErrorCodes.InvalidTopology)
+                {
+                    this.Audit(process, success: false);
+                    return AffinityApplyResult.Failed(
+                        AffinityApplyErrorCodes.InvalidTopology,
+                        ProcessOperationUserMessages.InvalidTopology,
+                        result.TechnicalMessage,
+                        isInvalidTopology: true,
+                        verifiedMask: process.ProcessorAffinity,
+                        failureReason: AffinityApplyFailureReason.InvalidMask);
+                }
+
+                this.logger.LogDebug(
+                    "CPU Sets unavailable for process {ProcessName} (PID: {ProcessId}): {Message}",
+                    process.Name,
+                    process.ProcessId,
+                    result.TechnicalMessage);
                 return null;
             }
             catch (Exception ex) when (AffinityApplyExceptionClassifier.IsAccessDenied(ex))
@@ -337,7 +370,7 @@ namespace ThreadPilot.Services
         private static AffinityApplyResult ProcessExited(string userMessage, ProcessModel? process, long requestedMask = 0) =>
             AffinityApplyResult.Failed(
                 AffinityApplyErrorCodes.ProcessExited,
-                userMessage,
+                ProcessOperationUserMessages.ProcessExited,
                 userMessage,
                 requestedMask: requestedMask,
                 verifiedMask: process?.ProcessorAffinity ?? 0,
@@ -408,7 +441,7 @@ namespace ThreadPilot.Services
             process == null
                 ? Task.FromResult(AffinityApplyResult.Failed(
                     AffinityApplyErrorCodes.ProcessExited,
-                    "Process is no longer running.",
+                    ProcessOperationUserMessages.ProcessExited,
                     "ProcessModel is null.",
                     failureReason: AffinityApplyFailureReason.ProcessTerminated))
                 : selection == null
@@ -416,6 +449,7 @@ namespace ThreadPilot.Services
                         AffinityApplyErrorCodes.InvalidSelection,
                         CpuSelectionAffinityApplier.InvalidSelectionUserMessage,
                         "CpuSelection is null.",
+                        isInvalidTopology: true,
                         failureReason: AffinityApplyFailureReason.InvalidMask))
                     : this.processService.SetProcessorAffinity(process, selection);
 
@@ -431,16 +465,19 @@ namespace ThreadPilot.Services
                     requestedMask,
                     startingMask,
                     AffinityApplyFailureReason.InvalidMask,
-                    "Affinity mask cannot be zero.");
+                    ProcessOperationUserMessages.InvalidTopology);
             }
 
             if (!this.cpuTopologyService.IsAffinityMaskValid(requestedMask))
             {
                 return AffinityApplyResult.Failed(
-                    requestedMask,
-                    startingMask,
-                    AffinityApplyFailureReason.InvalidMask,
-                    "Affinity mask is not valid for this CPU topology.");
+                    AffinityApplyErrorCodes.InvalidTopology,
+                    ProcessOperationUserMessages.InvalidTopology,
+                    $"Affinity mask 0x{requestedMask:X} is not valid for this CPU topology.",
+                    isInvalidTopology: true,
+                    requestedMask: requestedMask,
+                    verifiedMask: startingMask,
+                    failureReason: AffinityApplyFailureReason.InvalidMask);
             }
 
             if (!await this.IsProcessRunningAsync(process).ConfigureAwait(false))
@@ -449,7 +486,7 @@ namespace ThreadPilot.Services
                     requestedMask,
                     startingMask,
                     AffinityApplyFailureReason.ProcessTerminated,
-                    "Process is no longer running.");
+                    ProcessOperationUserMessages.ProcessExited);
             }
 
             try
@@ -465,11 +502,7 @@ namespace ThreadPilot.Services
                     process.ProcessId);
 
                 await this.TryRefreshProcessInfoAsync(process).ConfigureAwait(false);
-                return AffinityApplyResult.Failed(
-                    requestedMask,
-                    process.ProcessorAffinity,
-                    AffinityApplyFailureReason.AccessDenied,
-                    "Affinity change blocked (anti-cheat or insufficient privileges).");
+                return AccessDenied(ex, requestedMask, process.ProcessorAffinity);
             }
             catch (Exception ex) when (IsProcessTerminated(ex))
             {
@@ -483,7 +516,7 @@ namespace ThreadPilot.Services
                     requestedMask,
                     process.ProcessorAffinity,
                     AffinityApplyFailureReason.ProcessTerminated,
-                    "Process exited before affinity could be applied.");
+                    ProcessOperationUserMessages.ProcessExited);
             }
             catch (Exception ex)
             {
@@ -498,7 +531,7 @@ namespace ThreadPilot.Services
                     requestedMask,
                     process.ProcessorAffinity,
                     AffinityApplyFailureReason.ApplyFailed,
-                    $"Failed to set processor affinity: {ex.Message}");
+                    "ThreadPilot could not apply this affinity change.");
             }
 
             if (!await this.TryRefreshProcessInfoAsync(process).ConfigureAwait(false))
@@ -507,7 +540,7 @@ namespace ThreadPilot.Services
                     requestedMask,
                     process.ProcessorAffinity,
                     AffinityApplyFailureReason.ProcessTerminated,
-                    "Process exited before affinity could be verified.");
+                    ProcessOperationUserMessages.ProcessExited);
             }
 
             var verifiedMask = process.ProcessorAffinity;
@@ -521,6 +554,24 @@ namespace ThreadPilot.Services
             }
 
             return AffinityApplyResult.Succeeded(requestedMask, verifiedMask);
+        }
+
+        private static AffinityApplyResult AccessDenied(Exception ex, long requestedMask, long verifiedMask)
+        {
+            var antiCheatLikely = AffinityApplyExceptionClassifier.IsAntiCheatLikely(ex);
+            return AffinityApplyResult.Failed(
+                antiCheatLikely
+                    ? AffinityApplyErrorCodes.AntiCheatOrProtectedProcessLikely
+                    : AffinityApplyErrorCodes.AccessDenied,
+                antiCheatLikely
+                    ? ProcessOperationUserMessages.AntiCheatProtectedLikely
+                    : ProcessOperationUserMessages.AccessDenied,
+                ex.Message,
+                isAccessDenied: true,
+                isAntiCheatLikely: antiCheatLikely,
+                requestedMask: requestedMask,
+                verifiedMask: verifiedMask,
+                failureReason: AffinityApplyFailureReason.AccessDenied);
         }
 
         private static bool IsAccessDenied(Exception ex)

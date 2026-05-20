@@ -4,6 +4,7 @@ namespace ThreadPilot.Core.Tests
     using Microsoft.Win32.SafeHandles;
     using ThreadPilot.Models;
     using ThreadPilot.Platforms.Windows;
+    using ThreadPilot.Services;
 
     public sealed class ProcessCpuSetHandlerTests
     {
@@ -195,6 +196,47 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void ProcessCpuSetHandler_ApplyCpuSelectionDetailed_WithoutResolvableCpuSets_ReturnsInvalidTopology()
+        {
+            var nativeApi = new FakeProcessCpuSetNativeApi();
+            using var handler = CreateHandler(nativeApi, CpuSetMapping.Empty);
+            var selection = new CpuSelection
+            {
+                LogicalProcessors = [new ProcessorRef(1, 0, 64)],
+            };
+
+            var result = handler.ApplyCpuSelectionDetailed(selection);
+
+            Assert.False(result.Success);
+            Assert.Equal(AffinityApplyErrorCodes.InvalidTopology, result.ErrorCode);
+            Assert.Equal(ProcessOperationUserMessages.InvalidTopology, result.UserMessage);
+            Assert.False(nativeApi.WasSetProcessDefaultCpuSetsCalled);
+        }
+
+        [Fact]
+        public void ProcessCpuSetHandler_ApplyCpuSelectionDetailed_WhenNativeAccessDenied_ReturnsAccessDenied()
+        {
+            var nativeApi = new FakeProcessCpuSetNativeApi
+            {
+                SetProcessDefaultCpuSetsResult = false,
+                LastWin32Error = 5,
+            };
+            using var handler = CreateHandler(nativeApi, CpuSetMapping.Empty);
+            var selection = new CpuSelection
+            {
+                CpuSetIds = [400],
+            };
+
+            var result = handler.ApplyCpuSelectionDetailed(selection);
+
+            Assert.False(result.Success);
+            Assert.Equal(AffinityApplyErrorCodes.AccessDenied, result.ErrorCode);
+            Assert.Equal(5, result.Win32ErrorCode);
+            Assert.True(result.IsAccessDenied);
+            Assert.Equal(ProcessOperationUserMessages.AccessDenied, result.UserMessage);
+        }
+
+        [Fact]
         public void ProcessCpuSetHandler_ApplyCpuSetMask_LegacySingleGroupMappingIsPreserved()
         {
             var nativeApi = new FakeProcessCpuSetNativeApi();
@@ -248,6 +290,8 @@ namespace ThreadPilot.Core.Tests
 
             public int LastWin32Error { get; set; }
 
+            public bool SetProcessDefaultCpuSetsResult { get; init; } = true;
+
             public SafeProcessHandle OpenProcess(ProcessAccessFlags access, bool inheritHandle, uint processId)
             {
                 return new SafeProcessHandle(new IntPtr(1), ownsHandle: false);
@@ -258,7 +302,7 @@ namespace ThreadPilot.Core.Tests
                 this.WasSetProcessDefaultCpuSetsCalled = true;
                 this.LastAppliedCpuSetIds = cpuSetIds;
                 this.LastAppliedCpuSetCount = cpuSetIdCount;
-                return true;
+                return this.SetProcessDefaultCpuSetsResult;
             }
 
             public bool GetProcessTimes(

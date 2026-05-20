@@ -7,6 +7,8 @@ namespace ThreadPilot.Core.Tests
     using System.ComponentModel;
     using System.Diagnostics;
     using System.Text.Json;
+    using Microsoft.Extensions.Logging;
+    using Moq;
     using ThreadPilot.Models;
     using ThreadPilot.Services;
 
@@ -220,6 +222,93 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task LoadProcessProfile_WithRealtimePriority_ReturnsFalseWithoutApplyingPriorityOrAffinity()
+        {
+            var profilesDirectory = CreateTemporaryDirectory();
+            var profileName = $"profile-{Guid.NewGuid():N}";
+            var profile = new ProcessProfileSnapshot
+            {
+                ProcessName = "game.exe",
+                Priority = ProcessPriorityClass.RealTime,
+                ProcessorAffinity = 0b11,
+            };
+            var profileApplier = new FakeLoadProcessProfileApplier();
+            var service = CreateService(profilesDirectory, topologyProvider: null, profileApplier);
+
+            try
+            {
+                await WriteProfileAsync(profilesDirectory, profileName, profile);
+
+                var result = await service.LoadProcessProfile(profileName, CreateProcess());
+
+                Assert.False(result);
+                Assert.Equal(0, profileApplier.PriorityApplyCalls);
+                Assert.Equal(0, profileApplier.LegacyAffinityApplyCalls);
+                Assert.Equal(0, profileApplier.CpuSelectionApplyCalls);
+            }
+            finally
+            {
+                DeleteDirectory(profilesDirectory);
+            }
+        }
+
+        [Fact]
+        public void PriorityGuardrails_HighPriorityReturnsUserFacingWarning()
+        {
+            var warning = ProcessPriorityGuardrails.GetWarning(ProcessPriorityClass.High);
+
+            Assert.Equal(ProcessOperationUserMessages.HighPriorityWarning, warning);
+        }
+
+        [Fact]
+        public async Task SetProcessPriority_WithRealtime_AuditsFailureAndThrowsBlockedMessage()
+        {
+            var logger = new Mock<ILogger<ProcessService>>();
+            var security = new Mock<ISecurityService>(MockBehavior.Strict);
+            security
+                .Setup(s => s.AuditElevatedAction("SetProcessPriority", "game.exe", false))
+                .Returns(Task.CompletedTask);
+
+            var service = CreateService(CreateTemporaryDirectory(), logger: logger.Object, securityService: security.Object);
+            var process = CreateProcess();
+
+            try
+            {
+                var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+                    () => service.SetProcessPriority(process, ProcessPriorityClass.RealTime));
+
+                Assert.Equal(ProcessOperationUserMessages.RealtimePriorityBlocked, ex.Message);
+                Assert.Equal(ProcessPriorityClass.Normal, process.Priority);
+                security.Verify(
+                    s => s.AuditElevatedAction("SetProcessPriority", "game.exe", false),
+                    Times.Once);
+                VerifyWarningLogged(logger, ProcessOperationUserMessages.RealtimePriorityBlocked);
+            }
+            finally
+            {
+                DeleteDirectory(GetProfilesDirectory(service));
+            }
+        }
+
+        [Fact]
+        public async Task SetRegistryPriorityAsync_WithRealtime_ReturnsFalse()
+        {
+            var service = CreateService(CreateTemporaryDirectory());
+
+            try
+            {
+                var result = await service.SetRegistryPriorityAsync(CreateProcess(), enable: true, ProcessPriorityClass.RealTime);
+
+                Assert.False(result);
+                Assert.Contains("does not bypass", ProcessOperationUserMessages.PersistentLaunchTimePriorityNotice, StringComparison.OrdinalIgnoreCase);
+            }
+            finally
+            {
+                DeleteDirectory(GetProfilesDirectory(service));
+            }
+        }
+
+        [Fact]
         public void IsPassiveProcessAccessException_ReturnsTrue_ForModuleEnumerationFailure()
         {
             var exception = new Win32Exception(299, "Unable to enumerate the process modules.");
@@ -307,16 +396,18 @@ namespace ThreadPilot.Core.Tests
         private static ProcessService CreateService(
             string profilesDirectory,
             ICpuTopologyProvider? topologyProvider = null,
-            FakeLoadProcessProfileApplier? profileApplier = null)
+            FakeLoadProcessProfileApplier? profileApplier = null,
+            ILogger<ProcessService>? logger = null,
+            ISecurityService? securityService = null)
         {
             if (profileApplier == null)
             {
-                return new(null, null, () => profilesDirectory, cpuTopologyProvider: topologyProvider);
+                return new(logger, securityService, () => profilesDirectory, cpuTopologyProvider: topologyProvider);
             }
 
             return new ProcessService(
-                null,
-                null,
+                logger,
+                securityService,
                 () => profilesDirectory,
                 foregroundProcessService: null,
                 processClassifier: null,
@@ -382,6 +473,18 @@ namespace ThreadPilot.Core.Tests
             return (ConcurrentDictionary<TKey, TValue>)(field?.GetValue(service) ?? throw new InvalidOperationException($"Field '{fieldName}' not found."));
         }
 
+        private static void VerifyWarningLogged(Mock<ILogger<ProcessService>> logger, string message)
+        {
+            logger.Verify(
+                l => l.Log(
+                    LogLevel.Warning,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((state, _) => state.ToString() != null && state.ToString()!.Contains(message, StringComparison.Ordinal)),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
+        }
+
         private sealed class FakeCpuTopologyProvider(CpuTopologySnapshot snapshot) : ICpuTopologyProvider
         {
             public Task<CpuTopologySnapshot> GetTopologySnapshotAsync(
@@ -398,6 +501,8 @@ namespace ThreadPilot.Core.Tests
                 this.cpuSelectionResult = cpuSelectionResult ?? AffinityApplyResult.Succeeded(0, 0);
             }
 
+            public int PriorityApplyCalls { get; private set; }
+
             public int CpuSelectionApplyCalls { get; private set; }
 
             public int LegacyAffinityApplyCalls { get; private set; }
@@ -406,6 +511,7 @@ namespace ThreadPilot.Core.Tests
 
             public Task SetPriorityAsync(ProcessModel process, ProcessPriorityClass priority)
             {
+                this.PriorityApplyCalls++;
                 process.Priority = priority;
                 return Task.CompletedTask;
             }

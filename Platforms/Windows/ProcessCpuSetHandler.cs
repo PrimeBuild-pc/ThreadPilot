@@ -23,6 +23,7 @@ namespace ThreadPilot.Platforms.Windows
     using Microsoft.Extensions.Logging;
     using Microsoft.Win32.SafeHandles;
     using ThreadPilot.Models;
+    using ThreadPilot.Services;
 
     /// <summary>
     /// Handles CPU Set operations for a specific process using Windows APIs
@@ -181,7 +182,10 @@ namespace ThreadPilot.Platforms.Windows
             }
         }
 
-        public bool ApplyCpuSetMask(long affinityMask, bool clearMask = false)
+        public bool ApplyCpuSetMask(long affinityMask, bool clearMask = false) =>
+            this.ApplyCpuSetMaskDetailed(affinityMask, clearMask).Success;
+
+        public CpuSetApplyResult ApplyCpuSetMaskDetailed(long affinityMask, bool clearMask = false)
         {
             if (this.disposed)
             {
@@ -194,17 +198,21 @@ namespace ThreadPilot.Platforms.Windows
             if (this.cpuSetMapping.IsEmpty)
             {
                 this.logger?.LogWarning("CPU Set mapping not available. Cannot apply CPU Sets to process {ProcessId}", this.pid);
-                return false;
+                return CpuSetApplyResult.Failed(
+                    AffinityApplyErrorCodes.CpuSetsUnavailable,
+                    ProcessOperationUserMessages.CpuSetsUnavailable,
+                    $"CPU Set mapping is not available for process '{this.executableName}' (PID: {this.pid}).");
             }
 
-            if (!this.EnsureSetHandle())
+            var handleResult = this.EnsureSetHandleDetailed();
+            if (!handleResult.Success)
             {
-                return false;
+                return handleResult;
             }
 
             if (clearMask)
             {
-                return this.ApplyCpuSetIds(null, 0, "clear CPU Set");
+                return this.ApplyCpuSetIdsDetailed(null, 0, "clear CPU Set");
             }
 
             var cpuSetIds = this.cpuSetMapping.ResolveLegacyAffinityMask(affinityMask, Environment.ProcessorCount);
@@ -214,38 +222,44 @@ namespace ThreadPilot.Platforms.Windows
                 this.logger?.LogWarning(
                     "No valid CPU Set IDs found for affinity mask 0x{AffinityMask:X} on process '{ExecutableName}'",
                     affinityMask, this.executableName);
-                return false;
+                return CpuSetApplyResult.Failed(
+                    AffinityApplyErrorCodes.InvalidTopology,
+                    ProcessOperationUserMessages.InvalidTopology,
+                    $"No valid CPU Set IDs found for affinity mask 0x{affinityMask:X} on process '{this.executableName}'.");
             }
 
             var cpuSetIdsArray = cpuSetIds.ToArray();
-            var success = this.ApplyCpuSetIds(cpuSetIdsArray, (uint)cpuSetIdsArray.Length, "apply CPU Set");
+            var result = this.ApplyCpuSetIdsDetailed(cpuSetIdsArray, (uint)cpuSetIdsArray.Length, "apply CPU Set");
 
-            if (success)
+            if (result.Success)
             {
                 this.logger?.LogInformation(
                     "Applied CPU Set (affinity mask 0x{AffinityMask:X}) to '{ExecutableName}' (PID: {ProcessId})",
                     affinityMask, this.executableName, this.pid);
-                return true;
             }
 
-            return false;
+            return result;
         }
 
-        public bool ApplyCpuSelection(CpuSelection? selection, bool clearSelection = false)
+        public bool ApplyCpuSelection(CpuSelection? selection, bool clearSelection = false) =>
+            this.ApplyCpuSelectionDetailed(selection, clearSelection).Success;
+
+        public CpuSetApplyResult ApplyCpuSelectionDetailed(CpuSelection? selection, bool clearSelection = false)
         {
             if (this.disposed)
             {
                 throw new ObjectDisposedException(nameof(ProcessCpuSetHandler));
             }
 
-            if (!this.EnsureSetHandle())
+            var handleResult = this.EnsureSetHandleDetailed();
+            if (!handleResult.Success)
             {
-                return false;
+                return handleResult;
             }
 
             if (clearSelection)
             {
-                return this.ApplyCpuSetIds(null, 0, "clear CPU Set selection");
+                return this.ApplyCpuSetIdsDetailed(null, 0, "clear CPU Set selection");
             }
 
             ArgumentNullException.ThrowIfNull(selection);
@@ -257,14 +271,22 @@ namespace ThreadPilot.Platforms.Windows
                     "No valid CPU Set IDs resolved for CPU selection on process '{ExecutableName}' (PID: {ProcessId})",
                     this.executableName,
                     this.pid);
-                return false;
+                return CpuSetApplyResult.Failed(
+                    AffinityApplyErrorCodes.InvalidTopology,
+                    ProcessOperationUserMessages.InvalidTopology,
+                    $"No valid CPU Set IDs resolved for CPU selection on process '{this.executableName}' (PID: {this.pid}).");
             }
 
             var cpuSetIdsArray = cpuSetIds.ToArray();
-            return this.ApplyCpuSetIds(cpuSetIdsArray, (uint)cpuSetIdsArray.Length, "apply CPU Set selection");
+            return this.ApplyCpuSetIdsDetailed(cpuSetIdsArray, (uint)cpuSetIdsArray.Length, "apply CPU Set selection");
         }
 
         private bool EnsureSetHandle()
+        {
+            return this.EnsureSetHandleDetailed().Success;
+        }
+
+        private CpuSetApplyResult EnsureSetHandleDetailed()
         {
             if (this.setLimitedInfoHandle == null)
             {
@@ -276,23 +298,35 @@ namespace ThreadPilot.Platforms.Windows
                 if (this.setLimitedInfoHandle == null || this.setLimitedInfoHandle.IsInvalid)
                 {
                     int openError = this.nativeApi.GetLastWin32Error();
-                    string extraHelpString = (openError == 5) ? " Try restarting as Administrator" : string.Empty;
+                    string extraHelpString = (openError == 5)
+                        ? $" {ProcessOperationUserMessages.AdminClarification}"
+                        : string.Empty;
                     this.logger?.LogWarning(
                         "Could not open process '{ExecutableName}' (PID: {ProcessId}) for setting affinity: {Error}{Help}",
                         this.executableName, this.pid, new Win32Exception(openError).Message, extraHelpString);
-                    return false;
+                    return this.CreateNativeFailureResult(
+                        "open process for CPU Set changes",
+                        openError);
                 }
             }
             else if (this.setLimitedInfoHandle.IsInvalid)
             {
                 // The handle was already made previously and failed, don't bother trying again
-                return false;
+                return CpuSetApplyResult.Failed(
+                    AffinityApplyErrorCodes.CpuSetsUnavailable,
+                    ProcessOperationUserMessages.CpuSetsUnavailable,
+                    $"The cached CPU Set handle for '{this.executableName}' (PID: {this.pid}) is invalid.");
             }
 
-            return true;
+            return CpuSetApplyResult.Succeeded($"CPU Set handle is available for '{this.executableName}' (PID: {this.pid}).");
         }
 
         private bool ApplyCpuSetIds(uint[]? cpuSetIds, uint cpuSetIdCount, string operationName)
+        {
+            return this.ApplyCpuSetIdsDetailed(cpuSetIds, cpuSetIdCount, operationName).Success;
+        }
+
+        private CpuSetApplyResult ApplyCpuSetIdsDetailed(uint[]? cpuSetIds, uint cpuSetIdCount, string operationName)
         {
             bool success = this.nativeApi.SetProcessDefaultCpuSets(this.setLimitedInfoHandle!, cpuSetIds, cpuSetIdCount);
             if (success)
@@ -302,18 +336,36 @@ namespace ThreadPilot.Platforms.Windows
                     operationName,
                     this.executableName,
                     this.pid);
-                return true;
+                return CpuSetApplyResult.Succeeded(
+                    $"Completed {operationName} for '{this.executableName}' (PID: {this.pid}).");
             }
 
             int error = this.nativeApi.GetLastWin32Error();
             string errorMessage = $"Could not {operationName} for '{this.executableName}' (PID: {this.pid}): {new Win32Exception(error).Message}";
             if (error == 5)
             {
-                errorMessage += " (Likely due to anti-cheat or insufficient privileges)";
+                errorMessage += $" {ProcessOperationUserMessages.AdminClarification}";
             }
 
             this.logger?.LogWarning(errorMessage);
-            return false;
+            return this.CreateNativeFailureResult(operationName, error, errorMessage);
+        }
+
+        private CpuSetApplyResult CreateNativeFailureResult(
+            string operationName,
+            int win32ErrorCode,
+            string? technicalMessage = null)
+        {
+            var message = technicalMessage ??
+                $"Could not {operationName} for '{this.executableName}' (PID: {this.pid}): {new Win32Exception(win32ErrorCode).Message}";
+            var accessDenied = win32ErrorCode == 5;
+
+            return CpuSetApplyResult.Failed(
+                accessDenied ? AffinityApplyErrorCodes.AccessDenied : AffinityApplyErrorCodes.NativeApplyFailed,
+                accessDenied ? ProcessOperationUserMessages.AccessDenied : ProcessOperationUserMessages.CpuSetsUnavailable,
+                message,
+                win32ErrorCode,
+                isAccessDenied: accessDenied);
         }
 
         /// <summary>

@@ -46,12 +46,28 @@ namespace ThreadPilot.Platforms.Windows
         bool ApplyCpuSetMask(long affinityMask, bool clearMask = false);
 
         /// <summary>
+        /// Applies a CPU affinity mask to the process using CPU Sets and returns detailed failure information.
+        /// </summary>
+        /// <param name="affinityMask">The affinity mask where each bit represents a logical processor.</param>
+        /// <param name="clearMask">If true, clears the CPU Set (allows all cores); if false, applies the mask.</param>
+        /// <returns>Detailed CPU Set apply result.</returns>
+        CpuSetApplyResult ApplyCpuSetMaskDetailed(long affinityMask, bool clearMask = false);
+
+        /// <summary>
         /// Applies a topology-aware CPU selection to the process using CPU Sets.
         /// </summary>
         /// <param name="selection">The CPU selection to apply. Ignored and allowed to be null when <paramref name="clearSelection"/> is true.</param>
         /// <param name="clearSelection">If true, clears the CPU Set selection and ignores <paramref name="selection"/>.</param>
         /// <returns>True if the operation succeeded, false otherwise.</returns>
         bool ApplyCpuSelection(CpuSelection? selection, bool clearSelection = false);
+
+        /// <summary>
+        /// Applies a topology-aware CPU selection to the process using CPU Sets and returns detailed failure information.
+        /// </summary>
+        /// <param name="selection">The CPU selection to apply. Ignored and allowed to be null when <paramref name="clearSelection"/> is true.</param>
+        /// <param name="clearSelection">If true, clears the CPU Set selection and ignores <paramref name="selection"/>.</param>
+        /// <returns>Detailed CPU Set apply result.</returns>
+        CpuSetApplyResult ApplyCpuSelectionDetailed(CpuSelection? selection, bool clearSelection = false);
 
         /// <summary>
         /// Gets the average CPU usage for this process.
