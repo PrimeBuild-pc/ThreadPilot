@@ -50,6 +50,49 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task SaveProcessProfile_WithTopologyProvider_WritesCpuSelectionSchema()
+        {
+            var profilesDirectory = CreateTemporaryDirectory();
+            var profileName = $"profile-{Guid.NewGuid():N}";
+            var topology = CpuTopologySnapshot.Create(
+            [
+                new ProcessorRef(0, 0, 0),
+                new ProcessorRef(0, 1, 1),
+                new ProcessorRef(0, 2, 2),
+            ]);
+            var process = new ProcessModel
+            {
+                Name = "game.exe",
+                Priority = ProcessPriorityClass.High,
+                ProcessorAffinity = 0b101,
+            };
+
+            try
+            {
+                var service = CreateService(profilesDirectory, new FakeCpuTopologyProvider(topology));
+
+                var result = await service.SaveProcessProfile(profileName, process);
+
+                Assert.True(result);
+
+                var filePath = Path.Combine(profilesDirectory, $"{profileName}.json");
+                var profile = JsonSerializer.Deserialize<ProcessProfileSnapshot>(
+                    await File.ReadAllTextAsync(filePath),
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                Assert.NotNull(profile);
+                Assert.Equal(CpuAffinityProfileSchemaVersions.CpuSelection, profile.ProfileSchemaVersion);
+                Assert.Equal(0b101, profile.ProcessorAffinity);
+                Assert.NotNull(profile.CpuSelection);
+                Assert.Equal([0, 2], profile.CpuSelection!.GlobalLogicalProcessorIndexes);
+            }
+            finally
+            {
+                DeleteDirectory(profilesDirectory);
+            }
+        }
+
+        [Fact]
         public async Task LoadProcessProfile_ReturnsFalse_WhenFileIsMissing()
         {
             var profilesDirectory = CreateTemporaryDirectory();
@@ -61,6 +104,114 @@ namespace ThreadPilot.Core.Tests
                 var result = await service.LoadProcessProfile("missing-profile", new ProcessModel());
 
                 Assert.False(result);
+            }
+            finally
+            {
+                DeleteDirectory(profilesDirectory);
+            }
+        }
+
+        [Fact]
+        public async Task LoadProcessProfile_WithCpuSelectionApplyFailure_ReturnsFalse()
+        {
+            var profilesDirectory = CreateTemporaryDirectory();
+            var profileName = $"profile-{Guid.NewGuid():N}";
+            var topology = CreateTopology();
+            var profile = new ProcessProfileSnapshot
+            {
+                ProcessName = "game.exe",
+                Priority = ProcessPriorityClass.Normal,
+                ProcessorAffinity = 1,
+                ProfileSchemaVersion = CpuAffinityProfileSchemaVersions.CpuSelection,
+                CpuSelection = CpuSelection.FromProcessors([topology.LogicalProcessors[0]], topology),
+            };
+            var profileApplier = new FakeLoadProcessProfileApplier(
+                cpuSelectionResult: AffinityApplyResult.Failed(
+                    AffinityApplyErrorCodes.NativeApplyFailed,
+                    "Affinity was not applied.",
+                    "simulated apply failure"));
+            var service = CreateService(
+                profilesDirectory,
+                new FakeCpuTopologyProvider(topology),
+                profileApplier);
+
+            try
+            {
+                await WriteProfileAsync(profilesDirectory, profileName, profile);
+
+                var result = await service.LoadProcessProfile(profileName, CreateProcess());
+
+                Assert.False(result);
+                Assert.Equal(1, profileApplier.CpuSelectionApplyCalls);
+                Assert.Equal(0, profileApplier.LegacyAffinityApplyCalls);
+            }
+            finally
+            {
+                DeleteDirectory(profilesDirectory);
+            }
+        }
+
+        [Fact]
+        public async Task LoadProcessProfile_WithCpuSelectionApplySuccess_ReturnsTrue()
+        {
+            var profilesDirectory = CreateTemporaryDirectory();
+            var profileName = $"profile-{Guid.NewGuid():N}";
+            var topology = CreateTopology();
+            var profile = new ProcessProfileSnapshot
+            {
+                ProcessName = "game.exe",
+                Priority = ProcessPriorityClass.Normal,
+                ProcessorAffinity = 1,
+                ProfileSchemaVersion = CpuAffinityProfileSchemaVersions.CpuSelection,
+                CpuSelection = CpuSelection.FromProcessors([topology.LogicalProcessors[0]], topology),
+            };
+            var profileApplier = new FakeLoadProcessProfileApplier(
+                cpuSelectionResult: AffinityApplyResult.SucceededWithCpuSets("simulated apply success"));
+            var service = CreateService(
+                profilesDirectory,
+                new FakeCpuTopologyProvider(topology),
+                profileApplier);
+
+            try
+            {
+                await WriteProfileAsync(profilesDirectory, profileName, profile);
+
+                var result = await service.LoadProcessProfile(profileName, CreateProcess());
+
+                Assert.True(result);
+                Assert.Equal(1, profileApplier.CpuSelectionApplyCalls);
+                Assert.Equal(0, profileApplier.LegacyAffinityApplyCalls);
+            }
+            finally
+            {
+                DeleteDirectory(profilesDirectory);
+            }
+        }
+
+        [Fact]
+        public async Task LoadProcessProfile_WithoutTopologyProvider_UsesLegacyAffinityPath()
+        {
+            var profilesDirectory = CreateTemporaryDirectory();
+            var profileName = $"profile-{Guid.NewGuid():N}";
+            var profile = new ProcessProfileSnapshot
+            {
+                ProcessName = "game.exe",
+                Priority = ProcessPriorityClass.Normal,
+                ProcessorAffinity = 0b11,
+            };
+            var profileApplier = new FakeLoadProcessProfileApplier();
+            var service = CreateService(profilesDirectory, topologyProvider: null, profileApplier);
+
+            try
+            {
+                await WriteProfileAsync(profilesDirectory, profileName, profile);
+
+                var result = await service.LoadProcessProfile(profileName, CreateProcess());
+
+                Assert.True(result);
+                Assert.Equal(1, profileApplier.LegacyAffinityApplyCalls);
+                Assert.Equal(0b11, profileApplier.LastLegacyAffinityMask);
+                Assert.Equal(0, profileApplier.CpuSelectionApplyCalls);
             }
             finally
             {
@@ -153,8 +304,55 @@ namespace ThreadPilot.Core.Tests
             }
         }
 
-        private static ProcessService CreateService(string profilesDirectory) =>
-            new(null, null, () => profilesDirectory);
+        private static ProcessService CreateService(
+            string profilesDirectory,
+            ICpuTopologyProvider? topologyProvider = null,
+            FakeLoadProcessProfileApplier? profileApplier = null)
+        {
+            if (profileApplier == null)
+            {
+                return new(null, null, () => profilesDirectory, cpuTopologyProvider: topologyProvider);
+            }
+
+            return new ProcessService(
+                null,
+                null,
+                () => profilesDirectory,
+                foregroundProcessService: null,
+                processClassifier: null,
+                passiveProcessErrorThrottle: null,
+                cpuTopologyProvider: topologyProvider,
+                cpuSelectionMigrationService: null,
+                loadProcessProfilePrioritySetter: profileApplier.SetPriorityAsync,
+                loadProcessProfileCpuSelectionSetter: profileApplier.SetCpuSelectionAsync,
+                loadProcessProfileLegacyAffinitySetter: profileApplier.SetLegacyAffinityAsync);
+        }
+
+        private static ProcessModel CreateProcess() =>
+            new()
+            {
+                ProcessId = 1234,
+                Name = "game.exe",
+                Priority = ProcessPriorityClass.Normal,
+                ProcessorAffinity = 0,
+            };
+
+        private static CpuTopologySnapshot CreateTopology() =>
+            CpuTopologySnapshot.Create(
+            [
+                new ProcessorRef(0, 0, 0),
+                new ProcessorRef(0, 1, 1),
+            ]);
+
+        private static Task WriteProfileAsync(
+            string profilesDirectory,
+            string profileName,
+            ProcessProfileSnapshot profile)
+        {
+            var filePath = Path.Combine(profilesDirectory, $"{profileName}.json");
+            var json = JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true });
+            return File.WriteAllTextAsync(filePath, json);
+        }
 
         private static string CreateTemporaryDirectory()
         {
@@ -182,6 +380,49 @@ namespace ThreadPilot.Core.Tests
         {
             var field = typeof(ProcessService).GetField(fieldName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
             return (ConcurrentDictionary<TKey, TValue>)(field?.GetValue(service) ?? throw new InvalidOperationException($"Field '{fieldName}' not found."));
+        }
+
+        private sealed class FakeCpuTopologyProvider(CpuTopologySnapshot snapshot) : ICpuTopologyProvider
+        {
+            public Task<CpuTopologySnapshot> GetTopologySnapshotAsync(
+                CancellationToken cancellationToken = default) =>
+                Task.FromResult(snapshot);
+        }
+
+        private sealed class FakeLoadProcessProfileApplier
+        {
+            private readonly AffinityApplyResult cpuSelectionResult;
+
+            public FakeLoadProcessProfileApplier(AffinityApplyResult? cpuSelectionResult = null)
+            {
+                this.cpuSelectionResult = cpuSelectionResult ?? AffinityApplyResult.Succeeded(0, 0);
+            }
+
+            public int CpuSelectionApplyCalls { get; private set; }
+
+            public int LegacyAffinityApplyCalls { get; private set; }
+
+            public long LastLegacyAffinityMask { get; private set; }
+
+            public Task SetPriorityAsync(ProcessModel process, ProcessPriorityClass priority)
+            {
+                process.Priority = priority;
+                return Task.CompletedTask;
+            }
+
+            public Task<AffinityApplyResult> SetCpuSelectionAsync(ProcessModel process, CpuSelection selection)
+            {
+                this.CpuSelectionApplyCalls++;
+                return Task.FromResult(this.cpuSelectionResult);
+            }
+
+            public Task SetLegacyAffinityAsync(ProcessModel process, long affinityMask)
+            {
+                this.LegacyAffinityApplyCalls++;
+                this.LastLegacyAffinityMask = affinityMask;
+                process.ProcessorAffinity = affinityMask;
+                return Task.CompletedTask;
+            }
         }
     }
 }

@@ -47,6 +47,15 @@ namespace ThreadPilot.Models
         private long processorAffinity = -1; // All cores
 
         [ObservableProperty]
+        private int profileSchemaVersion = CpuAffinityProfileSchemaVersions.Legacy;
+
+        [ObservableProperty]
+        private CpuSelection? cpuSelection = null;
+
+        [ObservableProperty]
+        private CpuSelectionMigrationMetadata? cpuSelectionMigration = null;
+
+        [ObservableProperty]
         private string description = string.Empty;
 
         [ObservableProperty]
@@ -80,6 +89,9 @@ namespace ThreadPilot.Models
                 ProcessName = this.ProcessName,
                 Priority = this.Priority,
                 ProcessorAffinity = this.ProcessorAffinity,
+                ProfileSchemaVersion = this.ProfileSchemaVersion,
+                CpuSelection = this.CpuSelection,
+                CpuSelectionMigration = this.CpuSelectionMigration,
                 Description = this.Description,
                 IsEnabled = this.IsEnabled,
                 createdAt = DateTime.UtcNow,

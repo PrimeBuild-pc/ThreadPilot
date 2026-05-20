@@ -111,6 +111,8 @@ namespace ThreadPilot.Services
             services.AddSingleton<IPowerPlanService, PowerPlanService>();
             services.AddSingleton<PowerPlanTransitionGate>();
             services.AddSingleton<ICpuTopologyService, CpuTopologyService>();
+            services.AddSingleton<ICpuTopologyProvider, WindowsCpuTopologyProvider>();
+            services.AddSingleton<CpuSelectionMigrationService>();
             services.AddSingleton<ICpuPresetGenerator, CpuPresetGenerator>();
 
             // CoreMaskService needs IServiceProvider for checking profile references
@@ -118,7 +120,9 @@ namespace ThreadPilot.Services
             {
                 var logger = sp.GetRequiredService<ILogger<CoreMaskService>>();
                 var cpuTopologyService = sp.GetRequiredService<ICpuTopologyService>();
-                return new CoreMaskService(logger, cpuTopologyService, sp);
+                var cpuTopologyProvider = sp.GetRequiredService<ICpuTopologyProvider>();
+                var migrationService = sp.GetRequiredService<CpuSelectionMigrationService>();
+                return new CoreMaskService(logger, cpuTopologyService, sp, cpuTopologyProvider, migrationService);
             });
 
             return services;

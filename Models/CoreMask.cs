@@ -42,6 +42,12 @@ namespace ThreadPilot.Models
         /// </summary>
         public ObservableCollection<bool> BoolMask { get; set; } = new();
 
+        public int ProfileSchemaVersion { get; set; } = CpuAffinityProfileSchemaVersions.Legacy;
+
+        public CpuSelection? CpuSelection { get; set; }
+
+        public CpuSelectionMigrationMetadata? CpuSelectionMigration { get; set; }
+
         [ObservableProperty]
         private bool isDefault = false;
 
@@ -135,6 +141,9 @@ namespace ThreadPilot.Models
                 Description = this.Description,
                 IsEnabled = this.IsEnabled,
                 IsDefault = false,
+                ProfileSchemaVersion = this.ProfileSchemaVersion,
+                CpuSelection = this.CpuSelection,
+                CpuSelectionMigration = this.CpuSelectionMigration,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
             };
