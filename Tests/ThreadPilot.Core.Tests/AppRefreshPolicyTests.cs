@@ -5,8 +5,9 @@ namespace ThreadPilot.Core.Tests
     public sealed class AppRefreshPolicyTests
     {
         [Theory]
-        [InlineData(AppActivityState.ForegroundProcessView, true, true, true, true, true, true)]
-        [InlineData(AppActivityState.ForegroundOtherTab, false, false, false, true, true, true)]
+        [InlineData(AppActivityState.ForegroundProcessView, true, true, true, false, true, true)]
+        [InlineData(AppActivityState.ForegroundDiagnosticsView, false, false, false, true, true, true)]
+        [InlineData(AppActivityState.ForegroundOtherTab, false, false, false, false, true, true)]
         [InlineData(AppActivityState.Minimized, false, false, false, false, false, true)]
         [InlineData(AppActivityState.TrayHidden, false, false, false, false, false, true)]
         public void Evaluate_ReturnsExpectedRefreshDecision(
@@ -44,11 +45,13 @@ namespace ThreadPilot.Core.Tests
         [Theory]
         [InlineData(null, AppActivityState.ForegroundProcessView, true)]
         [InlineData(AppActivityState.ForegroundProcessView, AppActivityState.ForegroundProcessView, false)]
+        [InlineData(AppActivityState.ForegroundDiagnosticsView, AppActivityState.ForegroundDiagnosticsView, false)]
         [InlineData(AppActivityState.ForegroundOtherTab, AppActivityState.ForegroundOtherTab, false)]
         [InlineData(AppActivityState.Minimized, AppActivityState.Minimized, false)]
         [InlineData(AppActivityState.TrayHidden, AppActivityState.TrayHidden, false)]
         [InlineData(AppActivityState.TrayHidden, AppActivityState.ForegroundProcessView, true)]
         [InlineData(AppActivityState.ForegroundProcessView, AppActivityState.ForegroundOtherTab, true)]
+        [InlineData(AppActivityState.ForegroundOtherTab, AppActivityState.ForegroundDiagnosticsView, true)]
         public void ShouldApplyTransition_SkipsRedundantStateTransitions(
             AppActivityState? previousState,
             AppActivityState nextState,

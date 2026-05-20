@@ -127,12 +127,15 @@ namespace ThreadPilot.Services
             openDashboardMenuItem.Click += this.OnDashboardClick;
             this.contextMenu.Items.Add(openDashboardMenuItem);
 
-            this.performanceMenuItem = new ToolStripMenuItem("Open Performance")
+            if (AppNavigationOptions.ShowAdvancedDiagnostics)
             {
-                Font = new Font(this.menuFont, FontStyle.Regular),
-            };
-            this.performanceMenuItem.Click += this.OnPerformanceDashboardClick;
-            this.contextMenu.Items.Add(this.performanceMenuItem);
+                this.performanceMenuItem = new ToolStripMenuItem("Open Diagnostics")
+                {
+                    Font = new Font(this.menuFont, FontStyle.Regular),
+                };
+                this.performanceMenuItem.Click += this.OnPerformanceDashboardClick;
+                this.contextMenu.Items.Add(this.performanceMenuItem);
+            }
 
             this.monitoringToggleMenuItem = new ToolStripMenuItem("Pause Automation Monitoring");
             this.monitoringToggleMenuItem.Click += this.OnMonitoringToggleClick;
@@ -743,4 +746,3 @@ namespace ThreadPilot.Services
         }
     }
 }
-

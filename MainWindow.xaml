@@ -138,7 +138,7 @@
                             <ui:SymbolIcon Symbol="TasksApp24"/>
                         </ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
-                    <ui:NavigationViewItem x:Name="NavPerf" Content="Performance" Tag="Performance" TargetPageTag="Performance" Click="NavMenuItem_Click">
+                    <ui:NavigationViewItem x:Name="NavPerf" Content="Diagnostics" Tag="Performance" TargetPageTag="Performance" Click="NavMenuItem_Click">
                         <ui:NavigationViewItem.Icon>
                             <ui:SymbolIcon Symbol="DataHistogram24"/>
                         </ui:NavigationViewItem.Icon>
@@ -325,14 +325,14 @@
                     </Border.Effect>
                     <StackPanel>
                         <TextBlock x:Name="PerformanceIntroTitle"
-                                   Text="Performance Dashboard"
+                                   Text="Optional Diagnostics"
                                    FontSize="24"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                    Margin="0,0,0,10"/>
 
                         <TextBlock x:Name="PerformanceIntroDescription"
-                                   Text="This page gives you live CPU, memory and hotspot visibility so you can build precise optimization rules."
+                                   Text="Diagnostics are optional and intended for troubleshooting. For in-game overlays and detailed performance graphs, use dedicated tools."
                                    TextWrapping="Wrap"
                                    Margin="0,0,0,10"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
@@ -344,21 +344,21 @@
                                    Margin="0,0,0,6"/>
 
                         <TextBlock x:Name="PerformanceIntroTip1"
-                                   Text="1. Start live metrics to collect a current system snapshot."
+                                   Text="1. Open diagnostics only when you need a focused troubleshooting snapshot."
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Margin="0,0,0,4"/>
                         <TextBlock x:Name="PerformanceIntroTip2"
-                                   Text="2. Review top processes and pick recurring workloads."
+                                   Text="2. Review hotspots only as a hint before creating automation rules."
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Margin="0,0,0,4"/>
                         <TextBlock x:Name="PerformanceIntroTip3"
-                                   Text="3. Create rules from hotspots to automate power plan and affinity behavior."
+                                   Text="3. Stop live metrics when you are done troubleshooting."
                                    TextWrapping="Wrap"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Margin="0,0,0,16"/>
 
                         <Button x:Name="PerformanceIntroContinueButton"
-                                Content="Continue to Performance"
+                                Content="Continue to Diagnostics"
                                 Click="PerformanceIntroContinue_Click"
                                 HorizontalAlignment="Right"
                                 Background="{DynamicResource AccentFillColorDefaultBrush}"

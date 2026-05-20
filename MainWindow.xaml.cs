@@ -109,6 +109,7 @@ namespace ThreadPilot
 
                 this.InitializeComponent();
                 System.Diagnostics.Debug.WriteLine("InitializeComponent completed");
+                this.ConfigureDiagnosticsNavigation();
 
                 // Initialize loading overlay
                 this.InitializeLoadingOverlay();
@@ -158,6 +159,13 @@ namespace ThreadPilot
                     "MainWindow Initialization Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 throw;
             }
+        }
+
+        private void ConfigureDiagnosticsNavigation()
+        {
+            this.NavPerf.Visibility = AppNavigationOptions.ShowAdvancedDiagnostics
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         }
     }
 }

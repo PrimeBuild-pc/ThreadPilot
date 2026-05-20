@@ -166,9 +166,9 @@ namespace ThreadPilot.ViewModels
         private int blurRadius;
 
         private readonly Dictionary<string, DateTime> lastRuleApplyByExecutable = new(StringComparer.OrdinalIgnoreCase);
-        private bool monitoringWasActiveBeforeSuspend;
         private readonly SemaphoreSlim topProcessRefreshGate = new(1, 1);
         private bool pendingTopProcessRefresh;
+        private bool diagnosticsActivated;
 
         public PerformanceViewModel(
             IPerformanceMonitoringService performanceService,
@@ -196,22 +196,51 @@ namespace ThreadPilot.ViewModels
 
         public override async Task InitializeAsync()
         {
+            this.MonitoringStateText = "Stopped";
+            this.MonitoringStatusText = "Diagnostics inactive";
+            this.SetStatus("Diagnostics are inactive until opened.", false);
+            await Task.CompletedTask;
+        }
+
+        public async Task ActivateDiagnosticsAsync()
+        {
             try
             {
-                this.SetStatus("Initializing performance dashboard...");
+                this.SetStatus("Loading optional diagnostics...");
 
-                await this.RefreshMetricsAsync();
+                await this.RefreshMetricsSnapshotAsync();
                 await this.LoadHistoricalDataAsync();
-                await this.LoadTopProcessesAsync();
-                await this.RefreshGlobalPowerPlanAsync();
 
+                this.diagnosticsActivated = true;
                 this.MonitoringStateText = this.IsMonitoring ? "Active" : "Stopped";
-                this.SetStatus("Performance dashboard initialized", false);
+                this.MonitoringStatusText = this.IsMonitoring ? "Live metrics active" : "Diagnostics snapshot loaded";
+                this.SetStatus("Optional diagnostics loaded", false);
             }
             catch (Exception ex)
             {
-                this.SetError("Failed to initialize performance dashboard", ex);
-                this.logger.LogError(ex, "Error initializing performance dashboard");
+                this.SetError("Failed to load optional diagnostics", ex);
+                this.logger.LogError(ex, "Error loading optional diagnostics");
+            }
+        }
+
+        public async Task DeactivateDiagnosticsAsync()
+        {
+            try
+            {
+                if (this.IsMonitoring)
+                {
+                    await this.performanceService.StopMonitoringAsync();
+                }
+
+                this.IsMonitoring = false;
+                this.MonitoringStatusText = this.diagnosticsActivated
+                    ? "Diagnostics inactive"
+                    : "Live metrics stopped";
+                this.MonitoringStateText = "Stopped";
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogWarning(ex, "Failed to deactivate optional diagnostics");
             }
         }
 
@@ -220,6 +249,11 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
+                if (!this.diagnosticsActivated)
+                {
+                    await this.ActivateDiagnosticsAsync();
+                }
+
                 this.SetStatus("Starting performance monitoring...");
                 await this.performanceService.StartMonitoringAsync();
 
@@ -261,51 +295,32 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                if (!this.IsMonitoring)
-                {
-                    this.monitoringWasActiveBeforeSuspend = false;
-                    return;
-                }
-
-                this.monitoringWasActiveBeforeSuspend = true;
-                await this.performanceService.StopMonitoringAsync();
-
-                this.IsMonitoring = false;
-                this.MonitoringStatusText = "Live metrics paused";
-                this.MonitoringStateText = "Paused";
-                this.AddTimelineEvent("Live Metrics", "Live metrics paused while app is minimized.", "Info");
+                await this.DeactivateDiagnosticsAsync();
             }
             catch (Exception ex)
             {
-                this.logger.LogWarning(ex, "Failed to suspend performance monitoring while minimized");
+                this.logger.LogWarning(ex, "Failed to suspend performance diagnostics");
             }
         }
 
         public async Task ResumeBackgroundMonitoringAsync()
         {
-            try
-            {
-                if (!this.monitoringWasActiveBeforeSuspend || this.IsMonitoring)
-                {
-                    return;
-                }
-
-                await this.performanceService.StartMonitoringAsync();
-
-                this.IsMonitoring = true;
-                this.MonitoringStatusText = "Live metrics active";
-                this.MonitoringStateText = "Active";
-                this.AddTimelineEvent("Live Metrics", "Live metrics resumed after restore.", "Info");
-                this.monitoringWasActiveBeforeSuspend = false;
-            }
-            catch (Exception ex)
-            {
-                this.logger.LogWarning(ex, "Failed to resume performance monitoring after restore");
-            }
+            await Task.CompletedTask;
         }
 
         [RelayCommand]
         private async Task RefreshMetricsAsync()
+        {
+            if (!this.diagnosticsActivated)
+            {
+                await this.ActivateDiagnosticsAsync();
+                return;
+            }
+
+            await this.RefreshMetricsSnapshotAsync();
+        }
+
+        private async Task RefreshMetricsSnapshotAsync()
         {
             try
             {
@@ -486,22 +501,34 @@ namespace ThreadPilot.ViewModels
 
         partial void OnShowOnlyRuleBackedHotspotsChanged(bool value)
         {
-            _ = LoadTopProcessesAsync();
+            if (this.diagnosticsActivated)
+            {
+                _ = LoadTopProcessesAsync();
+            }
         }
 
         partial void OnShowOnlyActionableHotspotsChanged(bool value)
         {
-            _ = LoadTopProcessesAsync();
+            if (this.diagnosticsActivated)
+            {
+                _ = LoadTopProcessesAsync();
+            }
         }
 
         partial void OnSortModeChanged(string value)
         {
-            _ = LoadTopProcessesAsync();
+            if (this.diagnosticsActivated)
+            {
+                _ = LoadTopProcessesAsync();
+            }
         }
 
         partial void OnProcessSearchTextChanged(string value)
         {
-            _ = LoadTopProcessesAsync();
+            if (this.diagnosticsActivated)
+            {
+                _ = LoadTopProcessesAsync();
+            }
         }
 
         partial void OnIsPopupVisibleChanged(bool value)
@@ -618,7 +645,8 @@ namespace ThreadPilot.ViewModels
 
                     var snapshot = filtered.Take(50).ToList();
 
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    var dispatcher = System.Windows.Application.Current?.Dispatcher;
+                    void Apply()
                     {
                         this.TopCpuProcesses = new ObservableCollection<ProcessPerformanceInfo>(snapshot);
 
@@ -630,7 +658,16 @@ namespace ThreadPilot.ViewModels
                                 this.SelectedHotspotProcess = refreshedSelection;
                             }
                         }
-                    });
+                    }
+
+                    if (dispatcher != null && !dispatcher.CheckAccess())
+                    {
+                        await dispatcher.InvokeAsync(Apply);
+                    }
+                    else
+                    {
+                        Apply();
+                    }
 
                     await this.RefreshSelectedProcessRuleImpactAsync();
                 }

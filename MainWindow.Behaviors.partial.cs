@@ -340,15 +340,7 @@ namespace ThreadPilot
                 await powerPlanTask; // Ensure we get any exceptions
                 this.LogDebug("PowerPlanViewModel loaded successfully");
 
-                this.LogDebug("About to initialize PerformanceViewModel...");
-                var performanceTask = this.performanceViewModel.InitializeAsync();
-                var performanceResult = await Task.WhenAny(performanceTask, Task.Delay(5000));
-                if (performanceResult != performanceTask)
-                {
-                    throw new TimeoutException("PerformanceViewModel.InitializeAsync() timed out after 5 seconds");
-                }
-                await performanceTask; // Ensure we get any exceptions
-                this.LogDebug("PerformanceViewModel initialized successfully");
+                this.LogDebug("Skipping optional diagnostics initialization until the diagnostics page is opened.");
 
                 this.LogDebug("About to load SystemTweaksViewModel...");
                 var systemTweaksTask = this.systemTweaksViewModel.LoadCommand.ExecuteAsync(null);
@@ -1365,8 +1357,13 @@ namespace ThreadPilot
 
         private AppActivityState GetForegroundActivityState()
         {
-            return this.ProcessManagementTab.Visibility == Visibility.Visible
-                ? AppActivityState.ForegroundProcessView
+            if (this.ProcessManagementTab.Visibility == Visibility.Visible)
+            {
+                return AppActivityState.ForegroundProcessView;
+            }
+
+            return this.PerformanceViewControl.Visibility == Visibility.Visible
+                ? AppActivityState.ForegroundDiagnosticsView
                 : AppActivityState.ForegroundOtherTab;
         }
 
@@ -1408,7 +1405,7 @@ namespace ThreadPilot
 
             if (decision.PerformanceUiMonitoringEnabled)
             {
-                _ = this.performanceViewModel.ResumeBackgroundMonitoringAsync();
+                _ = this.performanceViewModel.ActivateDiagnosticsAsync();
             }
             else
             {
@@ -1791,9 +1788,14 @@ namespace ThreadPilot
                 return;
             }
 
-            this.ApplyAppRefreshPolicy(string.Equals(tag, "Process", StringComparison.Ordinal)
-                ? AppActivityState.ForegroundProcessView
-                : AppActivityState.ForegroundOtherTab);
+            var activityState = tag switch
+            {
+                "Process" => AppActivityState.ForegroundProcessView,
+                "Performance" => AppActivityState.ForegroundDiagnosticsView,
+                _ => AppActivityState.ForegroundOtherTab,
+            };
+
+            this.ApplyAppRefreshPolicy(activityState);
         }
 
         private void NavMenuItem_Click(object sender, RoutedEventArgs e)
