@@ -125,13 +125,15 @@ namespace ThreadPilot.Core.Tests
                 ProfileSchemaVersion = CpuAffinityProfileSchemaVersions.CpuSelection,
                 CpuSelection = CpuSelection.FromProcessors([topology.LogicalProcessors[0]], topology),
             };
-            var service = CreateTestableService(
-                profilesDirectory,
-                new FakeCpuTopologyProvider(topology),
+            var profileApplier = new FakeLoadProcessProfileApplier(
                 cpuSelectionResult: AffinityApplyResult.Failed(
                     AffinityApplyErrorCodes.NativeApplyFailed,
                     "Affinity was not applied.",
                     "simulated apply failure"));
+            var service = CreateService(
+                profilesDirectory,
+                new FakeCpuTopologyProvider(topology),
+                profileApplier);
 
             try
             {
@@ -140,8 +142,8 @@ namespace ThreadPilot.Core.Tests
                 var result = await service.LoadProcessProfile(profileName, CreateProcess());
 
                 Assert.False(result);
-                Assert.Equal(1, service.CpuSelectionApplyCalls);
-                Assert.Equal(0, service.LegacyAffinityApplyCalls);
+                Assert.Equal(1, profileApplier.CpuSelectionApplyCalls);
+                Assert.Equal(0, profileApplier.LegacyAffinityApplyCalls);
             }
             finally
             {
@@ -163,10 +165,12 @@ namespace ThreadPilot.Core.Tests
                 ProfileSchemaVersion = CpuAffinityProfileSchemaVersions.CpuSelection,
                 CpuSelection = CpuSelection.FromProcessors([topology.LogicalProcessors[0]], topology),
             };
-            var service = CreateTestableService(
+            var profileApplier = new FakeLoadProcessProfileApplier(
+                cpuSelectionResult: AffinityApplyResult.SucceededWithCpuSets("simulated apply success"));
+            var service = CreateService(
                 profilesDirectory,
                 new FakeCpuTopologyProvider(topology),
-                cpuSelectionResult: AffinityApplyResult.SucceededWithCpuSets("simulated apply success"));
+                profileApplier);
 
             try
             {
@@ -175,8 +179,8 @@ namespace ThreadPilot.Core.Tests
                 var result = await service.LoadProcessProfile(profileName, CreateProcess());
 
                 Assert.True(result);
-                Assert.Equal(1, service.CpuSelectionApplyCalls);
-                Assert.Equal(0, service.LegacyAffinityApplyCalls);
+                Assert.Equal(1, profileApplier.CpuSelectionApplyCalls);
+                Assert.Equal(0, profileApplier.LegacyAffinityApplyCalls);
             }
             finally
             {
@@ -195,7 +199,8 @@ namespace ThreadPilot.Core.Tests
                 Priority = ProcessPriorityClass.Normal,
                 ProcessorAffinity = 0b11,
             };
-            var service = CreateTestableService(profilesDirectory, topologyProvider: null);
+            var profileApplier = new FakeLoadProcessProfileApplier();
+            var service = CreateService(profilesDirectory, topologyProvider: null, profileApplier);
 
             try
             {
@@ -204,9 +209,9 @@ namespace ThreadPilot.Core.Tests
                 var result = await service.LoadProcessProfile(profileName, CreateProcess());
 
                 Assert.True(result);
-                Assert.Equal(1, service.LegacyAffinityApplyCalls);
-                Assert.Equal(0b11, service.LastLegacyAffinityMask);
-                Assert.Equal(0, service.CpuSelectionApplyCalls);
+                Assert.Equal(1, profileApplier.LegacyAffinityApplyCalls);
+                Assert.Equal(0b11, profileApplier.LastLegacyAffinityMask);
+                Assert.Equal(0, profileApplier.CpuSelectionApplyCalls);
             }
             finally
             {
@@ -301,14 +306,27 @@ namespace ThreadPilot.Core.Tests
 
         private static ProcessService CreateService(
             string profilesDirectory,
-            ICpuTopologyProvider? topologyProvider = null) =>
-            new(null, null, () => profilesDirectory, cpuTopologyProvider: topologyProvider);
+            ICpuTopologyProvider? topologyProvider = null,
+            FakeLoadProcessProfileApplier? profileApplier = null)
+        {
+            if (profileApplier == null)
+            {
+                return new(null, null, () => profilesDirectory, cpuTopologyProvider: topologyProvider);
+            }
 
-        private static TestableProcessService CreateTestableService(
-            string profilesDirectory,
-            ICpuTopologyProvider? topologyProvider,
-            AffinityApplyResult? cpuSelectionResult = null) =>
-            new(profilesDirectory, topologyProvider, cpuSelectionResult);
+            return new ProcessService(
+                null,
+                null,
+                () => profilesDirectory,
+                foregroundProcessService: null,
+                processClassifier: null,
+                passiveProcessErrorThrottle: null,
+                cpuTopologyProvider: topologyProvider,
+                cpuSelectionMigrationService: null,
+                loadProcessProfilePrioritySetter: profileApplier.SetPriorityAsync,
+                loadProcessProfileCpuSelectionSetter: profileApplier.SetCpuSelectionAsync,
+                loadProcessProfileLegacyAffinitySetter: profileApplier.SetLegacyAffinityAsync);
+        }
 
         private static ProcessModel CreateProcess() =>
             new()
@@ -371,15 +389,11 @@ namespace ThreadPilot.Core.Tests
                 Task.FromResult(snapshot);
         }
 
-        private sealed class TestableProcessService : ProcessService
+        private sealed class FakeLoadProcessProfileApplier
         {
             private readonly AffinityApplyResult cpuSelectionResult;
 
-            public TestableProcessService(
-                string profilesDirectory,
-                ICpuTopologyProvider? topologyProvider,
-                AffinityApplyResult? cpuSelectionResult)
-                : base(null, null, () => profilesDirectory, cpuTopologyProvider: topologyProvider)
+            public FakeLoadProcessProfileApplier(AffinityApplyResult? cpuSelectionResult = null)
             {
                 this.cpuSelectionResult = cpuSelectionResult ?? AffinityApplyResult.Succeeded(0, 0);
             }
@@ -390,19 +404,19 @@ namespace ThreadPilot.Core.Tests
 
             public long LastLegacyAffinityMask { get; private set; }
 
-            public override Task SetProcessPriority(ProcessModel process, ProcessPriorityClass priority)
+            public Task SetPriorityAsync(ProcessModel process, ProcessPriorityClass priority)
             {
                 process.Priority = priority;
                 return Task.CompletedTask;
             }
 
-            public override Task<AffinityApplyResult> SetProcessorAffinity(ProcessModel process, CpuSelection selection)
+            public Task<AffinityApplyResult> SetCpuSelectionAsync(ProcessModel process, CpuSelection selection)
             {
                 this.CpuSelectionApplyCalls++;
                 return Task.FromResult(this.cpuSelectionResult);
             }
 
-            public override Task SetProcessorAffinity(ProcessModel process, long affinityMask)
+            public Task SetLegacyAffinityAsync(ProcessModel process, long affinityMask)
             {
                 this.LegacyAffinityApplyCalls++;
                 this.LastLegacyAffinityMask = affinityMask;

@@ -45,6 +45,9 @@ namespace ThreadPilot.Services
         private readonly CpuSelectionAffinityApplier cpuSelectionAffinityApplier;
         private readonly ICpuTopologyProvider? cpuTopologyProvider;
         private readonly CpuSelectionMigrationService cpuSelectionMigrationService;
+        private readonly Func<ProcessModel, ProcessPriorityClass, Task>? loadProcessProfilePrioritySetter;
+        private readonly Func<ProcessModel, CpuSelection, Task<AffinityApplyResult>>? loadProcessProfileCpuSelectionSetter;
+        private readonly Func<ProcessModel, long, Task>? loadProcessProfileLegacyAffinitySetter;
 
         private string ProfilesDirectory => this.profilesDirectoryProvider();
 
@@ -63,6 +66,33 @@ namespace ThreadPilot.Services
             IPassiveProcessErrorThrottle? passiveProcessErrorThrottle = null,
             ICpuTopologyProvider? cpuTopologyProvider = null,
             CpuSelectionMigrationService? cpuSelectionMigrationService = null)
+            : this(
+                logger,
+                securityService,
+                profilesDirectoryProvider,
+                foregroundProcessService,
+                processClassifier,
+                passiveProcessErrorThrottle,
+                cpuTopologyProvider,
+                cpuSelectionMigrationService,
+                loadProcessProfilePrioritySetter: null,
+                loadProcessProfileCpuSelectionSetter: null,
+                loadProcessProfileLegacyAffinitySetter: null)
+        {
+        }
+
+        internal ProcessService(
+            ILogger<ProcessService>? logger,
+            ISecurityService? securityService,
+            Func<string>? profilesDirectoryProvider,
+            IForegroundProcessService? foregroundProcessService,
+            IProcessClassifier? processClassifier,
+            IPassiveProcessErrorThrottle? passiveProcessErrorThrottle,
+            ICpuTopologyProvider? cpuTopologyProvider,
+            CpuSelectionMigrationService? cpuSelectionMigrationService,
+            Func<ProcessModel, ProcessPriorityClass, Task>? loadProcessProfilePrioritySetter,
+            Func<ProcessModel, CpuSelection, Task<AffinityApplyResult>>? loadProcessProfileCpuSelectionSetter,
+            Func<ProcessModel, long, Task>? loadProcessProfileLegacyAffinitySetter)
         {
             this.logger = logger;
             this.securityService = securityService;
@@ -72,6 +102,9 @@ namespace ThreadPilot.Services
             this.profilesDirectoryProvider = profilesDirectoryProvider ?? (() => StoragePaths.ProfilesDirectory);
             this.cpuTopologyProvider = cpuTopologyProvider;
             this.cpuSelectionMigrationService = cpuSelectionMigrationService ?? new CpuSelectionMigrationService();
+            this.loadProcessProfilePrioritySetter = loadProcessProfilePrioritySetter;
+            this.loadProcessProfileCpuSelectionSetter = loadProcessProfileCpuSelectionSetter;
+            this.loadProcessProfileLegacyAffinitySetter = loadProcessProfileLegacyAffinitySetter;
             this.cpuSelectionAffinityApplier = new CpuSelectionAffinityApplier(
                 this.GetOrCreateCpuSetHandler,
                 this.ApplyLegacyProcessorAffinityDirectAsync,
@@ -362,7 +395,7 @@ namespace ThreadPilot.Services
             return model;
         }
 
-        public virtual async Task SetProcessorAffinity(ProcessModel process, long affinityMask)
+        public async Task SetProcessorAffinity(ProcessModel process, long affinityMask)
         {
             this.EnsureProcessOperationAllowed(process, "SetProcessAffinity");
 
@@ -427,7 +460,7 @@ namespace ThreadPilot.Services
             }).ConfigureAwait(false);
         }
 
-        public virtual async Task<AffinityApplyResult> SetProcessorAffinity(ProcessModel process, CpuSelection selection)
+        public async Task<AffinityApplyResult> SetProcessorAffinity(ProcessModel process, CpuSelection selection)
         {
             if (process == null)
             {
@@ -551,7 +584,7 @@ namespace ThreadPilot.Services
             }).ConfigureAwait(false);
         }
 
-        public virtual async Task SetProcessPriority(ProcessModel process, ProcessPriorityClass priority)
+        public async Task SetProcessPriority(ProcessModel process, ProcessPriorityClass priority)
         {
             this.EnsureProcessOperationAllowed(process, "SetProcessPriority");
 
@@ -625,7 +658,7 @@ namespace ThreadPilot.Services
                 return false;
             }
 
-            await this.SetProcessPriority(process, profile.Priority).ConfigureAwait(false);
+            await this.SetLoadProcessProfilePriorityAsync(process, profile.Priority).ConfigureAwait(false);
             var topology = await this.TryGetTopologySnapshotAsync().ConfigureAwait(false);
             if (topology != null)
             {
@@ -634,7 +667,7 @@ namespace ThreadPilot.Services
 
             if (profile.CpuSelection != null)
             {
-                var result = await this.SetProcessorAffinity(process, profile.CpuSelection).ConfigureAwait(false);
+                var result = await this.SetLoadProcessProfileCpuSelectionAsync(process, profile.CpuSelection).ConfigureAwait(false);
                 if (!result.Success)
                 {
                     this.logger?.LogWarning(
@@ -650,11 +683,26 @@ namespace ThreadPilot.Services
             }
             else
             {
-                await this.SetProcessorAffinity(process, profile.ProcessorAffinity).ConfigureAwait(false);
+                await this.SetLoadProcessProfileLegacyAffinityAsync(process, profile.ProcessorAffinity).ConfigureAwait(false);
             }
 
             return true;
         }
+
+        private Task SetLoadProcessProfilePriorityAsync(ProcessModel process, ProcessPriorityClass priority) =>
+            this.loadProcessProfilePrioritySetter != null
+                ? this.loadProcessProfilePrioritySetter(process, priority)
+                : this.SetProcessPriority(process, priority);
+
+        private Task<AffinityApplyResult> SetLoadProcessProfileCpuSelectionAsync(ProcessModel process, CpuSelection selection) =>
+            this.loadProcessProfileCpuSelectionSetter != null
+                ? this.loadProcessProfileCpuSelectionSetter(process, selection)
+                : this.SetProcessorAffinity(process, selection);
+
+        private Task SetLoadProcessProfileLegacyAffinityAsync(ProcessModel process, long affinityMask) =>
+            this.loadProcessProfileLegacyAffinitySetter != null
+                ? this.loadProcessProfileLegacyAffinitySetter(process, affinityMask)
+                : this.SetProcessorAffinity(process, affinityMask);
 
         private async Task<CpuTopologySnapshot?> TryGetTopologySnapshotAsync()
         {
