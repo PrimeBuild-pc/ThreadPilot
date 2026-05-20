@@ -362,7 +362,7 @@ namespace ThreadPilot.Services
             return model;
         }
 
-        public async Task SetProcessorAffinity(ProcessModel process, long affinityMask)
+        public virtual async Task SetProcessorAffinity(ProcessModel process, long affinityMask)
         {
             this.EnsureProcessOperationAllowed(process, "SetProcessAffinity");
 
@@ -427,7 +427,7 @@ namespace ThreadPilot.Services
             }).ConfigureAwait(false);
         }
 
-        public async Task<AffinityApplyResult> SetProcessorAffinity(ProcessModel process, CpuSelection selection)
+        public virtual async Task<AffinityApplyResult> SetProcessorAffinity(ProcessModel process, CpuSelection selection)
         {
             if (process == null)
             {
@@ -551,7 +551,7 @@ namespace ThreadPilot.Services
             }).ConfigureAwait(false);
         }
 
-        public async Task SetProcessPriority(ProcessModel process, ProcessPriorityClass priority)
+        public virtual async Task SetProcessPriority(ProcessModel process, ProcessPriorityClass priority)
         {
             this.EnsureProcessOperationAllowed(process, "SetProcessPriority");
 
@@ -634,7 +634,19 @@ namespace ThreadPilot.Services
 
             if (profile.CpuSelection != null)
             {
-                await this.SetProcessorAffinity(process, profile.CpuSelection).ConfigureAwait(false);
+                var result = await this.SetProcessorAffinity(process, profile.CpuSelection).ConfigureAwait(false);
+                if (!result.Success)
+                {
+                    this.logger?.LogWarning(
+                        "Failed to apply CpuSelection profile {ProfileName} to process {ProcessName} (PID: {ProcessId}). ErrorCode: {ErrorCode}. Message: {Message}",
+                        profileName,
+                        process.Name,
+                        process.ProcessId,
+                        result.ErrorCode,
+                        result.Message);
+
+                    return false;
+                }
             }
             else
             {
