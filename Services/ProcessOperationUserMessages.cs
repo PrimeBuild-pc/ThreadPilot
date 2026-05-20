@@ -33,6 +33,12 @@ namespace ThreadPilot.Services
 
         public const string PersistentLaunchTimePriorityNotice =
             "Persistent launch-time priority may be supported for normal processes, but it does not bypass protected process or anti-cheat restrictions.";
+
+        public const string PersistentRulesDescription =
+            "Applies saved rules when a matching process starts. Some protected or anti-cheat processes may reject changes. Administrator mode can help with normal permission issues but cannot bypass protection.";
+
+        public const string PersistentRulesProtectedProcessWarning =
+            "The process appears protected by anti-cheat or process protection. ThreadPilot will not try to override it.";
     }
 
     internal static class ProcessPriorityGuardrails
