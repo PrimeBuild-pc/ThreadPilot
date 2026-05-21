@@ -47,6 +47,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <Border Grid.Row="0"
@@ -181,6 +182,68 @@
                         </TextBlock>
                     </Border>
                 </Grid>
+
+                <Border Grid.Row="2"
+                        Background="{DynamicResource CardSurfaceBrush}"
+                        BorderBrush="{DynamicResource BorderSubtleBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="10"
+                        Margin="0,12,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Current process status"
+                                   FontSize="{StaticResource ProcessFontMediumSmall}"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,2"/>
+                        <TextBlock Text="Rules and changes are applied by ThreadPilot only when configured."
+                                   FontSize="{StaticResource ProcessFontSmall}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,8"/>
+                        <WrapPanel>
+                            <TextBlock Text="{Binding SelectedProcessSummary.ProcessTitle}"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"
+                                       Margin="0,0,18,4"/>
+                            <TextBlock Text="{Binding SelectedProcessSummary.CurrentProcessStatusText}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Margin="0,0,18,4"/>
+                            <TextBlock Text="{Binding SelectedProcessSummary.CpuPriorityText}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Margin="0,0,18,4"/>
+                            <TextBlock Text="{Binding SelectedProcessSummary.MemoryPriorityText}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Margin="0,0,18,4"/>
+                            <TextBlock Text="{Binding SelectedProcessSummary.AffinityText}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Margin="0,0,18,4"/>
+                            <TextBlock Text="{Binding SelectedProcessSummary.RuleStatusText}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Margin="0,0,18,4"/>
+                        </WrapPanel>
+                        <TextBlock Text="{Binding SelectedProcessSummary.ExecutablePath}"
+                                   FontSize="{StaticResource ProcessFontSmall}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextTrimming="CharacterEllipsis"
+                                   Margin="0,0,0,4"/>
+                        <WrapPanel Margin="0,2,0,0">
+                            <TextBlock Text="{Binding SelectedProcessSummary.CpuUsageText}"
+                                       FontSize="{StaticResource ProcessFontSmall}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Margin="0,0,18,0"/>
+                            <TextBlock Text="{Binding SelectedProcessSummary.MemoryUsageText}"
+                                       FontSize="{StaticResource ProcessFontSmall}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Margin="0,0,18,0"/>
+                            <TextBlock FontSize="{StaticResource ProcessFontSmall}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextWrapping="Wrap">
+                                <Run Text="Last ThreadPilot action: "/>
+                                <Run Text="{Binding SelectedProcessSummary.LastOperationMessage}"/>
+                            </TextBlock>
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
             </Grid>
 
             <Border Grid.Column="2"

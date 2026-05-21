@@ -154,6 +154,8 @@ namespace ThreadPilot.ViewModels
 
         partial void OnSelectedProcessChanged(ProcessModel? value)
         {
+            this.UpdateSelectedProcessSummary(value);
+
             if (value != null && CpuTopology != null)
             {
                 this.HasPendingAffinityEdits = false;
@@ -172,6 +174,13 @@ namespace ThreadPilot.ViewModels
 
             // Update system tray context menu
             this.systemTrayService.UpdateContextMenu(value?.Name, value != null);
+        }
+
+        private void UpdateSelectedProcessSummary(ProcessModel? process)
+        {
+            TaskSafety.FireAndForget(
+                this.SelectedProcessSummary.UpdateAsync(process, this.StatusMessage, this.HasError),
+                ex => this.Logger.LogWarning(ex, "Failed to update selected process summary"));
         }
 
         private async Task HandleSelectedProcessChangedAsync(ProcessModel value)
@@ -213,6 +222,11 @@ namespace ThreadPilot.ViewModels
                         $"Selected process: {value.Name} (PID: {value.ProcessId}) - " +
                             $"Priority: {value.Priority}, Affinity: 0x{value.ProcessorAffinity:X}", false);
                 });
+                if (ReferenceEquals(this.SelectedProcess, value))
+                {
+                    // Keep this second update for refreshed process fields and the latest operation message.
+                    this.UpdateSelectedProcessSummary(value);
+                }
 
                 // Load current power plan association if available
                 await this.LoadProcessPowerPlanAssociation(value);
@@ -235,6 +249,10 @@ namespace ThreadPilot.ViewModels
                 {
                     this.SetStatus($"Warning: Could not access process {value.Name} - it may have terminated or require elevated privileges", false);
                 });
+                if (ReferenceEquals(this.SelectedProcess, value))
+                {
+                    this.UpdateSelectedProcessSummary(value);
+                }
             }
         }
 

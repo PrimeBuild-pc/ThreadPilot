@@ -180,7 +180,10 @@ namespace ThreadPilot.ViewModels
             IAffinityApplyService? affinityApplyService = null,
             IProcessAffinityApplyCoordinator? processAffinityApplyCoordinator = null,
             ICpuTopologyProvider? cpuTopologyProvider = null,
-            IEnhancedLoggingService? enhancedLoggingService = null)
+            IEnhancedLoggingService? enhancedLoggingService = null,
+            IProcessMemoryPriorityService? memoryPriorityService = null,
+            IPersistentProcessRuleStore? persistentRuleStore = null,
+            IPersistentProcessRuleMatcher? persistentRuleMatcher = null)
             : base(logger, enhancedLoggingService)
         {
             this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
@@ -202,6 +205,10 @@ namespace ThreadPilot.ViewModels
                 cpuTopologyProvider,
                 new CpuSelectionMigrationService(),
                 NullLogger<ProcessAffinityApplyCoordinator>.Instance);
+            this.SelectedProcessSummary = new SelectedProcessSummaryViewModel(
+                memoryPriorityService,
+                persistentRuleStore,
+                persistentRuleMatcher);
 
             // Subscribe to topology detection events
             this.cpuTopologyService.TopologyDetected += this.OnTopologyDetected;
@@ -223,5 +230,7 @@ namespace ThreadPilot.ViewModels
             this.SetupVirtualizedProcessService();
             // Note: InitializeAsync() will be called explicitly by MainWindow loading overlay
         }
+
+        public SelectedProcessSummaryViewModel SelectedProcessSummary { get; }
     }
 }
