@@ -20,7 +20,9 @@ namespace ThreadPilot.ViewModels
     using System.Collections.ObjectModel;
     using System.ComponentModel;
     using System.Diagnostics;
+    using System.IO;
     using System.Linq;
+    using System.Text;
     using System.Threading.Tasks;
     using System.Windows.Input;
     using CommunityToolkit.Mvvm.ComponentModel;
@@ -179,8 +181,13 @@ namespace ThreadPilot.ViewModels
         private void UpdateSelectedProcessSummary(ProcessModel? process)
         {
             TaskSafety.FireAndForget(
-                this.SelectedProcessSummary.UpdateAsync(process, this.StatusMessage, this.HasError),
+                this.UpdateSelectedProcessSummaryAsync(process),
                 ex => this.Logger.LogWarning(ex, "Failed to update selected process summary"));
+        }
+
+        private Task UpdateSelectedProcessSummaryAsync(ProcessModel? process)
+        {
+            return this.SelectedProcessSummary.UpdateAsync(process, this.StatusMessage, this.HasError);
         }
 
         private async Task HandleSelectedProcessChangedAsync(ProcessModel value)
@@ -1252,6 +1259,285 @@ namespace ThreadPilot.ViewModels
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(this.ClearStatus);
             }
+        }
+
+        [RelayCommand]
+        private Task SetContextBelowNormalPriority(ProcessModel? process) =>
+            this.SetContextCpuPriorityAsync(process, ProcessPriorityClass.BelowNormal);
+
+        [RelayCommand]
+        private Task SetContextNormalPriority(ProcessModel? process) =>
+            this.SetContextCpuPriorityAsync(process, ProcessPriorityClass.Normal);
+
+        [RelayCommand]
+        private Task SetContextAboveNormalPriority(ProcessModel? process) =>
+            this.SetContextCpuPriorityAsync(process, ProcessPriorityClass.AboveNormal);
+
+        [RelayCommand]
+        private Task SetContextHighPriority(ProcessModel? process) =>
+            this.SetContextCpuPriorityAsync(process, ProcessPriorityClass.High);
+
+        [RelayCommand]
+        private Task SetContextMemoryPriorityVeryLow(ProcessModel? process) =>
+            this.SetContextMemoryPriorityAsync(process, ProcessMemoryPriority.VeryLow);
+
+        [RelayCommand]
+        private Task SetContextMemoryPriorityLow(ProcessModel? process) =>
+            this.SetContextMemoryPriorityAsync(process, ProcessMemoryPriority.Low);
+
+        [RelayCommand]
+        private Task SetContextMemoryPriorityMedium(ProcessModel? process) =>
+            this.SetContextMemoryPriorityAsync(process, ProcessMemoryPriority.Medium);
+
+        [RelayCommand]
+        private Task SetContextMemoryPriorityBelowNormal(ProcessModel? process) =>
+            this.SetContextMemoryPriorityAsync(process, ProcessMemoryPriority.BelowNormal);
+
+        [RelayCommand]
+        private Task SetContextMemoryPriorityNormal(ProcessModel? process) =>
+            this.SetContextMemoryPriorityAsync(process, ProcessMemoryPriority.Normal);
+
+        [RelayCommand]
+        private async Task ClearContextCpuSets(ProcessModel? process)
+        {
+            if (process == null)
+            {
+                return;
+            }
+
+            try
+            {
+                var success = await this.processService.ClearProcessCpuSetAsync(process);
+                if (!success)
+                {
+                    this.SetContextError(ProcessOperationUserMessages.AccessDenied);
+                    await this.UpdateSelectedProcessSummaryAsync(process);
+                    return;
+                }
+
+                await this.processService.RefreshProcessInfo(process);
+                this.SetStatus($"CPU Sets cleared for {process.Name}.", false);
+                await this.UpdateSelectedProcessSummaryAsync(process);
+            }
+            catch (Exception ex)
+            {
+                this.SetContextError(MapProcessOperationException(ex));
+                await this.TryRefreshContextProcessSummaryAsync(process);
+            }
+        }
+
+        [RelayCommand]
+        private async Task RefreshContextProcessInfo(ProcessModel? process)
+        {
+            if (process == null)
+            {
+                return;
+            }
+
+            try
+            {
+                await this.processService.RefreshProcessInfo(process);
+                this.SetStatus($"Process info refreshed for {process.Name}.", false);
+                await this.UpdateSelectedProcessSummaryAsync(process);
+            }
+            catch (Exception ex)
+            {
+                this.SetContextError(MapProcessOperationException(ex));
+                await this.TryRefreshContextProcessSummaryAsync(process);
+            }
+        }
+
+        [RelayCommand]
+        private async Task OpenContextExecutableLocation(ProcessModel? process)
+        {
+            if (process == null)
+            {
+                return;
+            }
+
+            var path = process.ExecutablePath;
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            {
+                this.SetContextError($"Executable path is unavailable for {process.Name}.");
+                await this.UpdateSelectedProcessSummaryAsync(process);
+                return;
+            }
+
+            try
+            {
+                this.executableLocationOpener(path);
+                this.SetStatus($"Opened executable location for {process.Name}.", false);
+                await this.UpdateSelectedProcessSummaryAsync(process);
+            }
+            catch (Exception ex)
+            {
+                this.SetContextError($"Could not open executable location: {ex.Message}");
+                await this.UpdateSelectedProcessSummaryAsync(process);
+            }
+        }
+
+        [RelayCommand]
+        private async Task CopyContextProcessInfo(ProcessModel? process)
+        {
+            if (process == null)
+            {
+                return;
+            }
+
+            await this.UpdateSelectedProcessSummaryAsync(process);
+
+            var path = string.IsNullOrWhiteSpace(process.ExecutablePath)
+                ? "unavailable"
+                : process.ExecutablePath;
+            var builder = new StringBuilder()
+                .AppendLine($"Name: {process.Name}")
+                .AppendLine($"PID: {process.ProcessId}")
+                .AppendLine($"Path: {path}")
+                .AppendLine($"CPU priority: {process.Priority}")
+                .AppendLine($"Memory priority: {this.SelectedProcessSummary.MemoryPriority?.ToString() ?? "unavailable"}")
+                .AppendLine($"Affinity: 0x{process.ProcessorAffinity:X}")
+                .AppendLine($"Rule status: {this.SelectedProcessSummary.RuleStatusText}");
+
+            try
+            {
+                this.clipboardSetter(builder.ToString().TrimEnd());
+                this.SetStatus($"Copied process info for {process.Name}.", false);
+                await this.UpdateSelectedProcessSummaryAsync(process);
+            }
+            catch (Exception ex)
+            {
+                this.SetContextError($"Could not copy process info: {ex.Message}");
+                await this.UpdateSelectedProcessSummaryAsync(process);
+            }
+        }
+
+        private async Task SetContextCpuPriorityAsync(ProcessModel? process, ProcessPriorityClass priority)
+        {
+            if (process == null)
+            {
+                return;
+            }
+
+            if (ProcessPriorityGuardrails.IsBlocked(priority))
+            {
+                this.SetContextError(ProcessOperationUserMessages.RealtimePriorityBlocked);
+                await this.UpdateSelectedProcessSummaryAsync(process);
+                return;
+            }
+
+            try
+            {
+                await this.processService.SetProcessPriority(process, priority);
+                await this.processService.RefreshProcessInfo(process);
+
+                var warning = ProcessPriorityGuardrails.GetWarning(priority);
+                if (!string.IsNullOrWhiteSpace(warning))
+                {
+                    this.SetCriticalStatus(warning);
+                    _ = this.notificationService.ShowNotificationAsync("Priority warning", warning, NotificationType.Warning);
+                }
+                else
+                {
+                    this.SetStatus($"Priority applied successfully to {process.Name}: {priority}.", false);
+                    _ = this.notificationService.ShowNotificationAsync("Priority applied", $"{process.Name}: {priority}", NotificationType.Success);
+                }
+
+                await this.UpdateSelectedProcessSummaryAsync(process);
+            }
+            catch (Exception ex)
+            {
+                var message = MapProcessOperationException(ex);
+                this.SetContextError(message);
+                _ = this.notificationService.ShowNotificationAsync("Priority blocked", message, NotificationType.Warning);
+                await this.TryRefreshContextProcessSummaryAsync(process);
+            }
+        }
+
+        private async Task SetContextMemoryPriorityAsync(ProcessModel? process, ProcessMemoryPriority priority)
+        {
+            if (process == null)
+            {
+                return;
+            }
+
+            if (this.memoryPriorityService == null)
+            {
+                this.SetContextError("Memory priority is unavailable on this system.");
+                await this.UpdateSelectedProcessSummaryAsync(process);
+                return;
+            }
+
+            try
+            {
+                var result = await this.memoryPriorityService.SetMemoryPriorityAsync(process, priority);
+                if (!result.Success)
+                {
+                    this.SetContextError(string.IsNullOrWhiteSpace(result.UserMessage)
+                        ? ProcessOperationUserMessages.AccessDenied
+                        : result.UserMessage);
+                    await this.UpdateSelectedProcessSummaryAsync(process);
+                    return;
+                }
+
+                this.SetStatus($"Memory priority applied successfully to {process.Name}: {priority}.", false);
+                await this.UpdateSelectedProcessSummaryAsync(process);
+            }
+            catch (Exception ex)
+            {
+                this.SetContextError(MapProcessOperationException(ex));
+                await this.UpdateSelectedProcessSummaryAsync(process);
+            }
+        }
+
+        private async Task TryRefreshContextProcessSummaryAsync(ProcessModel process)
+        {
+            try
+            {
+                await this.processService.RefreshProcessInfo(process);
+            }
+            catch
+            {
+                // The selected process may have exited or become inaccessible; keep the safe user message.
+            }
+
+            await this.UpdateSelectedProcessSummaryAsync(process);
+        }
+
+        private void SetContextError(string message)
+        {
+            this.SetStatus(message, false);
+            this.SetError(message);
+        }
+
+        private static string MapProcessOperationException(Exception exception)
+        {
+            var message = exception.Message ?? string.Empty;
+            if (message.Contains("Realtime priority", StringComparison.OrdinalIgnoreCase))
+            {
+                return ProcessOperationUserMessages.RealtimePriorityBlocked;
+            }
+
+            if (message.Contains("anti-cheat", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("protected", StringComparison.OrdinalIgnoreCase))
+            {
+                return ProcessOperationUserMessages.AntiCheatProtectedLikely;
+            }
+
+            if (message.Contains("exited", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("terminated", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("no longer exists", StringComparison.OrdinalIgnoreCase))
+            {
+                return ProcessOperationUserMessages.ProcessExited;
+            }
+
+            if (exception is UnauthorizedAccessException ||
+                message.Contains("access denied", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("denied", StringComparison.OrdinalIgnoreCase))
+            {
+                return ProcessOperationUserMessages.AccessDenied;
+            }
+
+            return string.IsNullOrWhiteSpace(message) ? ProcessOperationUserMessages.AccessDenied : message;
         }
 
         [RelayCommand]

@@ -17,6 +17,7 @@
 namespace ThreadPilot.ViewModels
 {
     using System;
+    using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.ComponentModel;
     using System.Diagnostics;
@@ -46,6 +47,9 @@ namespace ThreadPilot.ViewModels
         private readonly IGameModeService gameModeService;
         private readonly IAffinityApplyService affinityApplyService;
         private readonly IProcessAffinityApplyCoordinator processAffinityApplyCoordinator;
+        private readonly IProcessMemoryPriorityService? memoryPriorityService;
+        private readonly Action<string> clipboardSetter;
+        private readonly Action<string> executableLocationOpener;
         private System.Timers.Timer? refreshTimer;
         private bool isUiRefreshPaused;
         private bool isProcessViewActive = true;
@@ -183,7 +187,9 @@ namespace ThreadPilot.ViewModels
             IEnhancedLoggingService? enhancedLoggingService = null,
             IProcessMemoryPriorityService? memoryPriorityService = null,
             IPersistentProcessRuleStore? persistentRuleStore = null,
-            IPersistentProcessRuleMatcher? persistentRuleMatcher = null)
+            IPersistentProcessRuleMatcher? persistentRuleMatcher = null,
+            Action<string>? clipboardSetter = null,
+            Action<string>? executableLocationOpener = null)
             : base(logger, enhancedLoggingService)
         {
             this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
@@ -205,6 +211,9 @@ namespace ThreadPilot.ViewModels
                 cpuTopologyProvider,
                 new CpuSelectionMigrationService(),
                 NullLogger<ProcessAffinityApplyCoordinator>.Instance);
+            this.memoryPriorityService = memoryPriorityService;
+            this.clipboardSetter = clipboardSetter ?? System.Windows.Clipboard.SetText;
+            this.executableLocationOpener = executableLocationOpener ?? OpenExecutableLocationInExplorer;
             this.SelectedProcessSummary = new SelectedProcessSummaryViewModel(
                 memoryPriorityService,
                 persistentRuleStore,
@@ -231,6 +240,26 @@ namespace ThreadPilot.ViewModels
             // Note: InitializeAsync() will be called explicitly by MainWindow loading overlay
         }
 
+        public IReadOnlyList<ProcessPriorityClass> ContextMenuCpuPriorityActions { get; } =
+        [
+            ProcessPriorityClass.BelowNormal,
+            ProcessPriorityClass.Normal,
+            ProcessPriorityClass.AboveNormal,
+            ProcessPriorityClass.High,
+        ];
+
         public SelectedProcessSummaryViewModel SelectedProcessSummary { get; }
+
+        private static void OpenExecutableLocationInExplorer(string executablePath)
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = $"/select,\"{executablePath}\"",
+                UseShellExecute = true,
+            };
+
+            Process.Start(startInfo);
+        }
     }
 }
