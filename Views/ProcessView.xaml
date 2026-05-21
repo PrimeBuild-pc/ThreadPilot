@@ -142,6 +142,70 @@
                               ScrollViewer.CanContentScroll="True"
                               AutomationProperties.Name="Running process list"
                               AutomationProperties.HelpText="Virtualized process table with sorting and selection">
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=DataGrid}}"/>
+                                <EventSetter Event="PreviewMouseRightButtonDown" Handler="ProcessRow_PreviewMouseRightButtonDown"/>
+                                <Setter Property="ContextMenu">
+                                    <Setter.Value>
+                                        <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                                            <MenuItem Header="Apply Affinity"
+                                                      Command="{Binding ApplyContextAffinityCommand}"
+                                                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                            <MenuItem Header="Clear CPU Sets"
+                                                      Command="{Binding ClearContextCpuSetsCommand}"
+                                                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                            <Separator/>
+                                            <MenuItem Header="Set CPU Priority">
+                                                <MenuItem Header="Below Normal"
+                                                          Command="{Binding SetContextBelowNormalPriorityCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                <MenuItem Header="Normal"
+                                                          Command="{Binding SetContextNormalPriorityCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                <MenuItem Header="Above Normal"
+                                                          Command="{Binding SetContextAboveNormalPriorityCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                <MenuItem Header="High"
+                                                          Command="{Binding SetContextHighPriorityCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                <MenuItem Header="Realtime (blocked)"
+                                                          IsEnabled="False"
+                                                          ToolTipService.ShowOnDisabled="True"
+                                                          ToolTip="Realtime priority is blocked by ThreadPilot because it can make Windows unstable or unresponsive."/>
+                                            </MenuItem>
+                                            <MenuItem Header="Set Memory Priority">
+                                                <MenuItem Header="Very Low"
+                                                          Command="{Binding SetContextMemoryPriorityVeryLowCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                <MenuItem Header="Low"
+                                                          Command="{Binding SetContextMemoryPriorityLowCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                <MenuItem Header="Medium"
+                                                          Command="{Binding SetContextMemoryPriorityMediumCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                <MenuItem Header="Below Normal"
+                                                          Command="{Binding SetContextMemoryPriorityBelowNormalCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                <MenuItem Header="Normal"
+                                                          Command="{Binding SetContextMemoryPriorityNormalCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                            </MenuItem>
+                                            <Separator/>
+                                            <MenuItem Header="Open Executable Location"
+                                                      Command="{Binding OpenContextExecutableLocationCommand}"
+                                                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                            <MenuItem Header="Copy Process Info"
+                                                      Command="{Binding CopyContextProcessInfoCommand}"
+                                                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                            <MenuItem Header="Refresh Process Info"
+                                                      Command="{Binding RefreshContextProcessInfoCommand}"
+                                                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                        </ContextMenu>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </DataGrid.RowStyle>
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="160"/>
                             <DataGridTextColumn Header="ID" Binding="{Binding ProcessId}" Width="70"/>
