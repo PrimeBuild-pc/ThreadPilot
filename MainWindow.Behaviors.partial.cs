@@ -49,9 +49,6 @@ namespace ThreadPilot
             // Set DataContext for the association view
             this.AssociationView.DataContext = this.associationViewModel;
 
-            // Set DataContext for the performance view
-            this.PerformanceViewControl.DataContext = this.performanceViewModel;
-
             // Set DataContext for the log viewer view
             this.LogViewerViewControl.DataContext = this.logViewerViewModel;
 
@@ -1001,57 +998,7 @@ namespace ThreadPilot
         {
             try
             {
-                // Update power plans in system tray
-                var powerPlanService = this.serviceProvider.GetRequiredService<IPowerPlanService>();
-                var powerPlans = await powerPlanService.GetPowerPlansAsync();
-                var activePowerPlan = await powerPlanService.GetActivePowerPlan();
-                this.systemTrayService.UpdatePowerPlans(powerPlans, activePowerPlan);
-
-                // Update profiles in system tray
-                var profilesDirectory = StoragePaths.ProfilesDirectory;
-                var profileNames = new List<string>();
-
-                if (Directory.Exists(profilesDirectory))
-                {
-                    profileNames = Directory.GetFiles(profilesDirectory, "*.json")
-                        .Select(Path.GetFileNameWithoutExtension)
-                        .Where(name => !string.IsNullOrWhiteSpace(name))
-                        .ToList()!;
-                }
-
-                this.systemTrayService.UpdateProfiles(profileNames);
-
-                // Update system status (with timeout to prevent hanging)
-                try
-                {
-                    var performanceService = this.serviceProvider.GetRequiredService<IPerformanceMonitoringService>();
-                    var metricsTask = performanceService.GetSystemMetricsAsync(lightweight: true);
-                    var metricsResult = await Task.WhenAny(metricsTask, Task.Delay(2000)); // 2 second timeout
-
-                    if (metricsResult == metricsTask)
-                    {
-                        var currentMetrics = await metricsTask;
-                        this.systemTrayService.UpdateSystemStatus(
-                            activePowerPlan?.Name ?? "Unknown",
-                            currentMetrics?.TotalCpuUsage ?? 0.0,
-                            currentMetrics?.MemoryUsagePercentage ?? 0.0);
-                    }
-                    else
-                    {
-                        // Timeout - use default values
-                        this.systemTrayService.UpdateSystemStatus(
-                            activePowerPlan?.Name ?? "Unknown",
-                            0.0, 0.0);
-                    }
-                }
-                catch (Exception metricsEx)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Failed to get performance metrics for tray: {metricsEx.Message}");
-                    // Use default values
-                    this.systemTrayService.UpdateSystemStatus(
-                        activePowerPlan?.Name ?? "Unknown",
-                        0.0, 0.0);
-                }
+                await this.systemTrayStatusUpdater.UpdateContextMenuAsync(this.systemTrayService);
             }
             catch (Exception ex)
             {
@@ -1065,6 +1012,12 @@ namespace ThreadPilot
             {
                 this.systemTrayUpdateTimer?.Stop();
                 this.systemTrayUpdateTimer?.Dispose();
+                this.systemTrayUpdateTimer = null;
+
+                if (!this.systemTrayStatusUpdater.ShouldRunPerformanceStatusUpdates)
+                {
+                    return;
+                }
 
                 this.systemTrayUpdateFailureStreak = 0;
                 this.systemTrayUpdateTimer = new System.Timers.Timer(SystemTrayUpdateBaseIntervalMs);
@@ -1142,21 +1095,9 @@ namespace ThreadPilot
         {
             try
             {
-                var powerPlanService = this.serviceProvider.GetRequiredService<IPowerPlanService>();
-                var performanceService = this.serviceProvider.GetRequiredService<IPerformanceMonitoringService>();
-
-                var activePowerPlan = await powerPlanService.GetActivePowerPlan();
-                var currentMetrics = await performanceService.GetSystemMetricsAsync(lightweight: true);
-
-                await this.Dispatcher.InvokeAsync(() =>
-                {
-                    this.systemTrayService.UpdateSystemStatus(
-                        activePowerPlan?.Name ?? "Unknown",
-                        currentMetrics?.TotalCpuUsage ?? 0.0,
-                        currentMetrics?.MemoryUsagePercentage ?? 0.0);
-                });
-
-                return true;
+                return await this.systemTrayStatusUpdater.UpdateStatusAsync(
+                    this.systemTrayService,
+                    action => this.Dispatcher.InvokeAsync(action).Task);
             }
             catch (Exception ex)
             {
@@ -1335,6 +1276,12 @@ namespace ThreadPilot
             this.isSystemTrayUpdatesSuspended = false;
             this.systemTrayUpdateFailureStreak = 0;
             this.systemTrayUpdateTimer?.Stop();
+
+            if (!this.systemTrayStatusUpdater.ShouldRunPerformanceStatusUpdates)
+            {
+                return;
+            }
+
             if (this.systemTrayUpdateTimer != null)
             {
                 this.systemTrayUpdateTimer.Interval = SystemTrayUpdateBaseIntervalMs;
@@ -1405,9 +1352,9 @@ namespace ThreadPilot
 
             if (decision.PerformanceUiMonitoringEnabled)
             {
-                _ = this.performanceViewModel.ActivateDiagnosticsAsync();
+                _ = this.GetPerformanceViewModel().ActivateDiagnosticsAsync();
             }
-            else
+            else if (this.performanceViewModel != null)
             {
                 _ = this.performanceViewModel.SuspendBackgroundMonitoringAsync();
             }
@@ -1536,6 +1483,11 @@ namespace ThreadPilot
             if (string.IsNullOrEmpty(tag))
             {
                 return;
+            }
+
+            if (string.Equals(tag, "Performance", StringComparison.Ordinal))
+            {
+                this.GetPerformanceViewModel();
             }
 
             this.ApplySectionVisibility(tag);
@@ -1842,6 +1794,11 @@ namespace ThreadPilot
                     return;
                 }
 
+                if (string.Equals(tag, "Performance", StringComparison.Ordinal))
+                {
+                    this.GetPerformanceViewModel();
+                }
+
                 this.ApplySectionVisibility(tag);
 
                 if (string.Equals(tag, "Performance", StringComparison.Ordinal))
@@ -1897,6 +1854,7 @@ namespace ThreadPilot
 
                 this.initializationTimeoutTimer?.Stop();
                 this.initializationTimeoutTimer?.Dispose();
+                this.performanceViewModel?.Dispose();
 
                 this.selfResourceManagementService.RestoreForegroundMode();
                 this.navigationBehavior.Dispose();

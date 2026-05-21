@@ -37,8 +37,9 @@ namespace ThreadPilot.Services
         private readonly IApplicationSettingsService settingsService;
         private readonly IEnhancedLoggingService enhancedLoggingService;
         private readonly Queue<SystemPerformanceMetrics> historicalData;
-        private readonly PerformanceCounter totalCpuCounter;
-        private readonly PerformanceCounter memoryCounter;
+        private readonly object counterInitializationLock = new();
+        private PerformanceCounter? totalCpuCounter;
+        private PerformanceCounter? memoryCounter;
         private readonly List<PerformanceCounter> cpuCoreCounters;
         private System.Threading.Timer? monitoringTimer;
         private readonly object totalMemoryCacheLock = new();
@@ -81,13 +82,7 @@ namespace ThreadPilot.Services
             this.settingsService = settingsService;
             this.enhancedLoggingService = enhancedLoggingService;
             this.historicalData = new Queue<SystemPerformanceMetrics>(HistoricalDataCapacity);
-
-            // Initialize performance counters
-            this.totalCpuCounter = this.CreatePrimedCounter("Processor", "% Processor Time", "_Total");
-            this.memoryCounter = this.CreatePrimedCounter("Memory", "Available MBytes");
             this.cpuCoreCounters = new List<PerformanceCounter>();
-
-            this.InitializeCpuCoreCounters();
         }
 
         public async Task<SystemPerformanceMetrics> GetSystemMetricsAsync(bool lightweight = false)
@@ -146,6 +141,7 @@ namespace ThreadPilot.Services
 
             try
             {
+                this.EnsureCpuCoreCountersInitialized();
                 var topology = await this.cpuTopologyService.DetectTopologyAsync().ConfigureAwait(false);
 
                 for (int i = 0; i < this.cpuCoreCounters.Count; i++)
@@ -178,6 +174,7 @@ namespace ThreadPilot.Services
         {
             try
             {
+                this.EnsureSystemCountersInitialized();
                 var memoryInfo = new MemoryUsageInfo();
 
                 // Get physical memory info
@@ -189,7 +186,7 @@ namespace ThreadPilot.Services
                 }
 
                 // Get available memory
-                memoryInfo.AvailablePhysicalMemory = (long)this.memoryCounter.NextValue() * 1024 * 1024; // Convert MB to bytes
+                memoryInfo.AvailablePhysicalMemory = (long)(this.memoryCounter?.NextValue() ?? 0) * 1024 * 1024; // Convert MB to bytes
                 memoryInfo.UsedPhysicalMemory = memoryInfo.TotalPhysicalMemory - memoryInfo.AvailablePhysicalMemory;
                 memoryInfo.PhysicalMemoryUsagePercentage = memoryInfo.TotalPhysicalMemory > 0
                     ? ((double)memoryInfo.UsedPhysicalMemory / memoryInfo.TotalPhysicalMemory) * 100
@@ -376,6 +373,58 @@ namespace ThreadPilot.Services
             }
         }
 
+        private void EnsureSystemCountersInitialized()
+        {
+            if (this.totalCpuCounter != null && this.memoryCounter != null)
+            {
+                return;
+            }
+
+            lock (this.counterInitializationLock)
+            {
+                if (this.totalCpuCounter != null && this.memoryCounter != null)
+                {
+                    return;
+                }
+
+                PerformanceCounter? totalCpu = null;
+                PerformanceCounter? memory = null;
+
+                try
+                {
+                    totalCpu = this.CreatePrimedCounter("Processor", "% Processor Time", "_Total");
+                    memory = this.CreatePrimedCounter("Memory", "Available MBytes");
+
+                    this.totalCpuCounter = totalCpu;
+                    this.memoryCounter = memory;
+                }
+                catch
+                {
+                    totalCpu?.Dispose();
+                    memory?.Dispose();
+                    throw;
+                }
+            }
+        }
+
+        private void EnsureCpuCoreCountersInitialized()
+        {
+            if (this.cpuCoreCounters.Count > 0)
+            {
+                return;
+            }
+
+            lock (this.counterInitializationLock)
+            {
+                if (this.cpuCoreCounters.Count > 0)
+                {
+                    return;
+                }
+
+                this.InitializeCpuCoreCounters();
+            }
+        }
+
         private PerformanceCounter CreatePrimedCounter(string categoryName, string counterName, string? instanceName = null)
         {
             try
@@ -403,7 +452,8 @@ namespace ThreadPilot.Services
         {
             try
             {
-                return this.totalCpuCounter.NextValue();
+                this.EnsureSystemCountersInitialized();
+                return this.totalCpuCounter?.NextValue() ?? 0;
             }
             catch (Exception ex)
             {
@@ -416,7 +466,8 @@ namespace ThreadPilot.Services
         {
             try
             {
-                return (long)this.memoryCounter.NextValue() * 1024 * 1024; // Convert MB to bytes
+                this.EnsureSystemCountersInitialized();
+                return (long)(this.memoryCounter?.NextValue() ?? 0) * 1024 * 1024; // Convert MB to bytes
             }
             catch (Exception ex)
             {

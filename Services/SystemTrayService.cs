@@ -482,6 +482,24 @@ namespace ThreadPilot.Services
             }
         }
 
+        public void UpdateSystemStatus(string currentPowerPlan)
+        {
+            if (this.systemStatusMenuItem == null)
+            {
+                return;
+            }
+
+            try
+            {
+                this.systemStatusMenuItem.Text = $"Power Plan: {currentPowerPlan}";
+                this.logger.LogDebug("Updated non-performance system status in context menu");
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogWarning(ex, "Failed to update system status in context menu");
+            }
+        }
+
         public void Dispose()
         {
             if (this.disposed)
