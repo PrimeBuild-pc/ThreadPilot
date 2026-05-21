@@ -48,6 +48,7 @@ namespace ThreadPilot.ViewModels
         private readonly IAffinityApplyService affinityApplyService;
         private readonly IProcessAffinityApplyCoordinator processAffinityApplyCoordinator;
         private readonly IProcessMemoryPriorityService? memoryPriorityService;
+        private readonly IProcessRuleCreationService? processRuleCreationService;
         private readonly Action<string> clipboardSetter;
         private readonly Action<string> executableLocationOpener;
         private System.Timers.Timer? refreshTimer;
@@ -188,6 +189,7 @@ namespace ThreadPilot.ViewModels
             IProcessMemoryPriorityService? memoryPriorityService = null,
             IPersistentProcessRuleStore? persistentRuleStore = null,
             IPersistentProcessRuleMatcher? persistentRuleMatcher = null,
+            IProcessRuleCreationService? processRuleCreationService = null,
             Action<string>? clipboardSetter = null,
             Action<string>? executableLocationOpener = null)
             : base(logger, enhancedLoggingService)
@@ -212,6 +214,13 @@ namespace ThreadPilot.ViewModels
                 new CpuSelectionMigrationService(),
                 NullLogger<ProcessAffinityApplyCoordinator>.Instance);
             this.memoryPriorityService = memoryPriorityService;
+            this.processRuleCreationService = processRuleCreationService ?? (persistentRuleStore == null
+                ? null
+                : new ProcessRuleCreationService(
+                    persistentRuleStore,
+                    cpuTopologyProvider,
+                    new CpuSelectionMigrationService(),
+                    NullLogger<ProcessRuleCreationService>.Instance));
             this.clipboardSetter = clipboardSetter ?? System.Windows.Clipboard.SetText;
             this.executableLocationOpener = executableLocationOpener ?? OpenExecutableLocationInExplorer;
             this.SelectedProcessSummary = new SelectedProcessSummaryViewModel(

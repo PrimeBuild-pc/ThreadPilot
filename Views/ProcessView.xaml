@@ -156,6 +156,15 @@
                                                       Command="{Binding ClearContextCpuSetsCommand}"
                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                             <Separator/>
+                                            <MenuItem Header="Rules">
+                                                <MenuItem Header="Save Current Settings as Rule"
+                                                          Command="{Binding SaveCurrentSettingsAsRuleCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                <MenuItem Header="Apply Affinity and Save as Rule"
+                                                          Command="{Binding ApplyAffinityAndSaveAsRuleCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                            </MenuItem>
+                                            <Separator/>
                                             <MenuItem Header="Set CPU Priority">
                                                 <MenuItem Header="Below Normal"
                                                           Command="{Binding SetContextBelowNormalPriorityCommand}"
