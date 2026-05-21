@@ -728,11 +728,32 @@ namespace ThreadPilot.ViewModels
                 return;
             }
 
+            await this.ApplyAffinityToProcessAsync(selectedProcess, "Manual Process tab CPU selection");
+        }
+
+        [RelayCommand]
+        private async Task ApplyContextAffinity(ProcessModel? process)
+        {
+            if (process == null)
+            {
+                return;
+            }
+
+            if (!ReferenceEquals(this.SelectedProcess, process))
+            {
+                this.SelectedProcess = process;
+            }
+
+            await this.ApplyAffinityToProcessAsync(process, "Manual Process tab context menu CPU selection");
+        }
+
+        private async Task ApplyAffinityToProcessAsync(ProcessModel selectedProcess, string selectionReason)
+        {
             try
             {
                 var pendingSelection = this.GetPendingCoreSelectionMask();
 
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await InvokeOnUiAsync(() =>
                 {
                     this.SetStatus($"Setting affinity for {selectedProcess.Name}...");
                 });
@@ -740,9 +761,9 @@ namespace ThreadPilot.ViewModels
                 var result = await this.processAffinityApplyCoordinator.ApplyCoreSelectionAsync(
                     selectedProcess,
                     pendingSelection,
-                    "Manual Process tab CPU selection");
+                    selectionReason);
 
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await InvokeOnUiAsync(() =>
                 {
                     if (!result.UsedCpuSets)
                     {
@@ -789,13 +810,15 @@ namespace ThreadPilot.ViewModels
                         _ = this.notificationService.ShowNotificationAsync("Affinity error", result.Message, NotificationType.Error);
                     }
                 });
+
+                await this.UpdateSelectedProcessSummaryAsync(selectedProcess);
             }
             catch (Exception ex)
             {
                 var friendly = ex.Message;
                 _ = this.notificationService.ShowNotificationAsync("Affinity error", friendly, NotificationType.Error);
 
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await InvokeOnUiAsync(() =>
                 {
                     this.SetCriticalStatus($"Error setting affinity: {friendly}");
                 });
@@ -808,7 +831,7 @@ namespace ThreadPilot.ViewModels
                         await this.processService.RefreshProcessInfo(this.SelectedProcess);
                     }
 
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    await InvokeOnUiAsync(() =>
                     {
                         if (this.SelectedProcess != null)
                         {
@@ -821,14 +844,28 @@ namespace ThreadPilot.ViewModels
                 {
                     // Process may have terminated
                 }
+
+                await this.UpdateSelectedProcessSummaryAsync(selectedProcess);
             }
             finally
             {
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await InvokeOnUiAsync(() =>
                 {
                     this.ClearStatus();
                 });
             }
+        }
+
+        private static Task InvokeOnUiAsync(Action action)
+        {
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher == null || dispatcher.CheckAccess())
+            {
+                action();
+                return Task.CompletedTask;
+            }
+
+            return dispatcher.InvokeAsync(action).Task;
         }
 
         [RelayCommand]

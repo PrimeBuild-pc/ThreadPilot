@@ -27,6 +27,97 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task ApplyContextAffinityCommand_UsesProvidedRowProcess()
+        {
+            var processService = CreateProcessService();
+            var coordinator = CreateAffinityCoordinator();
+            var viewModel = CreateViewModel(
+                processService.Object,
+                processAffinityApplyCoordinator: coordinator.Object);
+            viewModel.CpuCores =
+            [
+                new CpuCoreModel { LogicalCoreId = 0, IsSelected = true },
+                new CpuCoreModel { LogicalCoreId = 1, IsSelected = false },
+            ];
+            var rowProcess = CreateProcess(processId: 100);
+
+            await viewModel.ApplyContextAffinityCommand.ExecuteAsync(rowProcess);
+
+            coordinator.Verify(
+                service => service.ApplyCoreSelectionAsync(
+                    rowProcess,
+                    It.Is<IReadOnlyList<bool>>(mask => mask.Count == 2 && mask[0] && !mask[1]),
+                    "Manual Process tab context menu CPU selection",
+                    default),
+                Times.Once);
+            Assert.Same(rowProcess, viewModel.SelectedProcess);
+        }
+
+        [Fact]
+        public async Task ApplyContextAffinityCommand_WhenRowProcessDiffersFromSelectedProcess_UsesRowProcess()
+        {
+            var processService = CreateProcessService();
+            var coordinator = CreateAffinityCoordinator();
+            var viewModel = CreateViewModel(
+                processService.Object,
+                processAffinityApplyCoordinator: coordinator.Object);
+            viewModel.CpuCores =
+            [
+                new CpuCoreModel { LogicalCoreId = 0, IsSelected = true },
+                new CpuCoreModel { LogicalCoreId = 1, IsSelected = true },
+            ];
+            var oldSelectedProcess = CreateProcess(processId: 1, name: "Old.exe");
+            var rowProcess = CreateProcess(processId: 2, name: "Row.exe");
+            viewModel.SelectedProcess = oldSelectedProcess;
+
+            await viewModel.ApplyContextAffinityCommand.ExecuteAsync(rowProcess);
+
+            coordinator.Verify(
+                service => service.ApplyCoreSelectionAsync(
+                    rowProcess,
+                    It.IsAny<IReadOnlyList<bool>>(),
+                    "Manual Process tab context menu CPU selection",
+                    default),
+                Times.Once);
+            coordinator.Verify(
+                service => service.ApplyCoreSelectionAsync(
+                    oldSelectedProcess,
+                    It.IsAny<IReadOnlyList<bool>>(),
+                    It.IsAny<string>(),
+                    default),
+                Times.Never);
+            Assert.Same(rowProcess, viewModel.SelectedProcess);
+        }
+
+        [Fact]
+        public async Task ApplyContextAffinityCommand_DoesNotCallLegacyLongDirectly()
+        {
+            var processService = CreateProcessService();
+            var coordinator = CreateAffinityCoordinator();
+            var viewModel = CreateViewModel(
+                processService.Object,
+                processAffinityApplyCoordinator: coordinator.Object);
+            viewModel.CpuCores =
+            [
+                new CpuCoreModel { LogicalCoreId = 0, IsSelected = true },
+            ];
+            var rowProcess = CreateProcess();
+
+            await viewModel.ApplyContextAffinityCommand.ExecuteAsync(rowProcess);
+
+            coordinator.Verify(
+                service => service.ApplyCoreSelectionAsync(
+                    rowProcess,
+                    It.IsAny<IReadOnlyList<bool>>(),
+                    "Manual Process tab context menu CPU selection",
+                    default),
+                Times.Once);
+            processService.Verify(
+                service => service.SetProcessorAffinity(It.IsAny<ProcessModel>(), It.IsAny<long>()),
+                Times.Never);
+        }
+
+        [Fact]
         public void ContextCpuPriorityActions_DoNotExposeRealtimeAsNormalAction()
         {
             var viewModel = CreateViewModel(CreateProcessService().Object);
@@ -221,8 +312,22 @@ namespace ThreadPilot.Core.Tests
             return processService;
         }
 
+        private static Mock<IProcessAffinityApplyCoordinator> CreateAffinityCoordinator()
+        {
+            var coordinator = new Mock<IProcessAffinityApplyCoordinator>(MockBehavior.Strict);
+            coordinator
+                .Setup(service => service.ApplyCoreSelectionAsync(
+                    It.IsAny<ProcessModel>(),
+                    It.IsAny<IReadOnlyList<bool>>(),
+                    It.IsAny<string>(),
+                    default))
+                .ReturnsAsync(AffinityApplyResult.Succeeded(1, 1));
+            return coordinator;
+        }
+
         private static ProcessViewModel CreateViewModel(
             IProcessService processService,
+            IProcessAffinityApplyCoordinator? processAffinityApplyCoordinator = null,
             IProcessMemoryPriorityService? memoryPriorityService = null,
             IPersistentProcessRuleStore? persistentRuleStore = null,
             Action<string>? clipboardSetter = null,
@@ -253,6 +358,7 @@ namespace ThreadPilot.Core.Tests
                 coreMaskService.Object,
                 associationService.Object,
                 gameModeService.Object,
+                processAffinityApplyCoordinator: processAffinityApplyCoordinator,
                 memoryPriorityService: memoryPriorityService,
                 persistentRuleStore: persistentRuleStore,
                 persistentRuleMatcher: new PersistentProcessRuleMatcher(),

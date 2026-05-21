@@ -150,7 +150,8 @@
                                     <Setter.Value>
                                         <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
                                             <MenuItem Header="Apply Affinity"
-                                                      Command="{Binding SetAffinityCommand}"/>
+                                                      Command="{Binding ApplyContextAffinityCommand}"
+                                                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                             <MenuItem Header="Clear CPU Sets"
                                                       Command="{Binding ClearContextCpuSetsCommand}"
                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
