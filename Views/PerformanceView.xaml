@@ -75,9 +75,9 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="Performance Intelligence" Style="{StaticResource TitleTextStyle}"/>
-                            <TextBlock Text="System snapshot, actionable hotspots, rule impact, and stability timeline." Style="{StaticResource LabelTextStyle}" Margin="0,4,0,0"/>
-                            <TextBlock Text="All actions are safety-first and route through existing Rules and Tweaks workflows." Style="{StaticResource LabelTextStyle}" Margin="0,2,0,0"/>
+                            <TextBlock Text="Optional Diagnostics" Style="{StaticResource TitleTextStyle}"/>
+                            <TextBlock Text="Diagnostics are optional and intended for troubleshooting." Style="{StaticResource LabelTextStyle}" Margin="0,4,0,0"/>
+                            <TextBlock Text="For in-game overlays and detailed performance graphs, use dedicated tools." Style="{StaticResource LabelTextStyle}" Margin="0,2,0,0"/>
                         </StackPanel>
 
                         <WrapPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" ItemHeight="32">

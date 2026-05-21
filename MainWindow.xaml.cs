@@ -42,10 +42,11 @@ namespace ThreadPilot
 
         private readonly ProcessViewModel processViewModel;
         private readonly PowerPlanViewModel powerPlanViewModel;
-        private readonly PerformanceViewModel performanceViewModel;
+        private readonly IDiagnosticsViewModelProvider diagnosticsViewModelProvider;
         private readonly ProcessPowerPlanAssociationViewModel associationViewModel;
         private readonly LogViewerViewModel logViewerViewModel;
         private readonly ISystemTrayService systemTrayService;
+        private readonly ISystemTrayStatusUpdater systemTrayStatusUpdater;
         private readonly IApplicationSettingsService settingsService;
         private readonly INotificationService notificationService;
         private readonly IProcessMonitorService processMonitorService;
@@ -59,6 +60,7 @@ namespace ThreadPilot
         private readonly IServiceProvider serviceProvider;
         private readonly IThemeService themeService;
         private System.Timers.Timer? systemTrayUpdateTimer;
+        private PerformanceViewModel? performanceViewModel;
         private bool isSystemTrayUpdatesSuspended;
         private int isSystemTrayUpdateInProgress;
         private int systemTrayUpdateFailureStreak;
@@ -84,10 +86,11 @@ namespace ThreadPilot
         public MainWindow(
             ProcessViewModel processViewModel,
             PowerPlanViewModel powerPlanViewModel,
-            PerformanceViewModel performanceViewModel,
+            IDiagnosticsViewModelProvider diagnosticsViewModelProvider,
             ProcessPowerPlanAssociationViewModel associationViewModel,
             LogViewerViewModel logViewerViewModel,
             ISystemTrayService systemTrayService,
+            ISystemTrayStatusUpdater systemTrayStatusUpdater,
             IApplicationSettingsService settingsService,
             INotificationService notificationService,
             IProcessMonitorService processMonitorService,
@@ -109,6 +112,7 @@ namespace ThreadPilot
 
                 this.InitializeComponent();
                 System.Diagnostics.Debug.WriteLine("InitializeComponent completed");
+                this.ConfigureDiagnosticsNavigation();
 
                 // Initialize loading overlay
                 this.InitializeLoadingOverlay();
@@ -117,10 +121,11 @@ namespace ThreadPilot
 
                 this.processViewModel = processViewModel;
                 this.powerPlanViewModel = powerPlanViewModel;
-                this.performanceViewModel = performanceViewModel;
+                this.diagnosticsViewModelProvider = diagnosticsViewModelProvider;
                 this.associationViewModel = associationViewModel;
                 this.logViewerViewModel = logViewerViewModel;
                 this.systemTrayService = systemTrayService;
+                this.systemTrayStatusUpdater = systemTrayStatusUpdater;
                 this.settingsService = settingsService;
                 this.notificationService = notificationService;
                 this.processMonitorService = processMonitorService;
@@ -158,6 +163,25 @@ namespace ThreadPilot
                     "MainWindow Initialization Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 throw;
             }
+        }
+
+        private void ConfigureDiagnosticsNavigation()
+        {
+            this.NavPerf.Visibility = AppNavigationOptions.ShowAdvancedDiagnostics
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+
+        private PerformanceViewModel GetPerformanceViewModel()
+        {
+            if (this.performanceViewModel != null)
+            {
+                return this.performanceViewModel;
+            }
+
+            this.performanceViewModel = this.diagnosticsViewModelProvider.GetOrCreate();
+            this.PerformanceViewControl.DataContext = this.performanceViewModel;
+            return this.performanceViewModel;
         }
     }
 }

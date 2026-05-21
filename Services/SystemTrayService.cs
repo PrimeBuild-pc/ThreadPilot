@@ -127,12 +127,15 @@ namespace ThreadPilot.Services
             openDashboardMenuItem.Click += this.OnDashboardClick;
             this.contextMenu.Items.Add(openDashboardMenuItem);
 
-            this.performanceMenuItem = new ToolStripMenuItem("Open Performance")
+            if (AppNavigationOptions.ShowAdvancedDiagnostics)
             {
-                Font = new Font(this.menuFont, FontStyle.Regular),
-            };
-            this.performanceMenuItem.Click += this.OnPerformanceDashboardClick;
-            this.contextMenu.Items.Add(this.performanceMenuItem);
+                this.performanceMenuItem = new ToolStripMenuItem("Open Diagnostics")
+                {
+                    Font = new Font(this.menuFont, FontStyle.Regular),
+                };
+                this.performanceMenuItem.Click += this.OnPerformanceDashboardClick;
+                this.contextMenu.Items.Add(this.performanceMenuItem);
+            }
 
             this.monitoringToggleMenuItem = new ToolStripMenuItem("Pause Automation Monitoring");
             this.monitoringToggleMenuItem.Click += this.OnMonitoringToggleClick;
@@ -479,6 +482,24 @@ namespace ThreadPilot.Services
             }
         }
 
+        public void UpdateSystemStatus(string currentPowerPlan)
+        {
+            if (this.systemStatusMenuItem == null)
+            {
+                return;
+            }
+
+            try
+            {
+                this.systemStatusMenuItem.Text = $"Power Plan: {currentPowerPlan}";
+                this.logger.LogDebug("Updated non-performance system status in context menu");
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogWarning(ex, "Failed to update system status in context menu");
+            }
+        }
+
         public void Dispose()
         {
             if (this.disposed)
@@ -743,4 +764,3 @@ namespace ThreadPilot.Services
         }
     }
 }
-

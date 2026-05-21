@@ -138,6 +138,11 @@ namespace ThreadPilot.Services
         /// <summary>
         /// Updates the current system status in the tray.
         /// </summary>
+        void UpdateSystemStatus(string currentPowerPlan);
+
+        /// <summary>
+        /// Updates the current system status in the tray with diagnostics metrics.
+        /// </summary>
         void UpdateSystemStatus(string currentPowerPlan, double cpuUsage, double memoryUsage);
     }
 

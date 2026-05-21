@@ -22,6 +22,7 @@ namespace ThreadPilot.Services
     public enum AppActivityState
     {
         ForegroundProcessView,
+        ForegroundDiagnosticsView,
         ForegroundOtherTab,
         Minimized,
         TrayHidden,
@@ -56,6 +57,13 @@ namespace ThreadPilot.Services
                     ProcessUiRefreshEnabled: true,
                     ImmediateProcessRefresh: true,
                     VirtualizedPreloadEnabled: true,
+                    PerformanceUiMonitoringEnabled: false,
+                    PowerPlanUiRefreshEnabled: true,
+                    BackgroundAutomationEnabled: true),
+                AppActivityState.ForegroundDiagnosticsView => new AppRefreshDecision(
+                    ProcessUiRefreshEnabled: false,
+                    ImmediateProcessRefresh: false,
+                    VirtualizedPreloadEnabled: false,
                     PerformanceUiMonitoringEnabled: true,
                     PowerPlanUiRefreshEnabled: true,
                     BackgroundAutomationEnabled: true),
@@ -63,7 +71,7 @@ namespace ThreadPilot.Services
                     ProcessUiRefreshEnabled: false,
                     ImmediateProcessRefresh: false,
                     VirtualizedPreloadEnabled: false,
-                    PerformanceUiMonitoringEnabled: true,
+                    PerformanceUiMonitoringEnabled: false,
                     PowerPlanUiRefreshEnabled: true,
                     BackgroundAutomationEnabled: true),
                 AppActivityState.Minimized or AppActivityState.TrayHidden => new AppRefreshDecision(

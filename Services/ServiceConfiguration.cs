@@ -147,6 +147,9 @@ namespace ThreadPilot.Services
 
             // Performance monitoring services
             services.AddSingleton<IPerformanceMonitoringService, PerformanceMonitoringService>();
+            services.AddSingleton(sp => new Lazy<IPerformanceMonitoringService>(
+                () => sp.GetRequiredService<IPerformanceMonitoringService>()));
+            services.AddSingleton<ISystemTrayStatusUpdater, SystemTrayStatusUpdater>();
 
             return services;
         }
@@ -202,6 +205,9 @@ namespace ThreadPilot.Services
             services.AddTransient<SettingsViewModel>();
             services.AddTransient<MainWindowViewModel>();
             services.AddTransient<PerformanceViewModel>();
+            services.AddTransient(sp => new Lazy<PerformanceViewModel>(
+                () => sp.GetRequiredService<PerformanceViewModel>()));
+            services.AddTransient<IDiagnosticsViewModelProvider, DiagnosticsViewModelProvider>();
             services.AddTransient<LogViewerViewModel>();
             services.AddTransient<SystemTweaksViewModel>();
 
