@@ -4,6 +4,7 @@
 namespace ThreadPilot.ViewModels
 {
     using System.Diagnostics;
+    using System.Threading;
     using CommunityToolkit.Mvvm.ComponentModel;
     using ThreadPilot.Models;
     using ThreadPilot.Services;
@@ -34,6 +35,7 @@ namespace ThreadPilot.ViewModels
         private string lastOperationSeverity = "Information";
         private bool isProtectedOrAccessDenied;
         private bool hasThreadPilotRule;
+        private int updateVersion;
 
         public SelectedProcessSummaryViewModel(
             IProcessMemoryPriorityService? memoryPriorityService = null,
@@ -176,9 +178,10 @@ namespace ThreadPilot.ViewModels
             string? lastOperationMessage = null,
             bool lastOperationIsError = false)
         {
+            var version = Interlocked.Increment(ref this.updateVersion);
             if (process == null)
             {
-                this.Clear(lastOperationMessage, lastOperationIsError);
+                this.Clear(version, lastOperationMessage, lastOperationIsError);
                 return;
             }
 
@@ -201,8 +204,13 @@ namespace ThreadPilot.ViewModels
             this.AffinityText = $"Affinity: legacy mask 0x{this.ProcessorAffinity:X}";
             this.UpdateLastOperation(lastOperationMessage, lastOperationIsError);
 
-            await this.UpdateMemoryPriorityAsync(process);
-            await this.UpdateRuleStatusAsync(process);
+            await this.UpdateMemoryPriorityAsync(process, version);
+            if (!this.IsCurrentVersion(version))
+            {
+                return;
+            }
+
+            await this.UpdateRuleStatusAsync(process, version);
         }
 
         private static string FormatMemory(long bytes)
@@ -216,8 +224,13 @@ namespace ThreadPilot.ViewModels
             return $"{megabytes:N0} MB";
         }
 
-        private void Clear(string? lastOperationMessage, bool lastOperationIsError)
+        private void Clear(int version, string? lastOperationMessage, bool lastOperationIsError)
         {
+            if (!this.IsCurrentVersion(version))
+            {
+                return;
+            }
+
             this.HasSelection = false;
             this.ProcessId = 0;
             this.ProcessName = string.Empty;
@@ -240,7 +253,7 @@ namespace ThreadPilot.ViewModels
             this.UpdateLastOperation(lastOperationMessage, lastOperationIsError);
         }
 
-        private async Task UpdateMemoryPriorityAsync(ProcessModel process)
+        private async Task UpdateMemoryPriorityAsync(ProcessModel process, int version)
         {
             this.MemoryPriority = null;
             this.MemoryPriorityText = "Memory priority unavailable";
@@ -253,6 +266,11 @@ namespace ThreadPilot.ViewModels
             try
             {
                 var priority = await this.memoryPriorityService.GetMemoryPriorityAsync(process);
+                if (!this.IsCurrentVersion(version))
+                {
+                    return;
+                }
+
                 if (priority == null)
                 {
                     return;
@@ -263,12 +281,17 @@ namespace ThreadPilot.ViewModels
             }
             catch (Exception)
             {
+                if (!this.IsCurrentVersion(version))
+                {
+                    return;
+                }
+
                 this.MemoryPriority = null;
                 this.MemoryPriorityText = "Memory priority unavailable";
             }
         }
 
-        private async Task UpdateRuleStatusAsync(ProcessModel process)
+        private async Task UpdateRuleStatusAsync(ProcessModel process, int version)
         {
             this.HasThreadPilotRule = false;
             this.RuleStatusText = "No saved rule";
@@ -281,6 +304,11 @@ namespace ThreadPilot.ViewModels
             try
             {
                 var rules = await this.persistentRuleStore.LoadAsync();
+                if (!this.IsCurrentVersion(version))
+                {
+                    return;
+                }
+
                 var matchingRule = rules.FirstOrDefault(rule => this.persistentRuleMatcher.IsMatch(rule, process));
                 if (matchingRule == null)
                 {
@@ -293,10 +321,17 @@ namespace ThreadPilot.ViewModels
             }
             catch (Exception)
             {
+                if (!this.IsCurrentVersion(version))
+                {
+                    return;
+                }
+
                 this.HasThreadPilotRule = false;
                 this.RuleStatusText = "No saved rule";
             }
         }
+
+        private bool IsCurrentVersion(int version) => Volatile.Read(ref this.updateVersion) == version;
 
         private void UpdateLastOperation(string? message, bool isError)
         {

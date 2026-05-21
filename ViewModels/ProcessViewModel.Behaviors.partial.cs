@@ -222,7 +222,11 @@ namespace ThreadPilot.ViewModels
                         $"Selected process: {value.Name} (PID: {value.ProcessId}) - " +
                             $"Priority: {value.Priority}, Affinity: 0x{value.ProcessorAffinity:X}", false);
                 });
-                this.UpdateSelectedProcessSummary(value);
+                if (ReferenceEquals(this.SelectedProcess, value))
+                {
+                    // Keep this second update for refreshed process fields and the latest operation message.
+                    this.UpdateSelectedProcessSummary(value);
+                }
 
                 // Load current power plan association if available
                 await this.LoadProcessPowerPlanAssociation(value);
@@ -245,7 +249,10 @@ namespace ThreadPilot.ViewModels
                 {
                     this.SetStatus($"Warning: Could not access process {value.Name} - it may have terminated or require elevated privileges", false);
                 });
-                this.UpdateSelectedProcessSummary(value);
+                if (ReferenceEquals(this.SelectedProcess, value))
+                {
+                    this.UpdateSelectedProcessSummary(value);
+                }
             }
         }
 

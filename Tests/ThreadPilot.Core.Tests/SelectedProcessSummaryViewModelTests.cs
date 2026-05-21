@@ -84,6 +84,72 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task UpdateAsync_WhenSelectionChangesBeforeSlowMemoryPriorityCompletes_KeepsLatestSelection()
+        {
+            var memoryPriority = new ControlledMemoryPriorityService();
+            var viewModel = new SelectedProcessSummaryViewModel(memoryPriority);
+            var oldProcess = CreateProcess("Old.exe", 100, ProcessPriorityClass.Normal, 0x1, 10);
+            var latestProcess = CreateProcess("Latest.exe", 200, ProcessPriorityClass.High, 0x2, 20);
+
+            var oldUpdate = viewModel.UpdateAsync(oldProcess);
+            await memoryPriority.WaitForReadAsync(oldProcess.ProcessId);
+
+            memoryPriority.SetImmediatePriority(latestProcess.ProcessId, ProcessMemoryPriority.Normal);
+            await viewModel.UpdateAsync(latestProcess);
+
+            memoryPriority.CompleteRead(oldProcess.ProcessId, ProcessMemoryPriority.VeryLow);
+            await oldUpdate;
+
+            Assert.Equal(latestProcess.ProcessId, viewModel.ProcessId);
+            Assert.Equal(latestProcess.Name, viewModel.ProcessName);
+            Assert.Equal(ProcessMemoryPriority.Normal, viewModel.MemoryPriority);
+            Assert.Equal("Memory priority: Normal", viewModel.MemoryPriorityText);
+        }
+
+        [Fact]
+        public async Task UpdateAsync_WhenSlowRuleLookupCompletesAfterSelectionChange_KeepsLatestRuleStatus()
+        {
+            var store = new ControlledPersistentProcessRuleStore();
+            var viewModel = new SelectedProcessSummaryViewModel(
+                persistentRuleStore: store,
+                persistentRuleMatcher: new PersistentProcessRuleMatcher());
+            var oldProcess = CreateProcess("Old.exe", 100);
+            var latestProcess = CreateProcess("Latest.exe", 200);
+
+            var oldUpdate = viewModel.UpdateAsync(oldProcess);
+            await store.WaitForLoadAsync(1);
+
+            store.EnqueueImmediateRules(new[]
+            {
+                new PersistentProcessRule
+                {
+                    Name = "Latest rule",
+                    ProcessName = latestProcess.Name,
+                    IsEnabled = true,
+                },
+            });
+            await viewModel.UpdateAsync(latestProcess);
+
+            store.CompleteLoad(
+                1,
+                new[]
+                {
+                    new PersistentProcessRule
+                    {
+                        Name = "Old rule",
+                        ProcessName = oldProcess.Name,
+                        IsEnabled = true,
+                    },
+                });
+            await oldUpdate;
+
+            Assert.Equal(latestProcess.ProcessId, viewModel.ProcessId);
+            Assert.Equal(latestProcess.Name, viewModel.ProcessName);
+            Assert.True(viewModel.HasThreadPilotRule);
+            Assert.Equal("Saved rule exists: Latest rule", viewModel.RuleStatusText);
+        }
+
+        [Fact]
         public void SelectedProcessSummary_HasNoPerformanceMonitoringDependency()
         {
             var type = typeof(SelectedProcessSummaryViewModel);
@@ -178,5 +244,105 @@ namespace ThreadPilot.Core.Tests
                 ProcessorAffinity = affinity,
                 Classification = ProcessClassification.ForegroundApp,
             };
+
+        private sealed class ControlledMemoryPriorityService : IProcessMemoryPriorityService
+        {
+            private readonly Dictionary<int, TaskCompletionSource<ProcessMemoryPriority?>> pendingReads = new();
+            private readonly Dictionary<int, TaskCompletionSource> readSignals = new();
+            private readonly Dictionary<int, ProcessMemoryPriority?> immediatePriorities = new();
+
+            public Task<ProcessMemoryPriority?> GetMemoryPriorityAsync(ProcessModel process)
+            {
+                if (this.immediatePriorities.TryGetValue(process.ProcessId, out var priority))
+                {
+                    return Task.FromResult(priority);
+                }
+
+                var pending = new TaskCompletionSource<ProcessMemoryPriority?>(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+                var signal = this.GetOrCreateReadSignal(process.ProcessId);
+                this.pendingReads[process.ProcessId] = pending;
+                signal.TrySetResult();
+                return pending.Task;
+            }
+
+            public Task<ProcessOperationResult> SetMemoryPriorityAsync(ProcessModel process, ProcessMemoryPriority priority)
+                => throw new NotSupportedException();
+
+            public void SetImmediatePriority(int processId, ProcessMemoryPriority? priority)
+            {
+                this.immediatePriorities[processId] = priority;
+            }
+
+            public Task WaitForReadAsync(int processId) => this.GetOrCreateReadSignal(processId).Task;
+
+            public void CompleteRead(int processId, ProcessMemoryPriority? priority)
+            {
+                this.pendingReads[processId].SetResult(priority);
+            }
+
+            private TaskCompletionSource GetOrCreateReadSignal(int processId)
+            {
+                if (!this.readSignals.TryGetValue(processId, out var signal))
+                {
+                    signal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                    this.readSignals[processId] = signal;
+                }
+
+                return signal;
+            }
+        }
+
+        private sealed class ControlledPersistentProcessRuleStore : IPersistentProcessRuleStore
+        {
+            private readonly Dictionary<int, TaskCompletionSource<IReadOnlyList<PersistentProcessRule>>> pendingLoads = new();
+            private readonly Dictionary<int, TaskCompletionSource> loadSignals = new();
+            private readonly Queue<IReadOnlyList<PersistentProcessRule>> immediateRules = new();
+            private int loadCount;
+
+            public Task<IReadOnlyList<PersistentProcessRule>> LoadAsync()
+            {
+                this.loadCount++;
+                var loadNumber = this.loadCount;
+
+                if (this.immediateRules.Count > 0)
+                {
+                    this.GetOrCreateLoadSignal(loadNumber).TrySetResult();
+                    return Task.FromResult(this.immediateRules.Dequeue());
+                }
+
+                var pending = new TaskCompletionSource<IReadOnlyList<PersistentProcessRule>>(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+                this.pendingLoads[loadNumber] = pending;
+                this.GetOrCreateLoadSignal(loadNumber).TrySetResult();
+                return pending.Task;
+            }
+
+            public Task SaveAsync(IReadOnlyList<PersistentProcessRule> rules)
+                => throw new NotSupportedException();
+
+            public void EnqueueImmediateRules(IReadOnlyList<PersistentProcessRule> rules)
+            {
+                this.immediateRules.Enqueue(rules);
+            }
+
+            public Task WaitForLoadAsync(int loadNumber) => this.GetOrCreateLoadSignal(loadNumber).Task;
+
+            public void CompleteLoad(int loadNumber, IReadOnlyList<PersistentProcessRule> rules)
+            {
+                this.pendingLoads[loadNumber].SetResult(rules);
+            }
+
+            private TaskCompletionSource GetOrCreateLoadSignal(int loadNumber)
+            {
+                if (!this.loadSignals.TryGetValue(loadNumber, out var signal))
+                {
+                    signal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                    this.loadSignals[loadNumber] = signal;
+                }
+
+                return signal;
+            }
+        }
     }
 }
