@@ -23,18 +23,107 @@
         <sys:Double x:Key="ProcessFontMedium">14</sys:Double>
         <sys:Double x:Key="ProcessFontMediumSmall">12</sys:Double>
         <sys:Double x:Key="ProcessFontSmall">11</sys:Double>
-        <Style x:Key="ProcessContextMenuItemStyle" TargetType="{x:Type MenuItem}">
+        <Style x:Key="ProcessContextMenuItemStyle" TargetType="{x:Type MenuItem}" BasedOn="{x:Null}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="FontWeight" Value="Normal"/>
             <Setter Property="FontSize" Value="{DynamicResource BodyFontSize}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="Padding" Value="12,7"/>
             <Setter Property="MinWidth" Value="220"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type MenuItem}">
+                        <Border x:Name="MenuItemRoot"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="0"
+                                SnapsToDevicePixels="True">
+                            <Grid MinWidth="{TemplateBinding MinWidth}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <ContentPresenter Grid.Column="0"
+                                                  Margin="{TemplateBinding Padding}"
+                                                  ContentSource="Header"
+                                                  RecognizesAccessKey="True"
+                                                  VerticalAlignment="Center"
+                                                  TextElement.Foreground="{TemplateBinding Foreground}"
+                                                  TextElement.FontSize="{TemplateBinding FontSize}"
+                                                  TextElement.FontWeight="{TemplateBinding FontWeight}"/>
+
+                                <Path x:Name="SubmenuArrow"
+                                      Grid.Column="1"
+                                      Width="6"
+                                      Height="10"
+                                      Margin="8,0,12,0"
+                                      Data="M 0 0 L 6 5 L 0 10 Z"
+                                      Fill="{DynamicResource TextSecondaryBrush}"
+                                      Stretch="Fill"
+                                      VerticalAlignment="Center"
+                                      Visibility="Collapsed"/>
+
+                                <Popup x:Name="PART_Popup"
+                                       AllowsTransparency="True"
+                                       Focusable="False"
+                                       IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                       Placement="Right"
+                                       PopupAnimation="Fade">
+                                    <Border Background="{DynamicResource CardSurfaceBrush}"
+                                            BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                            BorderThickness="1"
+                                            Padding="4"
+                                            SnapsToDevicePixels="True">
+                                        <ScrollViewer CanContentScroll="True"
+                                                      HorizontalScrollBarVisibility="Disabled"
+                                                      VerticalScrollBarVisibility="Auto">
+                                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"
+                                                            KeyboardNavigation.TabNavigation="Cycle"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Popup>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="HasItems" Value="True">
+                                <Setter TargetName="SubmenuArrow" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="MenuItemRoot" Property="Background" Value="{DynamicResource QuietRowHoverBackgroundBrush}"/>
+                                <Setter TargetName="SubmenuArrow" Property="Fill" Value="{DynamicResource TextPrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSubmenuOpen" Value="True">
+                                <Setter TargetName="MenuItemRoot" Property="Background" Value="{DynamicResource QuietRowHoverBackgroundBrush}"/>
+                                <Setter TargetName="SubmenuArrow" Property="Fill" Value="{DynamicResource TextPrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}"/>
+                                <Setter TargetName="SubmenuArrow" Property="Fill" Value="{DynamicResource TextDisabledBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
-        <Style x:Key="ProcessContextMenuSeparatorStyle" TargetType="{x:Type Separator}">
+        <Style x:Key="ProcessContextMenuSeparatorStyle" TargetType="{x:Type Separator}" BasedOn="{x:Null}">
             <Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}"/>
             <Setter Property="Margin" Value="8,4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Separator}">
+                        <Border Height="1"
+                                Background="{TemplateBinding Background}"
+                                SnapsToDevicePixels="True"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
-        <Style x:Key="ProcessContextMenuStyle" TargetType="{x:Type ContextMenu}">
+        <Style x:Key="ProcessContextMenuStyle" TargetType="{x:Type ContextMenu}" BasedOn="{x:Null}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="FontWeight" Value="Normal"/>
             <Setter Property="FontSize" Value="{DynamicResource BodyFontSize}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
@@ -43,6 +132,20 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="4"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ContextMenu}">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"
+                                            KeyboardNavigation.TabNavigation="Cycle"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </UserControl.Resources>
 
