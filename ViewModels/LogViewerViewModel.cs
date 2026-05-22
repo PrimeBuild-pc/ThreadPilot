@@ -33,54 +33,54 @@ namespace ThreadPilot.ViewModels
     /// </summary>
     public partial class LogViewerViewModel : ObservableObject
     {
-        private readonly IEnhancedLoggingService _loggingService;
-        private readonly IApplicationSettingsService _settingsService;
-        private readonly ILogger<LogViewerViewModel> _logger;
+        private readonly IEnhancedLoggingService loggingService;
+        private readonly IApplicationSettingsService settingsService;
+        private readonly ILogger<LogViewerViewModel> logger;
 
         [ObservableProperty]
-        private ObservableCollection<LogEntryDisplayModel> _logEntries = new();
+        private ObservableCollection<LogEntryDisplayModel> logEntries = new();
 
         [ObservableProperty]
-        private LogEntryDisplayModel? _selectedLogEntry;
+        private LogEntryDisplayModel? selectedLogEntry;
 
         [ObservableProperty]
-        private string _searchText = string.Empty;
+        private string searchText = string.Empty;
 
         [ObservableProperty]
-        private LogLevel _selectedLogLevel = LogLevel.Information;
+        private LogLevel selectedLogLevel = LogLevel.Information;
 
         [ObservableProperty]
-        private string _selectedCategory = "All";
+        private string selectedCategory = "All";
 
         [ObservableProperty]
-        private DateTime _fromDate = DateTime.Today.AddDays(-7);
+        private DateTime fromDate = DateTime.Today.AddDays(-7);
 
         [ObservableProperty]
-        private DateTime _toDate = DateTime.Today.AddDays(1);
+        private DateTime toDate = DateTime.Today.AddDays(1);
 
         [ObservableProperty]
-        private bool _isLoading;
+        private bool isLoading;
 
         [ObservableProperty]
-        private string _statusMessage = "Ready";
+        private string statusMessage = "Ready";
 
         [ObservableProperty]
-        private LogFileStatistics? _logStatistics;
+        private LogFileStatistics? logStatistics;
 
         [ObservableProperty]
-        private bool _enableDebugLogging;
+        private bool enableDebugLogging;
 
         [ObservableProperty]
-        private int _maxLogFileSizeMb = 10;
+        private int maxLogFileSizeMb = 10;
 
         [ObservableProperty]
-        private int _logRetentionDays = 7;
+        private int logRetentionDays = 7;
 
         [ObservableProperty]
-        private bool _autoRefresh = true;
+        private bool autoRefresh = true;
 
         [ObservableProperty]
-        private int _refreshIntervalSeconds = 30;
+        private int refreshIntervalSeconds = 30;
 
         public ObservableCollection<string> AvailableCategories { get; } = new()
         {
@@ -111,9 +111,9 @@ namespace ThreadPilot.ViewModels
             IApplicationSettingsService settingsService,
             ILogger<LogViewerViewModel> logger)
         {
-            this._loggingService = loggingService ?? throw new ArgumentNullException(nameof(loggingService));
-            this._settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
-            this._logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.loggingService = loggingService ?? throw new ArgumentNullException(nameof(loggingService));
+            this.settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             // Initialize commands
             this.RefreshLogsCommand = new AsyncRelayCommand(this.RefreshLogsAsync);
@@ -128,7 +128,7 @@ namespace ThreadPilot.ViewModels
             this.LoadSettings();
 
             // Start auto-refresh if enabled
-            if (this._autoRefresh)
+            if (this.autoRefresh)
             {
                 this.StartAutoRefresh();
             }
@@ -148,7 +148,7 @@ namespace ThreadPilot.ViewModels
             }
             catch (Exception ex)
             {
-                this._logger.LogError(ex, "Failed to initialize log viewer");
+                this.logger.LogError(ex, "Failed to initialize log viewer");
                 this.StatusMessage = $"Error: {ex.Message}";
             }
             finally
@@ -164,7 +164,7 @@ namespace ThreadPilot.ViewModels
                 this.IsLoading = true;
                 this.StatusMessage = "Refreshing logs...";
 
-                var logEntries = await this._loggingService.GetLogEntriesAsync(this.FromDate, this.ToDate);
+                var logEntries = await this.loggingService.GetLogEntriesAsync(this.FromDate, this.ToDate);
                 
                 // Filter by category and log level
                 var filteredEntries = logEntries.Where(entry =>
@@ -199,7 +199,7 @@ namespace ThreadPilot.ViewModels
             }
             catch (Exception ex)
             {
-                this._logger.LogError(ex, "Failed to refresh logs");
+                this.logger.LogError(ex, "Failed to refresh logs");
                 this.StatusMessage = $"Error refreshing logs: {ex.Message}";
             }
             finally
@@ -212,11 +212,11 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                this.LogStatistics = await this._loggingService.GetLogStatisticsAsync();
+                this.LogStatistics = await this.loggingService.GetLogStatisticsAsync();
             }
             catch (Exception ex)
             {
-                this._logger.LogError(ex, "Failed to refresh log statistics");
+                this.logger.LogError(ex, "Failed to refresh log statistics");
             }
         }
 
@@ -226,11 +226,11 @@ namespace ThreadPilot.ViewModels
             {
                 this.LogEntries.Clear();
                 this.StatusMessage = "Log display cleared";
-                await this._loggingService.LogUserActionAsync("LogsCleared", "User cleared log display");
+                await this.loggingService.LogUserActionAsync("LogsCleared", "User cleared log display");
             }
             catch (Exception ex)
             {
-                this._logger.LogError(ex, "Failed to clear logs");
+                this.logger.LogError(ex, "Failed to clear logs");
                 this.StatusMessage = $"Error clearing logs: {ex.Message}";
             }
         }
@@ -242,17 +242,17 @@ namespace ThreadPilot.ViewModels
                 this.IsLoading = true;
                 this.StatusMessage = "Exporting logs...";
 
-                var exportPath = await this._loggingService.ExportLogsAsync(this.FromDate, this.ToDate);
+                var exportPath = await this.loggingService.ExportLogsAsync(this.FromDate, this.ToDate);
                 this.StatusMessage = $"Logs exported to: {exportPath}";
 
-                await this._loggingService.LogUserActionAsync(
+                await this.loggingService.LogUserActionAsync(
                     "LogsExported",
                     $"Logs exported to {exportPath}",
                     $"DateRange: {this.FromDate:yyyy-MM-dd} to {this.ToDate:yyyy-MM-dd}");
             }
             catch (Exception ex)
             {
-                this._logger.LogError(ex, "Failed to export logs");
+                this.logger.LogError(ex, "Failed to export logs");
                 this.StatusMessage = $"Error exporting logs: {ex.Message}";
             }
             finally
@@ -268,15 +268,15 @@ namespace ThreadPilot.ViewModels
                 this.IsLoading = true;
                 this.StatusMessage = "Cleaning up old logs...";
 
-                await this._loggingService.CleanupOldLogsAsync();
+                await this.loggingService.CleanupOldLogsAsync();
                 await this.RefreshStatisticsAsync();
 
                 this.StatusMessage = "Old logs cleaned up successfully";
-                await this._loggingService.LogUserActionAsync("LogsCleanup", "User initiated log cleanup");
+                await this.loggingService.LogUserActionAsync("LogsCleanup", "User initiated log cleanup");
             }
             catch (Exception ex)
             {
-                this._logger.LogError(ex, "Failed to cleanup old logs");
+                this.logger.LogError(ex, "Failed to cleanup old logs");
                 this.StatusMessage = $"Error cleaning up logs: {ex.Message}";
             }
             finally
@@ -289,16 +289,16 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                await this._loggingService.UpdateConfigurationAsync(this.EnableDebugLogging, this.MaxLogFileSizeMb, this.LogRetentionDays);
+                await this.loggingService.UpdateConfigurationAsync(this.EnableDebugLogging, this.MaxLogFileSizeMb, this.LogRetentionDays);
 
                 this.StatusMessage = "Logging settings saved successfully";
-                await this._loggingService.LogUserActionAsync(
+                await this.loggingService.LogUserActionAsync(
                     "LoggingSettingsChanged",
                     $"Debug: {this.EnableDebugLogging}, MaxSize: {this.MaxLogFileSizeMb}MB, Retention: {this.LogRetentionDays} days");
             }
             catch (Exception ex)
             {
-                this._logger.LogError(ex, "Failed to save logging settings");
+                this.logger.LogError(ex, "Failed to save logging settings");
                 this.StatusMessage = $"Error saving settings: {ex.Message}";
             }
         }
@@ -307,7 +307,7 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                var logDirectory = this._loggingService.LogDirectoryPath;
+                var logDirectory = this.loggingService.LogDirectoryPath;
                 if (Directory.Exists(logDirectory))
                 {
                     System.Diagnostics.Process.Start("explorer.exe", logDirectory);
@@ -319,7 +319,7 @@ namespace ThreadPilot.ViewModels
             }
             catch (Exception ex)
             {
-                this._logger.LogError(ex, "Failed to open log directory");
+                this.logger.LogError(ex, "Failed to open log directory");
                 this.StatusMessage = $"Error opening log directory: {ex.Message}";
             }
         }
@@ -344,14 +344,14 @@ namespace ThreadPilot.ViewModels
             }
             catch (Exception ex)
             {
-                this._logger.LogError(ex, "Failed to copy log entry to clipboard");
+                this.logger.LogError(ex, "Failed to copy log entry to clipboard");
                 this.StatusMessage = "Failed to copy log entry";
             }
         }
 
         private void LoadSettings()
         {
-            var settings = this._settingsService.Settings;
+            var settings = this.settingsService.Settings;
             this.EnableDebugLogging = settings.EnableDebugLogging;
             this.MaxLogFileSizeMb = settings.MaxLogFileSizeMb;
             this.LogRetentionDays = settings.LogRetentionDays;

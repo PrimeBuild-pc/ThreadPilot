@@ -152,6 +152,11 @@
                                 <Setter Property="ContextMenu">
                                     <Setter.Value>
                                         <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                                            <ContextMenu.Resources>
+                                                <Style TargetType="MenuItem">
+                                                    <Setter Property="FontWeight" Value="Normal"/>
+                                                </Style>
+                                            </ContextMenu.Resources>
                                             <MenuItem Header="Apply Affinity"
                                                       Command="{Binding ApplyContextAffinityCommand}"
                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>

@@ -30,15 +30,15 @@ namespace ThreadPilot.Core.Tests
             };
 
             var result = await service.ExecuteAsync(
-                async () =>
+                () =>
                 {
                     attempts++;
                     if (attempts < 3)
                     {
-                        throw new InvalidOperationException("transient");
+                        return Task.FromException<string>(new InvalidOperationException("transient"));
                     }
 
-                    return "ok";
+                    return Task.FromResult("ok");
                 },
                 policy);
 
@@ -67,10 +67,10 @@ namespace ThreadPilot.Core.Tests
             await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
             {
                 await service.ExecuteAsync<string>(
-                    async () =>
+                    () =>
                     {
                         attempts++;
-                        throw new UnauthorizedAccessException("denied");
+                        return Task.FromException<string>(new UnauthorizedAccessException("denied"));
                     },
                     policy);
             });

@@ -90,6 +90,59 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task StopMonitoringCommand_StopsServiceAndLogsSuccess()
+        {
+            var harness = new Harness();
+            var viewModel = harness.CreateViewModel();
+
+            await viewModel.StopMonitoringCommand.ExecuteAsync(null);
+
+            harness.Performance.Verify(service => service.StopMonitoringAsync(), Times.Once);
+            harness.Logging.Verify(
+                logger => logger.LogUserActionAsync(
+                    "OptimizationMonitoringStopped",
+                    "Performance monitoring stopped",
+                    null),
+                Times.Once);
+            Assert.Equal("Performance monitoring stopped", viewModel.StatusMessage);
+        }
+
+        [Fact]
+        public async Task RefreshMetricsCommand_WhenMetricsFails_LogsFailureSafely()
+        {
+            var harness = new Harness(metricsThrows: true);
+            var viewModel = harness.CreateViewModel();
+
+            await viewModel.RefreshMetricsCommand.ExecuteAsync(null);
+
+            Assert.True(viewModel.HasError);
+            harness.Logging.Verify(
+                logger => logger.LogUserActionAsync(
+                    "OptimizationActionFailed",
+                    It.Is<string>(details => details.Contains("Failed to refresh performance snapshot")),
+                    null),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task ClearHistoricalDataCommand_ClearsServiceAndLogsSuccess()
+        {
+            var harness = new Harness();
+            var viewModel = harness.CreateViewModel();
+
+            await viewModel.ClearHistoricalDataCommand.ExecuteAsync(null);
+
+            harness.Performance.Verify(service => service.ClearHistoricalDataAsync(), Times.Once);
+            harness.Logging.Verify(
+                logger => logger.LogUserActionAsync(
+                    "OptimizationHistoryCleared",
+                    "Historical metrics cleared",
+                    null),
+                Times.Once);
+            Assert.Equal("Historical data cleared", viewModel.StatusMessage);
+        }
+
+        [Fact]
         public void ShowAdvancedDiagnostics_DefaultsToHidden()
         {
             Assert.False(AppNavigationOptions.ShowAdvancedDiagnostics);
@@ -111,11 +164,21 @@ namespace ThreadPilot.Core.Tests
 
             public Mock<IEnhancedLoggingService> Logging { get; } = new(MockBehavior.Loose);
 
-            public Harness(bool startMonitoringThrows = false)
+            public Harness(bool startMonitoringThrows = false, bool metricsThrows = false)
             {
-                this.Performance
-                    .Setup(x => x.GetSystemMetricsAsync(It.IsAny<bool>()))
-                    .ReturnsAsync(new SystemPerformanceMetrics());
+                if (metricsThrows)
+                {
+                    this.Performance
+                        .Setup(x => x.GetSystemMetricsAsync(It.IsAny<bool>()))
+                        .ThrowsAsync(new InvalidOperationException("metrics unavailable"));
+                }
+                else
+                {
+                    this.Performance
+                        .Setup(x => x.GetSystemMetricsAsync(It.IsAny<bool>()))
+                        .ReturnsAsync(new SystemPerformanceMetrics());
+                }
+
                 this.Performance
                     .Setup(x => x.GetHistoricalDataAsync(It.IsAny<TimeSpan>()))
                     .ReturnsAsync(new List<SystemPerformanceMetrics>());

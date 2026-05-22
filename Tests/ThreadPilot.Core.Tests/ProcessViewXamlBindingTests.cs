@@ -76,6 +76,17 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void ProcessGridContextMenu_MenuItemsUseNormalFontWeight()
+        {
+            var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);
+            var serialized = document.ToString(SaveOptions.DisableFormatting);
+
+            Assert.Contains("<ContextMenu", serialized, StringComparison.Ordinal);
+            Assert.Contains("TargetType=\"MenuItem\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("FontWeight\" Value=\"Normal\"", serialized, StringComparison.Ordinal);
+        }
+
+        [Fact]
         public void LegacyActionSidePanel_IsNotPersistentPrimaryUi()
         {
             var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);

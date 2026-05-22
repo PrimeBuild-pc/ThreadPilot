@@ -263,10 +263,21 @@ namespace ThreadPilot.Services
                 return;
             }
 
-            var openPoint = SystemTrayMenuPlacement.ResolveMenuOpenPoint(Cursor.Position, this.lastContextMenuOpenPoint);
+            var cursorPosition = Cursor.Position;
+            var workingArea = Screen.FromPoint(cursorPosition.IsEmpty ? this.lastContextMenuOpenPoint : cursorPosition).WorkingArea;
+            var openPoint = SystemTrayMenuPlacement.ResolveMenuOpenPoint(
+                cursorPosition,
+                this.lastContextMenuOpenPoint,
+                Rectangle.Empty,
+                workingArea);
             this.lastContextMenuOpenPoint = openPoint;
 
-            this.contextMenu.Show(openPoint);
+            if (this.contextMenu.Visible)
+            {
+                this.contextMenu.Close(ToolStripDropDownCloseReason.CloseCalled);
+            }
+
+            this.contextMenu.Show(openPoint, ToolStripDropDownDirection.Default);
         }
 
         private void OnQuickApplyClick(object? sender, EventArgs e)

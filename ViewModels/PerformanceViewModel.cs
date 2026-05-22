@@ -209,13 +209,20 @@ namespace ThreadPilot.ViewModels
             {
                 this.SetStatus("Loading optional diagnostics...");
 
-                await this.RefreshMetricsSnapshotAsync();
+                var snapshotLoaded = await this.RefreshMetricsSnapshotAsync();
                 await this.LoadHistoricalDataAsync();
 
                 this.diagnosticsActivated = true;
                 this.MonitoringStateText = this.IsMonitoring ? "Active" : "Stopped";
-                this.MonitoringStatusText = this.IsMonitoring ? "Live metrics active" : "Diagnostics snapshot loaded";
-                this.SetStatus("Optional diagnostics loaded", false);
+                if (snapshotLoaded)
+                {
+                    this.MonitoringStatusText = this.IsMonitoring ? "Live metrics active" : "Diagnostics snapshot loaded";
+                    this.SetStatus("Optional diagnostics loaded", false);
+                }
+                else
+                {
+                    this.MonitoringStatusText = "Diagnostics snapshot failed";
+                }
             }
             catch (Exception ex)
             {
@@ -325,7 +332,7 @@ namespace ThreadPilot.ViewModels
             await this.RefreshMetricsSnapshotAsync();
         }
 
-        private async Task RefreshMetricsSnapshotAsync()
+        private async Task<bool> RefreshMetricsSnapshotAsync()
         {
             try
             {
@@ -339,11 +346,13 @@ namespace ThreadPilot.ViewModels
                 this.LastManualRefreshText = $"Refreshed at {DateTime.Now:HH:mm:ss}";
                 this.SetStatus("Performance snapshot refreshed", false);
                 await this.LogUserActionAsync("OptimizationSnapshotRefreshed", "Performance snapshot refreshed");
+                return true;
             }
             catch (Exception ex)
             {
                 this.SetError("Failed to refresh performance snapshot", ex);
                 await this.LogUserActionAsync("OptimizationActionFailed", $"Failed to refresh performance snapshot: {ex.Message}");
+                return false;
             }
         }
 

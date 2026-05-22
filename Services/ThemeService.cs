@@ -30,6 +30,8 @@ namespace ThreadPilot.Services
 
         private readonly ILogger<ThemeService> logger;
         private ResourceDictionary? activeThemeDictionary;
+        private Uri? activeThemeUri;
+        private bool hasAppliedTheme;
 
         public bool IsDarkTheme { get; private set; }
 
@@ -42,6 +44,12 @@ namespace ThreadPilot.Services
         public void ApplyTheme(bool useDarkTheme)
         {
             var targetUri = new Uri(useDarkTheme ? DarkThemeDictionaryPath : LightThemeDictionaryPath, UriKind.Relative);
+            if (this.hasAppliedTheme &&
+                this.IsDarkTheme == useDarkTheme &&
+                string.Equals(this.activeThemeUri?.OriginalString, targetUri.OriginalString, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
 
             var appResources = System.Windows.Application.Current?.Resources;
             if (appResources == null)
@@ -60,6 +68,8 @@ namespace ThreadPilot.Services
                 this.activeThemeDictionary = ThemeDictionaryPolicy.ReplaceThreadPilotThemeDictionary(appResources, targetUri);
 
                 this.IsDarkTheme = useDarkTheme;
+                this.activeThemeUri = targetUri;
+                this.hasAppliedTheme = true;
             }
             catch (Exception ex)
             {
@@ -190,13 +200,30 @@ namespace ThreadPilot.Services
             ArgumentNullException.ThrowIfNull(targetUri);
             ArgumentNullException.ThrowIfNull(dictionaryFactory);
 
+            ResourceDictionary? matchingDictionary = null;
             for (int i = appResources.MergedDictionaries.Count - 1; i >= 0; i--)
             {
                 var dictionary = appResources.MergedDictionaries[i];
                 if (IsThreadPilotThemeDictionary(dictionary.Source?.OriginalString))
                 {
+                    if (matchingDictionary == null &&
+                        string.Equals(dictionary.Source?.OriginalString, targetUri.OriginalString, StringComparison.OrdinalIgnoreCase))
+                    {
+                        matchingDictionary = dictionary;
+                        continue;
+                    }
+
                     appResources.MergedDictionaries.RemoveAt(i);
                 }
+            }
+
+            if (matchingDictionary != null)
+            {
+                appResources.MergedDictionaries.Remove(matchingDictionary);
+                appResources.MergedDictionaries.Insert(
+                    GetInsertionIndex(appResources.MergedDictionaries.Count),
+                    matchingDictionary);
+                return matchingDictionary;
             }
 
             var nextDictionary = dictionaryFactory(targetUri);

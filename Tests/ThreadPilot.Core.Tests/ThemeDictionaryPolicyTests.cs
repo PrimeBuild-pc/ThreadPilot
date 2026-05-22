@@ -44,6 +44,30 @@ namespace ThreadPilot.Core.Tests
                 dictionary => ThemeDictionaryPolicy.IsThreadPilotThemeDictionary(dictionary.Source?.OriginalString));
         }
 
+        [Fact]
+        public void ReplaceThreadPilotThemeDictionary_WhenRequestedThemeIsAlreadyActive_ReusesExistingDictionary()
+        {
+            var darkThemeUri = new Uri("Themes/FluentDark.xaml", UriKind.Relative);
+            var resources = new ResourceDictionary();
+            var activeDictionary = CreateDictionaryWithSource(darkThemeUri);
+            resources.MergedDictionaries.Add(new ResourceDictionary());
+            resources.MergedDictionaries.Add(activeDictionary);
+            var factoryCalls = 0;
+
+            var result = ThemeDictionaryPolicy.ReplaceThreadPilotThemeDictionary(
+                resources,
+                darkThemeUri,
+                uri =>
+                {
+                    factoryCalls++;
+                    return CreateDictionaryWithSource(uri);
+                });
+
+            Assert.Same(activeDictionary, result);
+            Assert.Equal(0, factoryCalls);
+            Assert.Same(activeDictionary, resources.MergedDictionaries[^1]);
+        }
+
         [Theory]
         [InlineData("Themes/FluentDark.xaml")]
         [InlineData("Themes/FluentLight.xaml")]

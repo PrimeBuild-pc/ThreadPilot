@@ -800,9 +800,17 @@ namespace ThreadPilot.Core.Tests
         {
             public event EventHandler<ProcessEventArgs>? ProcessStarted;
 
-            public event EventHandler<ProcessEventArgs>? ProcessStopped;
+            public event EventHandler<ProcessEventArgs>? ProcessStopped
+            {
+                add { }
+                remove { }
+            }
 
-            public event EventHandler<MonitoringStatusEventArgs>? MonitoringStatusChanged;
+            public event EventHandler<MonitoringStatusEventArgs>? MonitoringStatusChanged
+            {
+                add { }
+                remove { }
+            }
 
             public List<ProcessModel> RunningProcesses { get; } = new();
 
