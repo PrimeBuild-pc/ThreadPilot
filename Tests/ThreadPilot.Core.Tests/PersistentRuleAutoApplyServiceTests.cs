@@ -17,11 +17,16 @@ namespace ThreadPilot.Core.Tests
             var process = CreateProcess();
             var rule = CreateRule();
             var engine = CreateEngine(rule, CreateSuccess(rule, process));
-            var service = CreateService([rule], engine.Object);
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var service = CreateService([rule], engine.Object, audit: audit);
 
             var results = await service.ApplyForProcessStartAsync(process);
 
             Assert.Single(results);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Rules", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
+            Assert.Contains("Auto-applied saved rule", entry.Message);
             engine.Verify(
                 x => x.ApplyMatchingRulesAsync(
                     process,
@@ -75,11 +80,13 @@ namespace ThreadPilot.Core.Tests
             var process = CreateProcess();
             var rule = CreateRule();
             var engine = CreateEngine(rule, CreateSuccess(rule, process));
-            var service = CreateService([rule], engine.Object, nowProvider: () => now);
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var service = CreateService([rule], engine.Object, nowProvider: () => now, audit: audit);
 
             await service.ApplyForProcessStartAsync(process);
             await service.ApplyForProcessStartAsync(process);
 
+            Assert.Single(await audit.GetEntriesAsync());
             engine.Verify(
                 x => x.ApplyMatchingRulesAsync(
                     process,
@@ -136,13 +143,18 @@ namespace ThreadPilot.Core.Tests
             var rule = CreateRule();
             var failure = CreateFailure(rule, process, ProcessOperationUserMessages.AccessDenied, isAccessDenied: true);
             var engine = CreateEngine(rule, failure);
-            var service = CreateService([rule], engine.Object);
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var service = CreateService([rule], engine.Object, audit: audit);
 
             var result = Assert.Single(await service.ApplyForProcessStartAsync(process));
 
             Assert.False(result.Success);
             Assert.True(result.IsAccessDenied);
             Assert.Equal(ProcessOperationUserMessages.AccessDenied, result.UserMessage);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Rules", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Warning, entry.Severity);
+            Assert.Contains("Failed to auto-apply saved rule", entry.Message);
         }
 
         [Fact]
@@ -373,7 +385,8 @@ namespace ThreadPilot.Core.Tests
             IReadOnlyList<PersistentProcessRule> rules,
             IPersistentRulesEngine engine,
             ApplicationSettingsModel? settings = null,
-            Func<DateTimeOffset>? nowProvider = null) =>
+            Func<DateTimeOffset>? nowProvider = null,
+            IActivityAuditService? audit = null) =>
             new(
                 new FakePersistentProcessRuleStore(rules),
                 new PersistentProcessRuleMatcher(),
@@ -381,7 +394,8 @@ namespace ThreadPilot.Core.Tests
                 CreateSettingsService(settings ?? new ApplicationSettingsModel()),
                 NullLogger<PersistentRuleAutoApplyService>.Instance,
                 nowProvider ?? (() => DateTimeOffset.UtcNow),
-                TimeSpan.FromSeconds(30));
+                TimeSpan.FromSeconds(30),
+                audit);
 
         private static Mock<IPersistentRulesEngine> CreateEngine(
             PersistentProcessRule rule,

@@ -46,8 +46,9 @@ namespace ThreadPilot.ViewModels
             ISystemTweaksService systemTweaksService,
             INotificationService notificationService,
             ILogger<SystemTweaksViewModel> logger,
-            IEnhancedLoggingService? enhancedLoggingService = null)
-            : base(logger, enhancedLoggingService)
+            IEnhancedLoggingService? enhancedLoggingService = null,
+            IActivityAuditService? activityAuditService = null)
+            : base(logger, enhancedLoggingService, activityAuditService)
         {
             this.systemTweaksService = systemTweaksService;
             this.notificationService = notificationService;

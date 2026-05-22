@@ -30,6 +30,16 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void ConfigureApplicationServices_RegistersActivityAuditService()
+        {
+            using var provider = CreateProvider();
+
+            var service = provider.GetRequiredService<IActivityAuditService>();
+
+            Assert.IsType<ActivityAuditService>(service);
+        }
+
+        [Fact]
         public void ApplicationSettings_DefaultsToPersistentRulesAutoApplyEnabled()
         {
             var settings = new ApplicationSettingsModel();

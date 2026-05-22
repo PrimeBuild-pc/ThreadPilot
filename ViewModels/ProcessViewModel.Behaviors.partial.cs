@@ -685,7 +685,7 @@ namespace ThreadPilot.ViewModels
                     ? await this.processService.GetActiveApplicationsAsync()
                     : await this.processService.GetProcessesAsync();
 
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await InvokeOnUiAsync(() =>
                 {
                     var deltaResult = ProcessListDeltaUpdater.ApplyDelta(
                         this.Processes,
@@ -712,7 +712,7 @@ namespace ThreadPilot.ViewModels
             }
             catch (Exception ex)
             {
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await InvokeOnUiAsync(() =>
                 {
                     this.SetStatus($"Error refreshing processes: {ex.Message}", false);
                 });
@@ -815,6 +815,10 @@ namespace ThreadPilot.ViewModels
             if (!applyResult.Success)
             {
                 this.SetContextError(applyResult.Message);
+                await this.LogUserActionAsync(
+                    "ProcessAffinityFailed",
+                    applyResult.Message,
+                    $"Process: {process.Name}, PID: {process.ProcessId}, RequestedMask: 0x{applyResult.RequestedMask:X}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
                 return;
             }
@@ -1334,8 +1338,24 @@ namespace ThreadPilot.ViewModels
         [RelayCommand]
         private async Task SetPriority(ProcessPriorityClass priority)
         {
-            if (this.SelectedProcess == null)
+            var selectedProcess = this.SelectedProcess;
+            if (selectedProcess == null)
             {
+                return;
+            }
+
+            if (ProcessPriorityGuardrails.IsBlocked(priority))
+            {
+                var message = ProcessOperationUserMessages.RealtimePriorityBlocked;
+                await InvokeOnUiAsync(() =>
+                {
+                    this.SetCriticalStatus(message);
+                });
+                _ = this.notificationService.ShowNotificationAsync("Priority blocked", message, NotificationType.Warning);
+                await this.LogUserActionAsync(
+                    "ProcessPriorityBlocked",
+                    message,
+                    $"Process: {selectedProcess.Name}, PID: {selectedProcess.ProcessId}, Priority: {priority}");
                 return;
             }
 
@@ -1343,14 +1363,14 @@ namespace ThreadPilot.ViewModels
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    this.SetStatus($"Setting priority for {this.SelectedProcess.Name} to {priority}...");
+                    this.SetStatus($"Setting priority for {selectedProcess.Name} to {priority}...");
                 });
 
                 // Apply the priority change
-                await this.processService.SetProcessPriority(this.SelectedProcess, priority);
+                await this.processService.SetProcessPriority(selectedProcess, priority);
 
                 // Immediately refresh the process to get the actual system state
-                await this.processService.RefreshProcessInfo(this.SelectedProcess);
+                await this.processService.RefreshProcessInfo(selectedProcess);
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
@@ -1358,7 +1378,7 @@ namespace ThreadPilot.ViewModels
                     this.OnPropertyChanged(nameof(this.SelectedProcess));
 
                     // Verify the priority was set correctly
-                    if (this.SelectedProcess.Priority == priority)
+                    if (selectedProcess.Priority == priority)
                     {
                         var warning = ProcessPriorityGuardrails.GetWarning(priority);
                         if (!string.IsNullOrWhiteSpace(warning))
@@ -1368,16 +1388,20 @@ namespace ThreadPilot.ViewModels
                         }
                         else
                         {
-                            this.SetStatus($"Priority applied successfully to {this.SelectedProcess.Name}: {priority}.", false);
-                            _ = this.notificationService.ShowNotificationAsync("Priority applied", $"{this.SelectedProcess.Name}: {priority}", NotificationType.Success);
+                            this.SetStatus($"Priority applied successfully to {selectedProcess.Name}: {priority}.", false);
+                            _ = this.notificationService.ShowNotificationAsync("Priority applied", $"{selectedProcess.Name}: {priority}", NotificationType.Success);
                         }
                     }
                     else
                     {
-                        this.SetStatus($"Priority adjusted by system for {this.SelectedProcess.Name} to {this.SelectedProcess.Priority}.", false);
-                        _ = this.notificationService.ShowNotificationAsync("Priority adjusted", $"{this.SelectedProcess.Name}: {this.SelectedProcess.Priority}", NotificationType.Warning);
+                        this.SetStatus($"Priority adjusted by system for {selectedProcess.Name} to {selectedProcess.Priority}.", false);
+                        _ = this.notificationService.ShowNotificationAsync("Priority adjusted", $"{selectedProcess.Name}: {selectedProcess.Priority}", NotificationType.Warning);
                     }
                 });
+                await this.LogUserActionAsync(
+                    "ProcessPriorityChanged",
+                    $"CPU priority changed for {selectedProcess.Name}: {priority}",
+                    $"PID: {selectedProcess.ProcessId}");
             }
             catch (Exception ex)
             {
@@ -1402,11 +1426,15 @@ namespace ThreadPilot.ViewModels
                 {
                     this.SetCriticalStatus($"Error setting priority: {message}");
                 });
+                await this.LogUserActionAsync(
+                    message == ProcessOperationUserMessages.RealtimePriorityBlocked ? "ProcessPriorityBlocked" : "ProcessPriorityChangeFailed",
+                    message,
+                    $"Process: {selectedProcess.Name}, PID: {selectedProcess.ProcessId}, Priority: {priority}");
 
                 // Try to refresh process info even if setting failed, to show current state
                 try
                 {
-                    await this.processService.RefreshProcessInfo(this.SelectedProcess);
+                    await this.processService.RefreshProcessInfo(selectedProcess);
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
                         this.OnPropertyChanged(nameof(this.SelectedProcess));
@@ -1513,11 +1541,20 @@ namespace ThreadPilot.ViewModels
             {
                 await this.processService.RefreshProcessInfo(process);
                 this.SetStatus($"Process info refreshed for {process.Name}.", false);
+                await this.LogUserActionAsync(
+                    "ProcessInfoRefreshed",
+                    $"Process info refreshed for {process.Name}.",
+                    $"PID: {process.ProcessId}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
             }
             catch (Exception ex)
             {
-                this.SetContextError(MapProcessOperationException(ex));
+                var message = MapProcessOperationException(ex);
+                this.SetContextError(message);
+                await this.LogUserActionAsync(
+                    "ProcessInfoRefreshFailed",
+                    message,
+                    $"Process: {process.Name}, PID: {process.ProcessId}");
                 await this.TryRefreshContextProcessSummaryAsync(process);
             }
         }
@@ -1533,7 +1570,12 @@ namespace ThreadPilot.ViewModels
             var path = process.ExecutablePath;
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
             {
-                this.SetContextError($"Executable path is unavailable for {process.Name}.");
+                var message = $"Executable path is unavailable for {process.Name}.";
+                this.SetContextError(message);
+                await this.LogUserActionAsync(
+                    "ProcessExecutableOpenFailed",
+                    message,
+                    $"Process: {process.Name}, PID: {process.ProcessId}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
                 return;
             }
@@ -1542,11 +1584,20 @@ namespace ThreadPilot.ViewModels
             {
                 this.executableLocationOpener(path);
                 this.SetStatus($"Opened executable location for {process.Name}.", false);
+                await this.LogUserActionAsync(
+                    "ProcessExecutableLocationOpened",
+                    $"Opened executable location for {process.Name}.",
+                    path);
                 await this.UpdateSelectedProcessSummaryAsync(process);
             }
             catch (Exception ex)
             {
-                this.SetContextError($"Could not open executable location: {ex.Message}");
+                var message = $"Could not open executable location: {ex.Message}";
+                this.SetContextError(message);
+                await this.LogUserActionAsync(
+                    "ProcessExecutableOpenFailed",
+                    message,
+                    $"Process: {process.Name}, PID: {process.ProcessId}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
             }
         }
@@ -1577,11 +1628,20 @@ namespace ThreadPilot.ViewModels
             {
                 this.clipboardSetter(builder.ToString().TrimEnd());
                 this.SetStatus($"Copied process info for {process.Name}.", false);
+                await this.LogUserActionAsync(
+                    "ProcessInfoCopied",
+                    $"Copied process info for {process.Name}.",
+                    $"PID: {process.ProcessId}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
             }
             catch (Exception ex)
             {
-                this.SetContextError($"Could not copy process info: {ex.Message}");
+                var message = $"Could not copy process info: {ex.Message}";
+                this.SetContextError(message);
+                await this.LogUserActionAsync(
+                    "ProcessInfoCopyFailed",
+                    message,
+                    $"Process: {process.Name}, PID: {process.ProcessId}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
             }
         }

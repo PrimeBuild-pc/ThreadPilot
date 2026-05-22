@@ -63,8 +63,8 @@
 
         <!-- Standardized Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
-            <TextBlock Text="Activity Logs" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
-            <TextBlock Text="View and filter application logs and system events" Style="{StaticResource PageSubtitleTextStyle}"/>
+            <TextBlock Text="ThreadPilot Activity" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
+            <TextBlock Text="Shows actions performed by ThreadPilot, including applied rules, affinity changes, priority changes, power plan changes, settings changes, tweaks, optimizations, and safe failure messages." Style="{StaticResource PageSubtitleTextStyle}" TextWrapping="Wrap"/>
         </StackPanel>
 
         <!-- Filter and Control Panel -->
@@ -133,9 +133,9 @@
                         </Button.IsEnabled>
                     </Button>
                     <Button Content="Clear Display" Command="{Binding ClearLogsCommand}" Margin="5,0"/>
-                    <Button Content="Export" Command="{Binding ExportLogsCommand}" Margin="5,0"/>
-                    <Button Content="Cleanup Old" Command="{Binding CleanupOldLogsCommand}" Margin="5,0"/>
-                    <Button Content="Open Directory" Command="{Binding OpenLogDirectoryCommand}" Margin="5,0"/>
+                    <Button Content="Export Activity" Command="{Binding ExportLogsCommand}" Margin="5,0"/>
+                    <Button Content="Cleanup Diagnostic Files" Command="{Binding CleanupOldLogsCommand}" Margin="5,0"/>
+                    <Button Content="Open Diagnostic Folder" Command="{Binding OpenLogDirectoryCommand}" Margin="5,0"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -162,10 +162,10 @@
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
 
-                    <GridViewColumn Header="Level" Width="80">
+                    <GridViewColumn Header="Status" Width="90">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding Level}"
+                                <TextBlock Text="{Binding Status}"
                                            Foreground="{Binding LevelColor}"
                                            Style="{StaticResource LogLevelTextStyle}"/>
                             </DataTemplate>
@@ -188,17 +188,17 @@
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
 
-                    <GridViewColumn Header="Exception" Width="60">
+                    <GridViewColumn Header="Details" Width="70">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Foreground="{DynamicResource ErrorTextBrush}" FontWeight="Bold">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding HasException}" Value="True">
+                                                <DataTrigger Binding="{Binding HasDetails}" Value="True">
                                                     <Setter Property="Text" Value="!"/>
                                                 </DataTrigger>
-                                                <DataTrigger Binding="{Binding HasException}" Value="False">
+                                                <DataTrigger Binding="{Binding HasDetails}" Value="False">
                                                     <Setter Property="Text" Value=""/>
                                                 </DataTrigger>
                                             </Style.Triggers>
@@ -261,11 +261,11 @@
         <GridSplitter Grid.Row="3" Height="5" HorizontalAlignment="Stretch"
                       Background="{DynamicResource SurfaceStrokeColorDefaultBrush}" ResizeBehavior="PreviousAndNext"/>
 
-        <!-- Log Entry Details -->
+        <!-- Activity Details -->
         <Border Grid.Row="4" Background="{DynamicResource SolidBackgroundFillColorBaseBrush}" BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                 <StackPanel Margin="16" DataContext="{Binding SelectedLogEntry}">
-                    <TextBlock Text="Log Entry Details" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,16"/>
+                    <TextBlock Text="Activity Details" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,16"/>
 
                     <Grid>
                         <Grid.Style>
@@ -293,8 +293,8 @@
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="Timestamp:" FontWeight="SemiBold" Margin="0,0,10,5"/>
                         <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding FormattedTimestamp}" Margin="0,0,0,5"/>
 
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Level:" FontWeight="SemiBold" Margin="0,0,10,5"/>
-                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Level}"
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Status:" FontWeight="SemiBold" Margin="0,0,10,5"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Status}"
                                    Foreground="{Binding LevelColor}" FontWeight="SemiBold" Margin="0,0,0,5"/>
 
                         <TextBlock Grid.Row="2" Grid.Column="0" Text="Category:" FontWeight="SemiBold" Margin="0,0,10,5"/>
@@ -305,25 +305,25 @@
                                  IsReadOnly="True" TextWrapping="Wrap" Background="Transparent"
                                  BorderThickness="0" Margin="0,0,0,10"/>
 
-                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Exception:" FontWeight="SemiBold" Margin="0,0,10,5"
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Details:" FontWeight="SemiBold" Margin="0,0,10,5"
                                    VerticalAlignment="Top">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding HasException}" Value="False">
+                                        <DataTrigger Binding="{Binding HasDetails}" Value="False">
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
-                        <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Exception, Mode=OneWay}"
-                                 IsReadOnly="True" TextWrapping="Wrap" Background="{DynamicResource ErrorBackgroundBrush}"
-                                 BorderThickness="1" BorderBrush="{DynamicResource ErrorBorderBrush}" Margin="0,0,0,10">
+                        <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Details, Mode=OneWay}"
+                                 IsReadOnly="True" TextWrapping="Wrap" Background="Transparent"
+                                 BorderThickness="0" Margin="0,0,0,10">
                             <TextBox.Style>
                                 <Style TargetType="TextBox">
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding HasException}" Value="False">
+                                        <DataTrigger Binding="{Binding HasDetails}" Value="False">
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -392,7 +392,7 @@
 
                 <!-- Settings Panel -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <CheckBox Content="Debug Logging" IsChecked="{Binding EnableDebugLogging}"
+                    <CheckBox Content="Debug Diagnostics" IsChecked="{Binding EnableDebugLogging}"
                               VerticalAlignment="Center" Margin="0,0,15,0"/>
 
                     <TextBlock Text="Max Size (MB):" VerticalAlignment="Center" Margin="0,0,5,0"/>

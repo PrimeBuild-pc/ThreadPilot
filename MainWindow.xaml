@@ -143,7 +143,7 @@
                             <ui:SymbolIcon Symbol="DataHistogram24"/>
                         </ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
-                    <ui:NavigationViewItem x:Name="NavLogs" Content="Activity Logs" Tag="Logs" TargetPageTag="Logs" Click="NavMenuItem_Click">
+                    <ui:NavigationViewItem x:Name="NavLogs" Content="ThreadPilot Activity" Tag="Logs" TargetPageTag="Logs" Click="NavMenuItem_Click">
                         <ui:NavigationViewItem.Icon>
                             <ui:SymbolIcon Symbol="DocumentText24"/>
                         </ui:NavigationViewItem.Icon>

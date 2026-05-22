@@ -33,6 +33,10 @@ namespace ThreadPilot.Core.Tests
                     $"{name} enabled",
                     tweakType.ToString()),
                 Times.Once);
+            var entry = Assert.Single(await harness.Audit.GetEntriesAsync());
+            Assert.Equal("Tweaks", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
+            Assert.Equal($"{name} enabled", entry.Message);
             Assert.Equal($"{name} enabled successfully", viewModel.StatusMessage);
         }
 
@@ -55,6 +59,10 @@ namespace ThreadPilot.Core.Tests
                     "Failed to enable Core Parking",
                     "CoreParking"),
                 Times.Once);
+            var entry = Assert.Single(await harness.Audit.GetEntriesAsync());
+            Assert.Equal("Tweaks", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Error, entry.Severity);
+            Assert.Equal("Failed to enable Core Parking", entry.Message);
             Assert.True(viewModel.HasError);
             Assert.Equal("Failed to toggle Core Parking", viewModel.ErrorMessage);
         }
@@ -66,6 +74,8 @@ namespace ThreadPilot.Core.Tests
             public Mock<INotificationService> Notifications { get; } = new(MockBehavior.Loose);
 
             public Mock<IEnhancedLoggingService> Logging { get; } = new(MockBehavior.Loose);
+
+            public ActivityAuditService Audit { get; } = new(NullLogger<ActivityAuditService>.Instance);
 
             public void SetupTweak(SystemTweak tweakType, bool setResult)
             {
@@ -146,7 +156,8 @@ namespace ThreadPilot.Core.Tests
                     this.Tweaks.Object,
                     this.Notifications.Object,
                     NullLogger<SystemTweaksViewModel>.Instance,
-                    this.Logging.Object);
+                    this.Logging.Object,
+                    this.Audit);
 
             private static TweakStatus CreateEnabledStatus() =>
                 new() { IsEnabled = true, IsAvailable = true };

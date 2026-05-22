@@ -69,6 +69,7 @@ namespace ThreadPilot.Services
         private readonly IPersistentRulesEngine rulesEngine;
         private readonly IApplicationSettingsService settingsService;
         private readonly ILogger<PersistentRuleAutoApplyService> logger;
+        private readonly IActivityAuditService? activityAuditService;
         private readonly Func<DateTimeOffset> nowProvider;
         private readonly TimeSpan cooldown;
         private readonly ConcurrentDictionary<RuleAttemptKey, DateTimeOffset> recentAttempts = new();
@@ -78,8 +79,9 @@ namespace ThreadPilot.Services
             IPersistentProcessRuleMatcher matcher,
             IPersistentRulesEngine rulesEngine,
             IApplicationSettingsService settingsService,
-            ILogger<PersistentRuleAutoApplyService> logger)
-            : this(ruleStore, matcher, rulesEngine, settingsService, logger, () => DateTimeOffset.UtcNow, DefaultCooldown)
+            ILogger<PersistentRuleAutoApplyService> logger,
+            IActivityAuditService? activityAuditService = null)
+            : this(ruleStore, matcher, rulesEngine, settingsService, logger, () => DateTimeOffset.UtcNow, DefaultCooldown, activityAuditService)
         {
         }
 
@@ -90,7 +92,8 @@ namespace ThreadPilot.Services
             IApplicationSettingsService settingsService,
             ILogger<PersistentRuleAutoApplyService> logger,
             Func<DateTimeOffset> nowProvider,
-            TimeSpan cooldown)
+            TimeSpan cooldown,
+            IActivityAuditService? activityAuditService = null)
         {
             this.ruleStore = ruleStore ?? throw new ArgumentNullException(nameof(ruleStore));
             this.matcher = matcher ?? throw new ArgumentNullException(nameof(matcher));
@@ -99,6 +102,7 @@ namespace ThreadPilot.Services
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.nowProvider = nowProvider ?? throw new ArgumentNullException(nameof(nowProvider));
             this.cooldown = cooldown <= TimeSpan.Zero ? DefaultCooldown : cooldown;
+            this.activityAuditService = activityAuditService;
         }
 
         public async Task<IReadOnlyList<PersistentRuleAutoApplyResult>> ApplyForDiscoveredProcessesAsync(
@@ -204,7 +208,7 @@ namespace ThreadPilot.Services
                 var results = applyResults.Select(PersistentRuleAutoApplyResult.FromApplyResult).ToList();
                 foreach (var result in results)
                 {
-                    this.LogResult(result);
+                    await this.LogResultAsync(result).ConfigureAwait(false);
                 }
 
                 return results;
@@ -252,7 +256,7 @@ namespace ThreadPilot.Services
             }
         }
 
-        private void LogResult(PersistentRuleAutoApplyResult result)
+        private async Task LogResultAsync(PersistentRuleAutoApplyResult result)
         {
             if (result.Success)
             {
@@ -261,6 +265,7 @@ namespace ThreadPilot.Services
                     result.RuleId,
                     result.ProcessName,
                     result.ProcessId);
+                await this.LogActivityResultAsync(result).ConfigureAwait(false);
                 return;
             }
 
@@ -274,6 +279,36 @@ namespace ThreadPilot.Services
                 result.ProcessName,
                 result.ProcessId,
                 result.UserMessage);
+            await this.LogActivityResultAsync(result).ConfigureAwait(false);
+        }
+
+        private async Task LogActivityResultAsync(PersistentRuleAutoApplyResult result)
+        {
+            if (this.activityAuditService == null)
+            {
+                return;
+            }
+
+            var action = result.Success
+                ? "PersistentRuleAutoApplied"
+                : "PersistentRuleAutoApplyFailed";
+            var message = result.Success
+                ? $"Auto-applied saved rule for {result.ProcessName}."
+                : $"Failed to auto-apply saved rule for {result.ProcessName}: {result.UserMessage}";
+
+            try
+            {
+                await this.activityAuditService
+                    .LogUserActionAsync(
+                        action,
+                        message,
+                        $"Rule: {result.RuleId}, PID: {result.ProcessId}")
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogWarning(ex, "Failed to write persistent rule activity audit entry");
+            }
         }
 
         private bool IsEnabled() =>

@@ -38,6 +38,7 @@ namespace ThreadPilot.Core.Tests
             harness.PowerPlan.Verify(x => x.GetActivePowerPlan(), Times.Once);
             harness.Performance.Verify(x => x.StartMonitoringAsync(), Times.Never);
             Assert.False(viewModel.IsMonitoring);
+            Assert.Empty(await harness.Audit.GetEntriesAsync());
         }
 
         [Fact]
@@ -70,6 +71,11 @@ namespace ThreadPilot.Core.Tests
                     "Performance monitoring started",
                     null),
                 Times.Once);
+            var entry = Assert.Single(
+                await harness.Audit.GetEntriesAsync(),
+                entry => entry.Message == "Performance monitoring started");
+            Assert.Equal("Optimization", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
         }
 
         [Fact]
@@ -87,6 +93,11 @@ namespace ThreadPilot.Core.Tests
                     It.Is<string>(details => details.Contains("Failed to start performance monitoring")),
                     null),
                 Times.Once);
+            var entry = Assert.Single(
+                await harness.Audit.GetEntriesAsync(),
+                entry => entry.Message.Contains("Failed to start performance monitoring"));
+            Assert.Equal("Optimization", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Error, entry.Severity);
         }
 
         [Fact]
@@ -104,6 +115,9 @@ namespace ThreadPilot.Core.Tests
                     "Performance monitoring stopped",
                     null),
                 Times.Once);
+            var entry = Assert.Single(await harness.Audit.GetEntriesAsync());
+            Assert.Equal("Optimization", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
             Assert.Equal("Performance monitoring stopped", viewModel.StatusMessage);
         }
 
@@ -122,6 +136,9 @@ namespace ThreadPilot.Core.Tests
                     It.Is<string>(details => details.Contains("Failed to refresh performance snapshot")),
                     null),
                 Times.Once);
+            var entry = Assert.Single(await harness.Audit.GetEntriesAsync());
+            Assert.Equal("Optimization", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Error, entry.Severity);
         }
 
         [Fact]
@@ -139,6 +156,9 @@ namespace ThreadPilot.Core.Tests
                     "Historical metrics cleared",
                     null),
                 Times.Once);
+            var entry = Assert.Single(await harness.Audit.GetEntriesAsync());
+            Assert.Equal("Optimization", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
             Assert.Equal("Historical data cleared", viewModel.StatusMessage);
         }
 
@@ -163,6 +183,8 @@ namespace ThreadPilot.Core.Tests
             public Mock<ISystemTweaksService> SystemTweaks { get; } = new(MockBehavior.Strict);
 
             public Mock<IEnhancedLoggingService> Logging { get; } = new(MockBehavior.Loose);
+
+            public ActivityAuditService Audit { get; } = new(NullLogger<ActivityAuditService>.Instance);
 
             public Harness(bool startMonitoringThrows = false, bool metricsThrows = false)
             {
@@ -226,7 +248,8 @@ namespace ThreadPilot.Core.Tests
                     this.ProcessMonitorManager.Object,
                     this.SystemTweaks.Object,
                     NullLogger<PerformanceViewModel>.Instance,
-                    this.Logging.Object);
+                    this.Logging.Object,
+                    this.Audit);
         }
     }
 }

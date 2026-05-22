@@ -11,7 +11,7 @@ namespace ThreadPilot.Core.Tests
     public sealed class SettingsViewModelThemeTests
     {
         [Fact]
-        public void ChangingTheme_AppliesThemeAndLogsVisibleActivityEntry()
+        public async Task ChangingTheme_AppliesThemeAndLogsVisibleActivityEntry()
         {
             var harness = new Harness();
             var viewModel = harness.CreateViewModel();
@@ -26,6 +26,10 @@ namespace ThreadPilot.Core.Tests
                     "Theme changed to Dark",
                     null),
                 Times.Once);
+            var entry = Assert.Single(await harness.Audit.GetEntriesAsync());
+            Assert.Equal("Settings", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
+            Assert.Equal("Theme changed to Dark", entry.Message);
             Assert.Equal("Theme changed to Dark.", viewModel.StatusMessage);
         }
 
@@ -66,6 +70,8 @@ namespace ThreadPilot.Core.Tests
 
             public Mock<IEnhancedLoggingService> Logging { get; } = new(MockBehavior.Loose);
 
+            public ActivityAuditService Audit { get; } = new(NullLogger<ActivityAuditService>.Instance);
+
             public Harness(bool initialDarkTheme = false)
             {
                 this.settings = new ApplicationSettingsModel
@@ -100,7 +106,8 @@ namespace ThreadPilot.Core.Tests
                     this.Theme.Object,
                     this.Tray.Object,
                     new GitHubUpdateChecker(new Mock<IGitHubReleaseClient>().Object),
-                    this.Logging.Object);
+                    this.Logging.Object,
+                    this.Audit);
         }
     }
 }

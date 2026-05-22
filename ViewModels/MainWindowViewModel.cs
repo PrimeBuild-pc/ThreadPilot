@@ -66,8 +66,9 @@ namespace ThreadPilot
             IProcessMonitorManagerService? processMonitorManagerService = null,
             INotificationService? notificationService = null,
             IElevationService? elevationService = null,
-            ISecurityService? securityService = null)
-            : base(logger, enhancedLoggingService)
+            ISecurityService? securityService = null,
+            IActivityAuditService? activityAuditService = null)
+            : base(logger, enhancedLoggingService, activityAuditService)
         {
             this.processMonitorManagerService = processMonitorManagerService;
             this.notificationService = notificationService;

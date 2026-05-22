@@ -178,8 +178,9 @@ namespace ThreadPilot.ViewModels
             IProcessMonitorManagerService processMonitorManagerService,
             ISystemTweaksService systemTweaksService,
             ILogger<PerformanceViewModel> logger,
-            IEnhancedLoggingService? enhancedLoggingService = null)
-            : base(logger, enhancedLoggingService)
+            IEnhancedLoggingService? enhancedLoggingService = null,
+            IActivityAuditService? activityAuditService = null)
+            : base(logger, enhancedLoggingService, activityAuditService)
         {
             this.performanceService = performanceService;
             this.processService = processService;
@@ -205,11 +206,16 @@ namespace ThreadPilot.ViewModels
 
         public async Task ActivateDiagnosticsAsync()
         {
+            await this.ActivateDiagnosticsCoreAsync(auditActivity: false);
+        }
+
+        private async Task ActivateDiagnosticsCoreAsync(bool auditActivity)
+        {
             try
             {
                 this.SetStatus("Loading optional diagnostics...");
 
-                var snapshotLoaded = await this.RefreshMetricsSnapshotAsync();
+                var snapshotLoaded = await this.RefreshMetricsSnapshotAsync(auditActivity);
                 await this.LoadHistoricalDataAsync();
 
                 this.diagnosticsActivated = true;
@@ -325,14 +331,14 @@ namespace ThreadPilot.ViewModels
         {
             if (!this.diagnosticsActivated)
             {
-                await this.ActivateDiagnosticsAsync();
+                await this.ActivateDiagnosticsCoreAsync(auditActivity: true);
                 return;
             }
 
-            await this.RefreshMetricsSnapshotAsync();
+            await this.RefreshMetricsSnapshotAsync(auditActivity: true);
         }
 
-        private async Task<bool> RefreshMetricsSnapshotAsync()
+        private async Task<bool> RefreshMetricsSnapshotAsync(bool auditActivity)
         {
             try
             {
@@ -345,13 +351,19 @@ namespace ThreadPilot.ViewModels
 
                 this.LastManualRefreshText = $"Refreshed at {DateTime.Now:HH:mm:ss}";
                 this.SetStatus("Performance snapshot refreshed", false);
-                await this.LogUserActionAsync("OptimizationSnapshotRefreshed", "Performance snapshot refreshed");
+                if (auditActivity)
+                {
+                    await this.LogUserActionAsync("OptimizationSnapshotRefreshed", "Performance snapshot refreshed");
+                }
                 return true;
             }
             catch (Exception ex)
             {
                 this.SetError("Failed to refresh performance snapshot", ex);
-                await this.LogUserActionAsync("OptimizationActionFailed", $"Failed to refresh performance snapshot: {ex.Message}");
+                if (auditActivity)
+                {
+                    await this.LogUserActionAsync("OptimizationActionFailed", $"Failed to refresh performance snapshot: {ex.Message}");
+                }
                 return false;
             }
         }

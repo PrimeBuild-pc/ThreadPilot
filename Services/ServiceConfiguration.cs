@@ -66,6 +66,7 @@ namespace ThreadPilot.Services
 
             // Enhanced logging service
             services.AddSingleton<IEnhancedLoggingService, EnhancedLoggingService>();
+            services.AddSingleton<IActivityAuditService, ActivityAuditService>();
             services.AddSingleton<IProcessRunner, SystemProcessRunner>();
             services.AddSingleton<ISettingsStorage, FileSettingsStorage>();
             services.AddSingleton(sp =>
@@ -236,6 +237,7 @@ namespace ThreadPilot.Services
                     typeof(IPowerPlanService),
                     typeof(ICpuTopologyService),
                     typeof(IEnhancedLoggingService),
+                    typeof(IActivityAuditService),
                     typeof(IApplicationSettingsService),
                 };
 

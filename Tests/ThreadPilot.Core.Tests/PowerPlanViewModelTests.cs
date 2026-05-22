@@ -26,6 +26,10 @@ namespace ThreadPilot.Core.Tests
                     "Deleted power plan Gaming",
                     $"Guid: {Harness.DeleteGuid}"),
                 Times.Once);
+            var entry = Assert.Single(await harness.Audit.GetEntriesAsync());
+            Assert.Equal("Power Plans", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
+            Assert.Equal("Deleted power plan Gaming", entry.Message);
             Assert.Equal("Power plan deleted: Gaming.", viewModel.StatusMessage);
             Assert.False(viewModel.HasError);
         }
@@ -42,6 +46,10 @@ namespace ThreadPilot.Core.Tests
             harness.PowerPlan.Verify(service => service.DeletePowerPlanAsync(It.IsAny<string>()), Times.Never);
             Assert.Equal("Switch to another power plan before deleting the active plan.", viewModel.StatusMessage);
             Assert.True(viewModel.HasError);
+            var entry = Assert.Single(await harness.Audit.GetEntriesAsync());
+            Assert.Equal("Power Plans", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Warning, entry.Severity);
+            Assert.Contains("Switch to another power plan", entry.Message);
         }
 
         [Fact]
@@ -73,6 +81,10 @@ namespace ThreadPilot.Core.Tests
                     "Applied power plan Gaming",
                     $"Guid: {Harness.DeleteGuid}"),
                 Times.Once);
+            var entry = Assert.Single(await harness.Audit.GetEntriesAsync());
+            Assert.Equal("Power Plans", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
+            Assert.Equal("Applied power plan Gaming", entry.Message);
         }
 
         [Fact]
@@ -90,6 +102,10 @@ namespace ThreadPilot.Core.Tests
                     "Refreshed power plan list",
                     null),
                 Times.Once);
+            var entry = Assert.Single(await harness.Audit.GetEntriesAsync());
+            Assert.Equal("Power Plans", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
+            Assert.Equal("Refreshed power plan list", entry.Message);
         }
 
         private sealed class Harness
@@ -100,6 +116,8 @@ namespace ThreadPilot.Core.Tests
             public Mock<IPowerPlanService> PowerPlan { get; } = new(MockBehavior.Strict);
 
             public Mock<IEnhancedLoggingService> Logging { get; } = new(MockBehavior.Loose);
+
+            public ActivityAuditService Audit { get; } = new(NullLogger<ActivityAuditService>.Instance);
 
             public Harness(bool deleteSucceeds = true)
             {
@@ -127,7 +145,8 @@ namespace ThreadPilot.Core.Tests
                 new(
                     NullLogger<PowerPlanViewModel>.Instance,
                     this.PowerPlan.Object,
-                    this.Logging.Object);
+                    this.Logging.Object,
+                    this.Audit);
         }
     }
 }

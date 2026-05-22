@@ -55,8 +55,9 @@ namespace ThreadPilot.ViewModels
         public PowerPlanViewModel(
             ILogger<PowerPlanViewModel> logger,
             IPowerPlanService powerPlanService,
-            IEnhancedLoggingService? enhancedLoggingService = null)
-            : base(logger, enhancedLoggingService)
+            IEnhancedLoggingService? enhancedLoggingService = null,
+            IActivityAuditService? activityAuditService = null)
+            : base(logger, enhancedLoggingService, activityAuditService)
         {
             this.powerPlanService = powerPlanService;
             this.SetupRefreshTimer();
@@ -84,7 +85,7 @@ namespace ThreadPilot.ViewModels
                     {
                         if (!this.isAutoRefreshPaused)
                         {
-                            await this.RefreshPowerPlansCommand.ExecuteAsync(null);
+                            await this.RefreshPowerPlansCoreAsync(reportStatus: false);
                         }
                     });
                 }
@@ -120,7 +121,7 @@ namespace ThreadPilot.ViewModels
             {
                 try
                 {
-                    await this.RefreshPowerPlansCommand.ExecuteAsync(null);
+                    await this.RefreshPowerPlansCoreAsync(reportStatus: false);
                 }
                 catch (Exception ex)
                 {

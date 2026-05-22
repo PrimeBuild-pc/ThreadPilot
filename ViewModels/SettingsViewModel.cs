@@ -106,8 +106,9 @@ namespace ThreadPilot.ViewModels
             IThemeService themeService,
             ISystemTrayService systemTrayService,
             GitHubUpdateChecker gitHubUpdateChecker,
-            IEnhancedLoggingService? enhancedLoggingService = null)
-            : base(logger, enhancedLoggingService)
+            IEnhancedLoggingService? enhancedLoggingService = null,
+            IActivityAuditService? activityAuditService = null)
+            : base(logger, enhancedLoggingService, activityAuditService)
         {
             this.settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
             this.notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));

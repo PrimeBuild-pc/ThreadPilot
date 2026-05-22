@@ -15,9 +15,11 @@ namespace ThreadPilot.Core.Tests
         {
             var processService = CreateProcessService();
             var enhancedLoggingService = new Mock<IEnhancedLoggingService>(MockBehavior.Loose);
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
             var viewModel = CreateViewModel(
                 processService.Object,
-                enhancedLoggingService: enhancedLoggingService.Object);
+                enhancedLoggingService: enhancedLoggingService.Object,
+                activityAuditService: audit);
             var process = CreateProcess(priority: ProcessPriorityClass.Normal);
 
             await viewModel.SetContextHighPriorityCommand.ExecuteAsync(process);
@@ -33,6 +35,10 @@ namespace ThreadPilot.Core.Tests
                 Times.Once);
             Assert.Equal(ProcessOperationUserMessages.HighPriorityWarning, viewModel.StatusMessage);
             Assert.False(viewModel.HasError);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Priority", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
+            Assert.Contains("High", entry.Message);
         }
 
         [Fact]
@@ -41,10 +47,12 @@ namespace ThreadPilot.Core.Tests
             var processService = CreateProcessService();
             var coordinator = CreateAffinityCoordinator();
             var enhancedLoggingService = new Mock<IEnhancedLoggingService>(MockBehavior.Loose);
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
             var viewModel = CreateViewModel(
                 processService.Object,
                 processAffinityApplyCoordinator: coordinator.Object,
-                enhancedLoggingService: enhancedLoggingService.Object);
+                enhancedLoggingService: enhancedLoggingService.Object,
+                activityAuditService: audit);
             viewModel.CpuCores =
             [
                 new CpuCoreModel { LogicalCoreId = 0, IsSelected = true },
@@ -68,6 +76,9 @@ namespace ThreadPilot.Core.Tests
                     It.Is<string>(context => context.Contains("Process: Game.exe") && context.Contains("PID: 100"))),
                 Times.Once);
             Assert.Same(rowProcess, viewModel.SelectedProcess);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Affinity", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
         }
 
         [Fact]
@@ -144,6 +155,25 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task SetPriorityCommand_WhenRealtimeRequested_LogsVisibleBlockedEntry()
+        {
+            var processService = CreateProcessService();
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var viewModel = CreateViewModel(processService.Object, activityAuditService: audit);
+            viewModel.SelectedProcess = CreateProcess();
+
+            await viewModel.SetPriorityCommand.ExecuteAsync(ProcessPriorityClass.RealTime);
+
+            processService.Verify(
+                service => service.SetProcessPriority(It.IsAny<ProcessModel>(), ProcessPriorityClass.RealTime),
+                Times.Never);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Priority", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Warning, entry.Severity);
+            Assert.Equal(ProcessOperationUserMessages.RealtimePriorityBlocked, entry.Message);
+        }
+
+        [Fact]
         public async Task ContextMemoryPriorityCommand_CallsMemoryPriorityService()
         {
             var memoryPriorityService = new Mock<IProcessMemoryPriorityService>(MockBehavior.Strict);
@@ -154,17 +184,22 @@ namespace ThreadPilot.Core.Tests
                 .Setup(service => service.GetMemoryPriorityAsync(It.IsAny<ProcessModel>()))
                 .ReturnsAsync(ProcessMemoryPriority.Low);
             var enhancedLoggingService = new Mock<IEnhancedLoggingService>(MockBehavior.Loose);
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
             var process = CreateProcess();
             var viewModel = CreateViewModel(
                 CreateProcessService().Object,
                 memoryPriorityService: memoryPriorityService.Object,
-                enhancedLoggingService: enhancedLoggingService.Object);
+                enhancedLoggingService: enhancedLoggingService.Object,
+                activityAuditService: audit);
 
             await viewModel.SetContextMemoryPriorityLowCommand.ExecuteAsync(process);
 
             memoryPriorityService.Verify(
                 service => service.SetMemoryPriorityAsync(process, ProcessMemoryPriority.Low),
                 Times.Once);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Memory Priority", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
             enhancedLoggingService.Verify(
                 service => service.LogUserActionAsync(
                     "ProcessMemoryPriorityChanged",
@@ -185,14 +220,19 @@ namespace ThreadPilot.Core.Tests
                     "Access is denied.",
                     isAccessDenied: true));
             var process = CreateProcess();
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
             var viewModel = CreateViewModel(
                 CreateProcessService().Object,
-                memoryPriorityService: memoryPriorityService.Object);
+                memoryPriorityService: memoryPriorityService.Object,
+                activityAuditService: audit);
 
             await viewModel.SetContextMemoryPriorityNormalCommand.ExecuteAsync(process);
 
             Assert.Equal(ProcessOperationUserMessages.AccessDenied, viewModel.StatusMessage);
             Assert.True(viewModel.HasError);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Memory Priority", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Warning, entry.Severity);
         }
 
         [Fact]
@@ -270,11 +310,15 @@ namespace ThreadPilot.Core.Tests
                 .Setup(service => service.ClearProcessCpuSetAsync(It.IsAny<ProcessModel>()))
                 .ReturnsAsync(true);
             var process = CreateProcess();
-            var viewModel = CreateViewModel(processService.Object);
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var viewModel = CreateViewModel(processService.Object, activityAuditService: audit);
 
             await viewModel.ClearContextCpuSetsCommand.ExecuteAsync(process);
 
             processService.Verify(service => service.ClearProcessCpuSetAsync(process), Times.Once);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Affinity", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
         }
 
         [Fact]
@@ -282,12 +326,28 @@ namespace ThreadPilot.Core.Tests
         {
             var processService = CreateProcessService();
             var process = CreateProcess();
-            var viewModel = CreateViewModel(processService.Object);
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var viewModel = CreateViewModel(processService.Object, activityAuditService: audit);
 
             await viewModel.RefreshContextProcessInfoCommand.ExecuteAsync(process);
 
             processService.Verify(service => service.RefreshProcessInfo(process), Times.Once);
             Assert.Equal("Process info refreshed for Game.exe.", viewModel.StatusMessage);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Process", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
+        }
+
+        [Fact]
+        public async Task RefreshProcessesCommand_DoesNotCreateActivityAuditEntry()
+        {
+            var processService = CreateProcessService();
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var viewModel = CreateViewModel(processService.Object, activityAuditService: audit);
+
+            await viewModel.RefreshProcessesCommand.ExecuteAsync(null);
+
+            Assert.Empty(await audit.GetEntriesAsync());
         }
 
         [Fact]
@@ -468,11 +528,13 @@ namespace ThreadPilot.Core.Tests
                     ProcessOperationUserMessages.AccessDenied,
                     "Access denied.",
                     isAccessDenied: true));
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
             var viewModel = CreateViewModel(
                 CreateProcessService().Object,
                 processAffinityApplyCoordinator: coordinator.Object,
                 persistentRuleStore: ruleStore,
-                processRuleCreationService: CreateRuleCreationService(ruleStore));
+                processRuleCreationService: CreateRuleCreationService(ruleStore),
+                activityAuditService: audit);
             viewModel.CpuCores =
             [
                 new CpuCoreModel { LogicalCoreId = 0, IsSelected = true },
@@ -483,6 +545,9 @@ namespace ThreadPilot.Core.Tests
             Assert.Empty(ruleStore.SavedRules);
             Assert.Equal(ProcessOperationUserMessages.AccessDenied, viewModel.StatusMessage);
             Assert.True(viewModel.HasError);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Affinity", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Warning, entry.Severity);
         }
 
         [Fact]
@@ -572,7 +637,8 @@ namespace ThreadPilot.Core.Tests
             IProcessRuleCreationService? processRuleCreationService = null,
             Action<string>? clipboardSetter = null,
             Action<string>? executableLocationOpener = null,
-            IEnhancedLoggingService? enhancedLoggingService = null)
+            IEnhancedLoggingService? enhancedLoggingService = null,
+            IActivityAuditService? activityAuditService = null)
         {
             var virtualizedProcessService = new Mock<IVirtualizedProcessService>(MockBehavior.Loose);
             virtualizedProcessService.SetupProperty(
@@ -601,6 +667,7 @@ namespace ThreadPilot.Core.Tests
                 gameModeService.Object,
                 processAffinityApplyCoordinator: processAffinityApplyCoordinator,
                 enhancedLoggingService: enhancedLoggingService,
+                activityAuditService: activityAuditService,
                 memoryPriorityService: memoryPriorityService,
                 persistentRuleStore: persistentRuleStore,
                 persistentRuleMatcher: new PersistentProcessRuleMatcher(),

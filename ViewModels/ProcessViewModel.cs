@@ -186,13 +186,14 @@ namespace ThreadPilot.ViewModels
             IProcessAffinityApplyCoordinator? processAffinityApplyCoordinator = null,
             ICpuTopologyProvider? cpuTopologyProvider = null,
             IEnhancedLoggingService? enhancedLoggingService = null,
+            IActivityAuditService? activityAuditService = null,
             IProcessMemoryPriorityService? memoryPriorityService = null,
             IPersistentProcessRuleStore? persistentRuleStore = null,
             IPersistentProcessRuleMatcher? persistentRuleMatcher = null,
             IProcessRuleCreationService? processRuleCreationService = null,
             Action<string>? clipboardSetter = null,
             Action<string>? executableLocationOpener = null)
-            : base(logger, enhancedLoggingService)
+            : base(logger, enhancedLoggingService, activityAuditService)
         {
             this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
             this.processFilterService = processFilterService ?? throw new ArgumentNullException(nameof(processFilterService));
