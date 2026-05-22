@@ -1,50 +1,57 @@
-# ThreadPilot v1.1.6 Release Notes
+# ThreadPilot v1.2.0 Release Notes Draft
 
 ## Highlights
 
-- Windows 11 native visual refresh across all major views with neutral Fluent surfaces.
-- Refined sidebar navigation: separator lines softened for a cleaner, Settings-like appearance.
-- Reduced visual weight and consistent card-based layouts in Rules, Logs, Performance, Settings, Tweaks, Process, Power Plans, and CPU Masks.
-- Start minimized default clarified: `StartMinimized` now explicitly defaults to `false` for predictable manual-launch visibility.
+- CPU topology v2 with topology-aware `CpuSelection`, CPU Sets, processor groups, and safer handling above 64 logical processors.
+- New safe affinity paths where CPU64 no longer aliases CPU0.
+- Intel hybrid handling through topology and `EfficiencyClass`, plus AMD CCD/L3-aware preset generation.
+- Memory priority support and persistent process rules.
+- Apply saved rules automatically when matching processes start while ThreadPilot is running.
+- Process tab context menu actions, Save as rule, Apply now, and selected-process summary.
 
 ## Added
 
-- Windows 11 visual refresh pass completed for neutral Fluent surfaces and card polish.
-- Sidebar navigation separator polish: horizontal separator lines removed/softened for a native Windows 11 Settings-like feel.
+- CPU topology v2 and `CpuSelection` for topology-aware affinity.
+- Group-aware CPU Sets support and processor group safety.
+- Memory priority controls.
+- Persistent process rules with runtime apply-at-process-start support.
+- Process tab context menu actions and selected-process summary.
+- Optional Diagnostics view hidden by default.
 
 ## Changed
 
-- `StartMinimized` defaults to `false` in `ApplicationSettingsModel`: manual exe launch opens the main window visibly by default.
-- Older settings JSON without `startMinimized` field now reliably defaults to `false`.
-- Explicit saved `startMinimized: true` or `startMinimized: false` values remain fully respected.
-- Project version updated to 1.1.6.
+- Default presets are gaming-oriented and generated from topology rather than hardcoded CPU SKU lists.
+- Intel hybrid behavior uses Windows topology and `EfficiencyClass`.
+- AMD behavior uses CCD/L3-aware preset generation.
+- Project version updated to 1.2.0.
 
 ## Fixed
 
-- Legacy settings without `startMinimized` no longer risk unexpected minimized startup.
+- Startup no longer fails from a read-only selected-process summary binding.
+- CPU64 no longer aliases CPU0 in new safe affinity paths.
+- Persistent rule auto-apply cancellation does not log shutdown/future cancellation as a warning.
 
-## Breaking Changes
+## Safety
 
-- None.
+- High CPU priority shows a warning and Realtime priority remains blocked.
+- ThreadPilot does not bypass anti-cheat or protected-process restrictions.
+- Administrator rights may help ordinary access-denied cases but do not bypass protected processes.
 
-## Installation
+## Compatibility and Upgrade Notes
 
-### Installer
+- Requires Windows 11 build 22000 or newer.
+- Existing legacy affinity profiles continue to load.
+- New saved rules prefer topology-aware `CpuSelection` when safe topology mapping is available.
+- Apply at process start works only while ThreadPilot is running.
 
-1. Download ThreadPilot_v1.1.6_Setup.exe.
-2. Run installer.
-3. Launch ThreadPilot.
+## Known Non-Goals
 
-### Portable
+- No anti-cheat bypass.
+- No Windows Service.
+- No registry or IFEO persistence.
+- No generated release artifacts yet.
+- No GitHub release or tag yet.
 
-1. Download ThreadPilot_v1.1.6_singlefile_win-x64.zip.
-2. Extract archive.
-3. Run ThreadPilot.exe.
+## Release Artifact Status
 
-## Checksums
-
-See SHA256SUMS.txt in release assets.
-
-## Known Issues
-
-- Windows 10 support remains best effort.
+- Installer, portable ZIP, checksums, package metadata verification, and release upload remain pending manual validation.

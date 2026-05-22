@@ -337,6 +337,50 @@ namespace ThreadPilot.Core.Tests
             processService.Verify(s => s.SetProcessPriority(It.IsAny<ProcessModel>(), It.IsAny<ProcessPriorityClass>()), Times.Once);
         }
 
+        [Fact]
+        public async Task ApplyMatchingRulesAsync_WhenRuleFilterExcludesMatchingRule_DoesNotApplyIt()
+        {
+            var rules = new[]
+            {
+                CreateRule(id: "rule-a", legacyAffinityMask: 1, applyAffinity: true),
+                CreateRule(id: "rule-b", legacyAffinityMask: 2, applyAffinity: true),
+            };
+            var affinity = CreateAffinityService();
+            var processService = CreateProcessService();
+            var engine = CreateEngine(rules, affinity.Object, processService.Object, CreateMemoryPriorityService().Object);
+
+            var results = await engine.ApplyMatchingRulesAsync(
+                CreateProcess(),
+                rule => rule.Id != "rule-a");
+
+            var result = Assert.Single(results);
+            Assert.Equal("rule-b", result.RuleId);
+            affinity.Verify(s => s.ApplyAsync(It.IsAny<ProcessModel>(), 1L), Times.Never);
+            affinity.Verify(s => s.ApplyAsync(It.IsAny<ProcessModel>(), 2L), Times.Once);
+        }
+
+        [Fact]
+        public async Task ApplyMatchingRulesAsync_WhenRuleFilterIncludesSelectedRule_AppliesOnlyThatRule()
+        {
+            var rules = new[]
+            {
+                CreateRule(id: "rule-a", priority: ProcessPriorityClass.AboveNormal, applyPriority: true),
+                CreateRule(id: "rule-b", priority: ProcessPriorityClass.High, applyPriority: true),
+            };
+            var affinity = CreateAffinityService();
+            var processService = CreateProcessService();
+            var engine = CreateEngine(rules, affinity.Object, processService.Object, CreateMemoryPriorityService().Object);
+
+            var results = await engine.ApplyMatchingRulesAsync(
+                CreateProcess(),
+                rule => rule.Id == "rule-b");
+
+            var result = Assert.Single(results);
+            Assert.Equal("rule-b", result.RuleId);
+            processService.Verify(s => s.SetProcessPriority(It.IsAny<ProcessModel>(), ProcessPriorityClass.AboveNormal), Times.Never);
+            processService.Verify(s => s.SetProcessPriority(It.IsAny<ProcessModel>(), ProcessPriorityClass.High), Times.Once);
+        }
+
         private static PersistentRulesEngine CreateEngine(
             IReadOnlyList<PersistentProcessRule> rules,
             IAffinityApplyService affinityApplyService,

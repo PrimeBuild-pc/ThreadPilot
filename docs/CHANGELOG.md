@@ -2,6 +2,44 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.2.0 - CPU topology, persistent rules, and process control update
+
+### Added
+
+- CPU topology v2 support with `CpuSelection` for topology-aware affinity.
+- Group-aware CPU Sets support and safer handling for processor groups and systems with more than 64 logical processors.
+- Memory priority controls and persistent process rules.
+- Apply at process start for saved rules while ThreadPilot is running.
+- Process tab context menu actions, explicit Apply now, and Save as rule flows.
+- Selected process summary panel for current affinity, priority, memory priority, and last operation status.
+- Optional Diagnostics experience hidden by default.
+
+### Changed
+
+- README and release documentation now describe ThreadPilot as a process control center rather than a performance overlay.
+- Default presets are gaming-oriented and topology-aware.
+- Intel hybrid handling uses topology and `EfficiencyClass` instead of hardcoded SKU lists.
+- AMD preset generation is CCD/L3-aware and avoids hardcoded SKU lists.
+- Project version updated to 1.2.0.
+
+### Fixed
+
+- Startup binding crash caused by a display-only selected-process summary message binding to a read-only property with a TwoWay-capable target.
+- CPU64 no longer aliases CPU0 in the new safe affinity paths.
+- Persistent rule auto-apply cancellation is handled as shutdown/cancellation instead of logged as a warning.
+
+### Safety
+
+- CPU priority guardrails warn for High priority and block Realtime priority.
+- Anti-cheat/protected-process failures use safe user messaging and ThreadPilot does not bypass protected processes.
+- Persistent rules reuse the existing affinity, priority, memory-priority, and Realtime guardrail backend instead of duplicating apply logic.
+
+### Notes / limitations
+
+- Apply at process start is runtime-based and works only while ThreadPilot is running.
+- No Windows Service, registry autorun, IFEO persistence, installer privilege workaround, tag, GitHub release, or generated release artifact is included in this update.
+- Administrator rights can help normal access-denied cases but do not bypass protected-process or anti-cheat restrictions.
+
 ## [1.1.6] - 2026-05-16
 
 ### Added

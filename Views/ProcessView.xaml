@@ -312,7 +312,7 @@
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        TextWrapping="Wrap">
                                 <Run Text="Last ThreadPilot action: "/>
-                                <Run Text="{Binding SelectedProcessSummary.LastOperationMessage}"/>
+                                <Run Text="{Binding SelectedProcessSummary.LastOperationMessage, Mode=OneWay}"/>
                             </TextBlock>
                         </WrapPanel>
                     </StackPanel>
