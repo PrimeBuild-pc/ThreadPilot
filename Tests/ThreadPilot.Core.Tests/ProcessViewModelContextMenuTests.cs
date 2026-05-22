@@ -294,6 +294,204 @@ namespace ThreadPilot.Core.Tests
             ruleStore.Verify(store => store.SaveAsync(It.IsAny<IReadOnlyList<PersistentProcessRule>>()), Times.Never);
         }
 
+        [Fact]
+        public async Task SaveCurrentSettingsAsRuleCommand_CreatesRuleForSelectedProcess()
+        {
+            var ruleStore = new CapturingRuleStore();
+            var viewModel = CreateViewModel(
+                CreateProcessService().Object,
+                persistentRuleStore: ruleStore,
+                processRuleCreationService: CreateRuleCreationService(ruleStore));
+            var process = CreateProcess();
+            viewModel.SelectedProcess = process;
+            viewModel.CpuCores =
+            [
+                new CpuCoreModel { LogicalCoreId = 0, IsSelected = true },
+                new CpuCoreModel { LogicalCoreId = 1, IsSelected = true },
+            ];
+
+            await viewModel.SaveCurrentSettingsAsRuleCommand.ExecuteAsync(null);
+
+            var rule = Assert.Single(ruleStore.SavedRules);
+            Assert.Equal(process.Name, rule.ProcessName);
+            Assert.Equal(process.ExecutablePath, rule.ExecutablePath);
+            Assert.Equal("Saved rule for Game.exe.", viewModel.StatusMessage);
+        }
+
+        [Fact]
+        public async Task SaveCurrentSettingsAsRuleCommand_UpdatesExistingMatchingRule()
+        {
+            var existing = new PersistentProcessRule
+            {
+                Id = "rule-1",
+                Name = "Old",
+                IsEnabled = true,
+                ProcessName = "Game.exe",
+                ExecutablePath = @"C:\Games\Game.exe",
+                CreatedAt = DateTime.UtcNow.AddDays(-1),
+                UpdatedAt = DateTime.UtcNow.AddDays(-1),
+            };
+            var ruleStore = new CapturingRuleStore([existing]);
+            var viewModel = CreateViewModel(
+                CreateProcessService().Object,
+                persistentRuleStore: ruleStore,
+                processRuleCreationService: CreateRuleCreationService(ruleStore));
+
+            await viewModel.SaveCurrentSettingsAsRuleCommand.ExecuteAsync(CreateProcess(priority: ProcessPriorityClass.High));
+
+            var rule = Assert.Single(ruleStore.SavedRules);
+            Assert.Equal("rule-1", rule.Id);
+            Assert.Equal(ProcessPriorityClass.High, rule.Priority);
+            Assert.Equal("Updated saved rule for Game.exe.", viewModel.StatusMessage);
+        }
+
+        [Fact]
+        public async Task SaveCurrentSettingsAsRuleCommand_WithNormalPriorityAndNoAffinityOrMemoryPriority_ShowsNoActionMessage()
+        {
+            var ruleStore = new CapturingRuleStore();
+            var viewModel = CreateViewModel(
+                CreateProcessService().Object,
+                persistentRuleStore: ruleStore,
+                processRuleCreationService: CreateRuleCreationService(ruleStore));
+            var process = CreateProcess(priority: ProcessPriorityClass.Normal, affinity: 0);
+
+            await viewModel.SaveCurrentSettingsAsRuleCommand.ExecuteAsync(process);
+
+            Assert.Empty(ruleStore.SavedRules);
+            Assert.Equal("There are no current settings to save as a rule.", viewModel.StatusMessage);
+            Assert.True(viewModel.HasError);
+        }
+
+        [Fact]
+        public async Task SaveCurrentSettingsAsRuleCommand_WithAffinityAndNormalPriority_DoesNotSaveApplyPriorityOnStart()
+        {
+            var ruleStore = new CapturingRuleStore();
+            var viewModel = CreateViewModel(
+                CreateProcessService().Object,
+                persistentRuleStore: ruleStore,
+                processRuleCreationService: CreateRuleCreationService(ruleStore));
+            var process = CreateProcess(priority: ProcessPriorityClass.Normal, affinity: 0x5);
+
+            await viewModel.SaveCurrentSettingsAsRuleCommand.ExecuteAsync(process);
+
+            var rule = Assert.Single(ruleStore.SavedRules);
+            Assert.Equal(0x5, rule.LegacyAffinityMask);
+            Assert.Null(rule.Priority);
+            Assert.False(rule.ApplyPriorityOnStart);
+        }
+
+        [Fact]
+        public async Task ApplyAffinityAndSaveAsRuleCommand_AppliesAffinityBeforeSavingRule()
+        {
+            var ruleStore = new CapturingRuleStore();
+            var coordinator = CreateAffinityCoordinator();
+            var viewModel = CreateViewModel(
+                CreateProcessService().Object,
+                processAffinityApplyCoordinator: coordinator.Object,
+                persistentRuleStore: ruleStore,
+                processRuleCreationService: CreateRuleCreationService(ruleStore));
+            viewModel.CpuCores =
+            [
+                new CpuCoreModel { LogicalCoreId = 0, IsSelected = true },
+                new CpuCoreModel { LogicalCoreId = 1, IsSelected = false },
+            ];
+            var process = CreateProcess();
+
+            await viewModel.ApplyAffinityAndSaveAsRuleCommand.ExecuteAsync(process);
+
+            coordinator.Verify(
+                service => service.ApplyCoreSelectionAsync(
+                    process,
+                    It.Is<IReadOnlyList<bool>>(mask => mask.Count == 2 && mask[0] && !mask[1]),
+                    "Manual Process tab context menu CPU selection",
+                    default),
+                Times.Once);
+            var rule = Assert.Single(ruleStore.SavedRules);
+            Assert.Equal(1, rule.LegacyAffinityMask);
+            Assert.True(rule.ApplyAffinityOnStart);
+        }
+
+        [Fact]
+        public async Task ApplyAffinityAndSaveAsRuleCommand_WhenAffinityApplyFails_DoesNotSaveRule()
+        {
+            var ruleStore = new CapturingRuleStore();
+            var coordinator = new Mock<IProcessAffinityApplyCoordinator>(MockBehavior.Strict);
+            coordinator
+                .Setup(service => service.ApplyCoreSelectionAsync(
+                    It.IsAny<ProcessModel>(),
+                    It.IsAny<IReadOnlyList<bool>>(),
+                    It.IsAny<string>(),
+                    default))
+                .ReturnsAsync(AffinityApplyResult.Failed(
+                    AffinityApplyErrorCodes.AccessDenied,
+                    ProcessOperationUserMessages.AccessDenied,
+                    "Access denied.",
+                    isAccessDenied: true));
+            var viewModel = CreateViewModel(
+                CreateProcessService().Object,
+                processAffinityApplyCoordinator: coordinator.Object,
+                persistentRuleStore: ruleStore,
+                processRuleCreationService: CreateRuleCreationService(ruleStore));
+            viewModel.CpuCores =
+            [
+                new CpuCoreModel { LogicalCoreId = 0, IsSelected = true },
+            ];
+
+            await viewModel.ApplyAffinityAndSaveAsRuleCommand.ExecuteAsync(CreateProcess());
+
+            Assert.Empty(ruleStore.SavedRules);
+            Assert.Equal(ProcessOperationUserMessages.AccessDenied, viewModel.StatusMessage);
+            Assert.True(viewModel.HasError);
+        }
+
+        [Fact]
+        public async Task ApplyAffinityAndSaveAsRuleCommand_UsesRowProcessInsteadOfStaleSelectedProcess()
+        {
+            var ruleStore = new CapturingRuleStore();
+            var coordinator = CreateAffinityCoordinator();
+            var viewModel = CreateViewModel(
+                CreateProcessService().Object,
+                processAffinityApplyCoordinator: coordinator.Object,
+                persistentRuleStore: ruleStore,
+                processRuleCreationService: CreateRuleCreationService(ruleStore));
+            viewModel.CpuCores =
+            [
+                new CpuCoreModel { LogicalCoreId = 0, IsSelected = true },
+            ];
+            var staleSelected = CreateProcess(name: "Old.exe", path: @"C:\Old\Old.exe");
+            var rowProcess = CreateProcess(name: "Row.exe", path: @"C:\Row\Row.exe");
+            viewModel.SelectedProcess = staleSelected;
+
+            await viewModel.ApplyAffinityAndSaveAsRuleCommand.ExecuteAsync(rowProcess);
+
+            coordinator.Verify(
+                service => service.ApplyCoreSelectionAsync(
+                    rowProcess,
+                    It.IsAny<IReadOnlyList<bool>>(),
+                    It.IsAny<string>(),
+                    default),
+                Times.Once);
+            var rule = Assert.Single(ruleStore.SavedRules);
+            Assert.Equal("Row.exe", rule.ProcessName);
+            Assert.Equal(@"C:\Row\Row.exe", rule.ExecutablePath);
+        }
+
+        [Fact]
+        public async Task SaveCurrentSettingsAsRuleCommand_UpdatesSelectedProcessSummary()
+        {
+            var ruleStore = new CapturingRuleStore();
+            var viewModel = CreateViewModel(
+                CreateProcessService().Object,
+                persistentRuleStore: ruleStore,
+                processRuleCreationService: CreateRuleCreationService(ruleStore));
+            var process = CreateProcess();
+
+            await viewModel.SaveCurrentSettingsAsRuleCommand.ExecuteAsync(process);
+
+            Assert.True(viewModel.SelectedProcessSummary.HasThreadPilotRule);
+            Assert.Equal("Saved rule exists: Game.exe rule", viewModel.SelectedProcessSummary.RuleStatusText);
+        }
+
         private static Mock<IProcessService> CreateProcessService()
         {
             var processService = new Mock<IProcessService>(MockBehavior.Loose);
@@ -330,6 +528,7 @@ namespace ThreadPilot.Core.Tests
             IProcessAffinityApplyCoordinator? processAffinityApplyCoordinator = null,
             IProcessMemoryPriorityService? memoryPriorityService = null,
             IPersistentProcessRuleStore? persistentRuleStore = null,
+            IProcessRuleCreationService? processRuleCreationService = null,
             Action<string>? clipboardSetter = null,
             Action<string>? executableLocationOpener = null)
         {
@@ -362,6 +561,7 @@ namespace ThreadPilot.Core.Tests
                 memoryPriorityService: memoryPriorityService,
                 persistentRuleStore: persistentRuleStore,
                 persistentRuleMatcher: new PersistentProcessRuleMatcher(),
+                processRuleCreationService: processRuleCreationService,
                 clipboardSetter: clipboardSetter,
                 executableLocationOpener: executableLocationOpener);
         }
@@ -370,7 +570,8 @@ namespace ThreadPilot.Core.Tests
             string name = "Game.exe",
             int processId = 42,
             string path = @"C:\Games\Game.exe",
-            ProcessPriorityClass priority = ProcessPriorityClass.Normal)
+            ProcessPriorityClass priority = ProcessPriorityClass.Normal,
+            long affinity = 0xF)
             => new()
             {
                 ProcessId = processId,
@@ -379,8 +580,30 @@ namespace ThreadPilot.Core.Tests
                 CpuUsage = 1.5,
                 MemoryUsage = 128 * 1024 * 1024,
                 Priority = priority,
-                ProcessorAffinity = 0xF,
+                ProcessorAffinity = affinity,
                 Classification = ProcessClassification.ForegroundApp,
             };
+
+        private static ProcessRuleCreationService CreateRuleCreationService(IPersistentProcessRuleStore ruleStore) =>
+            new(
+                ruleStore,
+                topologyProvider: null,
+                new CpuSelectionMigrationService(),
+                NullLogger<ProcessRuleCreationService>.Instance);
+
+        private sealed class CapturingRuleStore(IReadOnlyList<PersistentProcessRule>? initialRules = null)
+            : IPersistentProcessRuleStore
+        {
+            public IReadOnlyList<PersistentProcessRule> SavedRules { get; private set; } = initialRules ?? [];
+
+            public Task<IReadOnlyList<PersistentProcessRule>> LoadAsync() =>
+                Task.FromResult(this.SavedRules);
+
+            public Task SaveAsync(IReadOnlyList<PersistentProcessRule> rules)
+            {
+                this.SavedRules = rules.ToList();
+                return Task.CompletedTask;
+            }
+        }
     }
 }

@@ -112,6 +112,7 @@ namespace ThreadPilot.Services
             services.AddSingleton<IPersistentProcessRuleStore, PersistentProcessRuleJsonStore>();
             services.AddSingleton<IPersistentProcessRuleMatcher, PersistentProcessRuleMatcher>();
             services.AddSingleton<IPersistentRulesEngine, PersistentRulesEngine>();
+            services.AddSingleton<IProcessRuleCreationService, ProcessRuleCreationService>();
             services.AddSingleton<ProcessFilterService>();
             services.AddSingleton<IVirtualizedProcessService, VirtualizedProcessService>();
             services.AddSingleton<IConditionalProfileService, ConditionalProfileService>();

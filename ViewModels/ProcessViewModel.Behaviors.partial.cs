@@ -747,6 +747,115 @@ namespace ThreadPilot.ViewModels
             await this.ApplyAffinityToProcessAsync(process, "Manual Process tab context menu CPU selection");
         }
 
+        [RelayCommand]
+        private async Task SaveCurrentSettingsAsRule(ProcessModel? process)
+        {
+            var targetProcess = process ?? this.SelectedProcess;
+            if (targetProcess == null)
+            {
+                return;
+            }
+
+            if (this.processRuleCreationService == null)
+            {
+                this.SetContextError("Persistent rules are unavailable.");
+                await this.UpdateSelectedProcessSummaryAsync(targetProcess);
+                return;
+            }
+
+            if (!ReferenceEquals(this.SelectedProcess, targetProcess))
+            {
+                this.SelectedProcess = targetProcess;
+            }
+
+            await this.UpdateSelectedProcessSummaryAsync(targetProcess);
+
+            var currentCoreSelection = this.HasPendingAffinityEdits && this.CpuCores.Count > 0
+                ? this.GetPendingCoreSelectionMask()
+                : null;
+            var result = await this.processRuleCreationService.SaveCurrentSettingsAsRuleAsync(
+                targetProcess,
+                currentCoreSelection,
+                this.SelectedProcessSummary.MemoryPriority);
+
+            this.ApplyRuleCreationResultStatus(result);
+            await this.UpdateSelectedProcessSummaryAsync(targetProcess);
+        }
+
+        [RelayCommand]
+        private async Task ApplyAffinityAndSaveAsRule(ProcessModel? process)
+        {
+            if (process == null)
+            {
+                return;
+            }
+
+            if (this.processRuleCreationService == null)
+            {
+                this.SetContextError("Persistent rules are unavailable.");
+                await this.UpdateSelectedProcessSummaryAsync(process);
+                return;
+            }
+
+            if (!ReferenceEquals(this.SelectedProcess, process))
+            {
+                this.SelectedProcess = process;
+            }
+
+            var pendingSelection = this.GetPendingCoreSelectionMask();
+            var applyResult = await this.processAffinityApplyCoordinator.ApplyCoreSelectionAsync(
+                process,
+                pendingSelection,
+                "Manual Process tab context menu CPU selection");
+
+            if (!applyResult.Success)
+            {
+                this.SetContextError(applyResult.Message);
+                await this.UpdateSelectedProcessSummaryAsync(process);
+                return;
+            }
+
+            if (!applyResult.UsedCpuSets)
+            {
+                this.UpdateCoreSelections(process.ProcessorAffinity, true);
+            }
+
+            process.ForceNotifyProcessorAffinityChanged();
+            this.OnPropertyChanged(nameof(this.SelectedProcess));
+            this.HasPendingAffinityEdits = false;
+            this.UpdateAffinityDisplayState();
+
+            var saveResult = applyResult.UsedCpuSets
+                ? await this.processRuleCreationService.SaveCurrentSettingsAsRuleAsync(
+                    process,
+                    pendingSelection,
+                    currentMemoryPriority: null)
+                : await this.processRuleCreationService.SaveRuleAsync(
+                    process,
+                    new ProcessRuleCreationPayload
+                    {
+                        LegacyAffinityMask = applyResult.VerifiedMask == 0
+                            ? applyResult.RequestedMask
+                            : applyResult.VerifiedMask,
+                    });
+
+            this.ApplyRuleCreationResultStatus(saveResult);
+            await this.UpdateSelectedProcessSummaryAsync(process);
+        }
+
+        private void ApplyRuleCreationResultStatus(ProcessRuleCreationResult result)
+        {
+            if (result.Success)
+            {
+                this.SetStatus(result.UserMessage, false);
+                return;
+            }
+
+            this.SetContextError(string.IsNullOrWhiteSpace(result.UserMessage)
+                ? ProcessRuleCreationService.NoCurrentSettingsMessage
+                : result.UserMessage);
+        }
+
         private async Task ApplyAffinityToProcessAsync(ProcessModel selectedProcess, string selectionReason)
         {
             try
