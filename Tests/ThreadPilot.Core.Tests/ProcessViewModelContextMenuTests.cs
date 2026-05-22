@@ -346,6 +346,41 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task SaveCurrentSettingsAsRuleCommand_WithNormalPriorityAndNoAffinityOrMemoryPriority_ShowsNoActionMessage()
+        {
+            var ruleStore = new CapturingRuleStore();
+            var viewModel = CreateViewModel(
+                CreateProcessService().Object,
+                persistentRuleStore: ruleStore,
+                processRuleCreationService: CreateRuleCreationService(ruleStore));
+            var process = CreateProcess(priority: ProcessPriorityClass.Normal, affinity: 0);
+
+            await viewModel.SaveCurrentSettingsAsRuleCommand.ExecuteAsync(process);
+
+            Assert.Empty(ruleStore.SavedRules);
+            Assert.Equal("There are no current settings to save as a rule.", viewModel.StatusMessage);
+            Assert.True(viewModel.HasError);
+        }
+
+        [Fact]
+        public async Task SaveCurrentSettingsAsRuleCommand_WithAffinityAndNormalPriority_DoesNotSaveApplyPriorityOnStart()
+        {
+            var ruleStore = new CapturingRuleStore();
+            var viewModel = CreateViewModel(
+                CreateProcessService().Object,
+                persistentRuleStore: ruleStore,
+                processRuleCreationService: CreateRuleCreationService(ruleStore));
+            var process = CreateProcess(priority: ProcessPriorityClass.Normal, affinity: 0x5);
+
+            await viewModel.SaveCurrentSettingsAsRuleCommand.ExecuteAsync(process);
+
+            var rule = Assert.Single(ruleStore.SavedRules);
+            Assert.Equal(0x5, rule.LegacyAffinityMask);
+            Assert.Null(rule.Priority);
+            Assert.False(rule.ApplyPriorityOnStart);
+        }
+
+        [Fact]
         public async Task ApplyAffinityAndSaveAsRuleCommand_AppliesAffinityBeforeSavingRule()
         {
             var ruleStore = new CapturingRuleStore();
@@ -535,7 +570,8 @@ namespace ThreadPilot.Core.Tests
             string name = "Game.exe",
             int processId = 42,
             string path = @"C:\Games\Game.exe",
-            ProcessPriorityClass priority = ProcessPriorityClass.Normal)
+            ProcessPriorityClass priority = ProcessPriorityClass.Normal,
+            long affinity = 0xF)
             => new()
             {
                 ProcessId = processId,
@@ -544,7 +580,7 @@ namespace ThreadPilot.Core.Tests
                 CpuUsage = 1.5,
                 MemoryUsage = 128 * 1024 * 1024,
                 Priority = priority,
-                ProcessorAffinity = 0xF,
+                ProcessorAffinity = affinity,
                 Classification = ProcessClassification.ForegroundApp,
             };
 

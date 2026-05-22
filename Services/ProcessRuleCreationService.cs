@@ -92,9 +92,9 @@ namespace ThreadPilot.Services
 
             var payload = new ProcessRuleCreationPayload
             {
-                Priority = ProcessPriorityGuardrails.IsBlocked(process.Priority)
-                    ? null
-                    : process.Priority,
+                Priority = ShouldCaptureCurrentCpuPriority(process.Priority)
+                    ? process.Priority
+                    : null,
                 MemoryPriority = currentMemoryPriority,
             };
 
@@ -247,6 +247,12 @@ namespace ThreadPilot.Services
                 LegacyAffinityMask = legacyMask,
             });
         }
+
+        private static bool ShouldCaptureCurrentCpuPriority(ProcessPriorityClass priority) =>
+            priority is ProcessPriorityClass.Idle
+                or ProcessPriorityClass.BelowNormal
+                or ProcessPriorityClass.AboveNormal
+                or ProcessPriorityClass.High;
 
         private static bool HasActionablePayload(ProcessRuleCreationPayload payload) =>
             HasSelectionPayload(payload.CpuSelection) ||

@@ -202,6 +202,94 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task SaveCurrentSettingsAsRuleAsync_WithNormalPriorityAndNoOtherPayload_ReturnsNoActionFailure()
+        {
+            var store = new CapturingRuleStore();
+            var service = CreateService(store);
+
+            var result = await service.SaveCurrentSettingsAsRuleAsync(
+                CreateProcess(priority: ProcessPriorityClass.Normal, affinity: 0),
+                currentCoreSelection: null,
+                currentMemoryPriority: null);
+
+            Assert.False(result.Success);
+            Assert.Equal("NoActionableRulePayload", result.ErrorCode);
+            Assert.Equal("There are no current settings to save as a rule.", result.UserMessage);
+            Assert.Empty(store.SavedRules);
+        }
+
+        [Fact]
+        public async Task SaveCurrentSettingsAsRuleAsync_WithNormalPriorityAndAffinity_SavesAffinityButDoesNotEnablePriority()
+        {
+            var store = new CapturingRuleStore();
+            var service = CreateService(store);
+
+            var result = await service.SaveCurrentSettingsAsRuleAsync(
+                CreateProcess(priority: ProcessPriorityClass.Normal, affinity: 0x5),
+                currentCoreSelection: null,
+                currentMemoryPriority: null);
+
+            Assert.True(result.Success);
+            var rule = Assert.Single(store.SavedRules);
+            Assert.Equal(0x5, rule.LegacyAffinityMask);
+            Assert.True(rule.ApplyAffinityOnStart);
+            Assert.Null(rule.Priority);
+            Assert.False(rule.ApplyPriorityOnStart);
+        }
+
+        [Fact]
+        public async Task SaveCurrentSettingsAsRuleAsync_WithAboveNormalPriority_SavesPriority()
+        {
+            var store = new CapturingRuleStore();
+            var service = CreateService(store);
+
+            var result = await service.SaveCurrentSettingsAsRuleAsync(
+                CreateProcess(priority: ProcessPriorityClass.AboveNormal, affinity: 0),
+                currentCoreSelection: null,
+                currentMemoryPriority: null);
+
+            Assert.True(result.Success);
+            var rule = Assert.Single(store.SavedRules);
+            Assert.Equal(ProcessPriorityClass.AboveNormal, rule.Priority);
+            Assert.True(rule.ApplyPriorityOnStart);
+        }
+
+        [Fact]
+        public async Task SaveCurrentSettingsAsRuleAsync_WithHighPriority_SavesPriority()
+        {
+            var store = new CapturingRuleStore();
+            var service = CreateService(store);
+
+            var result = await service.SaveCurrentSettingsAsRuleAsync(
+                CreateProcess(priority: ProcessPriorityClass.High, affinity: 0),
+                currentCoreSelection: null,
+                currentMemoryPriority: null);
+
+            Assert.True(result.Success);
+            var rule = Assert.Single(store.SavedRules);
+            Assert.Equal(ProcessPriorityClass.High, rule.Priority);
+            Assert.True(rule.ApplyPriorityOnStart);
+        }
+
+        [Fact]
+        public async Task SaveCurrentSettingsAsRuleAsync_WithRealtimePriority_OmitsPriorityWithoutSavingIt()
+        {
+            var store = new CapturingRuleStore();
+            var service = CreateService(store);
+
+            var result = await service.SaveCurrentSettingsAsRuleAsync(
+                CreateProcess(priority: ProcessPriorityClass.RealTime, affinity: 0x3),
+                currentCoreSelection: null,
+                currentMemoryPriority: null);
+
+            Assert.True(result.Success);
+            var rule = Assert.Single(store.SavedRules);
+            Assert.Equal(0x3, rule.LegacyAffinityMask);
+            Assert.Null(rule.Priority);
+            Assert.False(rule.ApplyPriorityOnStart);
+        }
+
+        [Fact]
         public async Task SaveCurrentSettingsAsRuleAsync_SavesMemoryPriorityWhenAvailable()
         {
             var store = new CapturingRuleStore();
