@@ -82,13 +82,53 @@ namespace ThreadPilot.Core.Tests
             var serialized = document.ToString(SaveOptions.DisableFormatting);
 
             Assert.Contains("<ContextMenu", serialized, StringComparison.Ordinal);
-            Assert.Contains("Style=\"{StaticResource ProcessRowContextMenuStyle}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Style=\"{StaticResource ProcessContextMenuStyle}\"", serialized, StringComparison.Ordinal);
             Assert.Contains("BasedOn=\"{x:Null}\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("TargetType=\"MenuItem\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("TargetType=\"{x:Type MenuItem}\"", serialized, StringComparison.Ordinal);
             Assert.Contains("FontWeight\" Value=\"Normal\"", serialized, StringComparison.Ordinal);
             Assert.Contains("FontSize\" Value=\"{DynamicResource BodyFontSize}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Style=\"{StaticResource ProcessContextMenuItemStyle}\"", serialized, StringComparison.Ordinal);
             Assert.DoesNotContain("FontWeight\" Value=\"{Binding", serialized, StringComparison.Ordinal);
             Assert.DoesNotContain("FontWeight\" Value=\"{TemplateBinding", serialized, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void ProcessGridContextMenu_DoesNotApplyMenuItemStyleToSeparators()
+        {
+            var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);
+            var serialized = document.ToString(SaveOptions.DisableFormatting);
+
+            Assert.Contains("<Separator", serialized, StringComparison.Ordinal);
+            Assert.DoesNotContain("ItemContainerStyle", serialized, StringComparison.Ordinal);
+            Assert.DoesNotContain("<Separator Style=\"{StaticResource ProcessContextMenuItemStyle}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("<Separator Style=\"{StaticResource ProcessContextMenuSeparatorStyle}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("TargetType=\"{x:Type Separator}\"", serialized, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void ProcessGridContextMenu_ContainsExpectedActionsAndSubmenus()
+        {
+            var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);
+            var serialized = document.ToString(SaveOptions.DisableFormatting);
+
+            Assert.Contains("Header=\"Apply Affinity\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"Clear CPU Sets\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"Rules\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"Save Current Settings as Rule\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"Apply Affinity and Save as Rule\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"Set CPU Priority\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"Below Normal\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"Normal\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"Above Normal\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"High\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"Realtime (blocked)\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"Set Memory Priority\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"Very Low\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"Low\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"Medium\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"Open Executable Location\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"Copy Process Info\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"Refresh Process Info\"", serialized, StringComparison.Ordinal);
         }
 
         [Fact]

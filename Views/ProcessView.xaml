@@ -23,19 +23,22 @@
         <sys:Double x:Key="ProcessFontMedium">14</sys:Double>
         <sys:Double x:Key="ProcessFontMediumSmall">12</sys:Double>
         <sys:Double x:Key="ProcessFontSmall">11</sys:Double>
-        <Style x:Key="ProcessRowContextMenuItemStyle" TargetType="MenuItem" BasedOn="{x:Null}">
+        <Style x:Key="ProcessContextMenuItemStyle" TargetType="{x:Type MenuItem}" BasedOn="{x:Null}">
             <Setter Property="FontWeight" Value="Normal"/>
             <Setter Property="FontSize" Value="{DynamicResource BodyFontSize}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="Background" Value="{DynamicResource CardSurfaceBrush}"/>
         </Style>
-        <Style x:Key="ProcessRowContextMenuStyle" TargetType="ContextMenu" BasedOn="{x:Null}">
+        <Style x:Key="ProcessContextMenuSeparatorStyle" TargetType="{x:Type Separator}" BasedOn="{x:Null}">
+            <Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}"/>
+            <Setter Property="Margin" Value="0,4"/>
+        </Style>
+        <Style x:Key="ProcessContextMenuStyle" TargetType="{x:Type ContextMenu}" BasedOn="{x:Null}">
             <Setter Property="FontWeight" Value="Normal"/>
             <Setter Property="FontSize" Value="{DynamicResource BodyFontSize}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="Background" Value="{DynamicResource CardSurfaceBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-            <Setter Property="ItemContainerStyle" Value="{StaticResource ProcessRowContextMenuItemStyle}"/>
         </Style>
     </UserControl.Resources>
 
@@ -170,67 +173,87 @@
                                 <EventSetter Event="PreviewMouseRightButtonDown" Handler="ProcessRow_PreviewMouseRightButtonDown"/>
                                 <Setter Property="ContextMenu">
                                     <Setter.Value>
-                                        <ContextMenu Style="{StaticResource ProcessRowContextMenuStyle}"
+                                        <ContextMenu Style="{StaticResource ProcessContextMenuStyle}"
                                                      DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
-                                            <MenuItem Header="Apply Affinity"
+                                            <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                      Header="Apply Affinity"
                                                       Command="{Binding ApplyContextAffinityCommand}"
                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                            <MenuItem Header="Clear CPU Sets"
+                                            <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                      Header="Clear CPU Sets"
                                                       Command="{Binding ClearContextCpuSetsCommand}"
                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                            <Separator/>
-                                            <MenuItem Header="Rules">
-                                                <MenuItem Header="Save Current Settings as Rule"
+                                            <Separator Style="{StaticResource ProcessContextMenuSeparatorStyle}"/>
+                                            <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                      Header="Rules">
+                                                <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                          Header="Save Current Settings as Rule"
                                                           Command="{Binding SaveCurrentSettingsAsRuleCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                                <MenuItem Header="Apply Affinity and Save as Rule"
+                                                <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                          Header="Apply Affinity and Save as Rule"
                                                           Command="{Binding ApplyAffinityAndSaveAsRuleCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                             </MenuItem>
-                                            <Separator/>
-                                            <MenuItem Header="Set CPU Priority">
-                                                <MenuItem Header="Below Normal"
+                                            <Separator Style="{StaticResource ProcessContextMenuSeparatorStyle}"/>
+                                            <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                      Header="Set CPU Priority">
+                                                <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                          Header="Below Normal"
                                                           Command="{Binding SetContextBelowNormalPriorityCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                                <MenuItem Header="Normal"
+                                                <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                          Header="Normal"
                                                           Command="{Binding SetContextNormalPriorityCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                                <MenuItem Header="Above Normal"
+                                                <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                          Header="Above Normal"
                                                           Command="{Binding SetContextAboveNormalPriorityCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                                <MenuItem Header="High"
+                                                <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                          Header="High"
                                                           Command="{Binding SetContextHighPriorityCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                                <MenuItem Header="Realtime (blocked)"
+                                                <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                          Header="Realtime (blocked)"
                                                           IsEnabled="False"
                                                           ToolTipService.ShowOnDisabled="True"
                                                           ToolTip="Realtime priority is blocked by ThreadPilot because it can make Windows unstable or unresponsive."/>
                                             </MenuItem>
-                                            <MenuItem Header="Set Memory Priority">
-                                                <MenuItem Header="Very Low"
+                                            <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                      Header="Set Memory Priority">
+                                                <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                          Header="Very Low"
                                                           Command="{Binding SetContextMemoryPriorityVeryLowCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                                <MenuItem Header="Low"
+                                                <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                          Header="Low"
                                                           Command="{Binding SetContextMemoryPriorityLowCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                                <MenuItem Header="Medium"
+                                                <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                          Header="Medium"
                                                           Command="{Binding SetContextMemoryPriorityMediumCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                                <MenuItem Header="Below Normal"
+                                                <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                          Header="Below Normal"
                                                           Command="{Binding SetContextMemoryPriorityBelowNormalCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                                <MenuItem Header="Normal"
+                                                <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                          Header="Normal"
                                                           Command="{Binding SetContextMemoryPriorityNormalCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                             </MenuItem>
-                                            <Separator/>
-                                            <MenuItem Header="Open Executable Location"
+                                            <Separator Style="{StaticResource ProcessContextMenuSeparatorStyle}"/>
+                                            <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                      Header="Open Executable Location"
                                                       Command="{Binding OpenContextExecutableLocationCommand}"
                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                            <MenuItem Header="Copy Process Info"
+                                            <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                      Header="Copy Process Info"
                                                       Command="{Binding CopyContextProcessInfoCommand}"
                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                            <MenuItem Header="Refresh Process Info"
+                                            <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                      Header="Refresh Process Info"
                                                       Command="{Binding RefreshContextProcessInfoCommand}"
                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                         </ContextMenu>
