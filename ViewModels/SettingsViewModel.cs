@@ -257,6 +257,7 @@ namespace ThreadPilot.ViewModels
                         "Application settings have been saved successfully");
                 }
 
+                await this.LogUserActionAsync("SettingsChanged", "Settings saved and applied");
                 this.Logger.LogInformation("Settings saved successfully");
             }
             catch (Exception ex)
@@ -271,6 +272,7 @@ namespace ThreadPilot.ViewModels
                     "Settings Error",
                     "Failed to save settings",
                     ex);
+                await this.LogUserActionAsync("SettingsChangeFailed", $"Failed to save settings: {ex.Message}");
             }
             finally
             {
@@ -291,12 +293,14 @@ namespace ThreadPilot.ViewModels
                 this.UpdatePendingChangesState();
                 this.StatusMessage = "Settings reset to defaults (not saved yet)";
 
+                await this.LogUserActionAsync("SettingsChanged", "Settings reset to defaults pending save");
                 this.Logger.LogInformation("Settings reset to defaults");
             }
             catch (Exception ex)
             {
                 this.StatusMessage = $"Error resetting settings: {ex.Message}";
                 this.Logger.LogError(ex, "Error resetting settings");
+                await this.LogUserActionAsync("SettingsChangeFailed", $"Failed to reset settings: {ex.Message}");
             }
             finally
             {
@@ -348,6 +352,7 @@ namespace ThreadPilot.ViewModels
                     $"Settings and rules exported to {Path.GetFileName(saveDialog.FileName)}");
 
                 this.Logger.LogInformation("Configuration bundle exported to {Path}", saveDialog.FileName);
+                await this.LogUserActionAsync("SettingsChanged", "Configuration exported", Path.GetFileName(saveDialog.FileName));
             }
             catch (Exception ex)
             {
@@ -358,6 +363,7 @@ namespace ThreadPilot.ViewModels
                     "Export Error",
                     "Failed to export settings",
                     ex);
+                await this.LogUserActionAsync("SettingsChangeFailed", $"Failed to export settings: {ex.Message}");
             }
             finally
             {
@@ -411,6 +417,7 @@ namespace ThreadPilot.ViewModels
                         $"Settings and rules imported from {Path.GetFileName(importPath)}");
 
                     this.Logger.LogInformation("Configuration bundle imported from {Path}", importPath);
+                    await this.LogUserActionAsync("SettingsChanged", "Configuration bundle imported", Path.GetFileName(importPath));
                     return;
                 }
 
@@ -426,6 +433,7 @@ namespace ThreadPilot.ViewModels
                     NotificationType.Information);
 
                 this.Logger.LogInformation("Legacy settings imported from {Path}", importPath);
+                await this.LogUserActionAsync("SettingsChanged", "Legacy settings imported", Path.GetFileName(importPath));
             }
             catch (Exception ex)
             {
@@ -436,6 +444,7 @@ namespace ThreadPilot.ViewModels
                     "Import Error",
                     "Failed to import configuration",
                     ex);
+                await this.LogUserActionAsync("SettingsChangeFailed", $"Failed to import settings: {ex.Message}");
             }
             finally
             {
@@ -754,4 +763,3 @@ namespace ThreadPilot.ViewModels
         }
     }
 }
-

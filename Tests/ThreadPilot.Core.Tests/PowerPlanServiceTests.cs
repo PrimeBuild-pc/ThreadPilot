@@ -57,6 +57,50 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task DeletePowerPlanAsync_InvokesPowerCfgDelete_WhenPlanIsNotActive()
+        {
+            const string activeGuid = "381b4222-f694-41f0-9685-ff5bb260df2e";
+            const string deleteGuid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+            var runner = new RecordingProcessRunner
+            {
+                ResultFactory = invocation =>
+                    invocation.Arguments.SequenceEqual(new[] { "/getactivescheme" })
+                        ? new ProcessRunResult(
+                            0,
+                            $"Power Scheme GUID: {activeGuid}  (Balanced)",
+                            string.Empty)
+                        : new ProcessRunResult(0, string.Empty, string.Empty),
+            };
+            var service = CreateService(runner);
+
+            var result = await service.DeletePowerPlanAsync(deleteGuid);
+
+            Assert.True(result);
+            Assert.Contains(runner.Invocations, invocation =>
+                invocation.Arguments.SequenceEqual(new[] { "/delete", deleteGuid }));
+        }
+
+        [Fact]
+        public async Task DeletePowerPlanAsync_DoesNotDeleteActivePlan()
+        {
+            const string activeGuid = "381b4222-f694-41f0-9685-ff5bb260df2e";
+            var runner = new RecordingProcessRunner
+            {
+                ResultFactory = _ => new ProcessRunResult(
+                    0,
+                    $"Power Scheme GUID: {activeGuid}  (Balanced)",
+                    string.Empty),
+            };
+            var service = CreateService(runner);
+
+            var result = await service.DeletePowerPlanAsync(activeGuid);
+
+            Assert.False(result);
+            Assert.DoesNotContain(runner.Invocations, invocation =>
+                invocation.Arguments.Contains("/delete", StringComparer.OrdinalIgnoreCase));
+        }
+
+        [Fact]
         public async Task AddCustomPowerPlanFileAsync_RenamesOnCollision()
         {
             var tempRoot = Path.Combine(Path.GetTempPath(), $"threadpilot-powerplans-{Guid.NewGuid():N}");

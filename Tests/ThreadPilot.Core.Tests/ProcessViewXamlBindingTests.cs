@@ -63,5 +63,26 @@ namespace ThreadPilot.Core.Tests
 
             Assert.Empty(editableSummaryBindings);
         }
+
+        [Fact]
+        public void ProcessGridRowStyle_HighlightsSelectedRowsWithAccentTheme()
+        {
+            var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);
+            var serialized = document.ToString(SaveOptions.DisableFormatting);
+
+            Assert.Contains("IsSelected", serialized, StringComparison.Ordinal);
+            Assert.Contains("Accent", serialized, StringComparison.Ordinal);
+            Assert.Contains("BorderThickness", serialized, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void LegacyActionSidePanel_IsNotPersistentPrimaryUi()
+        {
+            var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);
+            var serialized = document.ToString(SaveOptions.DisableFormatting);
+
+            Assert.Contains("Grid.Column=\"2\" Visibility=\"Collapsed\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Advanced affinity picker", serialized, StringComparison.Ordinal);
+        }
     }
 }

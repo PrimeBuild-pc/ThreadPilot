@@ -68,6 +68,13 @@ namespace ThreadPilot.Services
         Task<bool> AddCustomPowerPlanFileAsync(string filePath);
 
         /// <summary>
+        /// Deletes a non-active Windows power plan by GUID when Windows permits removal.
+        /// </summary>
+        /// <param name="powerPlanGuid">Power plan GUID to delete.</param>
+        /// <returns><see langword="true"/> when deletion succeeds; otherwise <see langword="false"/>.</returns>
+        Task<bool> DeletePowerPlanAsync(string powerPlanGuid);
+
+        /// <summary>
         /// Sets the active power plan by GUID with duplicate change prevention.
         /// </summary>
         /// <param name="powerPlanGuid">Target power plan GUID.</param>

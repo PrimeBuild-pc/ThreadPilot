@@ -57,6 +57,39 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task StartMonitoringCommand_LogsSuccess_WhenServiceStarts()
+        {
+            var harness = new Harness();
+            var viewModel = harness.CreateViewModel();
+
+            await viewModel.StartMonitoringCommand.ExecuteAsync(null);
+
+            harness.Logging.Verify(
+                logger => logger.LogUserActionAsync(
+                    "OptimizationMonitoringStarted",
+                    "Performance monitoring started",
+                    null),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task StartMonitoringCommand_LogsFailure_WhenServiceFails()
+        {
+            var harness = new Harness(startMonitoringThrows: true);
+            var viewModel = harness.CreateViewModel();
+
+            await viewModel.StartMonitoringCommand.ExecuteAsync(null);
+
+            Assert.True(viewModel.HasError);
+            harness.Logging.Verify(
+                logger => logger.LogUserActionAsync(
+                    "OptimizationActionFailed",
+                    It.Is<string>(details => details.Contains("Failed to start performance monitoring")),
+                    null),
+                Times.Once);
+        }
+
+        [Fact]
         public void ShowAdvancedDiagnostics_DefaultsToHidden()
         {
             Assert.False(AppNavigationOptions.ShowAdvancedDiagnostics);
@@ -76,7 +109,9 @@ namespace ThreadPilot.Core.Tests
 
             public Mock<ISystemTweaksService> SystemTweaks { get; } = new(MockBehavior.Strict);
 
-            public Harness()
+            public Mock<IEnhancedLoggingService> Logging { get; } = new(MockBehavior.Loose);
+
+            public Harness(bool startMonitoringThrows = false)
             {
                 this.Performance
                     .Setup(x => x.GetSystemMetricsAsync(It.IsAny<bool>()))
@@ -90,11 +125,24 @@ namespace ThreadPilot.Core.Tests
                 this.Performance
                     .Setup(x => x.GetTopMemoryProcessesAsync(It.IsAny<int>()))
                     .ReturnsAsync(new List<ProcessPerformanceInfo>());
-                this.Performance
-                    .Setup(x => x.StartMonitoringAsync())
-                    .Returns(Task.CompletedTask);
+                if (startMonitoringThrows)
+                {
+                    this.Performance
+                        .Setup(x => x.StartMonitoringAsync())
+                        .ThrowsAsync(new InvalidOperationException("monitoring unavailable"));
+                }
+                else
+                {
+                    this.Performance
+                        .Setup(x => x.StartMonitoringAsync())
+                        .Returns(Task.CompletedTask);
+                }
+
                 this.Performance
                     .Setup(x => x.StopMonitoringAsync())
+                    .Returns(Task.CompletedTask);
+                this.Performance
+                    .Setup(x => x.ClearHistoricalDataAsync())
                     .Returns(Task.CompletedTask);
 
                 this.Associations
@@ -114,7 +162,8 @@ namespace ThreadPilot.Core.Tests
                     this.PowerPlan.Object,
                     this.ProcessMonitorManager.Object,
                     this.SystemTweaks.Object,
-                    NullLogger<PerformanceViewModel>.Instance);
+                    NullLogger<PerformanceViewModel>.Instance,
+                    this.Logging.Object);
         }
     }
 }

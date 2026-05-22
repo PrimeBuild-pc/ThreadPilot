@@ -45,8 +45,9 @@ namespace ThreadPilot.ViewModels
         public SystemTweaksViewModel(
             ISystemTweaksService systemTweaksService,
             INotificationService notificationService,
-            ILogger<SystemTweaksViewModel> logger)
-            : base(logger, null)
+            ILogger<SystemTweaksViewModel> logger,
+            IEnhancedLoggingService? enhancedLoggingService = null)
+            : base(logger, enhancedLoggingService)
         {
             this.systemTweaksService = systemTweaksService;
             this.notificationService = notificationService;
@@ -262,6 +263,10 @@ namespace ThreadPilot.ViewModels
                     await this.notificationService.ShowSuccessNotificationAsync(
                         "System Tweak Updated",
                         $"{item.Name} has been {(newState ? "enabled" : "disabled")}");
+                    await this.LogUserActionAsync(
+                        "SystemTweakApplied",
+                        $"{item.Name} {(newState ? "enabled" : "disabled")}",
+                        item.TweakType.ToString());
                 }
                 else
                 {
@@ -273,6 +278,10 @@ namespace ThreadPilot.ViewModels
                     await this.notificationService.ShowErrorNotificationAsync(
                         "System Tweak Failed",
                         $"Failed to {(newState ? "enable" : "disable")} {item.Name}");
+                    await this.LogUserActionAsync(
+                        "SystemTweakFailed",
+                        $"Failed to {(newState ? "enable" : "disable")} {item.Name}",
+                        item.TweakType.ToString());
                 }
             }
             catch (Exception ex)
@@ -282,6 +291,10 @@ namespace ThreadPilot.ViewModels
                     this.SetError($"Error toggling {item.Name}", ex);
                 });
                 this.Logger.LogError(ex, "Error toggling tweak {TweakName}", item.Name);
+                await this.LogUserActionAsync(
+                    "SystemTweakFailed",
+                    $"Error toggling {item.Name}: {ex.Message}",
+                    item.TweakType.ToString());
             }
         }
 

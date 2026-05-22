@@ -14,13 +14,22 @@ namespace ThreadPilot.Core.Tests
         public async Task ContextCpuPriorityCommand_CallsSafePriorityServicePath()
         {
             var processService = CreateProcessService();
-            var viewModel = CreateViewModel(processService.Object);
+            var enhancedLoggingService = new Mock<IEnhancedLoggingService>(MockBehavior.Loose);
+            var viewModel = CreateViewModel(
+                processService.Object,
+                enhancedLoggingService: enhancedLoggingService.Object);
             var process = CreateProcess(priority: ProcessPriorityClass.Normal);
 
             await viewModel.SetContextHighPriorityCommand.ExecuteAsync(process);
 
             processService.Verify(
                 service => service.SetProcessPriority(process, ProcessPriorityClass.High),
+                Times.Once);
+            enhancedLoggingService.Verify(
+                service => service.LogUserActionAsync(
+                    "ProcessPriorityChanged",
+                    It.Is<string>(details => details.Contains("Game.exe") && details.Contains("High")),
+                    It.Is<string>(context => context.Contains("PID: 42"))),
                 Times.Once);
             Assert.Equal(ProcessOperationUserMessages.HighPriorityWarning, viewModel.StatusMessage);
             Assert.False(viewModel.HasError);
@@ -31,9 +40,11 @@ namespace ThreadPilot.Core.Tests
         {
             var processService = CreateProcessService();
             var coordinator = CreateAffinityCoordinator();
+            var enhancedLoggingService = new Mock<IEnhancedLoggingService>(MockBehavior.Loose);
             var viewModel = CreateViewModel(
                 processService.Object,
-                processAffinityApplyCoordinator: coordinator.Object);
+                processAffinityApplyCoordinator: coordinator.Object,
+                enhancedLoggingService: enhancedLoggingService.Object);
             viewModel.CpuCores =
             [
                 new CpuCoreModel { LogicalCoreId = 0, IsSelected = true },
@@ -49,6 +60,12 @@ namespace ThreadPilot.Core.Tests
                     It.Is<IReadOnlyList<bool>>(mask => mask.Count == 2 && mask[0] && !mask[1]),
                     "Manual Process tab context menu CPU selection",
                     default),
+                Times.Once);
+            enhancedLoggingService.Verify(
+                service => service.LogUserActionAsync(
+                    "ProcessAffinityApplied",
+                    It.IsAny<string>(),
+                    It.Is<string>(context => context.Contains("Process: Game.exe") && context.Contains("PID: 100"))),
                 Times.Once);
             Assert.Same(rowProcess, viewModel.SelectedProcess);
         }
@@ -136,15 +153,23 @@ namespace ThreadPilot.Core.Tests
             memoryPriorityService
                 .Setup(service => service.GetMemoryPriorityAsync(It.IsAny<ProcessModel>()))
                 .ReturnsAsync(ProcessMemoryPriority.Low);
+            var enhancedLoggingService = new Mock<IEnhancedLoggingService>(MockBehavior.Loose);
             var process = CreateProcess();
             var viewModel = CreateViewModel(
                 CreateProcessService().Object,
-                memoryPriorityService: memoryPriorityService.Object);
+                memoryPriorityService: memoryPriorityService.Object,
+                enhancedLoggingService: enhancedLoggingService.Object);
 
             await viewModel.SetContextMemoryPriorityLowCommand.ExecuteAsync(process);
 
             memoryPriorityService.Verify(
                 service => service.SetMemoryPriorityAsync(process, ProcessMemoryPriority.Low),
+                Times.Once);
+            enhancedLoggingService.Verify(
+                service => service.LogUserActionAsync(
+                    "ProcessMemoryPriorityChanged",
+                    It.Is<string>(details => details.Contains("Game.exe") && details.Contains("Low")),
+                    It.Is<string>(context => context.Contains("PID: 42"))),
                 Times.Once);
         }
 
@@ -298,10 +323,12 @@ namespace ThreadPilot.Core.Tests
         public async Task SaveCurrentSettingsAsRuleCommand_CreatesRuleForSelectedProcess()
         {
             var ruleStore = new CapturingRuleStore();
+            var enhancedLoggingService = new Mock<IEnhancedLoggingService>(MockBehavior.Loose);
             var viewModel = CreateViewModel(
                 CreateProcessService().Object,
                 persistentRuleStore: ruleStore,
-                processRuleCreationService: CreateRuleCreationService(ruleStore));
+                processRuleCreationService: CreateRuleCreationService(ruleStore),
+                enhancedLoggingService: enhancedLoggingService.Object);
             var process = CreateProcess();
             viewModel.SelectedProcess = process;
             viewModel.CpuCores =
@@ -316,6 +343,12 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal(process.Name, rule.ProcessName);
             Assert.Equal(process.ExecutablePath, rule.ExecutablePath);
             Assert.Equal("Saved rule for Game.exe.", viewModel.StatusMessage);
+            enhancedLoggingService.Verify(
+                service => service.LogUserActionAsync(
+                    "PersistentRuleSaved",
+                    "Saved rule for Game.exe.",
+                    It.Is<string>(context => context.Contains("Process: Game.exe") && context.Contains("PID: 42"))),
+                Times.Once);
         }
 
         [Fact]
@@ -332,10 +365,12 @@ namespace ThreadPilot.Core.Tests
                 UpdatedAt = DateTime.UtcNow.AddDays(-1),
             };
             var ruleStore = new CapturingRuleStore([existing]);
+            var enhancedLoggingService = new Mock<IEnhancedLoggingService>(MockBehavior.Loose);
             var viewModel = CreateViewModel(
                 CreateProcessService().Object,
                 persistentRuleStore: ruleStore,
-                processRuleCreationService: CreateRuleCreationService(ruleStore));
+                processRuleCreationService: CreateRuleCreationService(ruleStore),
+                enhancedLoggingService: enhancedLoggingService.Object);
 
             await viewModel.SaveCurrentSettingsAsRuleCommand.ExecuteAsync(CreateProcess(priority: ProcessPriorityClass.High));
 
@@ -343,6 +378,12 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal("rule-1", rule.Id);
             Assert.Equal(ProcessPriorityClass.High, rule.Priority);
             Assert.Equal("Updated saved rule for Game.exe.", viewModel.StatusMessage);
+            enhancedLoggingService.Verify(
+                service => service.LogUserActionAsync(
+                    "PersistentRuleSaved",
+                    "Updated saved rule for Game.exe.",
+                    It.Is<string>(context => context.Contains("Process: Game.exe") && context.Contains("PID: 42"))),
+                Times.Once);
         }
 
         [Fact]
@@ -530,7 +571,8 @@ namespace ThreadPilot.Core.Tests
             IPersistentProcessRuleStore? persistentRuleStore = null,
             IProcessRuleCreationService? processRuleCreationService = null,
             Action<string>? clipboardSetter = null,
-            Action<string>? executableLocationOpener = null)
+            Action<string>? executableLocationOpener = null,
+            IEnhancedLoggingService? enhancedLoggingService = null)
         {
             var virtualizedProcessService = new Mock<IVirtualizedProcessService>(MockBehavior.Loose);
             virtualizedProcessService.SetupProperty(
@@ -558,6 +600,7 @@ namespace ThreadPilot.Core.Tests
                 associationService.Object,
                 gameModeService.Object,
                 processAffinityApplyCoordinator: processAffinityApplyCoordinator,
+                enhancedLoggingService: enhancedLoggingService,
                 memoryPriorityService: memoryPriorityService,
                 persistentRuleStore: persistentRuleStore,
                 persistentRuleMatcher: new PersistentProcessRuleMatcher(),

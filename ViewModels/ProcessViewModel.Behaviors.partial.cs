@@ -779,6 +779,10 @@ namespace ThreadPilot.ViewModels
                 this.SelectedProcessSummary.MemoryPriority);
 
             this.ApplyRuleCreationResultStatus(result);
+            await this.LogUserActionAsync(
+                result.Success ? "PersistentRuleSaved" : "PersistentRuleSaveFailed",
+                result.UserMessage,
+                $"Process: {targetProcess.Name}, PID: {targetProcess.ProcessId}");
             await this.UpdateSelectedProcessSummaryAsync(targetProcess);
         }
 
@@ -840,6 +844,10 @@ namespace ThreadPilot.ViewModels
                     });
 
             this.ApplyRuleCreationResultStatus(saveResult);
+            await this.LogUserActionAsync(
+                saveResult.Success ? "PersistentRuleSaved" : "PersistentRuleSaveFailed",
+                saveResult.UserMessage,
+                $"Process: {process.Name}, PID: {process.ProcessId}");
             await this.UpdateSelectedProcessSummaryAsync(process);
         }
 
@@ -920,12 +928,20 @@ namespace ThreadPilot.ViewModels
                     }
                 });
 
+                await this.LogUserActionAsync(
+                    result.Success ? "ProcessAffinityApplied" : "ProcessAffinityFailed",
+                    result.Message,
+                    $"Process: {selectedProcess.Name}, PID: {selectedProcess.ProcessId}, RequestedMask: 0x{result.RequestedMask:X}, VerifiedMask: 0x{result.VerifiedMask:X}");
                 await this.UpdateSelectedProcessSummaryAsync(selectedProcess);
             }
             catch (Exception ex)
             {
                 var friendly = ex.Message;
                 _ = this.notificationService.ShowNotificationAsync("Affinity error", friendly, NotificationType.Error);
+                await this.LogUserActionAsync(
+                    "ProcessAffinityFailed",
+                    friendly,
+                    $"Process: {selectedProcess.Name}, PID: {selectedProcess.ProcessId}");
 
                 await InvokeOnUiAsync(() =>
                 {
@@ -1457,17 +1473,30 @@ namespace ThreadPilot.ViewModels
                 if (!success)
                 {
                     this.SetContextError(ProcessOperationUserMessages.AccessDenied);
+                    await this.LogUserActionAsync(
+                        "CpuSetsClearFailed",
+                        ProcessOperationUserMessages.AccessDenied,
+                        $"Process: {process.Name}, PID: {process.ProcessId}");
                     await this.UpdateSelectedProcessSummaryAsync(process);
                     return;
                 }
 
                 await this.processService.RefreshProcessInfo(process);
                 this.SetStatus($"CPU Sets cleared for {process.Name}.", false);
+                await this.LogUserActionAsync(
+                    "CpuSetsCleared",
+                    $"CPU Sets cleared for {process.Name}",
+                    $"PID: {process.ProcessId}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
             }
             catch (Exception ex)
             {
-                this.SetContextError(MapProcessOperationException(ex));
+                var message = MapProcessOperationException(ex);
+                this.SetContextError(message);
+                await this.LogUserActionAsync(
+                    "CpuSetsClearFailed",
+                    message,
+                    $"Process: {process.Name}, PID: {process.ProcessId}");
                 await this.TryRefreshContextProcessSummaryAsync(process);
             }
         }
@@ -1567,6 +1596,10 @@ namespace ThreadPilot.ViewModels
             if (ProcessPriorityGuardrails.IsBlocked(priority))
             {
                 this.SetContextError(ProcessOperationUserMessages.RealtimePriorityBlocked);
+                await this.LogUserActionAsync(
+                    "ProcessPriorityBlocked",
+                    ProcessOperationUserMessages.RealtimePriorityBlocked,
+                    $"Process: {process.Name}, PID: {process.ProcessId}, Priority: {priority}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
                 return;
             }
@@ -1588,6 +1621,10 @@ namespace ThreadPilot.ViewModels
                     _ = this.notificationService.ShowNotificationAsync("Priority applied", $"{process.Name}: {priority}", NotificationType.Success);
                 }
 
+                await this.LogUserActionAsync(
+                    "ProcessPriorityChanged",
+                    $"CPU priority changed for {process.Name}: {priority}",
+                    $"PID: {process.ProcessId}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
             }
             catch (Exception ex)
@@ -1595,6 +1632,10 @@ namespace ThreadPilot.ViewModels
                 var message = MapProcessOperationException(ex);
                 this.SetContextError(message);
                 _ = this.notificationService.ShowNotificationAsync("Priority blocked", message, NotificationType.Warning);
+                await this.LogUserActionAsync(
+                    "ProcessPriorityChangeFailed",
+                    message,
+                    $"Process: {process.Name}, PID: {process.ProcessId}, Priority: {priority}");
                 await this.TryRefreshContextProcessSummaryAsync(process);
             }
         }
@@ -1618,19 +1659,33 @@ namespace ThreadPilot.ViewModels
                 var result = await this.memoryPriorityService.SetMemoryPriorityAsync(process, priority);
                 if (!result.Success)
                 {
-                    this.SetContextError(string.IsNullOrWhiteSpace(result.UserMessage)
+                    var message = string.IsNullOrWhiteSpace(result.UserMessage)
                         ? ProcessOperationUserMessages.AccessDenied
-                        : result.UserMessage);
+                        : result.UserMessage;
+                    this.SetContextError(message);
+                    await this.LogUserActionAsync(
+                        "ProcessMemoryPriorityFailed",
+                        message,
+                        $"Process: {process.Name}, PID: {process.ProcessId}, Priority: {priority}");
                     await this.UpdateSelectedProcessSummaryAsync(process);
                     return;
                 }
 
                 this.SetStatus($"Memory priority applied successfully to {process.Name}: {priority}.", false);
+                await this.LogUserActionAsync(
+                    "ProcessMemoryPriorityChanged",
+                    $"Memory priority changed for {process.Name}: {priority}",
+                    $"PID: {process.ProcessId}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
             }
             catch (Exception ex)
             {
-                this.SetContextError(MapProcessOperationException(ex));
+                var message = MapProcessOperationException(ex);
+                this.SetContextError(message);
+                await this.LogUserActionAsync(
+                    "ProcessMemoryPriorityFailed",
+                    message,
+                    $"Process: {process.Name}, PID: {process.ProcessId}, Priority: {priority}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
             }
         }

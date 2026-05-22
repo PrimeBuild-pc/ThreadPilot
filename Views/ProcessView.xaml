@@ -39,8 +39,8 @@
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="16"/>
-                <ColumnDefinition Width="360"/>
+                <ColumnDefinition Width="0"/>
+                <ColumnDefinition Width="0"/>
             </Grid.ColumnDefinitions>
 
             <Grid Grid.Column="0">
@@ -145,6 +145,9 @@
                         <DataGrid.RowStyle>
                             <Style TargetType="DataGridRow">
                                 <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=DataGrid}}"/>
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderBrush" Value="Transparent"/>
+                                <Setter Property="BorderThickness" Value="3,0,0,0"/>
                                 <EventSetter Event="PreviewMouseRightButtonDown" Handler="ProcessRow_PreviewMouseRightButtonDown"/>
                                 <Setter Property="ContextMenu">
                                     <Setter.Value>
@@ -213,6 +216,23 @@
                                         </ContextMenu>
                                     </Setter.Value>
                                 </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource QuietRowHoverBackgroundBrush}"/>
+                                    </Trigger>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource SoftSelectionBackgroundBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </Trigger>
+                                    <MultiTrigger>
+                                        <MultiTrigger.Conditions>
+                                            <Condition Property="IsSelected" Value="True"/>
+                                            <Condition Property="IsKeyboardFocusWithin" Value="True"/>
+                                        </MultiTrigger.Conditions>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentAltBrush}"/>
+                                    </MultiTrigger>
+                                </Style.Triggers>
                             </Style>
                         </DataGrid.RowStyle>
                         <DataGrid.Columns>
@@ -315,11 +335,98 @@
                                 <Run Text="{Binding SelectedProcessSummary.LastOperationMessage, Mode=OneWay}"/>
                             </TextBlock>
                         </WrapPanel>
+
+                        <Expander Header="Advanced affinity picker"
+                                  IsExpanded="False"
+                                  Margin="0,10,0,0">
+                            <StackPanel Margin="0,8,0,0">
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="260"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="Pending core mask"
+                                               FontSize="{StaticResource ProcessFontSmall}"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center"/>
+                                    <ComboBox Grid.Column="2"
+                                              ItemsSource="{Binding AvailableCoreMasks}"
+                                              SelectedItem="{Binding SelectedCoreMask, Mode=TwoWay}"
+                                              DisplayMemberPath="Name"
+                                              IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
+                                              ToolTip="Select the pending mask for row context-menu affinity actions"/>
+                                    <Button Grid.Column="4"
+                                            Command="{Binding CreateCustomMaskCommand}"
+                                            Padding="8,5"
+                                            ToolTip="Open CPU Masks tab to create a new custom mask">
+                                        <StackPanel Orientation="Horizontal">
+                                            <ui:SymbolIcon Symbol="Add12" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Custom" FontSize="{StaticResource ProcessFontMediumSmall}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+
+                                <WrapPanel Margin="0,0,0,8">
+                                    <TextBlock Text="{Binding CurrentAffinityText}"
+                                               FontSize="{StaticResource ProcessFontSmall}"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               Margin="0,0,18,4"/>
+                                    <TextBlock Text="{Binding PendingAffinityText}"
+                                               FontSize="{StaticResource ProcessFontSmall}"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               Margin="0,0,18,4"/>
+                                    <TextBlock Text="{Binding AffinityEditStateText}"
+                                               FontSize="{StaticResource ProcessFontSmall}"
+                                               Foreground="{DynamicResource WarningTextBrush}"
+                                               Margin="0,0,18,4"/>
+                                </WrapPanel>
+
+                                <WrapPanel Margin="0,0,0,6">
+                                    <TextBlock Text="{Binding TopologyStatus}"
+                                               FontSize="{StaticResource ProcessFontSmall}"
+                                               Foreground="{Binding IsTopologyDetectionSuccessful, Converter={StaticResource BoolToColorConverter}}"
+                                               Margin="0,0,18,4"/>
+                                    <TextBlock Text="{Binding HyperThreadingStatusText}"
+                                               FontSize="{StaticResource ProcessFontSmall}"
+                                               Foreground="{Binding IsHyperThreadingActive, Converter={StaticResource BoolToColorConverter}}"
+                                               Margin="0,0,18,4"/>
+                                </WrapPanel>
+
+                                <ScrollViewer MaxHeight="88"
+                                              VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Disabled">
+                                    <ItemsControl ItemsSource="{Binding CpuCores}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel Orientation="Horizontal"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <CheckBox Content="{Binding Label}"
+                                                          IsChecked="{Binding IsSelected, Mode=OneWay}"
+                                                          IsHitTestVisible="False"
+                                                          Focusable="False"
+                                                          IsEnabled="{Binding IsEnabled}"
+                                                          Margin="2"
+                                                          FontSize="{StaticResource ProcessFontSmall}"
+                                                          Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </StackPanel>
+                        </Expander>
                     </StackPanel>
                 </Border>
             </Grid>
 
             <Border Grid.Column="2"
+                    Visibility="Collapsed"
                     Background="{DynamicResource CardSurfaceBrush}"
                     BorderBrush="{DynamicResource BorderSubtleBrush}"
                     BorderThickness="1"
