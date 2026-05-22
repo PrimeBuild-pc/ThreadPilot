@@ -106,6 +106,47 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void ProcessGridContextMenu_UsesThemeAwareTemplatesWithoutDefaultIconColumn()
+        {
+            var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);
+            var serialized = document.ToString(SaveOptions.DisableFormatting);
+
+            Assert.Contains("ControlTemplate TargetType=\"{x:Type MenuItem}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("ControlTemplate TargetType=\"{x:Type Separator}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("x:Name=\"SubmenuArrow\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("QuietRowHoverBackgroundBrush", serialized, StringComparison.Ordinal);
+            Assert.Contains("TextDisabledBrush", serialized, StringComparison.Ordinal);
+            Assert.Contains("CardSurfaceBrush", serialized, StringComparison.Ordinal);
+            Assert.Contains("BorderSubtleBrush", serialized, StringComparison.Ordinal);
+            Assert.DoesNotContain("IconHost", serialized, StringComparison.Ordinal);
+            Assert.DoesNotContain("CheckGlyph", serialized, StringComparison.Ordinal);
+            Assert.DoesNotContain("SystemColors.Menu", serialized, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void ProcessGridContextMenu_ThemeResourceKeysExistInLightAndDarkThemes()
+        {
+            var themePaths = new[]
+            {
+                Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "Themes", "FluentLight.xaml"),
+                Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "Themes", "FluentDark.xaml"),
+            };
+
+            foreach (var themePath in themePaths)
+            {
+                var theme = File.ReadAllText(themePath);
+
+                Assert.Contains("x:Key=\"BodyFontSize\"", theme, StringComparison.Ordinal);
+                Assert.Contains("x:Key=\"CardSurfaceBrush\"", theme, StringComparison.Ordinal);
+                Assert.Contains("x:Key=\"BorderSubtleBrush\"", theme, StringComparison.Ordinal);
+                Assert.Contains("x:Key=\"TextPrimaryBrush\"", theme, StringComparison.Ordinal);
+                Assert.Contains("x:Key=\"TextSecondaryBrush\"", theme, StringComparison.Ordinal);
+                Assert.Contains("x:Key=\"TextDisabledBrush\"", theme, StringComparison.Ordinal);
+                Assert.Contains("x:Key=\"QuietRowHoverBackgroundBrush\"", theme, StringComparison.Ordinal);
+            }
+        }
+
+        [Fact]
         public void ProcessGridContextMenu_ContainsExpectedActionsAndSubmenus()
         {
             var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);
