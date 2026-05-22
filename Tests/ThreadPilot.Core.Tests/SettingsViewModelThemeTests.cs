@@ -94,8 +94,9 @@ namespace ThreadPilot.Core.Tests
                 "SettingsView.xaml");
             var serialized = File.ReadAllText(settingsViewPath);
 
-            Assert.Contains("Rules &amp; automation", serialized, StringComparison.Ordinal);
-            Assert.Contains("Apply saved rules when matching processes start", serialized, StringComparison.Ordinal);
+            Assert.Contains("Text=\"Rules &amp; automation\" Style=\"{StaticResource SectionHeaderStyle}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Text=\"Apply saved rules when matching processes start\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("TextWrapping=\"Wrap\"", serialized, StringComparison.Ordinal);
             Assert.Contains("IsChecked=\"{Binding Settings.ApplyPersistentRulesOnProcessStart}\"", serialized, StringComparison.Ordinal);
             Assert.Contains("This does not install a Windows Service and does not use registry/IFEO persistence.", serialized, StringComparison.Ordinal);
         }

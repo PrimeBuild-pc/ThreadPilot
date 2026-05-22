@@ -209,15 +209,17 @@
                     </Border>
                 </StackPanel>
 
-                <!-- Process Event Settings Section -->
+                <!-- Rules & automation Section -->
                 <StackPanel Width="372" Margin="0,0,16,16">
-                    <TextBlock Text="Process Event Settings" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
+                    <TextBlock Text="Rules &amp; automation" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
                     <Border Style="{StaticResource SettingsCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="Rules &amp; automation" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                            <CheckBox Content="Apply saved rules when matching processes start"
-                                      IsChecked="{Binding Settings.ApplyPersistentRulesOnProcessStart}"
-                                      Margin="0,0,0,5"/>
+                            <TextBlock Text="Saved rule auto-apply" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                            <CheckBox IsChecked="{Binding Settings.ApplyPersistentRulesOnProcessStart}"
+                                      Margin="0,0,0,5">
+                                <TextBlock Text="Apply saved rules when matching processes start"
+                                           TextWrapping="Wrap"/>
+                            </CheckBox>
                             <TextBlock Text="Applies enabled saved rules while ThreadPilot is running. This does not install a Windows Service and does not use registry/IFEO persistence."
                                        Style="{StaticResource DescriptionStyle}"
                                        Margin="20,0,0,15"/>

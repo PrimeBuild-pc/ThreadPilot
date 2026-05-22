@@ -83,11 +83,11 @@ namespace ThreadPilot.Core.Tests
 
             Assert.Contains("<ContextMenu", serialized, StringComparison.Ordinal);
             Assert.Contains("Style=\"{StaticResource ProcessContextMenuStyle}\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("BasedOn=\"{x:Null}\"", serialized, StringComparison.Ordinal);
             Assert.Contains("TargetType=\"{x:Type MenuItem}\"", serialized, StringComparison.Ordinal);
             Assert.Contains("FontWeight\" Value=\"Normal\"", serialized, StringComparison.Ordinal);
             Assert.Contains("FontSize\" Value=\"{DynamicResource BodyFontSize}\"", serialized, StringComparison.Ordinal);
             Assert.Contains("Style=\"{StaticResource ProcessContextMenuItemStyle}\"", serialized, StringComparison.Ordinal);
+            Assert.DoesNotContain("ControlTemplate TargetType=\"{x:Type MenuItem}\"", serialized, StringComparison.Ordinal);
             Assert.DoesNotContain("FontWeight\" Value=\"{Binding", serialized, StringComparison.Ordinal);
             Assert.DoesNotContain("FontWeight\" Value=\"{TemplateBinding", serialized, StringComparison.Ordinal);
         }
@@ -103,21 +103,22 @@ namespace ThreadPilot.Core.Tests
             Assert.DoesNotContain("<Separator Style=\"{StaticResource ProcessContextMenuItemStyle}\"", serialized, StringComparison.Ordinal);
             Assert.Contains("<Separator Style=\"{StaticResource ProcessContextMenuSeparatorStyle}\"", serialized, StringComparison.Ordinal);
             Assert.Contains("TargetType=\"{x:Type Separator}\"", serialized, StringComparison.Ordinal);
+            Assert.DoesNotContain("ControlTemplate TargetType=\"{x:Type Separator}\"", serialized, StringComparison.Ordinal);
         }
 
         [Fact]
-        public void ProcessGridContextMenu_UsesThemeAwareTemplatesWithoutDefaultIconColumn()
+        public void ProcessGridContextMenu_UsesThemeAwareNativeMenuWithoutCustomTemplates()
         {
             var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);
             var serialized = document.ToString(SaveOptions.DisableFormatting);
 
-            Assert.Contains("ControlTemplate TargetType=\"{x:Type MenuItem}\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("ControlTemplate TargetType=\"{x:Type Separator}\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("x:Name=\"SubmenuArrow\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("QuietRowHoverBackgroundBrush", serialized, StringComparison.Ordinal);
-            Assert.Contains("TextDisabledBrush", serialized, StringComparison.Ordinal);
+            Assert.Contains("TargetType=\"{x:Type ContextMenu}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("TargetType=\"{x:Type MenuItem}\"", serialized, StringComparison.Ordinal);
+            Assert.DoesNotContain("BasedOn=\"{x:Null}\"", serialized, StringComparison.Ordinal);
+            Assert.DoesNotContain("x:Name=\"SubmenuArrow\"", serialized, StringComparison.Ordinal);
             Assert.Contains("CardSurfaceBrush", serialized, StringComparison.Ordinal);
             Assert.Contains("BorderSubtleBrush", serialized, StringComparison.Ordinal);
+            Assert.Contains("TextPrimaryBrush", serialized, StringComparison.Ordinal);
             Assert.DoesNotContain("IconHost", serialized, StringComparison.Ordinal);
             Assert.DoesNotContain("CheckGlyph", serialized, StringComparison.Ordinal);
             Assert.DoesNotContain("SystemColors.Menu", serialized, StringComparison.Ordinal);
