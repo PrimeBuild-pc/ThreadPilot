@@ -183,6 +183,18 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task ApplyForProcessStartAsync_WhenRulesEngineCancels_PropagatesCancellation()
+        {
+            var process = CreateProcess();
+            var rule = CreateRule();
+            var engine = CreateEngineThatCancels();
+            var service = CreateService([rule], engine.Object);
+
+            await Assert.ThrowsAsync<OperationCanceledException>(() =>
+                service.ApplyForProcessStartAsync(process));
+        }
+
+        [Fact]
         public async Task ApplyForDiscoveredProcessesAsync_FeatureFlagDisabled_DoesNotCallRulesEngine()
         {
             var process = CreateProcess();
@@ -252,6 +264,18 @@ namespace ThreadPilot.Core.Tests
                     predicate == null || predicate(rule)
                         ? new[] { result }
                         : Array.Empty<PersistentRuleApplyResult>());
+            return engine;
+        }
+
+        private static Mock<IPersistentRulesEngine> CreateEngineThatCancels()
+        {
+            var engine = new Mock<IPersistentRulesEngine>(MockBehavior.Strict);
+            engine
+                .Setup(x => x.ApplyMatchingRulesAsync(
+                    It.IsAny<ProcessModel>(),
+                    It.IsAny<Predicate<PersistentProcessRule>?>(),
+                    It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new OperationCanceledException());
             return engine;
         }
 

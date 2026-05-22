@@ -619,6 +619,9 @@ namespace ThreadPilot.Services
                 var results = await this.persistentRuleAutoApplyService.ApplyForDiscoveredProcessesAsync(processes);
                 await this.LogPersistentRuleResultsAsync(results);
             }
+            catch (OperationCanceledException)
+            {
+            }
             catch (Exception ex)
             {
                 this.logger.LogWarning(ex, "Persistent rule auto-apply failed during process snapshot refresh");
@@ -631,6 +634,9 @@ namespace ThreadPilot.Services
             {
                 var results = await this.persistentRuleAutoApplyService.ApplyForProcessStartAsync(process);
                 await this.LogPersistentRuleResultsAsync(results);
+            }
+            catch (OperationCanceledException)
+            {
             }
             catch (Exception ex)
             {

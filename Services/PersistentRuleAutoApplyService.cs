@@ -209,7 +209,7 @@ namespace ThreadPilot.Services
 
                 return results;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 this.logger.LogWarning(
                     ex,
