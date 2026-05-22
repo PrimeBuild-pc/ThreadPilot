@@ -11,6 +11,7 @@ namespace ThreadPilot.Services
     {
         Task<IReadOnlyList<PersistentRuleApplyResult>> ApplyMatchingRulesAsync(
             ProcessModel process,
+            Predicate<PersistentProcessRule>? ruleFilter = null,
             CancellationToken cancellationToken = default);
     }
 
@@ -49,6 +50,7 @@ namespace ThreadPilot.Services
 
         public async Task<IReadOnlyList<PersistentRuleApplyResult>> ApplyMatchingRulesAsync(
             ProcessModel process,
+            Predicate<PersistentProcessRule>? ruleFilter = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(process);
@@ -56,7 +58,9 @@ namespace ThreadPilot.Services
             var rules = await this.ruleStore.LoadAsync().ConfigureAwait(false);
             var results = new List<PersistentRuleApplyResult>();
 
-            foreach (var rule in rules.Where(rule => this.matcher.IsMatch(rule, process)))
+            foreach (var rule in rules.Where(rule =>
+                (ruleFilter == null || ruleFilter(rule)) &&
+                this.matcher.IsMatch(rule, process)))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 results.Add(await this.ApplyRuleAsync(rule, process, cancellationToken).ConfigureAwait(false));

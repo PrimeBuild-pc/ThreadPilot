@@ -5,6 +5,7 @@ namespace ThreadPilot.Core.Tests
 {
     using System.Collections.ObjectModel;
     using System.Threading;
+    using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Logging.Abstractions;
     using Moq;
     using ThreadPilot.Models;
@@ -315,6 +316,121 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task ProcessStarted_AppliesPersistentRulesThroughCoordinator()
+        {
+            var process = new ProcessModel { ProcessId = 41, Name = "game.exe" };
+            var processMonitor = new FakeProcessMonitorService();
+            var configuration = new ProcessMonitorConfiguration();
+            var associationService = CreateAssociationService(configuration);
+            var powerPlanService = CreatePowerPlanService();
+            var notificationService = CreateNotificationService();
+            var processService = CreateProcessService();
+            var coreMaskService = CreateCoreMaskService();
+            var affinityApplyService = CreateAffinityApplyService();
+            var autoApplyService = CreateAutoApplyService();
+            var manager = CreateService(
+                processMonitor,
+                associationService,
+                powerPlanService,
+                notificationService,
+                processService,
+                coreMaskService,
+                affinityApplyService,
+                autoApplyService);
+
+            await manager.StartAsync();
+            processMonitor.RaiseProcessStarted(process);
+            await Task.Delay(100);
+
+            autoApplyService.Verify(
+                x => x.ApplyForDiscoveredProcessesAsync(
+                    It.IsAny<IEnumerable<ProcessModel>>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
+            autoApplyService.Verify(
+                x => x.ApplyForProcessStartAsync(process, It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task EvaluateCurrentProcessesAsync_WhenPersistentRuleSnapshotApplyCancels_DoesNotLogWarning()
+        {
+            var processMonitor = new FakeProcessMonitorService
+            {
+                RunningProcesses =
+                {
+                    new ProcessModel { ProcessId = 42, Name = "game.exe" },
+                },
+            };
+            var configuration = new ProcessMonitorConfiguration();
+            var associationService = CreateAssociationService(configuration);
+            var powerPlanService = CreatePowerPlanService();
+            var notificationService = CreateNotificationService();
+            var processService = CreateProcessService();
+            var coreMaskService = CreateCoreMaskService();
+            var affinityApplyService = CreateAffinityApplyService();
+            var autoApplyService = CreateAutoApplyService();
+            autoApplyService
+                .Setup(x => x.ApplyForDiscoveredProcessesAsync(
+                    It.IsAny<IEnumerable<ProcessModel>>(),
+                    It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new OperationCanceledException());
+            var logger = new CapturingLogger<ProcessMonitorManagerService>();
+            var manager = CreateService(
+                processMonitor,
+                associationService,
+                powerPlanService,
+                notificationService,
+                processService,
+                coreMaskService,
+                affinityApplyService,
+                autoApplyService,
+                logger);
+
+            await manager.StartAsync();
+            await manager.EvaluateCurrentProcessesAsync();
+
+            Assert.Empty(logger.WarningMessages);
+        }
+
+        [Fact]
+        public async Task ProcessStarted_WhenPersistentRuleAutoApplyCancels_DoesNotLogWarning()
+        {
+            var process = new ProcessModel { ProcessId = 43, Name = "game.exe" };
+            var processMonitor = new FakeProcessMonitorService();
+            var configuration = new ProcessMonitorConfiguration();
+            var associationService = CreateAssociationService(configuration);
+            var powerPlanService = CreatePowerPlanService();
+            var notificationService = CreateNotificationService();
+            var processService = CreateProcessService();
+            var coreMaskService = CreateCoreMaskService();
+            var affinityApplyService = CreateAffinityApplyService();
+            var autoApplyService = CreateAutoApplyService();
+            autoApplyService
+                .Setup(x => x.ApplyForProcessStartAsync(
+                    process,
+                    It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new OperationCanceledException());
+            var logger = new CapturingLogger<ProcessMonitorManagerService>();
+            var manager = CreateService(
+                processMonitor,
+                associationService,
+                powerPlanService,
+                notificationService,
+                processService,
+                coreMaskService,
+                affinityApplyService,
+                autoApplyService,
+                logger);
+
+            await manager.StartAsync();
+            processMonitor.RaiseProcessStarted(process);
+            await Task.Delay(100);
+
+            Assert.Empty(logger.WarningMessages);
+        }
+
+        [Fact]
         public async Task Dispose_CompletesOnBlockingSynchronizationContext()
         {
             var processMonitor = new FakeProcessMonitorService
@@ -378,7 +494,9 @@ namespace ThreadPilot.Core.Tests
             Mock<INotificationService> notificationService,
             Mock<IProcessService> processService,
             Mock<ICoreMaskService> coreMaskService,
-            Mock<IAffinityApplyService> affinityApplyService)
+            Mock<IAffinityApplyService> affinityApplyService,
+            Mock<IPersistentRuleAutoApplyService>? autoApplyService = null,
+            ILogger<ProcessMonitorManagerService>? logger = null)
         {
             var enhancedLogger = new Mock<IEnhancedLoggingService>(MockBehavior.Loose);
             enhancedLogger
@@ -403,8 +521,9 @@ namespace ThreadPilot.Core.Tests
                 processService.Object,
                 coreMaskService.Object,
                 affinityApplyService.Object,
+                (autoApplyService ?? CreateAutoApplyService()).Object,
                 new PowerPlanTransitionGate(TimeSpan.FromSeconds(2), () => DateTimeOffset.UtcNow),
-                NullLogger<ProcessMonitorManagerService>.Instance,
+                logger ?? NullLogger<ProcessMonitorManagerService>.Instance,
                 enhancedLogger.Object);
         }
 
@@ -462,6 +581,23 @@ namespace ThreadPilot.Core.Tests
                 .ReturnsAsync((ProcessModel process, long affinity) =>
                     AffinityApplyResult.Succeeded(affinity, affinity));
             return affinityApplyService;
+        }
+
+        private static Mock<IPersistentRuleAutoApplyService> CreateAutoApplyService()
+        {
+            var autoApplyService = new Mock<IPersistentRuleAutoApplyService>(MockBehavior.Strict);
+            autoApplyService
+                .Setup(x => x.ApplyForDiscoveredProcessesAsync(
+                    It.IsAny<IEnumerable<ProcessModel>>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Array.Empty<PersistentRuleAutoApplyResult>());
+            autoApplyService
+                .Setup(x => x.ApplyForProcessStartAsync(
+                    It.IsAny<ProcessModel>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Array.Empty<PersistentRuleAutoApplyResult>());
+            autoApplyService.Setup(x => x.MarkProcessExited(It.IsAny<int>()));
+            return autoApplyService;
         }
 
         private sealed class FakeProcessMonitorService : IProcessMonitorService
@@ -526,6 +662,39 @@ namespace ThreadPilot.Core.Tests
             public override void Post(SendOrPostCallback d, object? state)
             {
                 // Intentionally do not pump posted work to emulate a blocked UI thread.
+            }
+        }
+
+        private sealed class CapturingLogger<T> : ILogger<T>
+        {
+            public List<string> WarningMessages { get; } = new();
+
+            public IDisposable? BeginScope<TState>(TState state)
+                where TState : notnull =>
+                NullScope.Instance;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+                if (logLevel == LogLevel.Warning)
+                {
+                    this.WarningMessages.Add(formatter(state, exception));
+                }
+            }
+
+            private sealed class NullScope : IDisposable
+            {
+                public static readonly NullScope Instance = new();
+
+                public void Dispose()
+                {
+                }
             }
         }
     }

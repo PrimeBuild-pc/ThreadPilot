@@ -164,6 +164,9 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private bool enableFallbackPolling = true;
 
+        [ObservableProperty]
+        private bool applyPersistentRulesOnProcessStart = true;
+
         // Advanced Settings
         [ObservableProperty]
         private bool enableDebugLogging = false;
@@ -249,6 +252,7 @@ namespace ThreadPilot.Models
             this.FallbackPollingIntervalMs = other.FallbackPollingIntervalMs;
             this.EnableWmiMonitoring = other.EnableWmiMonitoring;
             this.EnableFallbackPolling = other.EnableFallbackPolling;
+            this.ApplyPersistentRulesOnProcessStart = other.ApplyPersistentRulesOnProcessStart;
 
             // Advanced Settings
             this.EnableDebugLogging = other.EnableDebugLogging;

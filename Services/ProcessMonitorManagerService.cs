@@ -39,6 +39,7 @@ namespace ThreadPilot.Services
         private readonly IProcessService processService;
         private readonly ICoreMaskService coreMaskService;
         private readonly IAffinityApplyService affinityApplyService;
+        private readonly IPersistentRuleAutoApplyService persistentRuleAutoApplyService;
         private readonly PowerPlanTransitionGate powerPlanTransitionGate;
         private readonly ILogger<ProcessMonitorManagerService> logger;
         private readonly IEnhancedLoggingService enhancedLogger;
@@ -74,6 +75,7 @@ namespace ThreadPilot.Services
             IProcessService processService,
             ICoreMaskService coreMaskService,
             IAffinityApplyService affinityApplyService,
+            IPersistentRuleAutoApplyService persistentRuleAutoApplyService,
             PowerPlanTransitionGate powerPlanTransitionGate,
             ILogger<ProcessMonitorManagerService> logger,
             IEnhancedLoggingService enhancedLogger)
@@ -86,6 +88,7 @@ namespace ThreadPilot.Services
             this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
             this.coreMaskService = coreMaskService ?? throw new ArgumentNullException(nameof(coreMaskService));
             this.affinityApplyService = affinityApplyService ?? throw new ArgumentNullException(nameof(affinityApplyService));
+            this.persistentRuleAutoApplyService = persistentRuleAutoApplyService ?? throw new ArgumentNullException(nameof(persistentRuleAutoApplyService));
             this.powerPlanTransitionGate = powerPlanTransitionGate ?? throw new ArgumentNullException(nameof(powerPlanTransitionGate));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.enhancedLogger = enhancedLogger ?? throw new ArgumentNullException(nameof(enhancedLogger));
@@ -193,6 +196,7 @@ namespace ThreadPilot.Services
                 {
                     this.coreMaskService.UnregisterMaskApplication(processId);
                     this.processService.UntrackProcess(processId);
+                    this.persistentRuleAutoApplyService.MarkProcessExited(processId);
                 }
                 this.runningAssociatedProcesses.Clear();
 
@@ -224,7 +228,8 @@ namespace ThreadPilot.Services
 
             try
             {
-                var currentProcesses = await this.processMonitorService.GetRunningProcessesAsync();
+                var currentProcesses = (await this.processMonitorService.GetRunningProcessesAsync()).ToList();
+                await this.ApplyPersistentRulesForDiscoveredProcessesAsync(currentProcesses);
                 var associatedProcesses = new List<ProcessModel>();
                 var currentProcessIds = new HashSet<int>(currentProcesses.Select(p => p.ProcessId));
 
@@ -235,6 +240,7 @@ namespace ThreadPilot.Services
                     {
                         this.coreMaskService.UnregisterMaskApplication(trackedPid);
                         this.processService.UntrackProcess(trackedPid);
+                        this.persistentRuleAutoApplyService.MarkProcessExited(trackedPid);
                     }
                 }
 
@@ -363,6 +369,8 @@ namespace ThreadPilot.Services
                     LogEventTypes.ProcessMonitoring.Started,
                     e.Process.Name, e.Process.ProcessId, "Process started and detected by monitoring");
 
+                await this.ApplyPersistentRulesForProcessStartAsync(e.Process);
+
                 var association = this.configuration.FindMatchingAssociation(e.Process);
                 if (association != null)
                 {
@@ -421,6 +429,8 @@ namespace ThreadPilot.Services
 
             try
             {
+                this.persistentRuleAutoApplyService.MarkProcessExited(e.Process.ProcessId);
+
                 if (this.runningAssociatedProcesses.TryRemove(e.Process.ProcessId, out _))
                 {
                     this.coreMaskService.UnregisterMaskApplication(e.Process.ProcessId);
@@ -599,6 +609,66 @@ namespace ThreadPilot.Services
                 {
                     this.logger.LogError(ex, "Failed to show error notification");
                 });
+            }
+        }
+
+        private async Task ApplyPersistentRulesForDiscoveredProcessesAsync(IEnumerable<ProcessModel> processes)
+        {
+            try
+            {
+                var results = await this.persistentRuleAutoApplyService.ApplyForDiscoveredProcessesAsync(processes);
+                await this.LogPersistentRuleResultsAsync(results);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogWarning(ex, "Persistent rule auto-apply failed during process snapshot refresh");
+            }
+        }
+
+        private async Task ApplyPersistentRulesForProcessStartAsync(ProcessModel process)
+        {
+            try
+            {
+                var results = await this.persistentRuleAutoApplyService.ApplyForProcessStartAsync(process);
+                await this.LogPersistentRuleResultsAsync(results);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogWarning(
+                    ex,
+                    "Persistent rule auto-apply failed for process {ProcessName} (PID: {ProcessId})",
+                    process.Name,
+                    process.ProcessId);
+            }
+        }
+
+        private async Task LogPersistentRuleResultsAsync(IReadOnlyList<PersistentRuleAutoApplyResult> results)
+        {
+            foreach (var result in results)
+            {
+                if (result.Success)
+                {
+                    await this.enhancedLogger.LogProcessMonitoringEventAsync(
+                        LogEventTypes.ProcessMonitoring.AssociationTriggered,
+                        result.ProcessName,
+                        result.ProcessId,
+                        $"Persistent rule '{result.RuleId}' applied automatically");
+                }
+                else
+                {
+                    this.logger.LogDebug(
+                        "Persistent rule {RuleId} was not applied to process {ProcessName} (PID: {ProcessId}): {Message}",
+                        result.RuleId,
+                        result.ProcessName,
+                        result.ProcessId,
+                        result.UserMessage);
+                }
             }
         }
 
@@ -834,4 +904,3 @@ namespace ThreadPilot.Services
         }
     }
 }
-
