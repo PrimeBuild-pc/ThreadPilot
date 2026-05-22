@@ -76,14 +76,30 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public void ProcessGridContextMenu_MenuItemsUseNormalFontWeight()
+        public void ProcessGridContextMenu_MenuItemsUseStableDetachedMenuStyle()
         {
             var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);
             var serialized = document.ToString(SaveOptions.DisableFormatting);
 
             Assert.Contains("<ContextMenu", serialized, StringComparison.Ordinal);
+            Assert.Contains("Style=\"{StaticResource ProcessRowContextMenuStyle}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("BasedOn=\"{x:Null}\"", serialized, StringComparison.Ordinal);
             Assert.Contains("TargetType=\"MenuItem\"", serialized, StringComparison.Ordinal);
             Assert.Contains("FontWeight\" Value=\"Normal\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("FontSize\" Value=\"{DynamicResource BodyFontSize}\"", serialized, StringComparison.Ordinal);
+            Assert.DoesNotContain("FontWeight\" Value=\"{Binding", serialized, StringComparison.Ordinal);
+            Assert.DoesNotContain("FontWeight\" Value=\"{TemplateBinding", serialized, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void ProcessToolbar_ExposesLockProcessListToggle()
+        {
+            var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);
+            var serialized = document.ToString(SaveOptions.DisableFormatting);
+
+            Assert.Contains("Lock process list", serialized, StringComparison.Ordinal);
+            Assert.Contains("IsChecked=\"{Binding IsProcessListLocked}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Pause process list refresh and sorting updates while you work with the current list.", serialized, StringComparison.Ordinal);
         }
 
         [Fact]

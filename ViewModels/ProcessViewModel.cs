@@ -147,6 +147,9 @@ namespace ThreadPilot.ViewModels
         [ObservableProperty]
         private bool isRegistryPriorityEnabled = false;
 
+        [ObservableProperty]
+        private bool isProcessListLocked = false;
+
         // PERFORMANCE IMPROVEMENT: Progressive loading support
         [ObservableProperty]
         private double loadingProgress = 0.0;

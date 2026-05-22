@@ -351,6 +351,45 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task LockProcessList_WhenEnabled_SkipsRefreshAndKeepsSelection()
+        {
+            var processService = CreateProcessService();
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var viewModel = CreateViewModel(processService.Object, activityAuditService: audit);
+            var selected = CreateProcess(processId: 42);
+            viewModel.Processes = new ObservableCollection<ProcessModel> { selected };
+            viewModel.FilteredProcesses = new ObservableCollection<ProcessModel> { selected };
+            viewModel.SelectedProcess = selected;
+
+            viewModel.IsProcessListLocked = true;
+            await viewModel.RefreshProcessesCommand.ExecuteAsync(null);
+
+            processService.Verify(service => service.GetProcessesAsync(), Times.Never);
+            Assert.Same(selected, viewModel.SelectedProcess);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Process", entry.Category);
+            Assert.Equal("Lock process list enabled.", entry.Message);
+        }
+
+        [Fact]
+        public async Task LockProcessList_WhenDisabled_RefreshesOnceWithoutPersistentRuleSettingChange()
+        {
+            var processService = CreateProcessService();
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var viewModel = CreateViewModel(processService.Object, activityAuditService: audit);
+
+            viewModel.IsProcessListLocked = true;
+            viewModel.IsProcessListLocked = false;
+
+            processService.Verify(service => service.GetProcessesAsync(), Times.Once);
+            var entries = await audit.GetEntriesAsync();
+            Assert.Contains(entries, entry => entry.Message == "Lock process list enabled.");
+            Assert.Contains(entries, entry => entry.Message == "Lock process list disabled.");
+            Assert.DoesNotContain(entries, entry => entry.Message.Contains("refreshed", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(entries, entry => entry.Message.Contains("Apply saved rules", StringComparison.OrdinalIgnoreCase));
+        }
+
+        [Fact]
         public async Task ContextMenuActions_DoNotCreatePersistentRules()
         {
             var processService = CreateProcessService();

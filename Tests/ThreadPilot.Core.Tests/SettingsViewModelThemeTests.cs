@@ -48,6 +48,58 @@ namespace ThreadPilot.Core.Tests
                 Times.Never);
         }
 
+        [Fact]
+        public async Task ChangingApplyPersistentRulesOnProcessStart_UpdatesSettingAndLogsVisibleActivityEntry()
+        {
+            var harness = new Harness();
+            var viewModel = harness.CreateViewModel();
+
+            viewModel.Settings.ApplyPersistentRulesOnProcessStart = false;
+
+            Assert.False(viewModel.Settings.ApplyPersistentRulesOnProcessStart);
+            harness.Logging.Verify(
+                service => service.LogUserActionAsync(
+                    "SettingsChanged",
+                    "[Settings] Apply saved rules at process start disabled.",
+                    null),
+                Times.Once);
+            var disabledEntry = Assert.Single(await harness.Audit.GetEntriesAsync());
+            Assert.Equal("Settings", disabledEntry.Category);
+            Assert.Equal("[Settings] Apply saved rules at process start disabled.", disabledEntry.Message);
+
+            viewModel.Settings.ApplyPersistentRulesOnProcessStart = true;
+
+            Assert.True(viewModel.Settings.ApplyPersistentRulesOnProcessStart);
+            harness.Logging.Verify(
+                service => service.LogUserActionAsync(
+                    "SettingsChanged",
+                    "[Settings] Apply saved rules at process start enabled.",
+                    null),
+                Times.Once);
+            var entries = await harness.Audit.GetEntriesAsync();
+            Assert.Contains(entries, entry => entry.Message == "[Settings] Apply saved rules at process start enabled.");
+        }
+
+        [Fact]
+        public void SettingsView_ExposesPersistentRuleAutoApplyToggle()
+        {
+            var settingsViewPath = Path.Combine(
+                AppContext.BaseDirectory,
+                "..",
+                "..",
+                "..",
+                "..",
+                "..",
+                "Views",
+                "SettingsView.xaml");
+            var serialized = File.ReadAllText(settingsViewPath);
+
+            Assert.Contains("Rules &amp; automation", serialized, StringComparison.Ordinal);
+            Assert.Contains("Apply saved rules when matching processes start", serialized, StringComparison.Ordinal);
+            Assert.Contains("IsChecked=\"{Binding Settings.ApplyPersistentRulesOnProcessStart}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("This does not install a Windows Service and does not use registry/IFEO persistence.", serialized, StringComparison.Ordinal);
+        }
+
         private sealed class Harness
         {
             private readonly ApplicationSettingsModel settings;

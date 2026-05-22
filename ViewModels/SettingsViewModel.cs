@@ -179,6 +179,16 @@ namespace ThreadPilot.ViewModels
                 return;
             }
 
+            if (string.Equals(e.PropertyName, nameof(ApplicationSettingsModel.ApplyPersistentRulesOnProcessStart), StringComparison.Ordinal))
+            {
+                this.UpdatePendingChangesState();
+                var state = this.Settings.ApplyPersistentRulesOnProcessStart ? "enabled" : "disabled";
+                _ = this.LogUserActionAsync(
+                    "SettingsChanged",
+                    $"[Settings] Apply saved rules at process start {state}.");
+                return;
+            }
+
             this.UpdatePendingChangesState();
         }
 

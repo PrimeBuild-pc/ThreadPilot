@@ -23,6 +23,20 @@
         <sys:Double x:Key="ProcessFontMedium">14</sys:Double>
         <sys:Double x:Key="ProcessFontMediumSmall">12</sys:Double>
         <sys:Double x:Key="ProcessFontSmall">11</sys:Double>
+        <Style x:Key="ProcessRowContextMenuItemStyle" TargetType="MenuItem" BasedOn="{x:Null}">
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="FontSize" Value="{DynamicResource BodyFontSize}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource CardSurfaceBrush}"/>
+        </Style>
+        <Style x:Key="ProcessRowContextMenuStyle" TargetType="ContextMenu" BasedOn="{x:Null}">
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="FontSize" Value="{DynamicResource BodyFontSize}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource CardSurfaceBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+            <Setter Property="ItemContainerStyle" Value="{StaticResource ProcessRowContextMenuItemStyle}"/>
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="10">
@@ -109,6 +123,11 @@
                                       Margin="0,0,15,0"
                                       VerticalAlignment="Center"
                                       ToolTip="Hide processes with very low CPU usage"/>
+                            <CheckBox Content="Lock process list"
+                                      IsChecked="{Binding IsProcessListLocked}"
+                                      Margin="0,0,15,0"
+                                      VerticalAlignment="Center"
+                                      ToolTip="Pause process list refresh and sorting updates while you work with the current list. Background monitoring and saved-rule auto-apply continue while ThreadPilot is running."/>
                             <TextBlock Text="Sort by:" VerticalAlignment="Center" Margin="0,0,5,0"/>
                             <ComboBox SelectedValue="{Binding SortMode}"
                                       SelectedValuePath="Tag"
@@ -151,12 +170,8 @@
                                 <EventSetter Event="PreviewMouseRightButtonDown" Handler="ProcessRow_PreviewMouseRightButtonDown"/>
                                 <Setter Property="ContextMenu">
                                     <Setter.Value>
-                                        <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
-                                            <ContextMenu.Resources>
-                                                <Style TargetType="MenuItem">
-                                                    <Setter Property="FontWeight" Value="Normal"/>
-                                                </Style>
-                                            </ContextMenu.Resources>
+                                        <ContextMenu Style="{StaticResource ProcessRowContextMenuStyle}"
+                                                     DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
                                             <MenuItem Header="Apply Affinity"
                                                       Command="{Binding ApplyContextAffinityCommand}"
                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>

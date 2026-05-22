@@ -672,6 +672,11 @@ namespace ThreadPilot.ViewModels
         [RelayCommand]
         private async Task RefreshProcesses()
         {
+            if (this.IsProcessListLocked)
+            {
+                return;
+            }
+
             if (this.IsBusy)
             {
                 return;
@@ -995,6 +1000,17 @@ namespace ThreadPilot.ViewModels
             }
 
             return dispatcher.InvokeAsync(action).Task;
+        }
+
+        private static Task InvokeOnUiAsync(Func<Task> action)
+        {
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher == null || dispatcher.CheckAccess())
+            {
+                return action();
+            }
+
+            return dispatcher.InvokeAsync(action).Task.Unwrap();
         }
 
         [RelayCommand]
@@ -1970,23 +1986,34 @@ namespace ThreadPilot.ViewModels
                 return;
             }
 
-            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
-            {
-                if (this.isUiRefreshPaused)
+            TaskSafety.FireAndForget(
+                InvokeOnUiAsync(async () =>
                 {
-                    return;
-                }
+                    if (this.isUiRefreshPaused)
+                    {
+                        return;
+                    }
 
-                try
-                {
-                    this.ClearStatus();
-                    await this.RefreshProcessesCommand.ExecuteAsync(null);
-                }
-                catch (Exception ex)
-                {
-                    this.Logger.LogDebug(ex, "Immediate process refresh after resume failed");
-                }
-            });
+                    try
+                    {
+                        this.ClearStatus();
+                        await this.RefreshProcessesCommand.ExecuteAsync(null);
+                    }
+                    catch (Exception ex)
+                    {
+                        this.Logger.LogDebug(ex, "Immediate process refresh after resume failed");
+                    }
+                }),
+                ex => this.Logger.LogDebug(ex, "Immediate process refresh dispatch after resume failed"));
+        }
+
+        partial void OnIsProcessListLockedChanged(bool value)
+        {
+            this.SetUiRefreshEnabled(!value, refreshImmediately: !value);
+
+            _ = this.LogUserActionAsync(
+                "ProcessListLockChanged",
+                value ? "Lock process list enabled." : "Lock process list disabled.");
         }
 
         partial void OnSearchTextChanged(string value)
