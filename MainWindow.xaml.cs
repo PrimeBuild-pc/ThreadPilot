@@ -64,6 +64,7 @@ namespace ThreadPilot
         private bool isSystemTrayUpdatesSuspended;
         private int isSystemTrayUpdateInProgress;
         private int systemTrayUpdateFailureStreak;
+        private int startupUpdateCheckStarted;
         private AppActivityState? lastAppliedRefreshState;
         private readonly IElevationService elevationService;
         private readonly ISecurityService securityService;

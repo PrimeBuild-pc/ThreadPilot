@@ -162,7 +162,14 @@ Configuration/ProcessProfiles.json
 Configuration/*.local.json
 Data/
 AppData/
+appdata/
 %AppData%/ThreadPilot/
+/settings.json
+/core_masks.json
+/persistent_rules.json
+/Configuration/
+/Profiles/
+/PowerPlans/
 
 # Project-specific extras
 .claude/

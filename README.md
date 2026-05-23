@@ -5,6 +5,7 @@
 **A free and open-source Windows process control center for deterministic CPU, priority, memory, and power-plan workflows.**
 
 [![Build](https://github.com/PrimeBuild-pc/ThreadPilot/actions/workflows/ci-devsecops.yml/badge.svg)](https://github.com/PrimeBuild-pc/ThreadPilot/actions/workflows/ci-devsecops.yml)
+[![codecov](https://codecov.io/gh/PrimeBuild-pc/ThreadPilot/branch/main/graph/badge.svg)](https://codecov.io/gh/PrimeBuild-pc/ThreadPilot)
 [![Release](https://img.shields.io/github/v/release/PrimeBuild-pc/ThreadPilot?sort=semver)](https://github.com/PrimeBuild-pc/ThreadPilot/releases)
 [![winget](https://img.shields.io/winget/v/PrimeBuild.ThreadPilot?label=winget)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/p/PrimeBuild/ThreadPilot)
 [![Windows](https://img.shields.io/badge/Windows-11-blue?logo=windows)](https://www.microsoft.com/windows)

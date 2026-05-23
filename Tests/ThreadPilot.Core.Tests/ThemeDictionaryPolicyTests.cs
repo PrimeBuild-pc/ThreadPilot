@@ -85,7 +85,26 @@ namespace ThreadPilot.Core.Tests
             Assert.Contains("StatusPillBackgroundBrush", themeText, StringComparison.Ordinal);
             Assert.Contains("AppFontFamily", themeText, StringComparison.Ordinal);
             Assert.Contains("MaskSelectedBackgroundBrush", themeText, StringComparison.Ordinal);
+            Assert.Contains("MaskSelectedListBackgroundBrush", themeText, StringComparison.Ordinal);
             Assert.Contains("MaskSelectedBorderBrush", themeText, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void DarkTheme_MaskListSelectionUsesSubtleTintWithoutAccentForeground()
+        {
+            var themeText = File.ReadAllText(GetRepositoryFilePath("Themes/FluentDark.xaml"));
+
+            Assert.Contains("x:Key=\"MaskSelectedListBackgroundBrush\"", themeText, StringComparison.Ordinal);
+            Assert.Contains("Opacity=\"0.05\"", themeText, StringComparison.Ordinal);
+            Assert.Contains("x:Key=\"MaskSelectedBorderBrush\"", themeText, StringComparison.Ordinal);
+            Assert.DoesNotContain(
+                "x:Key=\"MaskSelectedListBackgroundBrush\" Color=\"{StaticResource AccentFillColorDefault}\"",
+                themeText,
+                StringComparison.Ordinal);
+            Assert.DoesNotContain(
+                "x:Key=\"MaskSelectedListForegroundBrush\" Color=\"{StaticResource TextOnAccentFillColorPrimary}\"",
+                themeText,
+                StringComparison.Ordinal);
         }
 
         private static ResourceDictionary CreateDictionaryWithSource(Uri source)

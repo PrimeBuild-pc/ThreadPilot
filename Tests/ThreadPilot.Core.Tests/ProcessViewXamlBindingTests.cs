@@ -209,6 +209,27 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void MasksView_SelectedMaskListItemUsesReadableFluentSelection()
+        {
+            var masksViewPath = Path.Combine(
+                GetRepositoryRoot(),
+                "Views",
+                "MasksView.xaml");
+            var document = XDocument.Load(masksViewPath, LoadOptions.PreserveWhitespace);
+            var serialized = document.ToString(SaveOptions.DisableFormatting);
+
+            Assert.Contains("x:Key=\"MaskListItemStyle\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("TargetType=\"{x:Type ListBoxItem}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("ItemContainerStyle=\"{StaticResource MaskListItemStyle}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("MaskSelectedListBackgroundBrush", serialized, StringComparison.Ordinal);
+            Assert.Contains("MaskSelectedBorderBrush", serialized, StringComparison.Ordinal);
+            Assert.Contains("BorderThickness\" Value=\"2\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Foreground\" Value=\"{DynamicResource TextFillColorPrimaryBrush}\"", serialized, StringComparison.Ordinal);
+            Assert.DoesNotContain("TextOnAccentFillColorPrimaryBrush", serialized, StringComparison.Ordinal);
+            Assert.DoesNotContain("AccentFillColorDefaultBrush", serialized, StringComparison.Ordinal);
+        }
+
+        [Fact]
         public void MainWindow_ContainsStartupMinimizedSuggestionOverlay()
         {
             var mainWindowPath = Path.Combine(GetRepositoryRoot(), "MainWindow.xaml");
@@ -219,6 +240,23 @@ namespace ThreadPilot.Core.Tests
             Assert.Contains("Startup minimized", serialized, StringComparison.Ordinal);
             Assert.Contains("Open Settings", serialized, StringComparison.Ordinal);
             Assert.Contains("Don't show again", serialized, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void MainWindow_QueuesStartupUpdateCheckOnceWithoutBlockingStartup()
+        {
+            var mainWindowBehaviorPath = Path.Combine(GetRepositoryRoot(), "MainWindow.Behaviors.partial.cs");
+            var source = File.ReadAllText(mainWindowBehaviorPath);
+            var updateCheckSection = source[
+                source.IndexOf("private void QueueStartupUpdateCheck()", StringComparison.Ordinal)..
+                source.IndexOf("private void UpdateLoadingStatus", StringComparison.Ordinal)];
+
+            Assert.Contains("QueueStartupUpdateCheck();", source, StringComparison.Ordinal);
+            Assert.Contains("Interlocked.Exchange(ref this.startupUpdateCheckStarted, 1)", updateCheckSection, StringComparison.Ordinal);
+            Assert.Contains("TaskSafety.FireAndForget(this.CheckForUpdatesAtStartupAsync()", updateCheckSection, StringComparison.Ordinal);
+            Assert.Contains("GetLatestVersionAsync(\"PrimeBuild-pc\", \"ThreadPilot\")", updateCheckSection, StringComparison.Ordinal);
+            Assert.Contains("Startup update check ignored failure", updateCheckSection, StringComparison.Ordinal);
+            Assert.DoesNotContain("System.Windows.MessageBox.Show", updateCheckSection, StringComparison.Ordinal);
         }
 
         [Fact]

@@ -96,6 +96,7 @@
     <SolidColorBrush x:Key="SoftSelectionBackgroundBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.16"/>
     <SolidColorBrush x:Key="SoftSelectionBorderBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.30"/>
     <SolidColorBrush x:Key="MaskSelectedBackgroundBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.08"/>
+    <SolidColorBrush x:Key="MaskSelectedListBackgroundBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.05"/>
     <SolidColorBrush x:Key="MaskSelectedBorderBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.58"/>
 
     <!-- System Colors overrides -->

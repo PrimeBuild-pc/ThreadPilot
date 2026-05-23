@@ -24,7 +24,9 @@ namespace ThreadPilot.Services
     using System.Linq;
     using System.Text;
     using System.Text.Json;
+    using System.Threading;
     using System.Threading.Tasks;
+    using System.Windows;
     using Microsoft.Extensions.Logging;
     using ThreadPilot.Models;
 
@@ -49,6 +51,7 @@ namespace ThreadPilot.Services
         private readonly CpuSelectionMigrationService cpuSelectionMigrationService;
         private readonly string masksFilePath;
         private bool initialized = false;
+        private int topologyBackfillInProgress;
 
         // Tracks which masks are actively applied to processes
         private readonly Dictionary<int, string> activeProcessMasks = new(); // ProcessId -> MaskId
@@ -61,13 +64,15 @@ namespace ThreadPilot.Services
         /// The "All Cores" baseline mask - cannot be deleted.
         /// </summary>
         private const string ALLCORESMASKNAME = "All Cores";
+        private const string NOCORE0MASKNAME = "No Core 0";
 
         public CoreMaskService(
             ILogger<CoreMaskService> logger,
             ICpuTopologyService cpuTopologyService,
             IServiceProvider serviceProvider,
             ICpuTopologyProvider? cpuTopologyProvider = null,
-            CpuSelectionMigrationService? cpuSelectionMigrationService = null)
+            CpuSelectionMigrationService? cpuSelectionMigrationService = null,
+            string? masksFilePath = null)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.cpuTopologyService = cpuTopologyService ?? throw new ArgumentNullException(nameof(cpuTopologyService));
@@ -75,8 +80,18 @@ namespace ThreadPilot.Services
             this.cpuTopologyProvider = cpuTopologyProvider;
             this.cpuSelectionMigrationService = cpuSelectionMigrationService ?? new CpuSelectionMigrationService();
 
-            StoragePaths.EnsureAppDataDirectories();
-            this.masksFilePath = StoragePaths.CoreMasksFilePath;
+            if (string.IsNullOrWhiteSpace(masksFilePath))
+            {
+                StoragePaths.EnsureAppDataDirectories();
+                this.masksFilePath = StoragePaths.CoreMasksFilePath;
+            }
+            else
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(masksFilePath)!);
+                this.masksFilePath = masksFilePath;
+            }
+
+            this.cpuTopologyService.TopologyDetected += this.OnTopologyDetected;
         }
 
         public async Task InitializeAsync()
@@ -90,15 +105,55 @@ namespace ThreadPilot.Services
 
             await this.LoadMasksAsync();
 
-            // If no masks exist, create defaults
             if (this.AvailableMasks.Count == 0)
             {
                 this.logger.LogInformation("No masks found, creating defaults...");
-                await this.CreateDefaultMasksAsync();
+            }
+
+            if (await this.BackfillBuiltInDefaultMasksAsync())
+            {
+                await this.SaveMasksAsync();
             }
 
             this.initialized = true;
             this.logger.LogInformation("CoreMaskService initialized with {Count} masks", this.AvailableMasks.Count);
+        }
+
+        private void OnTopologyDetected(object? sender, CpuTopologyDetectedEventArgs e)
+        {
+            if (!this.initialized || !e.DetectionSuccessful)
+            {
+                return;
+            }
+
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher != null)
+            {
+                _ = dispatcher.InvokeAsync(async () => await this.BackfillBuiltInDefaultMasksAndSaveAsync());
+                return;
+            }
+
+            _ = Task.Run(this.BackfillBuiltInDefaultMasksAndSaveAsync);
+        }
+
+        private async Task BackfillBuiltInDefaultMasksAndSaveAsync()
+        {
+            if (Interlocked.Exchange(ref this.topologyBackfillInProgress, 1) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                if (await this.BackfillBuiltInDefaultMasksAsync())
+                {
+                    await this.SaveMasksAsync();
+                }
+            }
+            finally
+            {
+                Interlocked.Exchange(ref this.topologyBackfillInProgress, 0);
+            }
         }
 
         public async Task<CoreMask> CreateMaskAsync(string name, string description, IEnumerable<bool> boolMask)
@@ -498,11 +553,25 @@ namespace ThreadPilot.Services
 
         public async Task CreateDefaultMasksAsync()
         {
-            int coreCount = Environment.ProcessorCount;
+            bool changed = await this.BackfillBuiltInDefaultMasksAsync();
+            if (changed)
+            {
+                await this.SaveMasksAsync();
+            }
+
+            this.logger.LogInformation(
+                "Created or backfilled default masks with topology-aware presets; total masks: {Count}",
+                this.AvailableMasks.Count);
+        }
+
+        private async Task<bool> BackfillBuiltInDefaultMasksAsync()
+        {
             var topology = this.cpuTopologyService.CurrentTopology;
+            int coreCount = this.ResolveLogicalCoreCount(topology);
             bool topologyConfident = topology?.TopologyDetectionSuccessful == true;
             bool hasHyperThreading = topology?.HasHyperThreading == true;
             bool canCreateNoSmtVariants = topologyConfident && hasHyperThreading;
+            bool changed = false;
 
             // Collect all default masks with their "no SMT" variants
             var defaultMasks = new List<(string name, List<bool> boolMask, string description)>();
@@ -518,13 +587,32 @@ namespace ThreadPilot.Services
                 Name = ALLCORESMASKNAME,
                 Description = "Use all available CPU cores - baseline mask",
                 IsDefault = true,
+                IsEnabled = true,
             };
             for (int i = 0; i < coreCount; i++)
             {
                 allCoresMask.BoolMask.Add(true);
             }
 
-            this.AvailableMasks.Add(allCoresMask);
+            changed |= this.AddBuiltInMaskIfMissing(allCoresMask);
+
+            if (coreCount > 1)
+            {
+                var noCoreZeroMask = new CoreMask
+                {
+                    Name = NOCORE0MASKNAME,
+                    Description = "Use all logical CPUs except CPU 0",
+                    IsDefault = false,
+                    IsEnabled = true,
+                };
+
+                for (int i = 0; i < coreCount; i++)
+                {
+                    noCoreZeroMask.BoolMask.Add(i != 0);
+                }
+
+                changed |= this.AddBuiltInMaskIfMissing(noCoreZeroMask);
+            }
 
             // 2. Intel Hybrid Architecture: P-Cores, E-Cores, LPE-Cores (Arrow Lake+)
             if (topology != null && topology.HasIntelHybrid)
@@ -634,13 +722,34 @@ namespace ThreadPilot.Services
             // Add all generated masks to AvailableMasks
             foreach (var mask in resultMasks)
             {
-                this.AvailableMasks.Add(mask);
+                changed |= this.AddBuiltInMaskIfMissing(mask);
             }
 
-            await this.SaveMasksAsync();
-            this.logger.LogInformation(
-                "Created {Count} default masks with topology-aware presets (including no SMT variants)",
-                this.AvailableMasks.Count);
+            await Task.CompletedTask;
+            return changed;
+        }
+
+        private int ResolveLogicalCoreCount(CpuTopologyModel? topology)
+        {
+            if (topology?.TopologyDetectionSuccessful == true && topology.TotalLogicalCores > 0)
+            {
+                return topology.TotalLogicalCores;
+            }
+
+            return Environment.ProcessorCount;
+        }
+
+        private bool AddBuiltInMaskIfMissing(CoreMask mask)
+        {
+            if (this.AvailableMasks.Any(existing =>
+                existing.Name.Equals(mask.Name, StringComparison.OrdinalIgnoreCase)))
+            {
+                return false;
+            }
+
+            this.AvailableMasks.Add(mask);
+            this.logger.LogInformation("Backfilled built-in core mask '{Name}'", mask.Name);
+            return true;
         }
 
         /// <summary>

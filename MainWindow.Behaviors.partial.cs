@@ -120,6 +120,7 @@ namespace ThreadPilot
                 await this.InitializeServicesAsync();
                 this.LogDebug("InitializeServicesAsync completed successfully");
                 this.CompleteInitializationTask("Services");
+                this.QueueStartupUpdateCheck();
 
                 await this.Dispatcher.InvokeAsync(() => this.UpdateLoadingStatus("Finalizing startup...", "Applying final UI state and startup checks."));
                 this.LogDebug("Finalizing startup...");
@@ -136,6 +137,75 @@ namespace ThreadPilot
                 this.LogDebug($"=== ERROR in InitializeApplicationAsync: {ex} ===");
                 await this.Dispatcher.InvokeAsync(() => this.ShowInitializationError(ex));
             }
+        }
+
+        private void QueueStartupUpdateCheck()
+        {
+            if (Interlocked.Exchange(ref this.startupUpdateCheckStarted, 1) != 0)
+            {
+                return;
+            }
+
+            TaskSafety.FireAndForget(this.CheckForUpdatesAtStartupAsync(), ex =>
+            {
+                this.LogDebug($"Startup update check failed: {ex.Message}");
+            });
+        }
+
+        private async Task CheckForUpdatesAtStartupAsync()
+        {
+            try
+            {
+                this.LogDebug("Startup update check started");
+                var checker = this.serviceProvider.GetRequiredService<GitHubUpdateChecker>();
+                var currentVersion = GetCurrentApplicationVersion();
+                var (latest, _) = await checker.GetLatestVersionAsync("PrimeBuild-pc", "ThreadPilot");
+
+                if (latest == null)
+                {
+                    this.LogDebug("Startup update check completed without release information");
+                    return;
+                }
+
+                if (latest <= currentVersion)
+                {
+                    this.LogDebug($"Startup update check complete: installed {currentVersion}, latest {latest}");
+                    return;
+                }
+
+                await this.notificationService.ShowNotificationAsync(
+                    "Update available",
+                    $"ThreadPilot {latest} is available from GitHub releases.",
+                    NotificationType.Information);
+                this.LogDebug($"Startup update check found update: installed {currentVersion}, latest {latest}");
+            }
+            catch (Exception ex)
+            {
+                this.LogDebug($"Startup update check ignored failure: {ex.Message}");
+            }
+        }
+
+        private static Version GetCurrentApplicationVersion()
+        {
+            var rawVersion = typeof(App).Assembly
+                .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+                .OfType<System.Reflection.AssemblyInformationalVersionAttribute>()
+                .FirstOrDefault()?
+                .InformationalVersion
+                ?? typeof(App).Assembly.GetName().Version?.ToString()
+                ?? "0.0.0";
+
+            var sanitized = rawVersion.Trim();
+            if (sanitized.StartsWith("v", StringComparison.OrdinalIgnoreCase))
+            {
+                sanitized = sanitized[1..];
+            }
+
+            sanitized = sanitized.Split('-', '+')[0];
+
+            return Version.TryParse(sanitized, out var version)
+                ? version
+                : new Version(0, 0, 0);
         }
 
         private void UpdateLoadingStatus(string stage, string details = "")
