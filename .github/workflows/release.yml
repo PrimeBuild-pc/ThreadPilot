@@ -187,24 +187,17 @@ jobs:
           Set-Content -LiteralPath $sharedUninstall -Value $uninstallContent -Encoding Ascii
           Copy-Item "LICENSE" -Destination $sharedLicense -Force
 
-          $singleStage = "artifacts/release/package-staging/singlefile"
-          $readyToRunStage = "artifacts/release/package-staging/readytorun"
-          New-Item -ItemType Directory -Force -Path $singleStage | Out-Null
-          New-Item -ItemType Directory -Force -Path $readyToRunStage | Out-Null
+          $portableStage = "artifacts/release/package-staging/portable"
+          New-Item -ItemType Directory -Force -Path $portableStage | Out-Null
 
-          Copy-Item "artifacts/release/singlefile/*" -Destination $singleStage -Recurse -Force
-          Copy-Item "artifacts/release/readytorun/*" -Destination $readyToRunStage -Recurse -Force
+          Copy-Item "artifacts/release/singlefile/*" -Destination $portableStage -Recurse -Force
 
-          Copy-Item $sharedUninstall -Destination (Join-Path $singleStage "uninstall.bat") -Force
-          Copy-Item $sharedLicense -Destination (Join-Path $singleStage "LICENSE.md") -Force
-          Copy-Item $sharedUninstall -Destination (Join-Path $readyToRunStage "uninstall.bat") -Force
-          Copy-Item $sharedLicense -Destination (Join-Path $readyToRunStage "LICENSE.md") -Force
+          Copy-Item $sharedUninstall -Destination (Join-Path $portableStage "uninstall.bat") -Force
+          Copy-Item $sharedLicense -Destination (Join-Path $portableStage "LICENSE.md") -Force
 
-          $singleFileZip = "artifacts/release/packages/ThreadPilot_$version`_singlefile_win-x64.zip"
-          $readyToRunZip = "artifacts/release/packages/ThreadPilot_$version`_readytorun_win-x64.zip"
+          $portableZip = "artifacts/release/packages/ThreadPilot_$version`_Portable.zip"
 
-          Compress-Archive -Path "$singleStage/*" -DestinationPath $singleFileZip -Force
-          Compress-Archive -Path "$readyToRunStage/*" -DestinationPath $readyToRunZip -Force
+          Compress-Archive -Path "$portableStage/*" -DestinationPath $portableZip -Force
 
       - name: Generate checksums
         shell: pwsh
@@ -390,11 +383,10 @@ jobs:
           mkdir -p public-release-assets
 
           cp "release-assets/installer/ThreadPilot_${tag}_Setup.exe" "public-release-assets/ThreadPilot_${tag}_Setup.exe"
-          cp "release-assets/packages/ThreadPilot_${tag}_singlefile_win-x64.zip" "public-release-assets/ThreadPilot_${tag}_singlefile_win-x64.zip"
-          cp "release-assets/packages/ThreadPilot_${tag}_readytorun_win-x64.zip" "public-release-assets/ThreadPilot_${tag}_readytorun_win-x64.zip"
+          cp "release-assets/packages/ThreadPilot_${tag}_Portable.zip" "public-release-assets/ThreadPilot_${tag}_Portable.zip"
           cp "release-assets/SHA256SUMS.txt" "public-release-assets/SHA256SUMS.txt"
 
-          expected_count=4
+          expected_count=3
           actual_count="$(find public-release-assets -maxdepth 1 -type f | wc -l | tr -d ' ')"
           if [ "$actual_count" != "$expected_count" ]; then
             echo "Expected $expected_count public release asset files, found $actual_count."
@@ -437,8 +429,7 @@ jobs:
           body: ${{ steps.git-cliff.outputs.content }}
           files: |
             public-release-assets/ThreadPilot_${{ needs.build.outputs.tag }}_Setup.exe
-            public-release-assets/ThreadPilot_${{ needs.build.outputs.tag }}_singlefile_win-x64.zip
-            public-release-assets/ThreadPilot_${{ needs.build.outputs.tag }}_readytorun_win-x64.zip
+            public-release-assets/ThreadPilot_${{ needs.build.outputs.tag }}_Portable.zip
             public-release-assets/SHA256SUMS.txt
           generate_release_notes: true
 

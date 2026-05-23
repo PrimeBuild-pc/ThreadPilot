@@ -56,7 +56,10 @@
 
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
             <TextBlock Text="CPU Masks" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
-            <TextBlock Text="Create and maintain reusable CPU affinity masks" Style="{StaticResource PageSubtitleTextStyle}"/>
+            <TextBlock Text="Create reusable CPU affinity presets for per-process use." Style="{StaticResource PageSubtitleTextStyle}"/>
+            <TextBlock FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="0,6,0,0">
+                Selecting a mask here only edits the preset. It does not change CPU affinity until you apply it to a process or save it in a process rule.
+            </TextBlock>
         </StackPanel>
 
         <Grid Grid.Row="1">
@@ -167,7 +170,7 @@
                     <!-- CPU Selection Grid -->
                     <GroupBox Header="Select CPUs" Padding="{DynamicResource CompactCardPadding}" Margin="0,10,0,10">
                         <StackPanel>
-                            <TextBlock Text="Toggle CPUs to update this mask. Changes are saved automatically; All Cores remains the protected default mask."
+                            <TextBlock Text="Toggle CPUs to edit this mask preset. Changes are saved automatically and do not affect running processes. All Cores is the protected default preset."
                                        FontSize="11"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                        TextWrapping="Wrap"
@@ -221,10 +224,10 @@
                             <Button Content="Duplicate Mask" Command="{Binding DuplicateMaskCommand}"
                                     HorizontalAlignment="Left" Padding="10,6" Margin="0,0,0,5"/>
 
-                            <CheckBox Content="Set as Default Mask"
+                            <CheckBox Content="Default preset"
                                       IsChecked="{Binding SelectedCoreMask.IsDefault, Mode=TwoWay}"
                                       Margin="0,10,0,5"
-                                      ToolTip="The default mask is applied to new processes"/>
+                                      ToolTip="Pre-selected when ThreadPilot needs a fallback mask or when creating per-process rules. It does not apply CPU affinity automatically."/>
 
                             <CheckBox Content="Enabled"
                                       IsChecked="{Binding SelectedCoreMask.IsEnabled, Mode=TwoWay}"

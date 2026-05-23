@@ -71,13 +71,13 @@ winget search ThreadPilot
 | Package | Recommended use |
 |---|---|
 | `ThreadPilot_v<version>_Setup.exe` | Standard Windows installer for most users |
-| `ThreadPilot_v<version>_singlefile_win-x64.zip` | Portable/no-install deployment |
+| `ThreadPilot_v<version>_Portable.zip` | Portable/no-install deployment |
 
 Optional checksum verification:
 
 ```powershell
 Get-FileHash .\ThreadPilot_v<version>_Setup.exe -Algorithm SHA256
-Get-FileHash .\ThreadPilot_v<version>_singlefile_win-x64.zip -Algorithm SHA256
+Get-FileHash .\ThreadPilot_v<version>_Portable.zip -Algorithm SHA256
 ```
 
 Compare the result with `SHA256SUMS.txt` from the same release.

@@ -133,12 +133,15 @@ iscc Installer/setup.iss
 
 ## Release Asset Contract
 
-The release workflow currently publishes these GitHub release assets:
+## Release Asset Contract
 
-- `ThreadPilot_v<version>_Setup.exe`
-- `ThreadPilot_v<version>_singlefile_win-x64.zip`
-- `ThreadPilot_v<version>_readytorun_win-x64.zip`
-- `SHA256SUMS.txt`
+The release workflow publishes these public GitHub release assets:
+
+- `ThreadPilot_v<version>_Setup.exe` (Inno Setup installer)
+- `ThreadPilot_v<version>_Portable.zip` (portable deployment)
+- `SHA256SUMS.txt` (checksums for public assets)
+
+ReadyToRun and single-file build outputs are internal CI validation artifacts only. They are not uploaded as public GitHub release assets.
 
 Generated winget manifest YAML files and `manifest.spdx.json` are internal workflow artifacts only. They are retained for channel submission and release provenance, but they are not uploaded as public GitHub release assets.
 
@@ -175,9 +178,9 @@ Generate manifests locally with:
 
 ```powershell
 ./build/generate-winget-manifests.ps1 `
-  -Version "1.1.3" `
-  -Tag "v1.1.3" `
-  -InstallerUrl "https://github.com/PrimeBuild-pc/ThreadPilot/releases/download/v1.1.3/ThreadPilot_v1.1.3_Setup.exe" `
+  -Version "1.2.0" `
+  -Tag "v1.2.0" `
+  -InstallerUrl "https://github.com/PrimeBuild-pc/ThreadPilot/releases/download/v1.2.0/ThreadPilot_v1.2.0_Setup.exe" `
   -InstallerSha256 "<sha256>" `
   -OutputRoot "winget-manifests"
 ```
@@ -221,9 +224,9 @@ Local packaging-only validation:
 
 ```powershell
 ./build/publish-chocolatey.ps1 `
-  -Version "1.1.3" `
-  -Tag "v1.1.3" `
-  -InstallerPath ".\artifacts\release\installer\ThreadPilot_v1.1.3_Setup.exe" `
+  -Version "1.2.0" `
+  -Tag "v1.2.0" `
+  -InstallerPath ".\artifacts\release\installer\ThreadPilot_v1.2.0_Setup.exe" `
   -DryRun `
   -PackageOutputDirectory ".\artifacts\choco-dryrun" `
   -MetadataOutputPath ".\artifacts\choco-dryrun\chocolatey-package-metadata.json"
@@ -247,9 +250,9 @@ Public publish path:
 
 ```powershell
 ./build/publish-chocolatey.ps1 `
-  -Version "1.1.3" `
-  -Tag "v1.1.3" `
-  -InstallerPath ".\artifacts\release\installer\ThreadPilot_v1.1.3_Setup.exe" `
+  -Version "1.2.0" `
+  -Tag "v1.2.0" `
+  -InstallerPath ".\artifacts\release\installer\ThreadPilot_v1.2.0_Setup.exe" `
   -ApiKey "<chocolatey-api-key>"
 ```
 
@@ -271,8 +274,8 @@ Optional automation for publishing the GitHub release after artifacts are ready:
 The release workflow (`.github/workflows/release.yml`) now builds:
 
 - Inno Setup installer (`.exe`) as primary installer artifact
-- Single-file package (ZIP)
-- ReadyToRun package (ZIP)
-- SHA-256 checksum manifest
+- Portable package (ZIP) as public distribution
+- ReadyToRun build output for internal CI validation only
+- SHA-256 checksum manifest for public assets
 - Optional signing of EXE artifacts when signing secrets are configured
 

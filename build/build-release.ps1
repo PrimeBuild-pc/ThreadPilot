@@ -20,10 +20,8 @@ Set-Location -LiteralPath $projectRoot
 $outputRoot = Join-Path $projectRoot ("Installer\Output\v" + $Version)
 $publishDir = Join-Path $outputRoot "publish"
 $portableStage = Join-Path $outputRoot "portable_stage"
-$setupStage = Join-Path $outputRoot "setup_stage"
 
 $portableZip = Join-Path $outputRoot ("ThreadPilot_v" + $Version + "_Portable.zip")
-$setupZip = Join-Path $outputRoot ("ThreadPilot_v" + $Version + "_Setup.zip")
 $uninstallScriptPath = Join-Path $outputRoot "uninstall.bat"
 $licenseSource = Join-Path $projectRoot "LICENSE"
 $licenseMarkdownPath = Join-Path $outputRoot "LICENSE.md"
@@ -107,19 +105,9 @@ Copy-Item -LiteralPath $licenseMarkdownPath -Destination (Join-Path $portableSta
 Remove-IfExists -Path $portableZip
 Compress-Archive -Path (Join-Path $portableStage "*") -DestinationPath $portableZip -CompressionLevel Optimal
 
-Write-Host "Packaging setup archive..."
-New-Item -ItemType Directory -Path $setupStage -Force | Out-Null
-Copy-Item -Path (Join-Path $publishDir "*") -Destination $setupStage -Recurse -Force
-Copy-Item -LiteralPath $uninstallScriptPath -Destination (Join-Path $setupStage "uninstall.bat") -Force
-Copy-Item -LiteralPath $licenseMarkdownPath -Destination (Join-Path $setupStage "LICENSE.md") -Force
-Remove-IfExists -Path $setupZip
-Compress-Archive -Path (Join-Path $setupStage "*") -DestinationPath $setupZip -CompressionLevel Optimal
-
 Write-Host "Cleaning staging folders..."
 Remove-IfExists -Path $portableStage
-Remove-IfExists -Path $setupStage
 
 Write-Host "Release packaging complete." -ForegroundColor Green
 Write-Host "Portable: $portableZip"
-Write-Host "Setup:    $setupZip"
 Write-Host "Uninstall script source: $uninstallScriptPath"

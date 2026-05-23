@@ -92,6 +92,8 @@ else {
   [System.IO.Path]::GetFullPath($MetadataOutputPath)
 }
 
+$resolvedInstallerPath = (Resolve-Path -LiteralPath $InstallerPath).Path
+
 New-Item -ItemType Directory -Force -Path $resolvedPackageOutputDirectory | Out-Null
 
 [xml]$nuspec = Get-Content -LiteralPath $nuspecPath
@@ -150,7 +152,7 @@ try {
     @{
       version = $Version
       tag = $Tag
-      installerPath = (Resolve-Path -LiteralPath $InstallerPath).Path
+      installerPath = $resolvedInstallerPath
       installerUrl = $installerUrl
       installerSha256 = $hash
       packagePath = $nupkg.FullName

@@ -61,7 +61,10 @@ namespace ThreadPilot.ViewModels
     }
 
     /// <summary>
-    /// ViewModel for managing CPU core affinity masks
+    /// ViewModel for managing CPU core affinity masks.
+    /// This ViewModel manages CPU mask presets for editing and storage only.
+    /// It does not apply affinity to any process. Per-process affinity application
+    /// is handled by ProcessViewModel through ProcessAffinityApplyCoordinator.
     /// Based on CPUSetSetter's MasksTabViewModel.
     /// </summary>
     public partial class MasksViewModel : ObservableObject
