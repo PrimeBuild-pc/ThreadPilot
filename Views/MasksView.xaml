@@ -6,6 +6,47 @@
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="900">
 
+    <UserControl.Resources>
+        <Style x:Key="MaskListItemStyle" TargetType="{x:Type ListBoxItem}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{DynamicResource StandardCardCornerRadius}"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource QuietRowHoverBackgroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource MaskSelectedListBackgroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource MaskSelectedBorderBrush}"/>
+                    <Setter Property="BorderThickness" Value="2"/>
+                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -42,6 +83,7 @@
                         CornerRadius="{DynamicResource StandardCardCornerRadius}">
                     <ListBox ItemsSource="{Binding CoreMasks}"
                              SelectedItem="{Binding SelectedCoreMask, Mode=TwoWay}"
+                             ItemContainerStyle="{StaticResource MaskListItemStyle}"
                              Background="{DynamicResource CardSurfaceBrush}"
                              BorderThickness="0">
                         <ListBox.ItemTemplate>
@@ -139,22 +181,26 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1"
+                                            <Border BorderBrush="{DynamicResource BorderSubtleBrush}"
                                                     Margin="2" Padding="4" CornerRadius="4">
                                                 <Border.Style>
                                                     <Style TargetType="Border">
                                                         <Setter Property="Background" Value="{DynamicResource QuietRowBackgroundBrush}"/>
                                                         <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+                                                        <Setter Property="BorderThickness" Value="1"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                <Setter Property="Background" Value="{DynamicResource SoftSelectionBackgroundBrush}"/>
-                                                                <Setter Property="BorderBrush" Value="{DynamicResource SoftSelectionBorderBrush}"/>
+                                                                <Setter Property="Background" Value="{DynamicResource MaskSelectedBackgroundBrush}"/>
+                                                                <Setter Property="BorderBrush" Value="{DynamicResource MaskSelectedBorderBrush}"/>
+                                                                <Setter Property="BorderThickness" Value="2"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </Border.Style>
                                                 <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                          FontSize="10" MinWidth="60">
+                                                          FontSize="11"
+                                                          Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                          MinWidth="60">
                                                     <CheckBox.Content>
                                                         <TextBlock>
                                                             <Run Text="CPU "/>

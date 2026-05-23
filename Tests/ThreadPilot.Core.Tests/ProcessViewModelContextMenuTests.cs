@@ -14,7 +14,12 @@ namespace ThreadPilot.Core.Tests
         public async Task ContextCpuPriorityCommand_CallsSafePriorityServicePath()
         {
             var processService = CreateProcessService();
-            var viewModel = CreateViewModel(processService.Object);
+            var enhancedLoggingService = new Mock<IEnhancedLoggingService>(MockBehavior.Loose);
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var viewModel = CreateViewModel(
+                processService.Object,
+                enhancedLoggingService: enhancedLoggingService.Object,
+                activityAuditService: audit);
             var process = CreateProcess(priority: ProcessPriorityClass.Normal);
 
             await viewModel.SetContextHighPriorityCommand.ExecuteAsync(process);
@@ -22,8 +27,18 @@ namespace ThreadPilot.Core.Tests
             processService.Verify(
                 service => service.SetProcessPriority(process, ProcessPriorityClass.High),
                 Times.Once);
+            enhancedLoggingService.Verify(
+                service => service.LogUserActionAsync(
+                    "ProcessPriorityChanged",
+                    It.Is<string>(details => details.Contains("Game.exe") && details.Contains("High")),
+                    It.Is<string>(context => context.Contains("PID: 42"))),
+                Times.Once);
             Assert.Equal(ProcessOperationUserMessages.HighPriorityWarning, viewModel.StatusMessage);
             Assert.False(viewModel.HasError);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Priority", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
+            Assert.Contains("High", entry.Message);
         }
 
         [Fact]
@@ -31,9 +46,13 @@ namespace ThreadPilot.Core.Tests
         {
             var processService = CreateProcessService();
             var coordinator = CreateAffinityCoordinator();
+            var enhancedLoggingService = new Mock<IEnhancedLoggingService>(MockBehavior.Loose);
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
             var viewModel = CreateViewModel(
                 processService.Object,
-                processAffinityApplyCoordinator: coordinator.Object);
+                processAffinityApplyCoordinator: coordinator.Object,
+                enhancedLoggingService: enhancedLoggingService.Object,
+                activityAuditService: audit);
             viewModel.CpuCores =
             [
                 new CpuCoreModel { LogicalCoreId = 0, IsSelected = true },
@@ -50,7 +69,16 @@ namespace ThreadPilot.Core.Tests
                     "Manual Process tab context menu CPU selection",
                     default),
                 Times.Once);
+            enhancedLoggingService.Verify(
+                service => service.LogUserActionAsync(
+                    "ProcessAffinityApplied",
+                    It.IsAny<string>(),
+                    It.Is<string>(context => context.Contains("Process: Game.exe") && context.Contains("PID: 100"))),
+                Times.Once);
             Assert.Same(rowProcess, viewModel.SelectedProcess);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Affinity", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
         }
 
         [Fact]
@@ -127,6 +155,25 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task SetPriorityCommand_WhenRealtimeRequested_LogsVisibleBlockedEntry()
+        {
+            var processService = CreateProcessService();
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var viewModel = CreateViewModel(processService.Object, activityAuditService: audit);
+            viewModel.SelectedProcess = CreateProcess();
+
+            await viewModel.SetPriorityCommand.ExecuteAsync(ProcessPriorityClass.RealTime);
+
+            processService.Verify(
+                service => service.SetProcessPriority(It.IsAny<ProcessModel>(), ProcessPriorityClass.RealTime),
+                Times.Never);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Priority", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Warning, entry.Severity);
+            Assert.Equal(ProcessOperationUserMessages.RealtimePriorityBlocked, entry.Message);
+        }
+
+        [Fact]
         public async Task ContextMemoryPriorityCommand_CallsMemoryPriorityService()
         {
             var memoryPriorityService = new Mock<IProcessMemoryPriorityService>(MockBehavior.Strict);
@@ -136,15 +183,28 @@ namespace ThreadPilot.Core.Tests
             memoryPriorityService
                 .Setup(service => service.GetMemoryPriorityAsync(It.IsAny<ProcessModel>()))
                 .ReturnsAsync(ProcessMemoryPriority.Low);
+            var enhancedLoggingService = new Mock<IEnhancedLoggingService>(MockBehavior.Loose);
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
             var process = CreateProcess();
             var viewModel = CreateViewModel(
                 CreateProcessService().Object,
-                memoryPriorityService: memoryPriorityService.Object);
+                memoryPriorityService: memoryPriorityService.Object,
+                enhancedLoggingService: enhancedLoggingService.Object,
+                activityAuditService: audit);
 
             await viewModel.SetContextMemoryPriorityLowCommand.ExecuteAsync(process);
 
             memoryPriorityService.Verify(
                 service => service.SetMemoryPriorityAsync(process, ProcessMemoryPriority.Low),
+                Times.Once);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Memory Priority", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
+            enhancedLoggingService.Verify(
+                service => service.LogUserActionAsync(
+                    "ProcessMemoryPriorityChanged",
+                    It.Is<string>(details => details.Contains("Game.exe") && details.Contains("Low")),
+                    It.Is<string>(context => context.Contains("PID: 42"))),
                 Times.Once);
         }
 
@@ -160,14 +220,19 @@ namespace ThreadPilot.Core.Tests
                     "Access is denied.",
                     isAccessDenied: true));
             var process = CreateProcess();
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
             var viewModel = CreateViewModel(
                 CreateProcessService().Object,
-                memoryPriorityService: memoryPriorityService.Object);
+                memoryPriorityService: memoryPriorityService.Object,
+                activityAuditService: audit);
 
             await viewModel.SetContextMemoryPriorityNormalCommand.ExecuteAsync(process);
 
             Assert.Equal(ProcessOperationUserMessages.AccessDenied, viewModel.StatusMessage);
             Assert.True(viewModel.HasError);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Memory Priority", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Warning, entry.Severity);
         }
 
         [Fact]
@@ -245,11 +310,15 @@ namespace ThreadPilot.Core.Tests
                 .Setup(service => service.ClearProcessCpuSetAsync(It.IsAny<ProcessModel>()))
                 .ReturnsAsync(true);
             var process = CreateProcess();
-            var viewModel = CreateViewModel(processService.Object);
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var viewModel = CreateViewModel(processService.Object, activityAuditService: audit);
 
             await viewModel.ClearContextCpuSetsCommand.ExecuteAsync(process);
 
             processService.Verify(service => service.ClearProcessCpuSetAsync(process), Times.Once);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Affinity", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
         }
 
         [Fact]
@@ -257,12 +326,127 @@ namespace ThreadPilot.Core.Tests
         {
             var processService = CreateProcessService();
             var process = CreateProcess();
-            var viewModel = CreateViewModel(processService.Object);
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var viewModel = CreateViewModel(processService.Object, activityAuditService: audit);
 
             await viewModel.RefreshContextProcessInfoCommand.ExecuteAsync(process);
 
             processService.Verify(service => service.RefreshProcessInfo(process), Times.Once);
             Assert.Equal("Process info refreshed for Game.exe.", viewModel.StatusMessage);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Process", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
+        }
+
+        [Fact]
+        public async Task RefreshProcessesCommand_DoesNotCreateActivityAuditEntry()
+        {
+            var processService = CreateProcessService();
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var viewModel = CreateViewModel(processService.Object, activityAuditService: audit);
+
+            await viewModel.RefreshProcessesCommand.ExecuteAsync(null);
+
+            Assert.Empty(await audit.GetEntriesAsync());
+        }
+
+        [Fact]
+        public async Task LockProcessList_WhenEnabled_SkipsRefreshAndKeepsSelection()
+        {
+            var processService = CreateProcessService();
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var viewModel = CreateViewModel(processService.Object, activityAuditService: audit);
+            var selected = CreateProcess(processId: 42);
+            viewModel.Processes = new ObservableCollection<ProcessModel> { selected };
+            viewModel.FilteredProcesses = new ObservableCollection<ProcessModel> { selected };
+            viewModel.SelectedProcess = selected;
+
+            viewModel.IsProcessListLocked = true;
+            await viewModel.RefreshProcessesCommand.ExecuteAsync(null);
+
+            processService.Verify(service => service.GetProcessesAsync(), Times.Never);
+            Assert.Same(selected, viewModel.SelectedProcess);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Process", entry.Category);
+            Assert.Equal("Lock process list enabled.", entry.Message);
+        }
+
+        [Fact]
+        public async Task RefreshProcessesCommand_WhenProcessViewInactive_SkipsProcessRead()
+        {
+            var processService = CreateProcessService();
+            var viewModel = CreateViewModel(processService.Object);
+
+            viewModel.SetProcessViewActive(false);
+            await viewModel.RefreshProcessesCommand.ExecuteAsync(null);
+
+            processService.Verify(service => service.GetProcessesAsync(), Times.Never);
+            processService.Verify(service => service.GetActiveApplicationsAsync(), Times.Never);
+        }
+
+        [Fact]
+        public async Task RefreshProcessesCommand_WhenRefreshPaused_SkipsProcessRead()
+        {
+            var processService = CreateProcessService();
+            var viewModel = CreateViewModel(processService.Object);
+
+            viewModel.PauseRefresh();
+            await viewModel.RefreshProcessesCommand.ExecuteAsync(null);
+
+            processService.Verify(service => service.GetProcessesAsync(), Times.Never);
+            processService.Verify(service => service.GetActiveApplicationsAsync(), Times.Never);
+        }
+
+        [Fact]
+        public async Task LoadProcessesCommand_WhenProcessViewInactive_DoesNotPreloadVirtualizedBatch()
+        {
+            var processService = CreateProcessService();
+            var virtualizedProcessService = CreateVirtualizedProcessService(totalProcessCount: 100);
+            var viewModel = CreateViewModel(
+                processService.Object,
+                virtualizedProcessService: virtualizedProcessService.Object);
+
+            viewModel.SetProcessViewActive(false);
+            await viewModel.LoadProcessesCommand.ExecuteAsync(null);
+
+            virtualizedProcessService.Verify(
+                service => service.PreloadNextBatchAsync(It.IsAny<int>(), It.IsAny<bool>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task LoadProcessesCommand_WhenProcessListLocked_DoesNotPreloadVirtualizedBatch()
+        {
+            var processService = CreateProcessService();
+            var virtualizedProcessService = CreateVirtualizedProcessService(totalProcessCount: 100);
+            var viewModel = CreateViewModel(
+                processService.Object,
+                virtualizedProcessService: virtualizedProcessService.Object);
+
+            viewModel.IsProcessListLocked = true;
+            await viewModel.LoadProcessesCommand.ExecuteAsync(null);
+
+            virtualizedProcessService.Verify(
+                service => service.PreloadNextBatchAsync(It.IsAny<int>(), It.IsAny<bool>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task LockProcessList_WhenDisabled_RefreshesOnceWithoutPersistentRuleSettingChange()
+        {
+            var processService = CreateProcessService();
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var viewModel = CreateViewModel(processService.Object, activityAuditService: audit);
+
+            viewModel.IsProcessListLocked = true;
+            viewModel.IsProcessListLocked = false;
+
+            processService.Verify(service => service.GetProcessesAsync(), Times.Once);
+            var entries = await audit.GetEntriesAsync();
+            Assert.Contains(entries, entry => entry.Message == "Lock process list enabled.");
+            Assert.Contains(entries, entry => entry.Message == "Lock process list disabled.");
+            Assert.DoesNotContain(entries, entry => entry.Message.Contains("refreshed", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(entries, entry => entry.Message.Contains("Apply saved rules", StringComparison.OrdinalIgnoreCase));
         }
 
         [Fact]
@@ -298,10 +482,12 @@ namespace ThreadPilot.Core.Tests
         public async Task SaveCurrentSettingsAsRuleCommand_CreatesRuleForSelectedProcess()
         {
             var ruleStore = new CapturingRuleStore();
+            var enhancedLoggingService = new Mock<IEnhancedLoggingService>(MockBehavior.Loose);
             var viewModel = CreateViewModel(
                 CreateProcessService().Object,
                 persistentRuleStore: ruleStore,
-                processRuleCreationService: CreateRuleCreationService(ruleStore));
+                processRuleCreationService: CreateRuleCreationService(ruleStore),
+                enhancedLoggingService: enhancedLoggingService.Object);
             var process = CreateProcess();
             viewModel.SelectedProcess = process;
             viewModel.CpuCores =
@@ -316,6 +502,12 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal(process.Name, rule.ProcessName);
             Assert.Equal(process.ExecutablePath, rule.ExecutablePath);
             Assert.Equal("Saved rule for Game.exe.", viewModel.StatusMessage);
+            enhancedLoggingService.Verify(
+                service => service.LogUserActionAsync(
+                    "PersistentRuleSaved",
+                    "Saved rule for Game.exe.",
+                    It.Is<string>(context => context.Contains("Process: Game.exe") && context.Contains("PID: 42"))),
+                Times.Once);
         }
 
         [Fact]
@@ -332,10 +524,12 @@ namespace ThreadPilot.Core.Tests
                 UpdatedAt = DateTime.UtcNow.AddDays(-1),
             };
             var ruleStore = new CapturingRuleStore([existing]);
+            var enhancedLoggingService = new Mock<IEnhancedLoggingService>(MockBehavior.Loose);
             var viewModel = CreateViewModel(
                 CreateProcessService().Object,
                 persistentRuleStore: ruleStore,
-                processRuleCreationService: CreateRuleCreationService(ruleStore));
+                processRuleCreationService: CreateRuleCreationService(ruleStore),
+                enhancedLoggingService: enhancedLoggingService.Object);
 
             await viewModel.SaveCurrentSettingsAsRuleCommand.ExecuteAsync(CreateProcess(priority: ProcessPriorityClass.High));
 
@@ -343,6 +537,12 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal("rule-1", rule.Id);
             Assert.Equal(ProcessPriorityClass.High, rule.Priority);
             Assert.Equal("Updated saved rule for Game.exe.", viewModel.StatusMessage);
+            enhancedLoggingService.Verify(
+                service => service.LogUserActionAsync(
+                    "PersistentRuleSaved",
+                    "Updated saved rule for Game.exe.",
+                    It.Is<string>(context => context.Contains("Process: Game.exe") && context.Contains("PID: 42"))),
+                Times.Once);
         }
 
         [Fact]
@@ -427,11 +627,13 @@ namespace ThreadPilot.Core.Tests
                     ProcessOperationUserMessages.AccessDenied,
                     "Access denied.",
                     isAccessDenied: true));
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
             var viewModel = CreateViewModel(
                 CreateProcessService().Object,
                 processAffinityApplyCoordinator: coordinator.Object,
                 persistentRuleStore: ruleStore,
-                processRuleCreationService: CreateRuleCreationService(ruleStore));
+                processRuleCreationService: CreateRuleCreationService(ruleStore),
+                activityAuditService: audit);
             viewModel.CpuCores =
             [
                 new CpuCoreModel { LogicalCoreId = 0, IsSelected = true },
@@ -442,6 +644,9 @@ namespace ThreadPilot.Core.Tests
             Assert.Empty(ruleStore.SavedRules);
             Assert.Equal(ProcessOperationUserMessages.AccessDenied, viewModel.StatusMessage);
             Assert.True(viewModel.HasError);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Affinity", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Warning, entry.Severity);
         }
 
         [Fact]
@@ -510,6 +715,31 @@ namespace ThreadPilot.Core.Tests
             return processService;
         }
 
+        private static Mock<IVirtualizedProcessService> CreateVirtualizedProcessService(int totalProcessCount)
+        {
+            var virtualizedProcessService = new Mock<IVirtualizedProcessService>(MockBehavior.Loose);
+            virtualizedProcessService.SetupProperty(
+                service => service.Configuration,
+                new VirtualizedProcessConfig());
+            virtualizedProcessService
+                .Setup(service => service.InitializeAsync())
+                .Returns(Task.CompletedTask);
+            virtualizedProcessService
+                .Setup(service => service.GetTotalProcessCountAsync(It.IsAny<bool>()))
+                .ReturnsAsync(totalProcessCount);
+            virtualizedProcessService
+                .Setup(service => service.LoadProcessBatchAsync(It.IsAny<int>(), It.IsAny<bool>()))
+                .ReturnsAsync(new ProcessBatchResult
+                {
+                    Processes = [CreateProcess()],
+                    BatchIndex = 0,
+                    TotalBatches = 2,
+                    TotalProcessCount = totalProcessCount,
+                    HasMoreBatches = true,
+                });
+            return virtualizedProcessService;
+        }
+
         private static Mock<IProcessAffinityApplyCoordinator> CreateAffinityCoordinator()
         {
             var coordinator = new Mock<IProcessAffinityApplyCoordinator>(MockBehavior.Strict);
@@ -530,12 +760,19 @@ namespace ThreadPilot.Core.Tests
             IPersistentProcessRuleStore? persistentRuleStore = null,
             IProcessRuleCreationService? processRuleCreationService = null,
             Action<string>? clipboardSetter = null,
-            Action<string>? executableLocationOpener = null)
+            Action<string>? executableLocationOpener = null,
+            IEnhancedLoggingService? enhancedLoggingService = null,
+            IActivityAuditService? activityAuditService = null,
+            IVirtualizedProcessService? virtualizedProcessService = null)
         {
-            var virtualizedProcessService = new Mock<IVirtualizedProcessService>(MockBehavior.Loose);
-            virtualizedProcessService.SetupProperty(
-                service => service.Configuration,
-                new VirtualizedProcessConfig());
+            if (virtualizedProcessService == null)
+            {
+                var virtualizedProcessServiceMock = new Mock<IVirtualizedProcessService>(MockBehavior.Loose);
+                virtualizedProcessServiceMock.SetupProperty(
+                    service => service.Configuration,
+                    new VirtualizedProcessConfig());
+                virtualizedProcessService = virtualizedProcessServiceMock.Object;
+            }
 
             var cpuTopologyService = new Mock<ICpuTopologyService>(MockBehavior.Loose);
             var powerPlanService = new Mock<IPowerPlanService>(MockBehavior.Loose);
@@ -549,7 +786,7 @@ namespace ThreadPilot.Core.Tests
                 NullLogger<ProcessViewModel>.Instance,
                 processService,
                 new ProcessFilterService(),
-                virtualizedProcessService.Object,
+                virtualizedProcessService,
                 cpuTopologyService.Object,
                 powerPlanService.Object,
                 notificationService.Object,
@@ -558,6 +795,8 @@ namespace ThreadPilot.Core.Tests
                 associationService.Object,
                 gameModeService.Object,
                 processAffinityApplyCoordinator: processAffinityApplyCoordinator,
+                enhancedLoggingService: enhancedLoggingService,
+                activityAuditService: activityAuditService,
                 memoryPriorityService: memoryPriorityService,
                 persistentRuleStore: persistentRuleStore,
                 persistentRuleMatcher: new PersistentProcessRuleMatcher(),

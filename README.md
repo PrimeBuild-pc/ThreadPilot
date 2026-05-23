@@ -2,9 +2,10 @@
 
 # ThreadPilot ✈️
 
-**A free and open-source Windows process and power plan manager for deterministic performance workflows.**
+**A free and open-source Windows process control center for deterministic CPU, priority, memory, and power-plan workflows.**
 
 [![Build](https://github.com/PrimeBuild-pc/ThreadPilot/actions/workflows/ci-devsecops.yml/badge.svg)](https://github.com/PrimeBuild-pc/ThreadPilot/actions/workflows/ci-devsecops.yml)
+[![codecov](https://codecov.io/gh/PrimeBuild-pc/ThreadPilot/branch/main/graph/badge.svg)](https://codecov.io/gh/PrimeBuild-pc/ThreadPilot)
 [![Release](https://img.shields.io/github/v/release/PrimeBuild-pc/ThreadPilot?sort=semver)](https://github.com/PrimeBuild-pc/ThreadPilot/releases)
 [![winget](https://img.shields.io/winget/v/PrimeBuild.ThreadPilot?label=winget)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/p/PrimeBuild/ThreadPilot)
 [![Windows](https://img.shields.io/badge/Windows-11-blue?logo=windows)](https://www.microsoft.com/windows)
@@ -21,19 +22,26 @@
 
 ## What is ThreadPilot?
 
-ThreadPilot is a modern Windows desktop application for users who want predictable control over process behavior, CPU affinity, priority, power plans, and rule-driven performance workflows.
+ThreadPilot is a modern Windows process control center for users who want predictable control over process behavior, CPU affinity, CPU Sets, priority, memory priority, power plans, and saved process rules.
 
-It is designed as an open-source alternative for power users who need Process Lasso-style capabilities, automation support, system tray controls, and a Windows 11-first experience.
+It is designed as an open-source alternative for power users who need Process Lasso-style capabilities, automation support, system tray controls, and a Windows 11-first experience. ThreadPilot is not a performance overlay: its primary job is applying explicit process controls safely and making the result visible.
 
 ## ✨ Features
 
-- Live process management with refresh, filtering, and high-volume process handling.
-- CPU affinity and priority controls with topology-aware logic.
-- I/O and scheduler-related tuning utilities.
+- Live process management with refresh, filtering, context-menu actions, and a selected-process summary.
+- Topology-aware CPU affinity through `CpuSelection`, including CPU Sets support, processor groups, and safe handling for systems with more than 64 logical processors.
+- Safer CPU indexing in new affinity paths: CPU64 no longer aliases CPU0.
+- Intel hybrid CPU handling through Windows topology and `EfficiencyClass`, not hardcoded SKU lists.
+- AMD CCD/L3-aware preset generation, also topology-driven instead of hardcoded SKU lists.
+- Default gaming-oriented CPU presets for common foreground-game workflows.
+- CPU priority controls with guardrails: High priority warning and Realtime priority blocked.
+- Process memory priority support.
+- Persistent process rules with explicit Apply now and Save as rule flows.
+- Apply saved rules automatically when matching processes start while ThreadPilot is running.
 - Rule-based automation for power plan switching when selected processes start or stop.
-- Conditional profiles, tray controls, Live Metrics, and dashboard views.
+- Optional Diagnostics view, hidden by default, plus tray controls and dashboard views.
 - Administrator-aware Windows desktop workflow.
-- CI-backed release artifacts and package-manager distribution.
+- CI-backed build validation and package-manager distribution.
 - Windows 11 native visual refresh with neutral Fluent surfaces and refined card-based layouts.
 
 ## 📦 Install
@@ -87,6 +95,10 @@ Compare the result with `SHA256SUMS.txt` from the same release.
 ## 🚀 Usage Notes
 
 ThreadPilot uses an administrator-required manifest and requests elevation at startup. If UAC elevation is declined, the application exits instead of continuing in a limited mode.
+
+Persistent process rules are runtime-based. Apply at process start works only while ThreadPilot is running; it does not install a Windows Service, write registry or IFEO persistence, or use installer privilege tricks.
+
+ThreadPilot does not bypass anti-cheat or protected-process restrictions. Running as administrator may help with normal access-denied cases, but it does not override protected-process or anti-cheat enforcement.
 
 Useful startup arguments:
 

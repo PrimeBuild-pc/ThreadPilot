@@ -68,16 +68,21 @@ namespace ThreadPilot
                 // Ensure overlay is visible while initialization runs
                 if (loadingOverlay != null)
                 {
-                    loadingOverlay.Visibility = Visibility.Visible;
-                    loadingOverlay.Opacity = 1;
+                    loadingOverlay.Visibility = this.isSilentStartupMode ? Visibility.Collapsed : Visibility.Visible;
+                    loadingOverlay.Opacity = this.isSilentStartupMode ? 0 : 1;
                 }
 
-                // Enable blur on main app content during startup loading.
-                this.ApplyUIContentBlur(15);
+                if (!this.isSilentStartupMode)
+                {
+                    this.ApplyUIContentBlur(15);
+                }
 
                 // Start spinner animation if available
                 var spinnerAnimation = this.FindResource("SpinnerAnimation") as Storyboard;
-                spinnerAnimation?.Begin();
+                if (!this.isSilentStartupMode)
+                {
+                    spinnerAnimation?.Begin();
+                }
 
                 // Set a timeout guard for initialization
                 this.initializationTimeoutTimer = new System.Timers.Timer(15000)
@@ -115,6 +120,7 @@ namespace ThreadPilot
                 await this.InitializeServicesAsync();
                 this.LogDebug("InitializeServicesAsync completed successfully");
                 this.CompleteInitializationTask("Services");
+                this.QueueStartupUpdateCheck();
 
                 await this.Dispatcher.InvokeAsync(() => this.UpdateLoadingStatus("Finalizing startup...", "Applying final UI state and startup checks."));
                 this.LogDebug("Finalizing startup...");
@@ -131,6 +137,75 @@ namespace ThreadPilot
                 this.LogDebug($"=== ERROR in InitializeApplicationAsync: {ex} ===");
                 await this.Dispatcher.InvokeAsync(() => this.ShowInitializationError(ex));
             }
+        }
+
+        private void QueueStartupUpdateCheck()
+        {
+            if (Interlocked.Exchange(ref this.startupUpdateCheckStarted, 1) != 0)
+            {
+                return;
+            }
+
+            TaskSafety.FireAndForget(this.CheckForUpdatesAtStartupAsync(), ex =>
+            {
+                this.LogDebug($"Startup update check failed: {ex.Message}");
+            });
+        }
+
+        private async Task CheckForUpdatesAtStartupAsync()
+        {
+            try
+            {
+                this.LogDebug("Startup update check started");
+                var checker = this.serviceProvider.GetRequiredService<GitHubUpdateChecker>();
+                var currentVersion = GetCurrentApplicationVersion();
+                var (latest, _) = await checker.GetLatestVersionAsync("PrimeBuild-pc", "ThreadPilot");
+
+                if (latest == null)
+                {
+                    this.LogDebug("Startup update check completed without release information");
+                    return;
+                }
+
+                if (latest <= currentVersion)
+                {
+                    this.LogDebug($"Startup update check complete: installed {currentVersion}, latest {latest}");
+                    return;
+                }
+
+                await this.notificationService.ShowNotificationAsync(
+                    "Update available",
+                    $"ThreadPilot {latest} is available from GitHub releases.",
+                    NotificationType.Information);
+                this.LogDebug($"Startup update check found update: installed {currentVersion}, latest {latest}");
+            }
+            catch (Exception ex)
+            {
+                this.LogDebug($"Startup update check ignored failure: {ex.Message}");
+            }
+        }
+
+        private static Version GetCurrentApplicationVersion()
+        {
+            var rawVersion = typeof(App).Assembly
+                .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+                .OfType<System.Reflection.AssemblyInformationalVersionAttribute>()
+                .FirstOrDefault()?
+                .InformationalVersion
+                ?? typeof(App).Assembly.GetName().Version?.ToString()
+                ?? "0.0.0";
+
+            var sanitized = rawVersion.Trim();
+            if (sanitized.StartsWith("v", StringComparison.OrdinalIgnoreCase))
+            {
+                sanitized = sanitized[1..];
+            }
+
+            sanitized = sanitized.Split('-', '+')[0];
+
+            return Version.TryParse(sanitized, out var version)
+                ? version
+                : new Version(0, 0, 0);
         }
 
         private void UpdateLoadingStatus(string stage, string details = "")
@@ -160,6 +235,20 @@ namespace ThreadPilot
                 this.initializationTimeoutTimer?.Stop();
                 this.initializationTimeoutTimer?.Dispose();
 
+                if (this.isSilentStartupMode)
+                {
+                    var silentLoadingOverlay = this.FindName("LoadingOverlay") as Grid;
+                    if (silentLoadingOverlay != null)
+                    {
+                        silentLoadingOverlay.Visibility = Visibility.Collapsed;
+                        silentLoadingOverlay.Opacity = 0;
+                    }
+
+                    this.ClearUIContentBlur();
+                    this.ApplyAppRefreshPolicy(AppActivityState.TrayHidden);
+                    return;
+                }
+
                 // Stop spinner animation
                 var spinnerAnimation = this.FindResource("SpinnerAnimation") as Storyboard;
                 spinnerAnimation?.Stop();
@@ -186,6 +275,7 @@ namespace ThreadPilot
 
                         // Show elevation warning if needed
                         this.TryShowElevationWarning();
+                        this.TryShowStartupMinimizedSuggestion();
                     };
                     fadeOutAnimation.Begin();
                 }
@@ -204,6 +294,7 @@ namespace ThreadPilot
 
                     // Show elevation warning if needed
                     this.TryShowElevationWarning();
+                    this.TryShowStartupMinimizedSuggestion();
                 }
             }
             catch (Exception ex)
@@ -223,6 +314,7 @@ namespace ThreadPilot
 
                     // Show elevation warning if needed
                     this.TryShowElevationWarning();
+                    this.TryShowStartupMinimizedSuggestion();
                 }
                 catch (Exception fallbackEx)
                 {
@@ -1160,11 +1252,16 @@ namespace ThreadPilot
                 await startTask; // Get any exceptions
                 this.LogDebug("Process monitoring manager service started, showing notification...");
 
-                await this.notificationService.ShowSuccessNotificationAsync(
-                    "ThreadPilot Started",
-                    "Process monitoring and power plan management is now active");
+                if (!this.isSilentStartupMode)
+                {
+                    await this.notificationService.ShowSuccessNotificationAsync(
+                        "ThreadPilot Started",
+                        "Process monitoring and power plan management is now active");
+                }
 
-                this.LogDebug("Success notification shown");
+                this.LogDebug(this.isSilentStartupMode
+                    ? "Startup success notification skipped for silent startup"
+                    : "Success notification shown");
             }
             catch (Exception ex)
             {
@@ -1522,6 +1619,71 @@ namespace ThreadPilot
             }
         }
 
+        private void TryShowStartupMinimizedSuggestion()
+        {
+            if (!this.showStartupMinimizedSuggestionOnReady
+                || this.isSilentStartupMode
+                || !this.isInitializationComplete
+                || this.isElevationWarningVisible)
+            {
+                return;
+            }
+
+            try
+            {
+                if (!StartupMinimizedSuggestionPolicy.ShouldShow(
+                    this.settingsService.Settings,
+                    StartupWindowBehavior.Resolve(isAutostart: false, startMinimized: false)))
+                {
+                    return;
+                }
+
+                this.StartupMinimizedSuggestionOverlay.Visibility = Visibility.Visible;
+            }
+            catch (Exception ex)
+            {
+                this.LogDebug($"Failed to show startup minimized suggestion: {ex.Message}");
+            }
+        }
+
+        private async Task PersistStartupMinimizedSuggestionSeenAsync()
+        {
+            try
+            {
+                var settings = this.settingsService.Settings;
+                if (settings.HasSeenStartupMinimizedSuggestion)
+                {
+                    return;
+                }
+
+                settings.HasSeenStartupMinimizedSuggestion = true;
+                await this.settingsService.UpdateSettingsAsync(settings);
+            }
+            catch (Exception ex)
+            {
+                this.LogDebug($"Failed to persist startup minimized suggestion state: {ex.Message}");
+            }
+        }
+
+        private void HideStartupMinimizedSuggestion()
+        {
+            this.showStartupMinimizedSuggestionOnReady = false;
+            this.StartupMinimizedSuggestionOverlay.Visibility = Visibility.Collapsed;
+        }
+
+        private async void StartupSuggestionOpenSettings_Click(object sender, RoutedEventArgs e)
+        {
+            await this.PersistStartupMinimizedSuggestionSeenAsync();
+            this.HideStartupMinimizedSuggestion();
+            this.SelectMainTab("Settings");
+        }
+
+        private async void StartupSuggestionDontShowAgain_Click(object sender, RoutedEventArgs e)
+        {
+            await this.PersistStartupMinimizedSuggestionSeenAsync();
+            this.HideStartupMinimizedSuggestion();
+        }
+
         private void HidePerformanceIntro()
         {
             this.isPerformanceIntroVisible = false;
@@ -1661,6 +1823,8 @@ namespace ThreadPilot
             {
                 elevationBlur.Radius = this.previousElevationBackdropBlurRadius;
             }
+
+            this.TryShowStartupMinimizedSuggestion();
         }
 
         private void ElevationWarningDismiss_Click(object sender, RoutedEventArgs e)

@@ -51,6 +51,7 @@ namespace ThreadPilot.ViewModels
         private readonly GitHubUpdateChecker gitHubUpdateChecker;
         private ApplicationSettingsModel savedSettingsSnapshot;
         private bool isSyncingFromService = false;
+        private bool? appliedThemePreference;
         private string cachedDefaultPowerPlanGuid = string.Empty;
         private string cachedDefaultPowerPlanName = string.Empty;
         private static readonly JsonSerializerOptions ImportExportJsonOptions = new()
@@ -105,8 +106,9 @@ namespace ThreadPilot.ViewModels
             IThemeService themeService,
             ISystemTrayService systemTrayService,
             GitHubUpdateChecker gitHubUpdateChecker,
-            IEnhancedLoggingService? enhancedLoggingService = null)
-            : base(logger, enhancedLoggingService)
+            IEnhancedLoggingService? enhancedLoggingService = null,
+            IActivityAuditService? activityAuditService = null)
+            : base(logger, enhancedLoggingService, activityAuditService)
         {
             this.settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
             this.notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
@@ -132,6 +134,7 @@ namespace ThreadPilot.ViewModels
             // Initialize with current settings
             this.settings = (ApplicationSettingsModel)this.settingsService.Settings.Clone();
             this.savedSettingsSnapshot = (ApplicationSettingsModel)this.settings.Clone();
+            this.appliedThemePreference = this.settings.UseDarkTheme;
 
             // Initialize commands
             this.SaveSettingsCommand = new AsyncRelayCommand(this.SaveSettingsAsync);
@@ -148,11 +151,15 @@ namespace ThreadPilot.ViewModels
             // Keep viewmodel in sync with persisted settings
             this.settingsService.SettingsChanged += this.OnSettingsServiceSettingsChanged;
 
-            // Ensure we load the latest persisted settings on startup
-            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () => await this.RefreshSettingsAsync());
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher != null)
+            {
+                // Ensure we load the latest persisted settings on startup.
+                _ = dispatcher.InvokeAsync(async () => await this.RefreshSettingsAsync());
 
-            // Initialize data - marshal to UI thread to prevent cross-thread access exceptions
-            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () => await this.RefreshPowerPlansAsync());
+                // Initialize data - marshal to UI thread to prevent cross-thread access exceptions.
+                _ = dispatcher.InvokeAsync(async () => await this.RefreshPowerPlansAsync());
+            }
 
             this.Logger.LogInformation("Settings ViewModel initialized");
         }
@@ -167,13 +174,50 @@ namespace ThreadPilot.ViewModels
             if (string.Equals(e.PropertyName, nameof(ApplicationSettingsModel.UseDarkTheme), StringComparison.Ordinal))
             {
                 this.Settings.HasUserThemePreference = true;
+                this.UpdatePendingChangesState();
+                this.ApplyThemePreference(this.Settings.UseDarkTheme, logUserAction: true);
+                return;
+            }
 
-                var useDarkTheme = this.Settings.UseDarkTheme;
-                this.themeService.ApplyTheme(useDarkTheme);
-                this.systemTrayService.ApplyTheme(useDarkTheme);
+            if (string.Equals(e.PropertyName, nameof(ApplicationSettingsModel.ApplyPersistentRulesOnProcessStart), StringComparison.Ordinal))
+            {
+                this.UpdatePendingChangesState();
+                var state = this.Settings.ApplyPersistentRulesOnProcessStart ? "enabled" : "disabled";
+                _ = this.LogUserActionAsync(
+                    "SettingsChanged",
+                    $"[Settings] Apply saved rules at process start {state}.");
+                return;
             }
 
             this.UpdatePendingChangesState();
+        }
+
+        private void ApplyThemePreference(bool useDarkTheme, bool logUserAction)
+        {
+            if (this.appliedThemePreference == useDarkTheme)
+            {
+                return;
+            }
+
+            var themeName = useDarkTheme ? "Dark" : "Light";
+            try
+            {
+                this.themeService.ApplyTheme(useDarkTheme);
+                this.systemTrayService.ApplyTheme(useDarkTheme);
+                this.appliedThemePreference = useDarkTheme;
+                this.StatusMessage = $"Theme changed to {themeName}.";
+
+                if (logUserAction)
+                {
+                    _ = this.LogUserActionAsync("ThemeChanged", $"Theme changed to {themeName}");
+                }
+            }
+            catch (Exception ex)
+            {
+                this.StatusMessage = $"Failed to change theme to {themeName}.";
+                this.Logger.LogError(ex, "Failed to apply theme preference {ThemeName}", themeName);
+                _ = this.LogUserActionAsync("ThemeChangeFailed", $"Failed to change theme to {themeName}: {ex.Message}");
+            }
         }
 
         partial void OnHasUnsavedChangesChanged(bool value)
@@ -234,8 +278,7 @@ namespace ThreadPilot.ViewModels
                 this.isSyncingFromService = true;
                 this.Settings.UseDarkTheme = useDarkTheme;
                 this.isSyncingFromService = false;
-                this.themeService.ApplyTheme(useDarkTheme);
-                this.systemTrayService.ApplyTheme(useDarkTheme);
+                this.ApplyThemePreference(useDarkTheme, logUserAction: false);
 
                 // Update monitoring services with new settings
                 this.processMonitorManagerService.UpdateSettings();
@@ -257,6 +300,7 @@ namespace ThreadPilot.ViewModels
                         "Application settings have been saved successfully");
                 }
 
+                await this.LogUserActionAsync("SettingsChanged", "Settings saved and applied");
                 this.Logger.LogInformation("Settings saved successfully");
             }
             catch (Exception ex)
@@ -271,6 +315,7 @@ namespace ThreadPilot.ViewModels
                     "Settings Error",
                     "Failed to save settings",
                     ex);
+                await this.LogUserActionAsync("SettingsChangeFailed", $"Failed to save settings: {ex.Message}");
             }
             finally
             {
@@ -291,12 +336,14 @@ namespace ThreadPilot.ViewModels
                 this.UpdatePendingChangesState();
                 this.StatusMessage = "Settings reset to defaults (not saved yet)";
 
+                await this.LogUserActionAsync("SettingsChanged", "Settings reset to defaults pending save");
                 this.Logger.LogInformation("Settings reset to defaults");
             }
             catch (Exception ex)
             {
                 this.StatusMessage = $"Error resetting settings: {ex.Message}";
                 this.Logger.LogError(ex, "Error resetting settings");
+                await this.LogUserActionAsync("SettingsChangeFailed", $"Failed to reset settings: {ex.Message}");
             }
             finally
             {
@@ -348,6 +395,7 @@ namespace ThreadPilot.ViewModels
                     $"Settings and rules exported to {Path.GetFileName(saveDialog.FileName)}");
 
                 this.Logger.LogInformation("Configuration bundle exported to {Path}", saveDialog.FileName);
+                await this.LogUserActionAsync("SettingsChanged", "Configuration exported", Path.GetFileName(saveDialog.FileName));
             }
             catch (Exception ex)
             {
@@ -358,6 +406,7 @@ namespace ThreadPilot.ViewModels
                     "Export Error",
                     "Failed to export settings",
                     ex);
+                await this.LogUserActionAsync("SettingsChangeFailed", $"Failed to export settings: {ex.Message}");
             }
             finally
             {
@@ -411,6 +460,7 @@ namespace ThreadPilot.ViewModels
                         $"Settings and rules imported from {Path.GetFileName(importPath)}");
 
                     this.Logger.LogInformation("Configuration bundle imported from {Path}", importPath);
+                    await this.LogUserActionAsync("SettingsChanged", "Configuration bundle imported", Path.GetFileName(importPath));
                     return;
                 }
 
@@ -426,6 +476,7 @@ namespace ThreadPilot.ViewModels
                     NotificationType.Information);
 
                 this.Logger.LogInformation("Legacy settings imported from {Path}", importPath);
+                await this.LogUserActionAsync("SettingsChanged", "Legacy settings imported", Path.GetFileName(importPath));
             }
             catch (Exception ex)
             {
@@ -436,6 +487,7 @@ namespace ThreadPilot.ViewModels
                     "Import Error",
                     "Failed to import configuration",
                     ex);
+                await this.LogUserActionAsync("SettingsChangeFailed", $"Failed to import settings: {ex.Message}");
             }
             finally
             {
@@ -496,8 +548,7 @@ namespace ThreadPilot.ViewModels
                 this.isSyncingFromService = true;
                 this.Settings.UseDarkTheme = useDarkTheme;
                 this.isSyncingFromService = false;
-                this.themeService.ApplyTheme(useDarkTheme);
-                this.systemTrayService.ApplyTheme(useDarkTheme);
+                this.ApplyThemePreference(useDarkTheme, logUserAction: false);
 
                 this.SetSavedSettingsSnapshot(this.Settings);
                 this.StatusMessage = "Settings loaded";
@@ -754,4 +805,3 @@ namespace ThreadPilot.ViewModels
         }
     }
 }
-

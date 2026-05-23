@@ -431,6 +431,195 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task EvaluateCurrentProcessesAsync_WhenPersistentRuleAutoApplyThrows_LogsWarningWithoutBreakingRefresh()
+        {
+            var processMonitor = new FakeProcessMonitorService
+            {
+                RunningProcesses =
+                {
+                    new ProcessModel { ProcessId = 44, Name = "game.exe" },
+                },
+            };
+            var configuration = new ProcessMonitorConfiguration();
+            var associationService = CreateAssociationService(configuration);
+            var powerPlanService = CreatePowerPlanService();
+            var notificationService = CreateNotificationService();
+            var processService = CreateProcessService();
+            var coreMaskService = CreateCoreMaskService();
+            var affinityApplyService = CreateAffinityApplyService();
+            var autoApplyService = CreateAutoApplyService();
+            autoApplyService
+                .Setup(x => x.ApplyForDiscoveredProcessesAsync(
+                    It.IsAny<IEnumerable<ProcessModel>>(),
+                    It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new InvalidOperationException("auto apply failed"));
+            var logger = new CapturingLogger<ProcessMonitorManagerService>();
+            var manager = CreateService(
+                processMonitor,
+                associationService,
+                powerPlanService,
+                notificationService,
+                processService,
+                coreMaskService,
+                affinityApplyService,
+                autoApplyService,
+                logger);
+
+            await manager.StartAsync();
+            await manager.EvaluateCurrentProcessesAsync();
+
+            Assert.Contains(
+                logger.WarningMessages,
+                message => message.Contains("snapshot refresh", StringComparison.OrdinalIgnoreCase));
+            Assert.True(manager.IsRunning);
+        }
+
+        [Fact]
+        public async Task ProcessStarted_WhenPersistentRuleAutoApplyThrows_LogsWarningWithoutBreakingStartHandling()
+        {
+            var process = new ProcessModel { ProcessId = 45, Name = "game.exe" };
+            var processMonitor = new FakeProcessMonitorService();
+            var configuration = new ProcessMonitorConfiguration();
+            var associationService = CreateAssociationService(configuration);
+            var powerPlanService = CreatePowerPlanService();
+            var notificationService = CreateNotificationService();
+            var processService = CreateProcessService();
+            var coreMaskService = CreateCoreMaskService();
+            var affinityApplyService = CreateAffinityApplyService();
+            var autoApplyService = CreateAutoApplyService();
+            autoApplyService
+                .Setup(x => x.ApplyForProcessStartAsync(
+                    process,
+                    It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new InvalidOperationException("auto apply failed"));
+            var logger = new CapturingLogger<ProcessMonitorManagerService>();
+            var manager = CreateService(
+                processMonitor,
+                associationService,
+                powerPlanService,
+                notificationService,
+                processService,
+                coreMaskService,
+                affinityApplyService,
+                autoApplyService,
+                logger);
+
+            await manager.StartAsync();
+            processMonitor.RaiseProcessStarted(process);
+            await Task.Delay(100);
+
+            Assert.Contains(
+                logger.WarningMessages,
+                message => message.Contains("Persistent rule auto-apply failed", StringComparison.OrdinalIgnoreCase));
+            Assert.True(manager.IsRunning);
+        }
+
+        [Fact]
+        public async Task ProcessStarted_WhenPersistentRuleAutoApplySucceeds_LogsEnhancedMonitoringEvent()
+        {
+            var process = new ProcessModel { ProcessId = 46, Name = "game.exe" };
+            var processMonitor = new FakeProcessMonitorService();
+            var configuration = new ProcessMonitorConfiguration();
+            var associationService = CreateAssociationService(configuration);
+            var powerPlanService = CreatePowerPlanService();
+            var notificationService = CreateNotificationService();
+            var processService = CreateProcessService();
+            var coreMaskService = CreateCoreMaskService();
+            var affinityApplyService = CreateAffinityApplyService();
+            var autoApplyService = CreateAutoApplyService();
+            autoApplyService
+                .Setup(x => x.ApplyForProcessStartAsync(
+                    process,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new[]
+                {
+                    new PersistentRuleAutoApplyResult
+                    {
+                        Success = true,
+                        RuleId = "rule-game",
+                        ProcessId = process.ProcessId,
+                        ProcessName = process.Name,
+                        UserMessage = "Persistent rule applied.",
+                    },
+                });
+            var enhancedLogger = CreateEnhancedLogger();
+            var manager = CreateService(
+                processMonitor,
+                associationService,
+                powerPlanService,
+                notificationService,
+                processService,
+                coreMaskService,
+                affinityApplyService,
+                autoApplyService,
+                enhancedLogger: enhancedLogger);
+
+            await manager.StartAsync();
+            processMonitor.RaiseProcessStarted(process);
+            await Task.Delay(100);
+
+            enhancedLogger.Verify(
+                x => x.LogProcessMonitoringEventAsync(
+                    LogEventTypes.ProcessMonitoring.AssociationTriggered,
+                    process.Name,
+                    process.ProcessId,
+                    It.Is<string>(message => message.Contains("Persistent rule 'rule-game' applied automatically", StringComparison.Ordinal))),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task ProcessStarted_WhenPersistentRuleAutoApplyReturnsFailure_DoesNotNotifyOrThrow()
+        {
+            var process = new ProcessModel { ProcessId = 47, Name = "game.exe" };
+            var processMonitor = new FakeProcessMonitorService();
+            var configuration = new ProcessMonitorConfiguration();
+            var associationService = CreateAssociationService(configuration);
+            var powerPlanService = CreatePowerPlanService();
+            var notificationService = CreateNotificationService();
+            var processService = CreateProcessService();
+            var coreMaskService = CreateCoreMaskService();
+            var affinityApplyService = CreateAffinityApplyService();
+            var autoApplyService = CreateAutoApplyService();
+            autoApplyService
+                .Setup(x => x.ApplyForProcessStartAsync(
+                    process,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new[]
+                {
+                    new PersistentRuleAutoApplyResult
+                    {
+                        Success = false,
+                        RuleId = "rule-game",
+                        ProcessId = process.ProcessId,
+                        ProcessName = process.Name,
+                        UserMessage = ProcessOperationUserMessages.AccessDenied,
+                        IsAccessDenied = true,
+                    },
+                });
+            var manager = CreateService(
+                processMonitor,
+                associationService,
+                powerPlanService,
+                notificationService,
+                processService,
+                coreMaskService,
+                affinityApplyService,
+                autoApplyService);
+
+            await manager.StartAsync();
+            processMonitor.RaiseProcessStarted(process);
+            await Task.Delay(100);
+
+            Assert.True(manager.IsRunning);
+            notificationService.Verify(
+                x => x.ShowNotificationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<NotificationType>()),
+                Times.Never);
+            notificationService.Verify(
+                x => x.ShowErrorNotificationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Exception?>()),
+                Times.Never);
+        }
+
+        [Fact]
         public async Task Dispose_CompletesOnBlockingSynchronizationContext()
         {
             var processMonitor = new FakeProcessMonitorService
@@ -496,18 +685,10 @@ namespace ThreadPilot.Core.Tests
             Mock<ICoreMaskService> coreMaskService,
             Mock<IAffinityApplyService> affinityApplyService,
             Mock<IPersistentRuleAutoApplyService>? autoApplyService = null,
-            ILogger<ProcessMonitorManagerService>? logger = null)
+            ILogger<ProcessMonitorManagerService>? logger = null,
+            Mock<IEnhancedLoggingService>? enhancedLogger = null)
         {
-            var enhancedLogger = new Mock<IEnhancedLoggingService>(MockBehavior.Loose);
-            enhancedLogger
-                .Setup(x => x.LogSystemEventAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Microsoft.Extensions.Logging.LogLevel>()))
-                .Returns(Task.CompletedTask);
-            enhancedLogger
-                .Setup(x => x.LogProcessMonitoringEventAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>()))
-                .Returns(Task.CompletedTask);
-            enhancedLogger
-                .Setup(x => x.LogErrorAsync(It.IsAny<Exception>(), It.IsAny<string>(), It.IsAny<Dictionary<string, object>?>()))
-                .Returns(Task.CompletedTask);
+            var resolvedEnhancedLogger = enhancedLogger ?? CreateEnhancedLogger();
 
             var settingsService = new Mock<IApplicationSettingsService>(MockBehavior.Loose);
             settingsService.SetupGet(x => x.Settings).Returns(new ApplicationSettingsModel());
@@ -524,7 +705,22 @@ namespace ThreadPilot.Core.Tests
                 (autoApplyService ?? CreateAutoApplyService()).Object,
                 new PowerPlanTransitionGate(TimeSpan.FromSeconds(2), () => DateTimeOffset.UtcNow),
                 logger ?? NullLogger<ProcessMonitorManagerService>.Instance,
-                enhancedLogger.Object);
+                resolvedEnhancedLogger.Object);
+        }
+
+        private static Mock<IEnhancedLoggingService> CreateEnhancedLogger()
+        {
+            var enhancedLogger = new Mock<IEnhancedLoggingService>(MockBehavior.Loose);
+            enhancedLogger
+                .Setup(x => x.LogSystemEventAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Microsoft.Extensions.Logging.LogLevel>()))
+                .Returns(Task.CompletedTask);
+            enhancedLogger
+                .Setup(x => x.LogProcessMonitoringEventAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>()))
+                .Returns(Task.CompletedTask);
+            enhancedLogger
+                .Setup(x => x.LogErrorAsync(It.IsAny<Exception>(), It.IsAny<string>(), It.IsAny<Dictionary<string, object>?>()))
+                .Returns(Task.CompletedTask);
+            return enhancedLogger;
         }
 
         private static Mock<IProcessPowerPlanAssociationService> CreateAssociationService(ProcessMonitorConfiguration configuration)
@@ -604,9 +800,17 @@ namespace ThreadPilot.Core.Tests
         {
             public event EventHandler<ProcessEventArgs>? ProcessStarted;
 
-            public event EventHandler<ProcessEventArgs>? ProcessStopped;
+            public event EventHandler<ProcessEventArgs>? ProcessStopped
+            {
+                add { }
+                remove { }
+            }
 
-            public event EventHandler<MonitoringStatusEventArgs>? MonitoringStatusChanged;
+            public event EventHandler<MonitoringStatusEventArgs>? MonitoringStatusChanged
+            {
+                add { }
+                remove { }
+            }
 
             public List<ProcessModel> RunningProcesses { get; } = new();
 

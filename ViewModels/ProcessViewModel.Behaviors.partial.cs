@@ -23,6 +23,7 @@ namespace ThreadPilot.ViewModels
     using System.IO;
     using System.Linq;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
     using System.Windows.Input;
     using CommunityToolkit.Mvvm.ComponentModel;
@@ -524,7 +525,7 @@ namespace ThreadPilot.ViewModels
         [RelayCommand]
         public async Task LoadMoreProcesses()
         {
-            if (!this.IsVirtualizationEnabled || !this.HasMoreBatches || this.IsBusy)
+            if (!this.ShouldRunProcessUiRefresh() || !this.IsVirtualizationEnabled || !this.HasMoreBatches || this.IsBusy)
             {
                 return;
             }
@@ -560,8 +561,7 @@ namespace ThreadPilot.ViewModels
                     this.LoadingStatusText = string.Empty;
                 });
 
-                // Preload next batch in background
-                await this.virtualizedProcessService.PreloadNextBatchAsync(this.CurrentBatchIndex, this.ShowActiveApplicationsOnly);
+                await this.PreloadNextBatchIfAllowedAsync(this.CurrentBatchIndex);
             }
             catch (Exception ex)
             {
@@ -578,6 +578,11 @@ namespace ThreadPilot.ViewModels
         [RelayCommand]
         public async Task LoadProcesses()
         {
+            if (!this.ShouldRunProcessUiRefresh())
+            {
+                return;
+            }
+
             try
             {
                 System.Diagnostics.Debug.WriteLine($"LoadProcesses: Starting, ShowActiveApplicationsOnly={this.ShowActiveApplicationsOnly}");
@@ -614,8 +619,7 @@ namespace ThreadPilot.ViewModels
                             this.TotalProcessCount = batch.TotalProcessCount;
                         });
 
-                        // Preload next batch in background
-                        await this.virtualizedProcessService.PreloadNextBatchAsync(0, this.ShowActiveApplicationsOnly);
+                        await this.PreloadNextBatchIfAllowedAsync(0);
                     }
                     else
                     {
@@ -672,7 +676,12 @@ namespace ThreadPilot.ViewModels
         [RelayCommand]
         private async Task RefreshProcesses()
         {
-            if (this.IsBusy)
+            if (!this.ShouldRunProcessUiRefresh())
+            {
+                return;
+            }
+
+            if (this.IsBusy || Interlocked.Exchange(ref this.isRefreshProcessesInProgress, 1) == 1)
             {
                 return;
             }
@@ -685,7 +694,7 @@ namespace ThreadPilot.ViewModels
                     ? await this.processService.GetActiveApplicationsAsync()
                     : await this.processService.GetProcessesAsync();
 
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await InvokeOnUiAsync(() =>
                 {
                     var deltaResult = ProcessListDeltaUpdater.ApplyDelta(
                         this.Processes,
@@ -712,10 +721,14 @@ namespace ThreadPilot.ViewModels
             }
             catch (Exception ex)
             {
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await InvokeOnUiAsync(() =>
                 {
                     this.SetStatus($"Error refreshing processes: {ex.Message}", false);
                 });
+            }
+            finally
+            {
+                Interlocked.Exchange(ref this.isRefreshProcessesInProgress, 0);
             }
         }
 
@@ -779,6 +792,10 @@ namespace ThreadPilot.ViewModels
                 this.SelectedProcessSummary.MemoryPriority);
 
             this.ApplyRuleCreationResultStatus(result);
+            await this.LogUserActionAsync(
+                result.Success ? "PersistentRuleSaved" : "PersistentRuleSaveFailed",
+                result.UserMessage,
+                $"Process: {targetProcess.Name}, PID: {targetProcess.ProcessId}");
             await this.UpdateSelectedProcessSummaryAsync(targetProcess);
         }
 
@@ -811,6 +828,10 @@ namespace ThreadPilot.ViewModels
             if (!applyResult.Success)
             {
                 this.SetContextError(applyResult.Message);
+                await this.LogUserActionAsync(
+                    "ProcessAffinityFailed",
+                    applyResult.Message,
+                    $"Process: {process.Name}, PID: {process.ProcessId}, RequestedMask: 0x{applyResult.RequestedMask:X}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
                 return;
             }
@@ -840,6 +861,10 @@ namespace ThreadPilot.ViewModels
                     });
 
             this.ApplyRuleCreationResultStatus(saveResult);
+            await this.LogUserActionAsync(
+                saveResult.Success ? "PersistentRuleSaved" : "PersistentRuleSaveFailed",
+                saveResult.UserMessage,
+                $"Process: {process.Name}, PID: {process.ProcessId}");
             await this.UpdateSelectedProcessSummaryAsync(process);
         }
 
@@ -920,12 +945,20 @@ namespace ThreadPilot.ViewModels
                     }
                 });
 
+                await this.LogUserActionAsync(
+                    result.Success ? "ProcessAffinityApplied" : "ProcessAffinityFailed",
+                    result.Message,
+                    $"Process: {selectedProcess.Name}, PID: {selectedProcess.ProcessId}, RequestedMask: 0x{result.RequestedMask:X}, VerifiedMask: 0x{result.VerifiedMask:X}");
                 await this.UpdateSelectedProcessSummaryAsync(selectedProcess);
             }
             catch (Exception ex)
             {
                 var friendly = ex.Message;
                 _ = this.notificationService.ShowNotificationAsync("Affinity error", friendly, NotificationType.Error);
+                await this.LogUserActionAsync(
+                    "ProcessAffinityFailed",
+                    friendly,
+                    $"Process: {selectedProcess.Name}, PID: {selectedProcess.ProcessId}");
 
                 await InvokeOnUiAsync(() =>
                 {
@@ -975,6 +1008,17 @@ namespace ThreadPilot.ViewModels
             }
 
             return dispatcher.InvokeAsync(action).Task;
+        }
+
+        private static Task InvokeOnUiAsync(Func<Task> action)
+        {
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher == null || dispatcher.CheckAccess())
+            {
+                return action();
+            }
+
+            return dispatcher.InvokeAsync(action).Task.Unwrap();
         }
 
         [RelayCommand]
@@ -1318,8 +1362,24 @@ namespace ThreadPilot.ViewModels
         [RelayCommand]
         private async Task SetPriority(ProcessPriorityClass priority)
         {
-            if (this.SelectedProcess == null)
+            var selectedProcess = this.SelectedProcess;
+            if (selectedProcess == null)
             {
+                return;
+            }
+
+            if (ProcessPriorityGuardrails.IsBlocked(priority))
+            {
+                var message = ProcessOperationUserMessages.RealtimePriorityBlocked;
+                await InvokeOnUiAsync(() =>
+                {
+                    this.SetCriticalStatus(message);
+                });
+                _ = this.notificationService.ShowNotificationAsync("Priority blocked", message, NotificationType.Warning);
+                await this.LogUserActionAsync(
+                    "ProcessPriorityBlocked",
+                    message,
+                    $"Process: {selectedProcess.Name}, PID: {selectedProcess.ProcessId}, Priority: {priority}");
                 return;
             }
 
@@ -1327,14 +1387,14 @@ namespace ThreadPilot.ViewModels
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    this.SetStatus($"Setting priority for {this.SelectedProcess.Name} to {priority}...");
+                    this.SetStatus($"Setting priority for {selectedProcess.Name} to {priority}...");
                 });
 
                 // Apply the priority change
-                await this.processService.SetProcessPriority(this.SelectedProcess, priority);
+                await this.processService.SetProcessPriority(selectedProcess, priority);
 
                 // Immediately refresh the process to get the actual system state
-                await this.processService.RefreshProcessInfo(this.SelectedProcess);
+                await this.processService.RefreshProcessInfo(selectedProcess);
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
@@ -1342,7 +1402,7 @@ namespace ThreadPilot.ViewModels
                     this.OnPropertyChanged(nameof(this.SelectedProcess));
 
                     // Verify the priority was set correctly
-                    if (this.SelectedProcess.Priority == priority)
+                    if (selectedProcess.Priority == priority)
                     {
                         var warning = ProcessPriorityGuardrails.GetWarning(priority);
                         if (!string.IsNullOrWhiteSpace(warning))
@@ -1352,16 +1412,20 @@ namespace ThreadPilot.ViewModels
                         }
                         else
                         {
-                            this.SetStatus($"Priority applied successfully to {this.SelectedProcess.Name}: {priority}.", false);
-                            _ = this.notificationService.ShowNotificationAsync("Priority applied", $"{this.SelectedProcess.Name}: {priority}", NotificationType.Success);
+                            this.SetStatus($"Priority applied successfully to {selectedProcess.Name}: {priority}.", false);
+                            _ = this.notificationService.ShowNotificationAsync("Priority applied", $"{selectedProcess.Name}: {priority}", NotificationType.Success);
                         }
                     }
                     else
                     {
-                        this.SetStatus($"Priority adjusted by system for {this.SelectedProcess.Name} to {this.SelectedProcess.Priority}.", false);
-                        _ = this.notificationService.ShowNotificationAsync("Priority adjusted", $"{this.SelectedProcess.Name}: {this.SelectedProcess.Priority}", NotificationType.Warning);
+                        this.SetStatus($"Priority adjusted by system for {selectedProcess.Name} to {selectedProcess.Priority}.", false);
+                        _ = this.notificationService.ShowNotificationAsync("Priority adjusted", $"{selectedProcess.Name}: {selectedProcess.Priority}", NotificationType.Warning);
                     }
                 });
+                await this.LogUserActionAsync(
+                    "ProcessPriorityChanged",
+                    $"CPU priority changed for {selectedProcess.Name}: {priority}",
+                    $"PID: {selectedProcess.ProcessId}");
             }
             catch (Exception ex)
             {
@@ -1386,11 +1450,15 @@ namespace ThreadPilot.ViewModels
                 {
                     this.SetCriticalStatus($"Error setting priority: {message}");
                 });
+                await this.LogUserActionAsync(
+                    message == ProcessOperationUserMessages.RealtimePriorityBlocked ? "ProcessPriorityBlocked" : "ProcessPriorityChangeFailed",
+                    message,
+                    $"Process: {selectedProcess.Name}, PID: {selectedProcess.ProcessId}, Priority: {priority}");
 
                 // Try to refresh process info even if setting failed, to show current state
                 try
                 {
-                    await this.processService.RefreshProcessInfo(this.SelectedProcess);
+                    await this.processService.RefreshProcessInfo(selectedProcess);
                     await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
                         this.OnPropertyChanged(nameof(this.SelectedProcess));
@@ -1457,17 +1525,30 @@ namespace ThreadPilot.ViewModels
                 if (!success)
                 {
                     this.SetContextError(ProcessOperationUserMessages.AccessDenied);
+                    await this.LogUserActionAsync(
+                        "CpuSetsClearFailed",
+                        ProcessOperationUserMessages.AccessDenied,
+                        $"Process: {process.Name}, PID: {process.ProcessId}");
                     await this.UpdateSelectedProcessSummaryAsync(process);
                     return;
                 }
 
                 await this.processService.RefreshProcessInfo(process);
                 this.SetStatus($"CPU Sets cleared for {process.Name}.", false);
+                await this.LogUserActionAsync(
+                    "CpuSetsCleared",
+                    $"CPU Sets cleared for {process.Name}",
+                    $"PID: {process.ProcessId}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
             }
             catch (Exception ex)
             {
-                this.SetContextError(MapProcessOperationException(ex));
+                var message = MapProcessOperationException(ex);
+                this.SetContextError(message);
+                await this.LogUserActionAsync(
+                    "CpuSetsClearFailed",
+                    message,
+                    $"Process: {process.Name}, PID: {process.ProcessId}");
                 await this.TryRefreshContextProcessSummaryAsync(process);
             }
         }
@@ -1484,11 +1565,20 @@ namespace ThreadPilot.ViewModels
             {
                 await this.processService.RefreshProcessInfo(process);
                 this.SetStatus($"Process info refreshed for {process.Name}.", false);
+                await this.LogUserActionAsync(
+                    "ProcessInfoRefreshed",
+                    $"Process info refreshed for {process.Name}.",
+                    $"PID: {process.ProcessId}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
             }
             catch (Exception ex)
             {
-                this.SetContextError(MapProcessOperationException(ex));
+                var message = MapProcessOperationException(ex);
+                this.SetContextError(message);
+                await this.LogUserActionAsync(
+                    "ProcessInfoRefreshFailed",
+                    message,
+                    $"Process: {process.Name}, PID: {process.ProcessId}");
                 await this.TryRefreshContextProcessSummaryAsync(process);
             }
         }
@@ -1504,7 +1594,12 @@ namespace ThreadPilot.ViewModels
             var path = process.ExecutablePath;
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
             {
-                this.SetContextError($"Executable path is unavailable for {process.Name}.");
+                var message = $"Executable path is unavailable for {process.Name}.";
+                this.SetContextError(message);
+                await this.LogUserActionAsync(
+                    "ProcessExecutableOpenFailed",
+                    message,
+                    $"Process: {process.Name}, PID: {process.ProcessId}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
                 return;
             }
@@ -1513,11 +1608,20 @@ namespace ThreadPilot.ViewModels
             {
                 this.executableLocationOpener(path);
                 this.SetStatus($"Opened executable location for {process.Name}.", false);
+                await this.LogUserActionAsync(
+                    "ProcessExecutableLocationOpened",
+                    $"Opened executable location for {process.Name}.",
+                    path);
                 await this.UpdateSelectedProcessSummaryAsync(process);
             }
             catch (Exception ex)
             {
-                this.SetContextError($"Could not open executable location: {ex.Message}");
+                var message = $"Could not open executable location: {ex.Message}";
+                this.SetContextError(message);
+                await this.LogUserActionAsync(
+                    "ProcessExecutableOpenFailed",
+                    message,
+                    $"Process: {process.Name}, PID: {process.ProcessId}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
             }
         }
@@ -1548,11 +1652,20 @@ namespace ThreadPilot.ViewModels
             {
                 this.clipboardSetter(builder.ToString().TrimEnd());
                 this.SetStatus($"Copied process info for {process.Name}.", false);
+                await this.LogUserActionAsync(
+                    "ProcessInfoCopied",
+                    $"Copied process info for {process.Name}.",
+                    $"PID: {process.ProcessId}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
             }
             catch (Exception ex)
             {
-                this.SetContextError($"Could not copy process info: {ex.Message}");
+                var message = $"Could not copy process info: {ex.Message}";
+                this.SetContextError(message);
+                await this.LogUserActionAsync(
+                    "ProcessInfoCopyFailed",
+                    message,
+                    $"Process: {process.Name}, PID: {process.ProcessId}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
             }
         }
@@ -1567,6 +1680,10 @@ namespace ThreadPilot.ViewModels
             if (ProcessPriorityGuardrails.IsBlocked(priority))
             {
                 this.SetContextError(ProcessOperationUserMessages.RealtimePriorityBlocked);
+                await this.LogUserActionAsync(
+                    "ProcessPriorityBlocked",
+                    ProcessOperationUserMessages.RealtimePriorityBlocked,
+                    $"Process: {process.Name}, PID: {process.ProcessId}, Priority: {priority}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
                 return;
             }
@@ -1588,6 +1705,10 @@ namespace ThreadPilot.ViewModels
                     _ = this.notificationService.ShowNotificationAsync("Priority applied", $"{process.Name}: {priority}", NotificationType.Success);
                 }
 
+                await this.LogUserActionAsync(
+                    "ProcessPriorityChanged",
+                    $"CPU priority changed for {process.Name}: {priority}",
+                    $"PID: {process.ProcessId}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
             }
             catch (Exception ex)
@@ -1595,6 +1716,10 @@ namespace ThreadPilot.ViewModels
                 var message = MapProcessOperationException(ex);
                 this.SetContextError(message);
                 _ = this.notificationService.ShowNotificationAsync("Priority blocked", message, NotificationType.Warning);
+                await this.LogUserActionAsync(
+                    "ProcessPriorityChangeFailed",
+                    message,
+                    $"Process: {process.Name}, PID: {process.ProcessId}, Priority: {priority}");
                 await this.TryRefreshContextProcessSummaryAsync(process);
             }
         }
@@ -1618,19 +1743,33 @@ namespace ThreadPilot.ViewModels
                 var result = await this.memoryPriorityService.SetMemoryPriorityAsync(process, priority);
                 if (!result.Success)
                 {
-                    this.SetContextError(string.IsNullOrWhiteSpace(result.UserMessage)
+                    var message = string.IsNullOrWhiteSpace(result.UserMessage)
                         ? ProcessOperationUserMessages.AccessDenied
-                        : result.UserMessage);
+                        : result.UserMessage;
+                    this.SetContextError(message);
+                    await this.LogUserActionAsync(
+                        "ProcessMemoryPriorityFailed",
+                        message,
+                        $"Process: {process.Name}, PID: {process.ProcessId}, Priority: {priority}");
                     await this.UpdateSelectedProcessSummaryAsync(process);
                     return;
                 }
 
                 this.SetStatus($"Memory priority applied successfully to {process.Name}: {priority}.", false);
+                await this.LogUserActionAsync(
+                    "ProcessMemoryPriorityChanged",
+                    $"Memory priority changed for {process.Name}: {priority}",
+                    $"PID: {process.ProcessId}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
             }
             catch (Exception ex)
             {
-                this.SetContextError(MapProcessOperationException(ex));
+                var message = MapProcessOperationException(ex);
+                this.SetContextError(message);
+                await this.LogUserActionAsync(
+                    "ProcessMemoryPriorityFailed",
+                    message,
+                    $"Process: {process.Name}, PID: {process.ProcessId}, Priority: {priority}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
             }
         }
@@ -1796,20 +1935,23 @@ namespace ThreadPilot.ViewModels
         {
             ArgumentNullException.ThrowIfNull(decision);
 
-            this.virtualizedProcessService.Configuration.EnableBackgroundLoading = decision.VirtualizedPreloadEnabled;
-            this.SetUiRefreshEnabled(decision.ProcessUiRefreshEnabled, decision.ImmediateProcessRefresh);
+            this.isVirtualizedPreloadAllowedByPolicy = decision.VirtualizedPreloadEnabled;
+            this.virtualizedProcessService.Configuration.EnableBackgroundLoading = this.ShouldPreloadVirtualizedBatches();
+            this.SetUiRefreshEnabled(
+                decision.ProcessUiRefreshEnabled && !this.IsProcessListLocked,
+                decision.ImmediateProcessRefresh && !this.IsProcessListLocked);
         }
 
         public void SetProcessViewActive(bool isActive)
         {
             if (this.isProcessViewActive == isActive)
             {
-                this.virtualizedProcessService.Configuration.EnableBackgroundLoading = isActive && !this.isUiRefreshPaused;
+                this.virtualizedProcessService.Configuration.EnableBackgroundLoading = this.ShouldPreloadVirtualizedBatches();
                 return;
             }
 
             this.isProcessViewActive = isActive;
-            this.virtualizedProcessService.Configuration.EnableBackgroundLoading = isActive && !this.isUiRefreshPaused;
+            this.virtualizedProcessService.Configuration.EnableBackgroundLoading = this.ShouldPreloadVirtualizedBatches();
 
             if (!isActive)
             {
@@ -1837,7 +1979,7 @@ namespace ThreadPilot.ViewModels
         public void SetUiRefreshEnabled(bool enabled, bool refreshImmediately = true)
         {
             this.isUiRefreshPaused = !enabled;
-            this.virtualizedProcessService.Configuration.EnableBackgroundLoading = enabled && this.isProcessViewActive;
+            this.virtualizedProcessService.Configuration.EnableBackgroundLoading = this.ShouldPreloadVirtualizedBatches();
 
             if (!enabled)
             {
@@ -1855,23 +1997,54 @@ namespace ThreadPilot.ViewModels
                 return;
             }
 
-            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
-            {
-                if (this.isUiRefreshPaused)
+            TaskSafety.FireAndForget(
+                InvokeOnUiAsync(async () =>
                 {
-                    return;
-                }
+                    if (this.isUiRefreshPaused)
+                    {
+                        return;
+                    }
 
-                try
-                {
-                    this.ClearStatus();
-                    await this.RefreshProcessesCommand.ExecuteAsync(null);
-                }
-                catch (Exception ex)
-                {
-                    this.Logger.LogDebug(ex, "Immediate process refresh after resume failed");
-                }
-            });
+                    try
+                    {
+                        this.ClearStatus();
+                        await this.RefreshProcessesCommand.ExecuteAsync(null);
+                    }
+                    catch (Exception ex)
+                    {
+                        this.Logger.LogDebug(ex, "Immediate process refresh after resume failed");
+                    }
+                }),
+                ex => this.Logger.LogDebug(ex, "Immediate process refresh dispatch after resume failed"));
+        }
+
+        partial void OnIsProcessListLockedChanged(bool value)
+        {
+            this.SetUiRefreshEnabled(!value, refreshImmediately: !value);
+
+            _ = this.LogUserActionAsync(
+                "ProcessListLockChanged",
+                value ? "Lock process list enabled." : "Lock process list disabled.");
+        }
+
+        private bool ShouldRunProcessUiRefresh()
+        {
+            return this.isProcessViewActive && !this.isUiRefreshPaused && !this.IsProcessListLocked;
+        }
+
+        private bool ShouldPreloadVirtualizedBatches()
+        {
+            return this.IsVirtualizationEnabled
+                && this.isVirtualizedPreloadAllowedByPolicy
+                && this.ShouldRunProcessUiRefresh()
+                && !this.IsProcessListLocked;
+        }
+
+        private Task PreloadNextBatchIfAllowedAsync(int currentBatchIndex)
+        {
+            return this.ShouldPreloadVirtualizedBatches()
+                ? this.virtualizedProcessService.PreloadNextBatchAsync(currentBatchIndex, this.ShowActiveApplicationsOnly)
+                : Task.CompletedTask;
         }
 
         partial void OnSearchTextChanged(string value)

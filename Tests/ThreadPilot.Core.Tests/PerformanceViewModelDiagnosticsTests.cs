@@ -38,6 +38,7 @@ namespace ThreadPilot.Core.Tests
             harness.PowerPlan.Verify(x => x.GetActivePowerPlan(), Times.Once);
             harness.Performance.Verify(x => x.StartMonitoringAsync(), Times.Never);
             Assert.False(viewModel.IsMonitoring);
+            Assert.Empty(await harness.Audit.GetEntriesAsync());
         }
 
         [Fact]
@@ -54,6 +55,111 @@ namespace ThreadPilot.Core.Tests
             harness.Performance.Verify(x => x.StopMonitoringAsync(), Times.Once);
             Assert.False(viewModel.IsMonitoring);
             Assert.Equal("Stopped", viewModel.MonitoringStateText);
+        }
+
+        [Fact]
+        public async Task StartMonitoringCommand_LogsSuccess_WhenServiceStarts()
+        {
+            var harness = new Harness();
+            var viewModel = harness.CreateViewModel();
+
+            await viewModel.StartMonitoringCommand.ExecuteAsync(null);
+
+            harness.Logging.Verify(
+                logger => logger.LogUserActionAsync(
+                    "OptimizationMonitoringStarted",
+                    "Performance monitoring started",
+                    null),
+                Times.Once);
+            var entry = Assert.Single(
+                await harness.Audit.GetEntriesAsync(),
+                entry => entry.Message == "Performance monitoring started");
+            Assert.Equal("Optimization", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
+        }
+
+        [Fact]
+        public async Task StartMonitoringCommand_LogsFailure_WhenServiceFails()
+        {
+            var harness = new Harness(startMonitoringThrows: true);
+            var viewModel = harness.CreateViewModel();
+
+            await viewModel.StartMonitoringCommand.ExecuteAsync(null);
+
+            Assert.True(viewModel.HasError);
+            harness.Logging.Verify(
+                logger => logger.LogUserActionAsync(
+                    "OptimizationActionFailed",
+                    It.Is<string>(details => details.Contains("Failed to start performance monitoring")),
+                    null),
+                Times.Once);
+            var entry = Assert.Single(
+                await harness.Audit.GetEntriesAsync(),
+                entry => entry.Message.Contains("Failed to start performance monitoring"));
+            Assert.Equal("Optimization", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Error, entry.Severity);
+        }
+
+        [Fact]
+        public async Task StopMonitoringCommand_StopsServiceAndLogsSuccess()
+        {
+            var harness = new Harness();
+            var viewModel = harness.CreateViewModel();
+
+            await viewModel.StopMonitoringCommand.ExecuteAsync(null);
+
+            harness.Performance.Verify(service => service.StopMonitoringAsync(), Times.Once);
+            harness.Logging.Verify(
+                logger => logger.LogUserActionAsync(
+                    "OptimizationMonitoringStopped",
+                    "Performance monitoring stopped",
+                    null),
+                Times.Once);
+            var entry = Assert.Single(await harness.Audit.GetEntriesAsync());
+            Assert.Equal("Optimization", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
+            Assert.Equal("Performance monitoring stopped", viewModel.StatusMessage);
+        }
+
+        [Fact]
+        public async Task RefreshMetricsCommand_WhenMetricsFails_LogsFailureSafely()
+        {
+            var harness = new Harness(metricsThrows: true);
+            var viewModel = harness.CreateViewModel();
+
+            await viewModel.RefreshMetricsCommand.ExecuteAsync(null);
+
+            Assert.True(viewModel.HasError);
+            harness.Logging.Verify(
+                logger => logger.LogUserActionAsync(
+                    "OptimizationActionFailed",
+                    It.Is<string>(details => details.Contains("Failed to refresh performance snapshot")),
+                    null),
+                Times.Once);
+            var entry = Assert.Single(await harness.Audit.GetEntriesAsync());
+            Assert.Equal("Optimization", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Error, entry.Severity);
+        }
+
+        [Fact]
+        public async Task ClearHistoricalDataCommand_ClearsServiceAndLogsSuccess()
+        {
+            var harness = new Harness();
+            var viewModel = harness.CreateViewModel();
+
+            await viewModel.ClearHistoricalDataCommand.ExecuteAsync(null);
+
+            harness.Performance.Verify(service => service.ClearHistoricalDataAsync(), Times.Once);
+            harness.Logging.Verify(
+                logger => logger.LogUserActionAsync(
+                    "OptimizationHistoryCleared",
+                    "Historical metrics cleared",
+                    null),
+                Times.Once);
+            var entry = Assert.Single(await harness.Audit.GetEntriesAsync());
+            Assert.Equal("Optimization", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
+            Assert.Equal("Historical data cleared", viewModel.StatusMessage);
         }
 
         [Fact]
@@ -76,11 +182,25 @@ namespace ThreadPilot.Core.Tests
 
             public Mock<ISystemTweaksService> SystemTweaks { get; } = new(MockBehavior.Strict);
 
-            public Harness()
+            public Mock<IEnhancedLoggingService> Logging { get; } = new(MockBehavior.Loose);
+
+            public ActivityAuditService Audit { get; } = new(NullLogger<ActivityAuditService>.Instance);
+
+            public Harness(bool startMonitoringThrows = false, bool metricsThrows = false)
             {
-                this.Performance
-                    .Setup(x => x.GetSystemMetricsAsync(It.IsAny<bool>()))
-                    .ReturnsAsync(new SystemPerformanceMetrics());
+                if (metricsThrows)
+                {
+                    this.Performance
+                        .Setup(x => x.GetSystemMetricsAsync(It.IsAny<bool>()))
+                        .ThrowsAsync(new InvalidOperationException("metrics unavailable"));
+                }
+                else
+                {
+                    this.Performance
+                        .Setup(x => x.GetSystemMetricsAsync(It.IsAny<bool>()))
+                        .ReturnsAsync(new SystemPerformanceMetrics());
+                }
+
                 this.Performance
                     .Setup(x => x.GetHistoricalDataAsync(It.IsAny<TimeSpan>()))
                     .ReturnsAsync(new List<SystemPerformanceMetrics>());
@@ -90,11 +210,24 @@ namespace ThreadPilot.Core.Tests
                 this.Performance
                     .Setup(x => x.GetTopMemoryProcessesAsync(It.IsAny<int>()))
                     .ReturnsAsync(new List<ProcessPerformanceInfo>());
-                this.Performance
-                    .Setup(x => x.StartMonitoringAsync())
-                    .Returns(Task.CompletedTask);
+                if (startMonitoringThrows)
+                {
+                    this.Performance
+                        .Setup(x => x.StartMonitoringAsync())
+                        .ThrowsAsync(new InvalidOperationException("monitoring unavailable"));
+                }
+                else
+                {
+                    this.Performance
+                        .Setup(x => x.StartMonitoringAsync())
+                        .Returns(Task.CompletedTask);
+                }
+
                 this.Performance
                     .Setup(x => x.StopMonitoringAsync())
+                    .Returns(Task.CompletedTask);
+                this.Performance
+                    .Setup(x => x.ClearHistoricalDataAsync())
                     .Returns(Task.CompletedTask);
 
                 this.Associations
@@ -114,7 +247,9 @@ namespace ThreadPilot.Core.Tests
                     this.PowerPlan.Object,
                     this.ProcessMonitorManager.Object,
                     this.SystemTweaks.Object,
-                    NullLogger<PerformanceViewModel>.Instance);
+                    NullLogger<PerformanceViewModel>.Instance,
+                    this.Logging.Object,
+                    this.Audit);
         }
     }
 }

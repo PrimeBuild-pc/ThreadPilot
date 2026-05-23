@@ -64,6 +64,7 @@ namespace ThreadPilot
         private bool isSystemTrayUpdatesSuspended;
         private int isSystemTrayUpdateInProgress;
         private int systemTrayUpdateFailureStreak;
+        private int startupUpdateCheckStarted;
         private AppActivityState? lastAppliedRefreshState;
         private readonly IElevationService elevationService;
         private readonly ISecurityService securityService;
@@ -82,6 +83,8 @@ namespace ThreadPilot
         private bool isPerformanceIntroVisible = false;
         private double previousAppContentOpacity = 1;
         private TaskCompletionSource<MessageBoxResult>? unsavedSettingsDialogCompletionSource;
+        private bool isSilentStartupMode;
+        private bool showStartupMinimizedSuggestionOnReady;
 
         public MainWindow(
             ProcessViewModel processViewModel,
@@ -163,6 +166,32 @@ namespace ThreadPilot
                     "MainWindow Initialization Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 throw;
             }
+        }
+
+        public void ConfigureStartupMode(bool isSilentStartupMode, bool showStartupMinimizedSuggestionOnReady)
+        {
+            this.isSilentStartupMode = isSilentStartupMode;
+            this.showStartupMinimizedSuggestionOnReady = showStartupMinimizedSuggestionOnReady;
+
+            if (!isSilentStartupMode)
+            {
+                return;
+            }
+
+            this.showStartupMinimizedSuggestionOnReady = false;
+            this.LoadingOverlay.Visibility = Visibility.Collapsed;
+            this.ClearUIContentBlur();
+
+            if (this.FindResource("SpinnerAnimation") is Storyboard spinnerAnimation)
+            {
+                spinnerAnimation.Stop();
+            }
+
+            this.isSystemTrayUpdatesSuspended = true;
+            this.lastAppliedRefreshState = AppActivityState.TrayHidden;
+            this.processViewModel.SetProcessViewActive(false);
+            this.processViewModel.ApplyRefreshDecision(AppRefreshPolicy.Evaluate(AppActivityState.TrayHidden));
+            this.powerPlanViewModel.PauseAutoRefresh();
         }
 
         private void ConfigureDiagnosticsNavigation()

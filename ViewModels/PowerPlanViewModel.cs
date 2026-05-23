@@ -55,8 +55,9 @@ namespace ThreadPilot.ViewModels
         public PowerPlanViewModel(
             ILogger<PowerPlanViewModel> logger,
             IPowerPlanService powerPlanService,
-            IEnhancedLoggingService? enhancedLoggingService = null)
-            : base(logger, enhancedLoggingService)
+            IEnhancedLoggingService? enhancedLoggingService = null,
+            IActivityAuditService? activityAuditService = null)
+            : base(logger, enhancedLoggingService, activityAuditService)
         {
             this.powerPlanService = powerPlanService;
             this.SetupRefreshTimer();
@@ -84,7 +85,7 @@ namespace ThreadPilot.ViewModels
                     {
                         if (!this.isAutoRefreshPaused)
                         {
-                            await this.RefreshPowerPlansCommand.ExecuteAsync(null);
+                            await this.RefreshPowerPlansCoreAsync(reportStatus: false);
                         }
                     });
                 }
@@ -120,7 +121,7 @@ namespace ThreadPilot.ViewModels
             {
                 try
                 {
-                    await this.RefreshPowerPlansCommand.ExecuteAsync(null);
+                    await this.RefreshPowerPlansCoreAsync(reportStatus: false);
                 }
                 catch (Exception ex)
                 {
@@ -135,14 +136,12 @@ namespace ThreadPilot.ViewModels
             try
             {
                 this.SetStatus("Loading power plans...");
-                this.PowerPlans = await this.powerPlanService.GetPowerPlansAsync();
-                this.CustomPowerPlans = await this.powerPlanService.GetCustomPowerPlansAsync();
-                this.ActivePowerPlan = await this.powerPlanService.GetActivePowerPlan();
-                this.ClearStatus();
+                await this.RefreshPowerPlansCoreAsync(reportStatus: false);
+                this.SetStatus("Power plans loaded.", false);
             }
             catch (Exception ex)
             {
-                this.SetStatus($"Error loading power plans: {ex.Message}", false);
+                await this.SetOperationFailedAsync($"Error loading power plans: {ex.Message}", "PowerPlanLoadFailed");
             }
         }
 
@@ -156,24 +155,11 @@ namespace ThreadPilot.ViewModels
 
             try
             {
-                var currentPlans = await this.powerPlanService.GetPowerPlansAsync();
-                var currentActive = await this.powerPlanService.GetActivePowerPlan();
-                var customPlans = await this.powerPlanService.GetCustomPowerPlansAsync();
-
-                // Update power plans
-                this.PowerPlans = new ObservableCollection<PowerPlanModel>(currentPlans);
-                this.CustomPowerPlans = new ObservableCollection<PowerPlanModel>(customPlans);
-                this.ActivePowerPlan = currentActive;
-
-                // Update selected plan if it exists
-                if (this.SelectedPowerPlan != null)
-                {
-                    this.SelectedPowerPlan = this.PowerPlans.FirstOrDefault(p => p.Guid == this.SelectedPowerPlan.Guid);
-                }
+                await this.RefreshPowerPlansCoreAsync(reportStatus: true);
             }
             catch (Exception ex)
             {
-                this.SetStatus($"Error refreshing power plans: {ex.Message}", false);
+                await this.SetOperationFailedAsync($"Error refreshing power plans: {ex.Message}", "PowerPlanRefreshFailed");
             }
         }
 
@@ -187,23 +173,25 @@ namespace ThreadPilot.ViewModels
 
             try
             {
-                this.SetStatus($"Setting active power plan to {this.SelectedPowerPlan.Name}...");
-                var success = await this.powerPlanService.SetActivePowerPlan(this.SelectedPowerPlan);
+                var targetPlan = this.SelectedPowerPlan;
+                this.SetStatus($"Setting active power plan to {targetPlan.Name}...");
+                var success = await this.powerPlanService.SetActivePowerPlan(targetPlan);
 
                 if (success)
                 {
-                    this.ActivePowerPlan = this.SelectedPowerPlan;
-                    await this.RefreshPowerPlans();
-                    this.ClearStatus();
+                    this.ActivePowerPlan = targetPlan;
+                    await this.RefreshPowerPlansCoreAsync(reportStatus: false);
+                    this.SetStatus($"Power plan applied: {targetPlan.Name}.", false);
+                    await this.LogUserActionAsync("PowerPlanApplied", $"Applied power plan {targetPlan.Name}", $"Guid: {targetPlan.Guid}");
                 }
                 else
                 {
-                    this.SetStatus($"Failed to set power plan {this.SelectedPowerPlan.Name}", false);
+                    await this.SetOperationFailedAsync($"Failed to set power plan {targetPlan.Name}", "PowerPlanApplyFailed");
                 }
             }
             catch (Exception ex)
             {
-                this.SetStatus($"Error setting power plan: {ex.Message}", false);
+                await this.SetOperationFailedAsync($"Error setting power plan: {ex.Message}", "PowerPlanApplyFailed");
             }
         }
 
@@ -217,22 +205,24 @@ namespace ThreadPilot.ViewModels
 
             try
             {
-                this.SetStatus($"Importing custom power plan {this.SelectedCustomPlan.Name}...");
-                var success = await this.powerPlanService.ImportCustomPowerPlan(this.SelectedCustomPlan.FilePath);
+                var customPlan = this.SelectedCustomPlan;
+                this.SetStatus($"Importing custom power plan {customPlan.Name}...");
+                var success = await this.powerPlanService.ImportCustomPowerPlan(customPlan.FilePath);
 
                 if (success)
                 {
-                    await this.RefreshPowerPlans();
-                    this.ClearStatus();
+                    await this.RefreshPowerPlansCoreAsync(reportStatus: false);
+                    this.SetStatus($"Power plan imported: {customPlan.Name}.", false);
+                    await this.LogUserActionAsync("PowerPlanImported", $"Imported power plan {customPlan.Name}", customPlan.FilePath);
                 }
                 else
                 {
-                    this.SetStatus($"Failed to import power plan {this.SelectedCustomPlan.Name}", false);
+                    await this.SetOperationFailedAsync($"Failed to import power plan {customPlan.Name}", "PowerPlanImportFailed");
                 }
             }
             catch (Exception ex)
             {
-                this.SetStatus($"Error importing power plan: {ex.Message}", false);
+                await this.SetOperationFailedAsync($"Error importing power plan: {ex.Message}", "PowerPlanImportFailed");
             }
         }
 
@@ -261,18 +251,91 @@ namespace ThreadPilot.ViewModels
 
                 if (success)
                 {
-                    await this.RefreshPowerPlans();
+                    await this.RefreshPowerPlansCoreAsync(reportStatus: false);
                     this.SetStatus("Custom power plan added to library.", false);
+                    await this.LogUserActionAsync("PowerPlanAdded", "Added custom power plan file", dialog.FileName);
                 }
                 else
                 {
-                    this.SetStatus("Failed to add custom power plan file.", false);
+                    await this.SetOperationFailedAsync("Failed to add custom power plan file.", "PowerPlanAddFailed");
                 }
             }
             catch (Exception ex)
             {
-                this.SetStatus($"Error adding custom power plan file: {ex.Message}", false);
+                await this.SetOperationFailedAsync($"Error adding custom power plan file: {ex.Message}", "PowerPlanAddFailed");
             }
+        }
+
+        [RelayCommand]
+        private async Task DeletePowerPlan(PowerPlanModel? powerPlan)
+        {
+            var targetPlan = powerPlan ?? this.SelectedPowerPlan;
+            if (targetPlan == null)
+            {
+                return;
+            }
+
+            var activePlan = this.ActivePowerPlan ?? await this.powerPlanService.GetActivePowerPlan();
+            if (targetPlan.IsActive || string.Equals(targetPlan.Guid, activePlan?.Guid, StringComparison.OrdinalIgnoreCase))
+            {
+                await this.SetOperationFailedAsync("Switch to another power plan before deleting the active plan.", "PowerPlanDeleteBlocked");
+                return;
+            }
+
+            try
+            {
+                this.SetStatus($"Deleting power plan {targetPlan.Name}...");
+                var success = await this.powerPlanService.DeletePowerPlanAsync(targetPlan.Guid);
+                if (!success)
+                {
+                    await this.SetOperationFailedAsync(
+                        $"Could not delete power plan {targetPlan.Name}. Windows may not allow this plan to be removed.",
+                        "PowerPlanDeleteFailed");
+                    return;
+                }
+
+                await this.RefreshPowerPlansCoreAsync(reportStatus: false);
+                this.SetStatus($"Power plan deleted: {targetPlan.Name}.", false);
+                await this.LogUserActionAsync("PowerPlanDeleted", $"Deleted power plan {targetPlan.Name}", $"Guid: {targetPlan.Guid}");
+            }
+            catch (Exception ex)
+            {
+                await this.SetOperationFailedAsync($"Error deleting power plan: {ex.Message}", "PowerPlanDeleteFailed");
+            }
+        }
+
+        private async Task RefreshPowerPlansCoreAsync(bool reportStatus)
+        {
+            var currentPlans = await this.powerPlanService.GetPowerPlansAsync();
+            var currentActive = await this.powerPlanService.GetActivePowerPlan();
+            var customPlans = await this.powerPlanService.GetCustomPowerPlansAsync();
+
+            this.PowerPlans = new ObservableCollection<PowerPlanModel>(currentPlans);
+            this.CustomPowerPlans = new ObservableCollection<PowerPlanModel>(customPlans);
+            this.ActivePowerPlan = currentActive;
+
+            foreach (var plan in this.PowerPlans)
+            {
+                plan.IsActive = string.Equals(plan.Guid, currentActive?.Guid, StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (this.SelectedPowerPlan != null)
+            {
+                this.SelectedPowerPlan = this.PowerPlans.FirstOrDefault(p => p.Guid == this.SelectedPowerPlan.Guid);
+            }
+
+            if (reportStatus)
+            {
+                this.SetStatus("Power plans refreshed.", false);
+                await this.LogUserActionAsync("PowerPlansRefreshed", "Refreshed power plan list");
+            }
+        }
+
+        private async Task SetOperationFailedAsync(string message, string action)
+        {
+            this.SetStatus(message, false);
+            this.SetError(message);
+            await this.LogUserActionAsync(action, message);
         }
     }
 }

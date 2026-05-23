@@ -177,8 +177,10 @@ namespace ThreadPilot.ViewModels
             IPowerPlanService powerPlanService,
             IProcessMonitorManagerService processMonitorManagerService,
             ISystemTweaksService systemTweaksService,
-            ILogger<PerformanceViewModel> logger)
-            : base(logger, null)
+            ILogger<PerformanceViewModel> logger,
+            IEnhancedLoggingService? enhancedLoggingService = null,
+            IActivityAuditService? activityAuditService = null)
+            : base(logger, enhancedLoggingService, activityAuditService)
         {
             this.performanceService = performanceService;
             this.processService = processService;
@@ -204,17 +206,29 @@ namespace ThreadPilot.ViewModels
 
         public async Task ActivateDiagnosticsAsync()
         {
+            await this.ActivateDiagnosticsCoreAsync(auditActivity: false);
+        }
+
+        private async Task ActivateDiagnosticsCoreAsync(bool auditActivity)
+        {
             try
             {
                 this.SetStatus("Loading optional diagnostics...");
 
-                await this.RefreshMetricsSnapshotAsync();
+                var snapshotLoaded = await this.RefreshMetricsSnapshotAsync(auditActivity);
                 await this.LoadHistoricalDataAsync();
 
                 this.diagnosticsActivated = true;
                 this.MonitoringStateText = this.IsMonitoring ? "Active" : "Stopped";
-                this.MonitoringStatusText = this.IsMonitoring ? "Live metrics active" : "Diagnostics snapshot loaded";
-                this.SetStatus("Optional diagnostics loaded", false);
+                if (snapshotLoaded)
+                {
+                    this.MonitoringStatusText = this.IsMonitoring ? "Live metrics active" : "Diagnostics snapshot loaded";
+                    this.SetStatus("Optional diagnostics loaded", false);
+                }
+                else
+                {
+                    this.MonitoringStatusText = "Diagnostics snapshot failed";
+                }
             }
             catch (Exception ex)
             {
@@ -263,10 +277,12 @@ namespace ThreadPilot.ViewModels
                 this.AddTimelineEvent("Live Metrics", "Live metrics started.", "Info");
 
                 this.SetStatus("Performance monitoring started", false);
+                await this.LogUserActionAsync("OptimizationMonitoringStarted", "Performance monitoring started");
             }
             catch (Exception ex)
             {
                 this.SetError("Failed to start performance monitoring", ex);
+                await this.LogUserActionAsync("OptimizationActionFailed", $"Failed to start performance monitoring: {ex.Message}");
             }
         }
 
@@ -284,10 +300,12 @@ namespace ThreadPilot.ViewModels
                 this.AddTimelineEvent("Live Metrics", "Live metrics stopped.", "Warning");
 
                 this.SetStatus("Performance monitoring stopped", false);
+                await this.LogUserActionAsync("OptimizationMonitoringStopped", "Performance monitoring stopped");
             }
             catch (Exception ex)
             {
                 this.SetError("Failed to stop performance monitoring", ex);
+                await this.LogUserActionAsync("OptimizationActionFailed", $"Failed to stop performance monitoring: {ex.Message}");
             }
         }
 
@@ -313,14 +331,14 @@ namespace ThreadPilot.ViewModels
         {
             if (!this.diagnosticsActivated)
             {
-                await this.ActivateDiagnosticsAsync();
+                await this.ActivateDiagnosticsCoreAsync(auditActivity: true);
                 return;
             }
 
-            await this.RefreshMetricsSnapshotAsync();
+            await this.RefreshMetricsSnapshotAsync(auditActivity: true);
         }
 
-        private async Task RefreshMetricsSnapshotAsync()
+        private async Task<bool> RefreshMetricsSnapshotAsync(bool auditActivity)
         {
             try
             {
@@ -333,10 +351,20 @@ namespace ThreadPilot.ViewModels
 
                 this.LastManualRefreshText = $"Refreshed at {DateTime.Now:HH:mm:ss}";
                 this.SetStatus("Performance snapshot refreshed", false);
+                if (auditActivity)
+                {
+                    await this.LogUserActionAsync("OptimizationSnapshotRefreshed", "Performance snapshot refreshed");
+                }
+                return true;
             }
             catch (Exception ex)
             {
                 this.SetError("Failed to refresh performance snapshot", ex);
+                if (auditActivity)
+                {
+                    await this.LogUserActionAsync("OptimizationActionFailed", $"Failed to refresh performance snapshot: {ex.Message}");
+                }
+                return false;
             }
         }
 
@@ -350,10 +378,12 @@ namespace ThreadPilot.ViewModels
                 this.UpdateTimelineSummary();
                 this.AddTimelineEvent("History", "Historical metrics cleared.", "Info");
                 this.SetStatus("Historical data cleared", false);
+                await this.LogUserActionAsync("OptimizationHistoryCleared", "Historical metrics cleared");
             }
             catch (Exception ex)
             {
                 this.SetError("Failed to clear historical data", ex);
+                await this.LogUserActionAsync("OptimizationActionFailed", $"Failed to clear historical data: {ex.Message}");
             }
         }
 
@@ -430,6 +460,7 @@ namespace ThreadPilot.ViewModels
 
                     this.AddTimelineEvent("Rule", $"Rule created for {executableName} from hotspot panel.", "Success");
                     this.SetStatus($"Rule created for {executableName} and ready for automation.", false);
+                    await this.LogUserActionAsync("PersistentRuleSaved", $"Rule created for {executableName} from hotspot panel");
                 }
                 else
                 {
@@ -451,6 +482,7 @@ namespace ThreadPilot.ViewModels
 
                     this.AddTimelineEvent("Rule", $"Rule updated for {executableName} from hotspot panel.", "Success");
                     this.SetStatus($"Rule updated for {executableName} from hotspot panel.", false);
+                    await this.LogUserActionAsync("PersistentRuleUpdated", $"Rule updated for {executableName} from hotspot panel");
                 }
 
                 await this.RefreshSelectedProcessRuleImpactAsync();
@@ -460,6 +492,7 @@ namespace ThreadPilot.ViewModels
             {
                 this.logger.LogError(ex, "Failed to create or update rule from performance hotspot");
                 this.SetError("Failed to create rule from selected hotspot", ex);
+                await this.LogUserActionAsync("PersistentRuleSaveFailed", $"Failed to create rule from selected hotspot: {ex.Message}");
             }
             finally
             {

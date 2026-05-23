@@ -46,6 +46,7 @@ namespace ThreadPilot.Services
         private TrayIconState currentIconState = TrayIconState.Normal;
         private bool isDarkTheme = true;
         private Font? menuFont;
+        private Point lastContextMenuOpenPoint = Point.Empty;
         private bool disposed = false;
 
         public event EventHandler? QuickApplyRequested;
@@ -100,7 +101,7 @@ namespace ThreadPilot.Services
 
                 // Set up event handlers
                 this.notifyIcon.DoubleClick += this.OnTrayIconDoubleClick;
-                this.notifyIcon.ContextMenuStrip = this.contextMenu;
+                this.notifyIcon.MouseUp += this.OnTrayIconMouseUp;
 
                 // Set initial icon state
                 this.UpdateTrayIcon(TrayIconState.Normal);
@@ -253,6 +254,30 @@ namespace ThreadPilot.Services
         private void OnTrayIconDoubleClick(object? sender, EventArgs e)
         {
             this.ShowMainWindowRequested?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void OnTrayIconMouseUp(object? sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Right || this.contextMenu == null)
+            {
+                return;
+            }
+
+            var cursorPosition = Cursor.Position;
+            var workingArea = Screen.FromPoint(cursorPosition.IsEmpty ? this.lastContextMenuOpenPoint : cursorPosition).WorkingArea;
+            var openPoint = SystemTrayMenuPlacement.ResolveMenuOpenPoint(
+                cursorPosition,
+                this.lastContextMenuOpenPoint,
+                Rectangle.Empty,
+                workingArea);
+            this.lastContextMenuOpenPoint = openPoint;
+
+            if (this.contextMenu.Visible)
+            {
+                this.contextMenu.Close(ToolStripDropDownCloseReason.CloseCalled);
+            }
+
+            this.contextMenu.Show(openPoint, ToolStripDropDownDirection.Default);
         }
 
         private void OnQuickApplyClick(object? sender, EventArgs e)
@@ -513,6 +538,7 @@ namespace ThreadPilot.Services
 
                 if (this.notifyIcon != null)
                 {
+                    this.notifyIcon.MouseUp -= this.OnTrayIconMouseUp;
                     this.notifyIcon.Visible = false;
                     this.notifyIcon.Dispose();
                     this.notifyIcon = null;

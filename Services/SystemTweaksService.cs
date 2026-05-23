@@ -51,6 +51,8 @@ namespace ThreadPilot.Services
         private const string CoreParkingVisibilityKeyPath = @"SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583";
         private const string PriorityControlKeyPath = @"SYSTEM\CurrentControlSet\Control\PriorityControl";
         private const string PrioritySeparationValueName = "Win32PrioritySeparation";
+        private const int HighSchedulingCategoryDisabledValue = 2;
+        internal const int HighSchedulingCategoryEnabledValue = 0x1A;
         private readonly ILogger<SystemTweaksService> logger;
         private readonly IElevationService elevationService;
 
@@ -498,13 +500,13 @@ namespace ThreadPilot.Services
                 }
 
                 var rawValue = ReadRegistryIntValue(key, PrioritySeparationValueName);
-                var isEnabled = rawValue.GetValueOrDefault(2) == 38;
+                var isEnabled = rawValue.GetValueOrDefault(HighSchedulingCategoryDisabledValue) == HighSchedulingCategoryEnabledValue;
 
                 return Task.FromResult(new TweakStatus
                 {
                     IsEnabled = isEnabled,
                     IsAvailable = true,
-                    Description = "ON applies high foreground boost (Win32PrioritySeparation=38)",
+                    Description = "ON applies high foreground boost (Win32PrioritySeparation=26 / 0x1A)",
                 });
             }
             catch (Exception ex)
@@ -531,8 +533,8 @@ namespace ThreadPilot.Services
                     return false;
                 }
 
-                // ON = 38 (Short, Variable, High), OFF = 2 (default/minimal boost)
-                key.SetValue(PrioritySeparationValueName, enabled ? 38 : 2, RegistryValueKind.DWord);
+                // ON = 26 / 0x1A, OFF = 2 (default/minimal boost)
+                key.SetValue(PrioritySeparationValueName, GetHighSchedulingCategoryRegistryValue(enabled), RegistryValueKind.DWord);
 
                 var status = await this.GetHighSchedulingCategoryStatusAsync();
                 this.TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("HighSchedulingCategory", status));
@@ -574,6 +576,9 @@ namespace ThreadPilot.Services
 
             return true;
         }
+
+        internal static int GetHighSchedulingCategoryRegistryValue(bool enabled) =>
+            enabled ? HighSchedulingCategoryEnabledValue : HighSchedulingCategoryDisabledValue;
 
         private async Task EnsurePowerSettingVisibleAsync(string subgroupAlias, string settingAlias)
         {

@@ -45,8 +45,10 @@ namespace ThreadPilot.ViewModels
         public SystemTweaksViewModel(
             ISystemTweaksService systemTweaksService,
             INotificationService notificationService,
-            ILogger<SystemTweaksViewModel> logger)
-            : base(logger, null)
+            ILogger<SystemTweaksViewModel> logger,
+            IEnhancedLoggingService? enhancedLoggingService = null,
+            IActivityAuditService? activityAuditService = null)
+            : base(logger, enhancedLoggingService, activityAuditService)
         {
             this.systemTweaksService = systemTweaksService;
             this.notificationService = notificationService;
@@ -232,7 +234,7 @@ namespace ThreadPilot.ViewModels
 
             try
             {
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await InvokeOnUiAsync(() =>
                 {
                     this.SetStatus($"Toggling {item.Name}...");
                 });
@@ -254,7 +256,7 @@ namespace ThreadPilot.ViewModels
                 if (success)
                 {
                     await this.UpdateTweakItemStatusAsync(item);
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    await InvokeOnUiAsync(() =>
                     {
                         this.SetStatus($"{item.Name} {(newState ? "enabled" : "disabled")} successfully");
                     });
@@ -262,10 +264,14 @@ namespace ThreadPilot.ViewModels
                     await this.notificationService.ShowSuccessNotificationAsync(
                         "System Tweak Updated",
                         $"{item.Name} has been {(newState ? "enabled" : "disabled")}");
+                    await this.LogUserActionAsync(
+                        "SystemTweakApplied",
+                        $"{item.Name} {(newState ? "enabled" : "disabled")}",
+                        item.TweakType.ToString());
                 }
                 else
                 {
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    await InvokeOnUiAsync(() =>
                     {
                         this.SetError($"Failed to toggle {item.Name}", null);
                     });
@@ -273,16 +279,36 @@ namespace ThreadPilot.ViewModels
                     await this.notificationService.ShowErrorNotificationAsync(
                         "System Tweak Failed",
                         $"Failed to {(newState ? "enable" : "disable")} {item.Name}");
+                    await this.LogUserActionAsync(
+                        "SystemTweakFailed",
+                        $"Failed to {(newState ? "enable" : "disable")} {item.Name}",
+                        item.TweakType.ToString());
                 }
             }
             catch (Exception ex)
             {
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await InvokeOnUiAsync(() =>
                 {
                     this.SetError($"Error toggling {item.Name}", ex);
                 });
                 this.Logger.LogError(ex, "Error toggling tweak {TweakName}", item.Name);
+                await this.LogUserActionAsync(
+                    "SystemTweakFailed",
+                    $"Error toggling {item.Name}: {ex.Message}",
+                    item.TweakType.ToString());
             }
+        }
+
+        private static Task InvokeOnUiAsync(Action action)
+        {
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher == null)
+            {
+                action();
+                return Task.CompletedTask;
+            }
+
+            return dispatcher.InvokeAsync(action).Task;
         }
 
         private void OnTweakStatusChanged(object? sender, TweakStatusChangedEventArgs e)
@@ -336,4 +362,3 @@ namespace ThreadPilot.ViewModels
         public IAsyncRelayCommand<SystemTweakItem>? ToggleCommand { get; set; }
     }
 }
-

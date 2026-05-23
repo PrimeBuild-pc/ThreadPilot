@@ -377,6 +377,64 @@ namespace ThreadPilot.Services
             }
         }
 
+        public async Task<bool> DeletePowerPlanAsync(string powerPlanGuid)
+        {
+            if (!Guid.TryParse(powerPlanGuid, out _))
+            {
+                this.logger.LogWarning("Rejected invalid power plan GUID for delete: {PowerPlanGuid}", powerPlanGuid);
+                return false;
+            }
+
+            try
+            {
+                var activePlan = await this.GetActivePowerPlan().ConfigureAwait(false);
+                if (string.Equals(activePlan?.Guid, powerPlanGuid, StringComparison.OrdinalIgnoreCase))
+                {
+                    this.logger.LogWarning("Blocked deletion of active power plan: {PowerPlanGuid}", powerPlanGuid);
+                    await this.enhancedLogger.LogSystemEventAsync(
+                        LogEventTypes.PowerPlan.ChangeFailed,
+                        $"Blocked deletion of active power plan '{activePlan?.Name ?? powerPlanGuid}'",
+                        Microsoft.Extensions.Logging.LogLevel.Warning).ConfigureAwait(false);
+                    return false;
+                }
+
+                var targetPlan = await this.GetPowerPlanByGuidAsync(powerPlanGuid).ConfigureAwait(false);
+                var result = await this.RunPowerCfgAsync("/delete", powerPlanGuid).ConfigureAwait(false);
+                var success = result.ExitCode == 0;
+
+                if (success)
+                {
+                    this.logger.LogInformation("Deleted power plan '{PowerPlan}' ({PowerPlanGuid})", targetPlan?.Name ?? "Unknown", powerPlanGuid);
+                    await this.enhancedLogger.LogUserActionAsync(
+                        "PowerPlanDeleted",
+                        $"Deleted power plan {targetPlan?.Name ?? powerPlanGuid}",
+                        $"Guid: {powerPlanGuid}").ConfigureAwait(false);
+                }
+                else
+                {
+                    this.logger.LogWarning(
+                        "Failed to delete power plan '{PowerPlanGuid}' - powercfg exit code: {ExitCode}, stderr: {StdErr}",
+                        powerPlanGuid,
+                        result.ExitCode,
+                        result.StandardError);
+
+                    await this.enhancedLogger.LogSystemEventAsync(
+                        LogEventTypes.PowerPlan.ChangeFailed,
+                        $"Failed to delete power plan '{targetPlan?.Name ?? powerPlanGuid}' - Exit code: {result.ExitCode}",
+                        Microsoft.Extensions.Logging.LogLevel.Warning).ConfigureAwait(false);
+                }
+
+                return success;
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogError(ex, "Exception occurred while deleting power plan '{PowerPlanGuid}'", powerPlanGuid);
+                await this.enhancedLogger.LogErrorAsync(ex, "PowerPlanService.DeletePowerPlanAsync",
+                    new Dictionary<string, object> { ["PowerPlanGuid"] = powerPlanGuid }).ConfigureAwait(false);
+                return false;
+            }
+        }
+
         public async Task<string?> GetActivePowerPlanGuidAsync()
         {
             var activePlan = await this.GetActivePowerPlan().ConfigureAwait(false);

@@ -44,6 +44,30 @@ namespace ThreadPilot.Core.Tests
                 dictionary => ThemeDictionaryPolicy.IsThreadPilotThemeDictionary(dictionary.Source?.OriginalString));
         }
 
+        [Fact]
+        public void ReplaceThreadPilotThemeDictionary_WhenRequestedThemeIsAlreadyActive_ReusesExistingDictionary()
+        {
+            var darkThemeUri = new Uri("Themes/FluentDark.xaml", UriKind.Relative);
+            var resources = new ResourceDictionary();
+            var activeDictionary = CreateDictionaryWithSource(darkThemeUri);
+            resources.MergedDictionaries.Add(new ResourceDictionary());
+            resources.MergedDictionaries.Add(activeDictionary);
+            var factoryCalls = 0;
+
+            var result = ThemeDictionaryPolicy.ReplaceThreadPilotThemeDictionary(
+                resources,
+                darkThemeUri,
+                uri =>
+                {
+                    factoryCalls++;
+                    return CreateDictionaryWithSource(uri);
+                });
+
+            Assert.Same(activeDictionary, result);
+            Assert.Equal(0, factoryCalls);
+            Assert.Same(activeDictionary, resources.MergedDictionaries[^1]);
+        }
+
         [Theory]
         [InlineData("Themes/FluentDark.xaml")]
         [InlineData("Themes/FluentLight.xaml")]
@@ -59,6 +83,28 @@ namespace ThreadPilot.Core.Tests
             Assert.Contains("SectionTitleTextStyle", themeText, StringComparison.Ordinal);
             Assert.Contains("QuietRowBackgroundBrush", themeText, StringComparison.Ordinal);
             Assert.Contains("StatusPillBackgroundBrush", themeText, StringComparison.Ordinal);
+            Assert.Contains("AppFontFamily", themeText, StringComparison.Ordinal);
+            Assert.Contains("MaskSelectedBackgroundBrush", themeText, StringComparison.Ordinal);
+            Assert.Contains("MaskSelectedListBackgroundBrush", themeText, StringComparison.Ordinal);
+            Assert.Contains("MaskSelectedBorderBrush", themeText, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void DarkTheme_MaskListSelectionUsesSubtleTintWithoutAccentForeground()
+        {
+            var themeText = File.ReadAllText(GetRepositoryFilePath("Themes/FluentDark.xaml"));
+
+            Assert.Contains("x:Key=\"MaskSelectedListBackgroundBrush\"", themeText, StringComparison.Ordinal);
+            Assert.Contains("Opacity=\"0.05\"", themeText, StringComparison.Ordinal);
+            Assert.Contains("x:Key=\"MaskSelectedBorderBrush\"", themeText, StringComparison.Ordinal);
+            Assert.DoesNotContain(
+                "x:Key=\"MaskSelectedListBackgroundBrush\" Color=\"{StaticResource AccentFillColorDefault}\"",
+                themeText,
+                StringComparison.Ordinal);
+            Assert.DoesNotContain(
+                "x:Key=\"MaskSelectedListForegroundBrush\" Color=\"{StaticResource TextOnAccentFillColorPrimary}\"",
+                themeText,
+                StringComparison.Ordinal);
         }
 
         private static ResourceDictionary CreateDictionaryWithSource(Uri source)

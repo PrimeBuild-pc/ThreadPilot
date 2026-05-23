@@ -38,26 +38,27 @@
                     </Grid.RowDefinitions>
 
                     <Grid Grid.Row="0" Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="8"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0"
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0"
                                    Text="Select the Windows plan to make active."
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center"/>
-                        <Button Grid.Column="1"
-                                Command="{Binding SetActivePlanCommand}"
-                                Content="Set as Active Windows Plan"
-                                Padding="10,5"
-                                ToolTip="Change the active Windows power plan to the selected plan"/>
-                        <Button Grid.Column="3"
-                                Command="{Binding LoadPowerPlansCommand}"
-                                Content="Refresh Plans"
-                                Padding="10,5"
-                                ToolTip="Refresh the list of available power plans"/>
+                                   TextWrapping="Wrap"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip="Select the Windows plan to make active."/>
+                        <WrapPanel Grid.Row="1" Margin="0,8,0,0">
+                            <Button Command="{Binding SetActivePlanCommand}"
+                                    Content="Set as Active Windows Plan"
+                                    Padding="10,5"
+                                    Margin="0,0,8,0"
+                                    ToolTip="Change the active Windows power plan to the selected plan"/>
+                            <Button Command="{Binding LoadPowerPlansCommand}"
+                                    Content="Refresh Plans"
+                                    Padding="10,5"
+                                    ToolTip="Refresh the list of available power plans"/>
+                        </WrapPanel>
                     </Grid>
 
                     <ui:ListView Grid.Row="1"
@@ -66,15 +67,66 @@
                                  Background="{DynamicResource QuietRowBackgroundBrush}"
                                  BorderBrush="{DynamicResource BorderSubtleBrush}"
                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                        <ui:ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListView}}"/>
+                                <Setter Property="ContextMenu">
+                                    <Setter.Value>
+                                        <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                                            <MenuItem Header="Delete"
+                                                      Command="{Binding DeletePowerPlanCommand}"
+                                                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                        </ContextMenu>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ui:ListView.ItemContainerStyle>
                         <ui:ListView.ItemTemplate>
                             <DataTemplate>
-                                <StackPanel Margin="5">
-                                    <TextBlock Text="{Binding Name}"
-                                            FontWeight="{Binding IsActive, Converter={StaticResource BoolToFontWeightConverter}}"/>
-                                    <TextBlock Text="{Binding Guid}"
-                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                            FontSize="11"/>
-                                </StackPanel>
+                                <Border Margin="2"
+                                        Padding="8"
+                                        BorderThickness="4,1,1,1"
+                                        CornerRadius="6">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                    <Setter Property="Background" Value="{DynamicResource SoftSelectionBackgroundBrush}"/>
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="8"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontWeight="{Binding IsActive, Converter={StaticResource BoolToFontWeightConverter}}"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Guid}"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       FontSize="11"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                        <Border Grid.Column="2"
+                                                Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                                CornerRadius="4"
+                                                Padding="8,2"
+                                                VerticalAlignment="Top"
+                                                Visibility="{Binding IsActive, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <TextBlock Text="Active"
+                                                       FontSize="11"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
                             </DataTemplate>
                         </ui:ListView.ItemTemplate>
                     </ui:ListView>
@@ -92,26 +144,27 @@
                     </Grid.RowDefinitions>
 
                     <Grid Grid.Row="0" Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="8"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0"
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0"
                                    Text="Local .pow files ready to import into Windows."
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center"/>
-                        <Button Grid.Column="1"
-                                Command="{Binding ImportCustomPlanCommand}"
-                                Content="Import Selected .pow"
-                                Padding="10,5"
-                                ToolTip="Import the selected custom .pow file into Windows"/>
-                        <Button Grid.Column="3"
-                                Command="{Binding AddCustomPlanFileCommand}"
-                                Content="Add .pow File"
-                                Padding="10,5"
-                                ToolTip="Add a new custom power plan file to the custom library"/>
+                                   TextWrapping="Wrap"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip="Local .pow files ready to import into Windows."/>
+                        <WrapPanel Grid.Row="1" Margin="0,8,0,0">
+                            <Button Command="{Binding ImportCustomPlanCommand}"
+                                    Content="Import Selected .pow"
+                                    Padding="10,5"
+                                    Margin="0,0,8,0"
+                                    ToolTip="Import the selected custom .pow file into Windows"/>
+                            <Button Command="{Binding AddCustomPlanFileCommand}"
+                                    Content="Add .pow File"
+                                    Padding="10,5"
+                                    ToolTip="Add a new custom power plan file to the custom library"/>
+                        </WrapPanel>
                     </Grid>
 
                     <ui:ListView Grid.Row="1"

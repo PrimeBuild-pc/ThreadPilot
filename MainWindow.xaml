@@ -143,7 +143,7 @@
                             <ui:SymbolIcon Symbol="DataHistogram24"/>
                         </ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
-                    <ui:NavigationViewItem x:Name="NavLogs" Content="Activity Logs" Tag="Logs" TargetPageTag="Logs" Click="NavMenuItem_Click">
+                    <ui:NavigationViewItem x:Name="NavLogs" Content="ThreadPilot Activity" Tag="Logs" TargetPageTag="Logs" Click="NavMenuItem_Click">
                         <ui:NavigationViewItem.Icon>
                             <ui:SymbolIcon Symbol="DocumentText24"/>
                         </ui:NavigationViewItem.Icon>
@@ -282,7 +282,7 @@
         <Border Grid.Row="2" Background="{DynamicResource SolidBackgroundFillColorBaseBrush}" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderSubtleBrush}" Padding="12,4">
             <Border.Resources>
                 <Style TargetType="TextBlock">
-                    <Setter Property="FontFamily" Value="Segoe UI Variable, Segoe UI"/>
+                    <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
                     <Setter Property="FontSize" Value="12"/>
                 </Style>
             </Border.Resources>
@@ -364,6 +364,64 @@
                                 Background="{DynamicResource AccentFillColorDefaultBrush}"
                                 Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                                 Padding="16,8"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <Grid x:Name="StartupMinimizedSuggestionOverlay"
+                  Visibility="Collapsed"
+                  Panel.ZIndex="955"
+                  Background="{DynamicResource OverlayBrush}"
+                  AutomationProperties.Name="Startup minimized suggestion">
+                <Border Background="{DynamicResource CardSurfaceBrush}"
+                        BorderBrush="{DynamicResource BorderSubtleBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{DynamicResource StandardCardCornerRadius}"
+                        Padding="20"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Top"
+                        Margin="0,56,0,0"
+                        MinWidth="420"
+                        MaxWidth="560"
+                        IsHitTestVisible="True">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity="0.16"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <Border Background="{DynamicResource InfoBackgroundBrush}"
+                                BorderBrush="{DynamicResource InfoBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{DynamicResource StandardCardCornerRadius}"
+                                Padding="8,3"
+                                HorizontalAlignment="Left"
+                                Margin="0,0,0,10">
+                            <TextBlock Text="Recommended"
+                                       FontSize="{DynamicResource CaptionFontSize}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource InfoTextBrush}"/>
+                        </Border>
+                        <TextBlock Text="Startup minimized"
+                                   FontSize="20"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                   Margin="0,0,0,8"/>
+                        <TextBlock Text="Enable Startup minimized when you want ThreadPilot to start silently in the tray on future Windows sign-ins."
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Margin="0,0,0,16"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="Don't show again"
+                                    Click="StartupSuggestionDontShowAgain_Click"
+                                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                    Padding="14,7"
+                                    Margin="0,0,10,0"/>
+                            <Button Content="Open Settings"
+                                    Click="StartupSuggestionOpenSettings_Click"
+                                    Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                    Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                    Padding="14,7"/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
             </Grid>

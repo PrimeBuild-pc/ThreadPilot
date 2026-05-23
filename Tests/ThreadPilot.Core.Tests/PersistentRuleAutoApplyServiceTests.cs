@@ -17,11 +17,16 @@ namespace ThreadPilot.Core.Tests
             var process = CreateProcess();
             var rule = CreateRule();
             var engine = CreateEngine(rule, CreateSuccess(rule, process));
-            var service = CreateService([rule], engine.Object);
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var service = CreateService([rule], engine.Object, audit: audit);
 
             var results = await service.ApplyForProcessStartAsync(process);
 
             Assert.Single(results);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Rules", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);
+            Assert.Contains("Auto-applied saved rule", entry.Message);
             engine.Verify(
                 x => x.ApplyMatchingRulesAsync(
                     process,
@@ -75,11 +80,13 @@ namespace ThreadPilot.Core.Tests
             var process = CreateProcess();
             var rule = CreateRule();
             var engine = CreateEngine(rule, CreateSuccess(rule, process));
-            var service = CreateService([rule], engine.Object, nowProvider: () => now);
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var service = CreateService([rule], engine.Object, nowProvider: () => now, audit: audit);
 
             await service.ApplyForProcessStartAsync(process);
             await service.ApplyForProcessStartAsync(process);
 
+            Assert.Single(await audit.GetEntriesAsync());
             engine.Verify(
                 x => x.ApplyMatchingRulesAsync(
                     process,
@@ -136,13 +143,18 @@ namespace ThreadPilot.Core.Tests
             var rule = CreateRule();
             var failure = CreateFailure(rule, process, ProcessOperationUserMessages.AccessDenied, isAccessDenied: true);
             var engine = CreateEngine(rule, failure);
-            var service = CreateService([rule], engine.Object);
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var service = CreateService([rule], engine.Object, audit: audit);
 
             var result = Assert.Single(await service.ApplyForProcessStartAsync(process));
 
             Assert.False(result.Success);
             Assert.True(result.IsAccessDenied);
             Assert.Equal(ProcessOperationUserMessages.AccessDenied, result.UserMessage);
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Equal("Rules", entry.Category);
+            Assert.Equal(ActivityAuditSeverity.Warning, entry.Severity);
+            Assert.Contains("Failed to auto-apply saved rule", entry.Message);
         }
 
         [Fact]
@@ -195,6 +207,51 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task ApplyForProcessStartAsync_FeatureFlagDisabled_DoesNotCallRulesEngine()
+        {
+            var process = CreateProcess();
+            var rule = CreateRule();
+            var engine = CreateEngine(rule, CreateSuccess(rule, process));
+            var service = CreateService(
+                [rule],
+                engine.Object,
+                settings: new ApplicationSettingsModel { ApplyPersistentRulesOnProcessStart = false });
+
+            var results = await service.ApplyForProcessStartAsync(process);
+
+            Assert.Empty(results);
+            engine.Verify(
+                x => x.ApplyMatchingRulesAsync(
+                    It.IsAny<ProcessModel>(),
+                    It.IsAny<Predicate<PersistentProcessRule>?>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+
+        [Theory]
+        [InlineData(0, "game.exe")]
+        [InlineData(42, "")]
+        [InlineData(42, "   ")]
+        public async Task ApplyForProcessStartAsync_WithInvalidProcess_DoesNotCallRulesEngine(int processId, string processName)
+        {
+            var process = CreateProcess(processName);
+            process.ProcessId = processId;
+            var rule = CreateRule();
+            var engine = CreateEngine(rule, CreateSuccess(rule, process));
+            var service = CreateService([rule], engine.Object);
+
+            var results = await service.ApplyForProcessStartAsync(process);
+
+            Assert.Empty(results);
+            engine.Verify(
+                x => x.ApplyMatchingRulesAsync(
+                    It.IsAny<ProcessModel>(),
+                    It.IsAny<Predicate<PersistentProcessRule>?>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+
+        [Fact]
         public async Task ApplyForDiscoveredProcessesAsync_FeatureFlagDisabled_DoesNotCallRulesEngine()
         {
             var process = CreateProcess();
@@ -217,6 +274,26 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task ApplyForDiscoveredProcessesAsync_GroupsDuplicateProcessesByProcessId()
+        {
+            var process = CreateProcess();
+            var duplicate = CreateProcess("game.exe");
+            duplicate.ExecutablePath = @"C:\Games\GameCopy.exe";
+            var rule = CreateRule();
+            var engine = CreateEngine(rule, CreateSuccess(rule, process));
+            var service = CreateService([rule], engine.Object);
+
+            await service.ApplyForDiscoveredProcessesAsync([process, duplicate]);
+
+            engine.Verify(
+                x => x.ApplyMatchingRulesAsync(
+                    It.IsAny<ProcessModel>(),
+                    It.IsAny<Predicate<PersistentProcessRule>?>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+
+        [Fact]
         public async Task ApplyForDiscoveredProcessesAsync_ClearsCooldownForProcessesNoLongerPresent()
         {
             var process = CreateProcess();
@@ -236,11 +313,80 @@ namespace ThreadPilot.Core.Tests
                 Times.Exactly(2));
         }
 
+        [Fact]
+        public async Task ApplyForProcessStartAsync_WhenRuleUpdatedDuringCooldown_AllowsReapply()
+        {
+            var process = CreateProcess();
+            var rule = CreateRule();
+            var rules = new List<PersistentProcessRule> { rule };
+            var engine = CreateEngine(rule, CreateSuccess(rule, process));
+            var service = CreateService(rules, engine.Object);
+
+            await service.ApplyForProcessStartAsync(process);
+            rules[0] = rule with { UpdatedAt = rule.UpdatedAt.AddSeconds(1) };
+            await service.ApplyForProcessStartAsync(process);
+
+            engine.Verify(
+                x => x.ApplyMatchingRulesAsync(
+                    process,
+                    It.IsAny<Predicate<PersistentProcessRule>?>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Exactly(2));
+        }
+
+        [Fact]
+        public async Task ApplyForProcessStartAsync_WhenRulesEngineThrows_ReturnsControlledFailure()
+        {
+            var process = CreateProcess();
+            var rule = CreateRule();
+            var engine = CreateEngineThatThrows(new InvalidOperationException("native apply failed"));
+            var service = CreateService([rule], engine.Object);
+
+            var result = Assert.Single(await service.ApplyForProcessStartAsync(process));
+
+            Assert.False(result.Success);
+            Assert.Equal(rule.Id, result.RuleId);
+            Assert.Equal(process.ProcessId, result.ProcessId);
+            Assert.Equal("ThreadPilot could not apply the saved rule.", result.UserMessage);
+            Assert.Equal("native apply failed", result.TechnicalMessage);
+        }
+
+        [Fact]
+        public async Task MarkProcessExited_RemovesOnlyMatchingProcessAttempts()
+        {
+            var process = CreateProcess();
+            var otherProcess = CreateProcess("game.exe");
+            otherProcess.ProcessId = 84;
+            var rule = CreateRule();
+            var engine = CreateEngine(rule, CreateSuccess(rule, process));
+            var service = CreateService([rule], engine.Object);
+
+            await service.ApplyForProcessStartAsync(process);
+            await service.ApplyForProcessStartAsync(otherProcess);
+            service.MarkProcessExited(process.ProcessId);
+            await service.ApplyForProcessStartAsync(process);
+            await service.ApplyForProcessStartAsync(otherProcess);
+
+            engine.Verify(
+                x => x.ApplyMatchingRulesAsync(
+                    process,
+                    It.IsAny<Predicate<PersistentProcessRule>?>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Exactly(2));
+            engine.Verify(
+                x => x.ApplyMatchingRulesAsync(
+                    otherProcess,
+                    It.IsAny<Predicate<PersistentProcessRule>?>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+
         private static PersistentRuleAutoApplyService CreateService(
             IReadOnlyList<PersistentProcessRule> rules,
             IPersistentRulesEngine engine,
             ApplicationSettingsModel? settings = null,
-            Func<DateTimeOffset>? nowProvider = null) =>
+            Func<DateTimeOffset>? nowProvider = null,
+            IActivityAuditService? audit = null) =>
             new(
                 new FakePersistentProcessRuleStore(rules),
                 new PersistentProcessRuleMatcher(),
@@ -248,7 +394,8 @@ namespace ThreadPilot.Core.Tests
                 CreateSettingsService(settings ?? new ApplicationSettingsModel()),
                 NullLogger<PersistentRuleAutoApplyService>.Instance,
                 nowProvider ?? (() => DateTimeOffset.UtcNow),
-                TimeSpan.FromSeconds(30));
+                TimeSpan.FromSeconds(30),
+                audit);
 
         private static Mock<IPersistentRulesEngine> CreateEngine(
             PersistentProcessRule rule,
@@ -276,6 +423,18 @@ namespace ThreadPilot.Core.Tests
                     It.IsAny<Predicate<PersistentProcessRule>?>(),
                     It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new OperationCanceledException());
+            return engine;
+        }
+
+        private static Mock<IPersistentRulesEngine> CreateEngineThatThrows(Exception exception)
+        {
+            var engine = new Mock<IPersistentRulesEngine>(MockBehavior.Strict);
+            engine
+                .Setup(x => x.ApplyMatchingRulesAsync(
+                    It.IsAny<ProcessModel>(),
+                    It.IsAny<Predicate<PersistentProcessRule>?>(),
+                    It.IsAny<CancellationToken>()))
+                .ThrowsAsync(exception);
             return engine;
         }
 

@@ -54,6 +54,8 @@ namespace ThreadPilot.ViewModels
         private System.Timers.Timer? refreshTimer;
         private bool isUiRefreshPaused;
         private bool isProcessViewActive = true;
+        private bool isVirtualizedPreloadAllowedByPolicy = true;
+        private int isRefreshProcessesInProgress;
         private readonly ThrottledRefreshCoordinator searchRefreshCoordinator;
         private readonly ThrottledRefreshCoordinator filterRefreshCoordinator;
         private bool isApplyingFilter;
@@ -147,6 +149,9 @@ namespace ThreadPilot.ViewModels
         [ObservableProperty]
         private bool isRegistryPriorityEnabled = false;
 
+        [ObservableProperty]
+        private bool isProcessListLocked = false;
+
         // PERFORMANCE IMPROVEMENT: Progressive loading support
         [ObservableProperty]
         private double loadingProgress = 0.0;
@@ -186,13 +191,14 @@ namespace ThreadPilot.ViewModels
             IProcessAffinityApplyCoordinator? processAffinityApplyCoordinator = null,
             ICpuTopologyProvider? cpuTopologyProvider = null,
             IEnhancedLoggingService? enhancedLoggingService = null,
+            IActivityAuditService? activityAuditService = null,
             IProcessMemoryPriorityService? memoryPriorityService = null,
             IPersistentProcessRuleStore? persistentRuleStore = null,
             IPersistentProcessRuleMatcher? persistentRuleMatcher = null,
             IProcessRuleCreationService? processRuleCreationService = null,
             Action<string>? clipboardSetter = null,
             Action<string>? executableLocationOpener = null)
-            : base(logger, enhancedLoggingService)
+            : base(logger, enhancedLoggingService, activityAuditService)
         {
             this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
             this.processFilterService = processFilterService ?? throw new ArgumentNullException(nameof(processFilterService));

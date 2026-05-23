@@ -30,6 +30,7 @@ namespace ThreadPilot.ViewModels
     {
         protected readonly ILogger Logger;
         protected readonly IEnhancedLoggingService? EnhancedLoggingService;
+        protected readonly IActivityAuditService? ActivityAuditService;
         private bool disposed;
         private CancellationTokenSource? statusLifetimeCts;
         private bool preserveStatusUntilReplaced;
@@ -51,10 +52,14 @@ namespace ThreadPilot.ViewModels
         [ObservableProperty]
         private string errorMessage = string.Empty;
 
-        protected BaseViewModel(ILogger logger, IEnhancedLoggingService? enhancedLoggingService = null)
+        protected BaseViewModel(
+            ILogger logger,
+            IEnhancedLoggingService? enhancedLoggingService = null,
+            IActivityAuditService? activityAuditService = null)
         {
             this.Logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.EnhancedLoggingService = enhancedLoggingService;
+            this.ActivityAuditService = activityAuditService;
         }
 
         /// <summary>
@@ -232,6 +237,11 @@ namespace ThreadPilot.ViewModels
                 if (this.EnhancedLoggingService != null)
                 {
                     await this.EnhancedLoggingService.LogUserActionAsync(action, details, context);
+                }
+
+                if (this.ActivityAuditService != null)
+                {
+                    await this.ActivityAuditService.LogUserActionAsync(action, details, context);
                 }
             }
             catch (Exception ex)
