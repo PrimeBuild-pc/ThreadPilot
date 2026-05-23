@@ -193,6 +193,35 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void MasksView_SelectedCpuTilesUseSubtleMaskSelectionResources()
+        {
+            var masksViewPath = Path.Combine(
+                GetRepositoryRoot(),
+                "Views",
+                "MasksView.xaml");
+            var document = XDocument.Load(masksViewPath, LoadOptions.PreserveWhitespace);
+            var serialized = document.ToString(SaveOptions.DisableFormatting);
+
+            Assert.Contains("MaskSelectedBackgroundBrush", serialized, StringComparison.Ordinal);
+            Assert.Contains("MaskSelectedBorderBrush", serialized, StringComparison.Ordinal);
+            Assert.Contains("BorderThickness\" Value=\"2\"", serialized, StringComparison.Ordinal);
+            Assert.DoesNotContain("SoftSelectionBackgroundBrush", serialized, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void MainWindow_ContainsStartupMinimizedSuggestionOverlay()
+        {
+            var mainWindowPath = Path.Combine(GetRepositoryRoot(), "MainWindow.xaml");
+            var document = XDocument.Load(mainWindowPath, LoadOptions.PreserveWhitespace);
+            var serialized = document.ToString(SaveOptions.DisableFormatting);
+
+            Assert.Contains("StartupMinimizedSuggestionOverlay", serialized, StringComparison.Ordinal);
+            Assert.Contains("Startup minimized", serialized, StringComparison.Ordinal);
+            Assert.Contains("Open Settings", serialized, StringComparison.Ordinal);
+            Assert.Contains("Don't show again", serialized, StringComparison.Ordinal);
+        }
+
+        [Fact]
         public void LegacyActionSidePanel_IsNotPersistentPrimaryUi()
         {
             var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);
@@ -200,6 +229,22 @@ namespace ThreadPilot.Core.Tests
 
             Assert.Contains("Grid.Column=\"2\" Visibility=\"Collapsed\"", serialized, StringComparison.Ordinal);
             Assert.Contains("Advanced affinity picker", serialized, StringComparison.Ordinal);
+        }
+
+        private static string GetRepositoryRoot()
+        {
+            var directory = new DirectoryInfo(AppContext.BaseDirectory);
+            while (directory != null && !File.Exists(Path.Combine(directory.FullName, "ThreadPilot.csproj")))
+            {
+                directory = directory.Parent;
+            }
+
+            if (directory == null)
+            {
+                throw new InvalidOperationException("Repository root was not found.");
+            }
+
+            return directory.FullName;
         }
     }
 }

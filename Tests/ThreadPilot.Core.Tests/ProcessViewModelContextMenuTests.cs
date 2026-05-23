@@ -372,6 +372,66 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task RefreshProcessesCommand_WhenProcessViewInactive_SkipsProcessRead()
+        {
+            var processService = CreateProcessService();
+            var viewModel = CreateViewModel(processService.Object);
+
+            viewModel.SetProcessViewActive(false);
+            await viewModel.RefreshProcessesCommand.ExecuteAsync(null);
+
+            processService.Verify(service => service.GetProcessesAsync(), Times.Never);
+            processService.Verify(service => service.GetActiveApplicationsAsync(), Times.Never);
+        }
+
+        [Fact]
+        public async Task RefreshProcessesCommand_WhenRefreshPaused_SkipsProcessRead()
+        {
+            var processService = CreateProcessService();
+            var viewModel = CreateViewModel(processService.Object);
+
+            viewModel.PauseRefresh();
+            await viewModel.RefreshProcessesCommand.ExecuteAsync(null);
+
+            processService.Verify(service => service.GetProcessesAsync(), Times.Never);
+            processService.Verify(service => service.GetActiveApplicationsAsync(), Times.Never);
+        }
+
+        [Fact]
+        public async Task LoadProcessesCommand_WhenProcessViewInactive_DoesNotPreloadVirtualizedBatch()
+        {
+            var processService = CreateProcessService();
+            var virtualizedProcessService = CreateVirtualizedProcessService(totalProcessCount: 100);
+            var viewModel = CreateViewModel(
+                processService.Object,
+                virtualizedProcessService: virtualizedProcessService.Object);
+
+            viewModel.SetProcessViewActive(false);
+            await viewModel.LoadProcessesCommand.ExecuteAsync(null);
+
+            virtualizedProcessService.Verify(
+                service => service.PreloadNextBatchAsync(It.IsAny<int>(), It.IsAny<bool>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task LoadProcessesCommand_WhenProcessListLocked_DoesNotPreloadVirtualizedBatch()
+        {
+            var processService = CreateProcessService();
+            var virtualizedProcessService = CreateVirtualizedProcessService(totalProcessCount: 100);
+            var viewModel = CreateViewModel(
+                processService.Object,
+                virtualizedProcessService: virtualizedProcessService.Object);
+
+            viewModel.IsProcessListLocked = true;
+            await viewModel.LoadProcessesCommand.ExecuteAsync(null);
+
+            virtualizedProcessService.Verify(
+                service => service.PreloadNextBatchAsync(It.IsAny<int>(), It.IsAny<bool>()),
+                Times.Never);
+        }
+
+        [Fact]
         public async Task LockProcessList_WhenDisabled_RefreshesOnceWithoutPersistentRuleSettingChange()
         {
             var processService = CreateProcessService();
@@ -655,6 +715,31 @@ namespace ThreadPilot.Core.Tests
             return processService;
         }
 
+        private static Mock<IVirtualizedProcessService> CreateVirtualizedProcessService(int totalProcessCount)
+        {
+            var virtualizedProcessService = new Mock<IVirtualizedProcessService>(MockBehavior.Loose);
+            virtualizedProcessService.SetupProperty(
+                service => service.Configuration,
+                new VirtualizedProcessConfig());
+            virtualizedProcessService
+                .Setup(service => service.InitializeAsync())
+                .Returns(Task.CompletedTask);
+            virtualizedProcessService
+                .Setup(service => service.GetTotalProcessCountAsync(It.IsAny<bool>()))
+                .ReturnsAsync(totalProcessCount);
+            virtualizedProcessService
+                .Setup(service => service.LoadProcessBatchAsync(It.IsAny<int>(), It.IsAny<bool>()))
+                .ReturnsAsync(new ProcessBatchResult
+                {
+                    Processes = [CreateProcess()],
+                    BatchIndex = 0,
+                    TotalBatches = 2,
+                    TotalProcessCount = totalProcessCount,
+                    HasMoreBatches = true,
+                });
+            return virtualizedProcessService;
+        }
+
         private static Mock<IProcessAffinityApplyCoordinator> CreateAffinityCoordinator()
         {
             var coordinator = new Mock<IProcessAffinityApplyCoordinator>(MockBehavior.Strict);
@@ -677,12 +762,17 @@ namespace ThreadPilot.Core.Tests
             Action<string>? clipboardSetter = null,
             Action<string>? executableLocationOpener = null,
             IEnhancedLoggingService? enhancedLoggingService = null,
-            IActivityAuditService? activityAuditService = null)
+            IActivityAuditService? activityAuditService = null,
+            IVirtualizedProcessService? virtualizedProcessService = null)
         {
-            var virtualizedProcessService = new Mock<IVirtualizedProcessService>(MockBehavior.Loose);
-            virtualizedProcessService.SetupProperty(
-                service => service.Configuration,
-                new VirtualizedProcessConfig());
+            if (virtualizedProcessService == null)
+            {
+                var virtualizedProcessServiceMock = new Mock<IVirtualizedProcessService>(MockBehavior.Loose);
+                virtualizedProcessServiceMock.SetupProperty(
+                    service => service.Configuration,
+                    new VirtualizedProcessConfig());
+                virtualizedProcessService = virtualizedProcessServiceMock.Object;
+            }
 
             var cpuTopologyService = new Mock<ICpuTopologyService>(MockBehavior.Loose);
             var powerPlanService = new Mock<IPowerPlanService>(MockBehavior.Loose);
@@ -696,7 +786,7 @@ namespace ThreadPilot.Core.Tests
                 NullLogger<ProcessViewModel>.Instance,
                 processService,
                 new ProcessFilterService(),
-                virtualizedProcessService.Object,
+                virtualizedProcessService,
                 cpuTopologyService.Object,
                 powerPlanService.Object,
                 notificationService.Object,

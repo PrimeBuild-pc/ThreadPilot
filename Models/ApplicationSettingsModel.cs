@@ -181,6 +181,9 @@ namespace ThreadPilot.Models
         private bool hasSeenElevationWarning = false;
 
         [ObservableProperty]
+        private bool hasSeenStartupMinimizedSuggestion = false;
+
+        [ObservableProperty]
         private bool enableSelfLowImpactMode = true;
 
         [ObservableProperty]
@@ -259,6 +262,7 @@ namespace ThreadPilot.Models
             this.EnablePerformanceCounters = other.EnablePerformanceCounters;
             this.HasSeenPerformanceIntro = other.HasSeenPerformanceIntro;
             this.HasSeenElevationWarning = other.HasSeenElevationWarning;
+            this.HasSeenStartupMinimizedSuggestion = other.HasSeenStartupMinimizedSuggestion;
             this.EnableSelfLowImpactMode = other.EnableSelfLowImpactMode;
             this.EnableSelfAffinityLimit = other.EnableSelfAffinityLimit;
             this.MaxLogFileSizeMb = other.MaxLogFileSizeMb;

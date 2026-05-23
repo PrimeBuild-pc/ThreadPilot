@@ -23,26 +23,37 @@ uninstall.bat
 # Keep release documentation tracked
 !docs/release/
 !docs/release/*.md
+!docs/releases/
+!docs/releases/*.md
 
 # Local worktrees and planning docs
 .worktrees/
 docs/superpowers/plans/
+/FINAL_RELEASE_PLAN*.md
+/RELEASE_PLAN*.md
+/LOCAL_VALIDATION*.md
+/VALIDATION_NOTES*.md
+/PR*_VALIDATION*.md
+/CHOCOLATEY_MODERATOR_NOTICE*.md
 
 # Test and coverage
 [Tt]est[Rr]esult*/
+**/[Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+coverage/
+coverage-report/
+coverage-results/
+lcov-report/
 coverage*.json
 coverage*.xml
 coverage*.info
+lcov.info
 *.coverage
 *.coveragexml
 *.trx
-FINAL_RELEASE_PLAN.md
-RELEASE_PLAN.md
-CHOCOLATEY_MODERATOR_NOTICE.md
 
 # .NET / NuGet
 *.deps.json
@@ -92,17 +103,37 @@ $RECYCLE.BIN/
 *.log
 logs/
 Logs/
+*.pid
+*.trace
+*.stackdump
 .DS_Store
 .fuse_hidden*
 .directory
 .Trash-*
+/screenshots/
+/validation-screenshots/
+/threadpilot-menu-validation/
+*-screenshot.png
+*-screenshot.jpg
+*-validation.png
 
 # Installer / packaging artifacts
 Installer/Output/
+/release/
+/release-build/
+/package-stage/
+/_stage*/
 *.cab
 *.msi
 *.msm
 *.msp
+*.msix
+*.msixbundle
+*.appinstaller
+*.blockmap
+*.sha256
+*.sha512
+ThreadPilot-*.zip
 *.lnk
 *.exe.config
 *.[Pp]ublish.xml

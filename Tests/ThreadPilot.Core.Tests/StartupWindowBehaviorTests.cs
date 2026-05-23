@@ -10,6 +10,7 @@ namespace ThreadPilot.Core.Tests
         {
             var behavior = StartupWindowBehavior.Resolve(isAutostart: false, startMinimized: false);
 
+            Assert.True(behavior.ShouldShowWindow);
             Assert.True(behavior.ShowInTaskbar);
             Assert.Equal(Visibility.Visible, behavior.Visibility);
             Assert.Equal(WindowState.Normal, behavior.WindowState);
@@ -18,12 +19,13 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public void Resolve_ShowsMinimizedTaskbarWindow_ForManualLaunchWithStartMinimized()
+        public void Resolve_HidesToTray_ForManualLaunchWithStartMinimized()
         {
             var behavior = StartupWindowBehavior.Resolve(isAutostart: false, startMinimized: true);
 
-            Assert.True(behavior.ShowInTaskbar);
-            Assert.Equal(Visibility.Visible, behavior.Visibility);
+            Assert.False(behavior.ShouldShowWindow);
+            Assert.False(behavior.ShowInTaskbar);
+            Assert.Equal(Visibility.Hidden, behavior.Visibility);
             Assert.Equal(WindowState.Minimized, behavior.WindowState);
             Assert.False(behavior.HideAfterShow);
             Assert.False(behavior.ActivateAfterShow);
@@ -34,10 +36,11 @@ namespace ThreadPilot.Core.Tests
         {
             var behavior = StartupWindowBehavior.Resolve(isAutostart: true, startMinimized: true);
 
+            Assert.False(behavior.ShouldShowWindow);
             Assert.False(behavior.ShowInTaskbar);
             Assert.Equal(Visibility.Hidden, behavior.Visibility);
             Assert.Equal(WindowState.Minimized, behavior.WindowState);
-            Assert.True(behavior.HideAfterShow);
+            Assert.False(behavior.HideAfterShow);
             Assert.False(behavior.ActivateAfterShow);
         }
 
@@ -46,6 +49,7 @@ namespace ThreadPilot.Core.Tests
         {
             var behavior = StartupWindowBehavior.Resolve(isAutostart: true, startMinimized: false);
 
+            Assert.True(behavior.ShouldShowWindow);
             Assert.True(behavior.ShowInTaskbar);
             Assert.Equal(Visibility.Visible, behavior.Visibility);
             Assert.Equal(WindowState.Normal, behavior.WindowState);

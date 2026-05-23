@@ -3,6 +3,7 @@ namespace ThreadPilot.Helpers
     using System.Windows;
 
     public readonly record struct StartupWindowBehavior(
+        bool ShouldShowWindow,
         bool ShowInTaskbar,
         Visibility Visibility,
         WindowState WindowState,
@@ -14,24 +15,27 @@ namespace ThreadPilot.Helpers
             if (isAutostart && startMinimized)
             {
                 return new StartupWindowBehavior(
+                    ShouldShowWindow: false,
                     ShowInTaskbar: false,
                     Visibility: Visibility.Hidden,
                     WindowState: WindowState.Minimized,
-                    HideAfterShow: true,
+                    HideAfterShow: false,
                     ActivateAfterShow: false);
             }
 
             if (startMinimized)
             {
                 return new StartupWindowBehavior(
-                    ShowInTaskbar: true,
-                    Visibility: Visibility.Visible,
+                    ShouldShowWindow: false,
+                    ShowInTaskbar: false,
+                    Visibility: Visibility.Hidden,
                     WindowState: WindowState.Minimized,
                     HideAfterShow: false,
                     ActivateAfterShow: false);
             }
 
             return new StartupWindowBehavior(
+                ShouldShowWindow: true,
                 ShowInTaskbar: true,
                 Visibility: Visibility.Visible,
                 WindowState: WindowState.Normal,

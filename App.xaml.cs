@@ -71,6 +71,8 @@ namespace ThreadPilot
 #if DEBUG
             bool isTestMode = false;
 #endif
+            bool effectiveStartMinimized = false;
+            ApplicationSettingsModel? loadedSettings = null;
 
             foreach (var arg in e.Args)
             {
@@ -102,6 +104,8 @@ namespace ThreadPilot
                         break;
                 }
             }
+
+            effectiveStartMinimized = startMinimized;
 
             // Set up global exception handlers first
             AppDomain.CurrentDomain.UnhandledException += this.OnUnhandledException;
@@ -219,6 +223,8 @@ namespace ThreadPilot
 
                 Task.Run(async () => await settingsService.LoadSettingsAsync()).GetAwaiter().GetResult();
                 var settings = settingsService.Settings;
+                loadedSettings = settings;
+                effectiveStartMinimized = startMinimized || settings.StartMinimized;
                 var useDarkTheme = settings.HasUserThemePreference
                     ? settings.UseDarkTheme
                     : themeService.GetSystemUsesDarkTheme();
@@ -237,6 +243,7 @@ namespace ThreadPilot
             }
 
             var mainWindow = this.ServiceProvider.GetRequiredService<MainWindow>();
+            this.MainWindow = mainWindow;
 
             // Handle startup behavior with comprehensive error handling
             try
@@ -249,23 +256,33 @@ namespace ThreadPilot
                     throw new InvalidOperationException("MainWindow could not be created");
                 }
 
-                var startupWindowBehavior = StartupWindowBehavior.Resolve(isAutostart, startMinimized);
+                var startupWindowBehavior = StartupWindowBehavior.Resolve(isAutostart, effectiveStartMinimized);
+                var showStartupSuggestion = loadedSettings != null
+                    && StartupMinimizedSuggestionPolicy.ShouldShow(loadedSettings, startupWindowBehavior);
+                mainWindow.ConfigureStartupMode(
+                    isSilentStartupMode: !startupWindowBehavior.ShouldShowWindow,
+                    showStartupMinimizedSuggestionOnReady: showStartupSuggestion);
+
                 mainWindow.ShowInTaskbar = startupWindowBehavior.ShowInTaskbar;
                 mainWindow.Visibility = startupWindowBehavior.Visibility;
                 mainWindow.WindowState = startupWindowBehavior.WindowState;
-                mainWindow.Show();
 
-                if (startupWindowBehavior.HideAfterShow)
+                if (startupWindowBehavior.ShouldShowWindow)
                 {
-                    mainWindow.Hide();
-                }
-                else if (startupWindowBehavior.ActivateAfterShow)
-                {
-                    mainWindow.EnsureDashboardVisibleOnScreen();
-                    mainWindow.Activate();
+                    mainWindow.Show();
+
+                    if (startupWindowBehavior.HideAfterShow)
+                    {
+                        mainWindow.Hide();
+                    }
+                    else if (startupWindowBehavior.ActivateAfterShow)
+                    {
+                        mainWindow.EnsureDashboardVisibleOnScreen();
+                        mainWindow.Activate();
+                    }
                 }
 
-                logger.LogInformation("Main window displayed successfully");
+                logger.LogInformation("Startup window behavior applied successfully");
             }
             catch (Exception ex)
             {
@@ -450,4 +467,3 @@ namespace ThreadPilot
         }
     }
 }
-

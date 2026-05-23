@@ -133,6 +133,22 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task LoadSettingsAsync_PreservesStartupMinimizedSuggestionDismissal()
+        {
+            var storage = new FakeSettingsStorage();
+            storage.Files[TestPaths.SettingsFilePath] = """
+                {
+                  "hasSeenStartupMinimizedSuggestion": true
+                }
+                """;
+            var service = CreateService(storage);
+
+            await service.LoadSettingsAsync();
+
+            Assert.True(service.Settings.HasSeenStartupMinimizedSuggestion);
+        }
+
+        [Fact]
         public async Task ImportSettingsAsync_Throws_WhenFileIsMissing()
         {
             var storage = new FakeSettingsStorage();

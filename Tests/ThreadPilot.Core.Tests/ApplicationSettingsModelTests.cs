@@ -12,6 +12,7 @@ namespace ThreadPilot.Core.Tests
             Assert.True(settings.AutostartWithWindows);
             Assert.False(settings.StartMinimized);
             Assert.True(settings.ApplyPersistentRulesOnProcessStart);
+            Assert.False(settings.HasSeenStartupMinimizedSuggestion);
         }
 
         [Fact]

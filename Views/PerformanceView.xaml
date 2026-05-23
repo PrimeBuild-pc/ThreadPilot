@@ -31,13 +31,13 @@
 
         <Style x:Key="MetricValueTextStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="22"/>
-            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
 
         <Style x:Key="AccentValueTextStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="22"/>
-            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
         </Style>
     </UserControl.Resources>

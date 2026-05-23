@@ -401,7 +401,7 @@
                     <Border Background="{DynamicResource OverlayBrush}" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                             <ProgressBar Value="{Binding LoadingProgress}" Maximum="100" Width="200" Height="20" Margin="0,0,0,10"/>
-                            <TextBlock Text="{Binding LoadingStatusText}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding LoadingStatusText}" HorizontalAlignment="Center" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Border>
 

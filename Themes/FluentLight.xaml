@@ -63,6 +63,7 @@
     <CornerRadius x:Key="StandardCardCornerRadius">8</CornerRadius>
     <Thickness x:Key="StandardCardPadding">16</Thickness>
     <Thickness x:Key="CompactCardPadding">12</Thickness>
+    <FontFamily x:Key="AppFontFamily">Segoe UI Variable, Segoe UI</FontFamily>
     <sys:Double x:Key="PageTitleFontSize">24</sys:Double>
     <sys:Double x:Key="PageSubtitleFontSize">14</sys:Double>
     <sys:Double x:Key="SectionTitleFontSize">16</sys:Double>
@@ -94,6 +95,8 @@
 
     <SolidColorBrush x:Key="SoftSelectionBackgroundBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.12"/>
     <SolidColorBrush x:Key="SoftSelectionBorderBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.24"/>
+    <SolidColorBrush x:Key="MaskSelectedBackgroundBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.06"/>
+    <SolidColorBrush x:Key="MaskSelectedBorderBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.45"/>
 
     <!-- System Colors overrides -->
     <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="{StaticResource ApplicationBackgroundColor}"/>
@@ -111,17 +114,17 @@
     <Style TargetType="Window">
         <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-        <Setter Property="FontFamily" Value="Segoe UI Variable, Segoe UI"/>
+        <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
     </Style>
 
     <Style TargetType="UserControl">
         <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-        <Setter Property="FontFamily" Value="Segoe UI Variable, Segoe UI"/>
+        <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
     </Style>
 
     <Style TargetType="Control">
-        <Setter Property="FontFamily" Value="Segoe UI Variable, Segoe UI"/>
+        <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
     </Style>
 
     <Style TargetType="Grid">
@@ -173,14 +176,14 @@
     <!-- Removed native implicit styles to allow Wpf.Ui to style them fully -->
 
     <Style x:Key="PageTitleTextStyle" TargetType="TextBlock">
-        <Setter Property="FontFamily" Value="Segoe UI Variable, Segoe UI"/>
+        <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
         <Setter Property="FontSize" Value="{DynamicResource PageTitleFontSize}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
     </Style>
 
     <Style x:Key="PageSubtitleTextStyle" TargetType="TextBlock">
-        <Setter Property="FontFamily" Value="Segoe UI Variable, Segoe UI"/>
+        <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
         <Setter Property="FontSize" Value="{DynamicResource PageSubtitleFontSize}"/>
         <Setter Property="FontWeight" Value="Normal"/>
         <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
@@ -188,18 +191,18 @@
     </Style>
 
     <Style x:Key="SectionTitleTextStyle" TargetType="TextBlock">
-        <Setter Property="FontFamily" Value="Segoe UI Variable, Segoe UI"/>
+        <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
         <Setter Property="FontSize" Value="{DynamicResource SectionTitleFontSize}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
     </Style>
 
     <Style TargetType="TextBlock">
-        <Setter Property="FontFamily" Value="Segoe UI Variable, Segoe UI"/>
+        <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
     </Style>
 
     <Style TargetType="TextElement">
-        <Setter Property="FontFamily" Value="Segoe UI Variable, Segoe UI"/>
+        <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
     </Style>
 </ResourceDictionary>

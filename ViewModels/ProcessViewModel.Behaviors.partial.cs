@@ -23,6 +23,7 @@ namespace ThreadPilot.ViewModels
     using System.IO;
     using System.Linq;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
     using System.Windows.Input;
     using CommunityToolkit.Mvvm.ComponentModel;
@@ -524,7 +525,7 @@ namespace ThreadPilot.ViewModels
         [RelayCommand]
         public async Task LoadMoreProcesses()
         {
-            if (!this.IsVirtualizationEnabled || !this.HasMoreBatches || this.IsBusy)
+            if (!this.ShouldRunProcessUiRefresh() || !this.IsVirtualizationEnabled || !this.HasMoreBatches || this.IsBusy)
             {
                 return;
             }
@@ -560,8 +561,7 @@ namespace ThreadPilot.ViewModels
                     this.LoadingStatusText = string.Empty;
                 });
 
-                // Preload next batch in background
-                await this.virtualizedProcessService.PreloadNextBatchAsync(this.CurrentBatchIndex, this.ShowActiveApplicationsOnly);
+                await this.PreloadNextBatchIfAllowedAsync(this.CurrentBatchIndex);
             }
             catch (Exception ex)
             {
@@ -578,6 +578,11 @@ namespace ThreadPilot.ViewModels
         [RelayCommand]
         public async Task LoadProcesses()
         {
+            if (!this.ShouldRunProcessUiRefresh())
+            {
+                return;
+            }
+
             try
             {
                 System.Diagnostics.Debug.WriteLine($"LoadProcesses: Starting, ShowActiveApplicationsOnly={this.ShowActiveApplicationsOnly}");
@@ -614,8 +619,7 @@ namespace ThreadPilot.ViewModels
                             this.TotalProcessCount = batch.TotalProcessCount;
                         });
 
-                        // Preload next batch in background
-                        await this.virtualizedProcessService.PreloadNextBatchAsync(0, this.ShowActiveApplicationsOnly);
+                        await this.PreloadNextBatchIfAllowedAsync(0);
                     }
                     else
                     {
@@ -672,12 +676,12 @@ namespace ThreadPilot.ViewModels
         [RelayCommand]
         private async Task RefreshProcesses()
         {
-            if (this.IsProcessListLocked)
+            if (!this.ShouldRunProcessUiRefresh())
             {
                 return;
             }
 
-            if (this.IsBusy)
+            if (this.IsBusy || Interlocked.Exchange(ref this.isRefreshProcessesInProgress, 1) == 1)
             {
                 return;
             }
@@ -721,6 +725,10 @@ namespace ThreadPilot.ViewModels
                 {
                     this.SetStatus($"Error refreshing processes: {ex.Message}", false);
                 });
+            }
+            finally
+            {
+                Interlocked.Exchange(ref this.isRefreshProcessesInProgress, 0);
             }
         }
 
@@ -1927,20 +1935,23 @@ namespace ThreadPilot.ViewModels
         {
             ArgumentNullException.ThrowIfNull(decision);
 
-            this.virtualizedProcessService.Configuration.EnableBackgroundLoading = decision.VirtualizedPreloadEnabled;
-            this.SetUiRefreshEnabled(decision.ProcessUiRefreshEnabled, decision.ImmediateProcessRefresh);
+            this.isVirtualizedPreloadAllowedByPolicy = decision.VirtualizedPreloadEnabled;
+            this.virtualizedProcessService.Configuration.EnableBackgroundLoading = this.ShouldPreloadVirtualizedBatches();
+            this.SetUiRefreshEnabled(
+                decision.ProcessUiRefreshEnabled && !this.IsProcessListLocked,
+                decision.ImmediateProcessRefresh && !this.IsProcessListLocked);
         }
 
         public void SetProcessViewActive(bool isActive)
         {
             if (this.isProcessViewActive == isActive)
             {
-                this.virtualizedProcessService.Configuration.EnableBackgroundLoading = isActive && !this.isUiRefreshPaused;
+                this.virtualizedProcessService.Configuration.EnableBackgroundLoading = this.ShouldPreloadVirtualizedBatches();
                 return;
             }
 
             this.isProcessViewActive = isActive;
-            this.virtualizedProcessService.Configuration.EnableBackgroundLoading = isActive && !this.isUiRefreshPaused;
+            this.virtualizedProcessService.Configuration.EnableBackgroundLoading = this.ShouldPreloadVirtualizedBatches();
 
             if (!isActive)
             {
@@ -1968,7 +1979,7 @@ namespace ThreadPilot.ViewModels
         public void SetUiRefreshEnabled(bool enabled, bool refreshImmediately = true)
         {
             this.isUiRefreshPaused = !enabled;
-            this.virtualizedProcessService.Configuration.EnableBackgroundLoading = enabled && this.isProcessViewActive;
+            this.virtualizedProcessService.Configuration.EnableBackgroundLoading = this.ShouldPreloadVirtualizedBatches();
 
             if (!enabled)
             {
@@ -2014,6 +2025,26 @@ namespace ThreadPilot.ViewModels
             _ = this.LogUserActionAsync(
                 "ProcessListLockChanged",
                 value ? "Lock process list enabled." : "Lock process list disabled.");
+        }
+
+        private bool ShouldRunProcessUiRefresh()
+        {
+            return this.isProcessViewActive && !this.isUiRefreshPaused && !this.IsProcessListLocked;
+        }
+
+        private bool ShouldPreloadVirtualizedBatches()
+        {
+            return this.IsVirtualizationEnabled
+                && this.isVirtualizedPreloadAllowedByPolicy
+                && this.ShouldRunProcessUiRefresh()
+                && !this.IsProcessListLocked;
+        }
+
+        private Task PreloadNextBatchIfAllowedAsync(int currentBatchIndex)
+        {
+            return this.ShouldPreloadVirtualizedBatches()
+                ? this.virtualizedProcessService.PreloadNextBatchAsync(currentBatchIndex, this.ShowActiveApplicationsOnly)
+                : Task.CompletedTask;
         }
 
         partial void OnSearchTextChanged(string value)

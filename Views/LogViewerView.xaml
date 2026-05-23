@@ -191,7 +191,7 @@
                     <GridViewColumn Header="Details" Width="70">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Foreground="{DynamicResource ErrorTextBrush}" FontWeight="Bold">
+                                <TextBlock Foreground="{DynamicResource ErrorTextBrush}" FontWeight="SemiBold">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Style.Triggers>

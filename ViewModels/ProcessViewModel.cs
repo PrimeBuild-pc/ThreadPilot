@@ -54,6 +54,8 @@ namespace ThreadPilot.ViewModels
         private System.Timers.Timer? refreshTimer;
         private bool isUiRefreshPaused;
         private bool isProcessViewActive = true;
+        private bool isVirtualizedPreloadAllowedByPolicy = true;
+        private int isRefreshProcessesInProgress;
         private readonly ThrottledRefreshCoordinator searchRefreshCoordinator;
         private readonly ThrottledRefreshCoordinator filterRefreshCoordinator;
         private bool isApplyingFilter;

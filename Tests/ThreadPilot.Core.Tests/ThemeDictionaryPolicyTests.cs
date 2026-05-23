@@ -83,6 +83,9 @@ namespace ThreadPilot.Core.Tests
             Assert.Contains("SectionTitleTextStyle", themeText, StringComparison.Ordinal);
             Assert.Contains("QuietRowBackgroundBrush", themeText, StringComparison.Ordinal);
             Assert.Contains("StatusPillBackgroundBrush", themeText, StringComparison.Ordinal);
+            Assert.Contains("AppFontFamily", themeText, StringComparison.Ordinal);
+            Assert.Contains("MaskSelectedBackgroundBrush", themeText, StringComparison.Ordinal);
+            Assert.Contains("MaskSelectedBorderBrush", themeText, StringComparison.Ordinal);
         }
 
         private static ResourceDictionary CreateDictionaryWithSource(Uri source)
