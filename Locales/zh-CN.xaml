@@ -1,0 +1,529 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    
+    <!-- MainWindow / General -->
+    <sys:String x:Key="MainWindow_Title">ThreadPilot - 进程与电源计划管理器</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningTitle">推荐以管理员权限运行</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningDescription">ThreadPilot 当前正以受限权限运行。某些功能可能无法使用。</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningRequired">需要管理员访问权限以执行以下操作：</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningPowerPlans">• 修改电源计划配置</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningAffinity">• 更改进程 CPU 关联性和优先级</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningTweaks">• 应用系统级优化和调整</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningProtected">• 管理受保护的进程</sys:String>
+    <sys:String x:Key="MainWindow_ContinueWithoutElevation">不提升权限继续</sys:String>
+    <sys:String x:Key="MainWindow_RequestElevation">请求权限提升</sys:String>
+    
+    <!-- MainWindow Navigation -->
+    <sys:String x:Key="MainWindow_NavProcess">进程管理</sys:String>
+    <sys:String x:Key="MainWindow_NavMasks">CPU 掩码</sys:String>
+    <sys:String x:Key="MainWindow_NavPower">电源计划</sys:String>
+    <sys:String x:Key="MainWindow_NavRules">自动化规则</sys:String>
+    <sys:String x:Key="MainWindow_NavDiagnostics">性能诊断</sys:String>
+    <sys:String x:Key="MainWindow_NavActivity">活动日志</sys:String>
+    <sys:String x:Key="MainWindow_NavTweaks">系统微调</sys:String>
+    <sys:String x:Key="MainWindow_NavSettings">应用设置</sys:String>
+    
+    <!-- MainWindow Overlays -->
+    <sys:String x:Key="MainWindow_StartupMinimizedSuggestionTitle">启动时最小化</sys:String>
+    <sys:String x:Key="MainWindow_StartupMinimizedSuggestionDescription">开启此项后，ThreadPilot 会在 Windows 登录时静默启动至系统托盘。</sys:String>
+    <sys:String x:Key="MainWindow_Recommended">推荐</sys:String>
+    <sys:String x:Key="MainWindow_DontShowAgain">不再显示</sys:String>
+    <sys:String x:Key="MainWindow_OpenSettings">打开设置</sys:String>
+    
+    <!-- LogViewerView -->
+    <sys:String x:Key="LogViewerView_Title">ThreadPilot 活动日志</sys:String>
+    <sys:String x:Key="LogViewerView_Subtitle">显示 ThreadPilot 执行的操作，包括已应用规则、关联性更改、优先级更改、电源计划更改、设置更改、调整、优化以及安全故障消息。</sys:String>
+    <sys:String x:Key="LogViewerView_Search">搜索:</sys:String>
+    <sys:String x:Key="LogViewerView_CategoryLabel">类别:</sys:String>
+    <sys:String x:Key="LogViewerView_LevelLabel">级别:</sys:String>
+    <sys:String x:Key="LogViewerView_From">从:</sys:String>
+    <sys:String x:Key="LogViewerView_To">至:</sys:String>
+    <sys:String x:Key="LogViewerView_Refresh">刷新</sys:String>
+    <sys:String x:Key="LogViewerView_ClearDisplay">清除显示</sys:String>
+    <sys:String x:Key="LogViewerView_ExportActivity">导出活动</sys:String>
+    <sys:String x:Key="LogViewerView_CleanupDiagnostics">清理诊断文件</sys:String>
+    <sys:String x:Key="LogViewerView_OpenFolder">打开诊断文件夹</sys:String>
+    
+    <!-- LogViewerView Grid Headers -->
+    <sys:String x:Key="LogViewerView_HeaderTime">时间</sys:String>
+    <sys:String x:Key="LogViewerView_HeaderStatus">状态</sys:String>
+    <sys:String x:Key="LogViewerView_HeaderCategory">类别</sys:String>
+    <sys:String x:Key="LogViewerView_HeaderMessage">消息</sys:String>
+    <sys:String x:Key="LogViewerView_HeaderDetails">详情</sys:String>
+    <sys:String x:Key="LogViewerView_HeaderId">ID</sys:String>
+    <sys:String x:Key="LogViewerView_ContextMenuCopy">复制条目</sys:String>
+    <sys:String x:Key="LogViewerView_ContextMenuRefresh">刷新</sys:String>
+    <sys:String x:Key="LogViewerView_NoEntries">没有要显示的日志条目</sys:String>
+    <sys:String x:Key="LogViewerView_NoEntriesTip">调整过滤器或刷新日志以加载最近的 ThreadPilot 活动。</sys:String>
+    
+    <!-- LogViewerView Details -->
+    <sys:String x:Key="LogViewerView_DetailsTitle">活动详情</sys:String>
+    <sys:String x:Key="LogViewerView_Timestamp">时间戳:</sys:String>
+    <sys:String x:Key="LogViewerView_Status">状态:</sys:String>
+    <sys:String x:Key="LogViewerView_Category">类别:</sys:String>
+    <sys:String x:Key="LogViewerView_Message">消息:</sys:String>
+    <sys:String x:Key="LogViewerView_Details">详情:</sys:String>
+    <sys:String x:Key="LogViewerView_CorrelationId">相关性 ID:</sys:String>
+    <sys:String x:Key="LogViewerView_NoEntrySelected">未选择日志条目</sys:String>
+    <sys:String x:Key="LogViewerView_Files">文件:</sys:String>
+    <sys:String x:Key="LogViewerView_Size">大小:</sys:String>
+    <sys:String x:Key="LogViewerView_DebugDiagnostics">调试诊断</sys:String>
+    <sys:String x:Key="LogViewerView_MaxSize">最大大小 (MB):</sys:String>
+    <sys:String x:Key="LogViewerView_Retention">保留天数 (天):</sys:String>
+    <sys:String x:Key="LogViewerView_SaveSettings">保存设置</sys:String>
+    
+    <!-- MasksView -->
+    <sys:String x:Key="MasksView_Title">CPU 掩码</sys:String>
+    <sys:String x:Key="MasksView_Subtitle">创建可复用的 CPU 关联性预设以供每个进程使用。</sys:String>
+    <sys:String x:Key="MasksView_EditingClarification">在此处选择掩码仅编辑预设。在将其应用于进程或保存在进程规则中之前，它不会更改 CPU 关联性。</sys:String>
+    <sys:String x:Key="MasksView_New">新建</sys:String>
+    <sys:String x:Key="MasksView_Delete">删除</sys:String>
+    <sys:String x:Key="MasksView_Duplicate">复制掩码</sys:String>
+    <sys:String x:Key="MasksView_Info">掩码信息</sys:String>
+    <sys:String x:Key="MasksView_Name">名称:</sys:String>
+    <sys:String x:Key="MasksView_Description">描述:</sys:String>
+    <sys:String x:Key="MasksView_Enabled">已启用</sys:String>
+    <sys:String x:Key="MasksView_DefaultPreset">默认预设</sys:String>
+    <sys:String x:Key="MasksView_DefaultPresetTip">当 ThreadPilot 需要后备掩码或创建针对每个进程的规则时预先选择。它不会自动应用 CPU 关联性。</sys:String>
+    <sys:String x:Key="MasksView_DisableTip">禁用以暂时隐藏此掩码</sys:String>
+    <sys:String x:Key="MasksView_SelectCpus">选择 CPU 核心</sys:String>
+    <sys:String x:Key="MasksView_SelectCpusTip">切换 CPU 以编辑此掩码预设。更改将自动保存，且不会影响正在运行的进程。“所有核心”是受保护的默认预设。</sys:String>
+    <sys:String x:Key="MasksView_SavedAutomatically">掩码名称、描述、CPU 选择和选项会自动保存。</sys:String>
+    <sys:String x:Key="MasksView_CreateNewTooltip">创建新的 CPU 掩码</sys:String>
+    <sys:String x:Key="MasksView_DeleteTooltip">删除选定的掩码</sys:String>
+    <sys:String x:Key="MasksView_CpusHeader">CPU 核心</sys:String>
+    <sys:String x:Key="MasksView_Cpu">CPU</sys:String>
+
+    <!-- PerformanceView -->
+    <sys:String x:Key="PerformanceView_OptionalDiagnostics">可选性能诊断</sys:String>
+    <sys:String x:Key="PerformanceView_DiagnosticsDesc">诊断是可选的，仅用于故障排除。对于游戏内覆盖层和详细的性能图表，请使用专用工具。</sys:String>
+    <sys:String x:Key="PerformanceView_QuickTips">快速提示：</sys:String>
+    <sys:String x:Key="PerformanceView_Tip1">1. 仅在需要针对性的故障排除快照时才打开诊断。</sys:String>
+    <sys:String x:Key="PerformanceView_Tip2">2. 在创建自动化规则之前，仅将热点查看作为提示。</sys:String>
+    <sys:String x:Key="PerformanceView_Tip3">3. 故障排除完成后，停止实时指标收集。</sys:String>
+    <sys:String x:Key="PerformanceView_Continue">继续前往诊断</sys:String>
+    
+    <sys:String x:Key="PerformanceView_ActiveProcesses">活动进程</sys:String>
+    <sys:String x:Key="PerformanceView_TopConsumersDesc">通过一键规则创建来监控 CPU 和内存的占用大户。</sys:String>
+    <sys:String x:Key="PerformanceView_SearchPlaceholder">按名称搜索进程</sys:String>
+    <sys:String x:Key="PerformanceView_RuleBackedOnly">仅限包含规则的</sys:String>
+    <sys:String x:Key="PerformanceView_ActionableOnly">仅限可操作的</sys:String>
+    <sys:String x:Key="PerformanceView_RuleImpact">规则影响</sys:String>
+    <sys:String x:Key="PerformanceView_CreateRuleButton">基于选择创建/更新规则</sys:String>
+    <sys:String x:Key="PerformanceView_CreateRuleTooltip">为选定的热点进程创建或更新自动化规则</sys:String>
+    
+    <sys:String x:Key="PerformanceView_Timeline">稳定性时间线</sys:String>
+    <sys:String x:Key="PerformanceView_ClearHistory">清除历史记录</sys:String>
+    <sys:String x:Key="PerformanceView_ClearHistoryTooltip">清除显示的指标和时间轴历史记录</sys:String>
+    <sys:String x:Key="PerformanceView_CoreSnapshot">核心快照</sys:String>
+    <sys:String x:Key="PerformanceView_CoreSnapshotDesc">单核利用率，用于快速的不平衡检查。</sys:String>
+    <sys:String x:Key="PerformanceView_ToggleCore">切换核心面板</sys:String>
+    <sys:String x:Key="PerformanceView_ToggleProcess">切换进程面板</sys:String>
+    <sys:String x:Key="PerformanceView_StartLive">开始实时指标</sys:String>
+    <sys:String x:Key="PerformanceView_StartLiveTooltip">为此控制面板启动实时指标收集</sys:String>
+    <sys:String x:Key="PerformanceView_StopLive">停止实时指标</sys:String>
+    <sys:String x:Key="PerformanceView_StopLiveTooltip">暂停实时指标收集；后台自动化会单独运行</sys:String>
+    <sys:String x:Key="PerformanceView_Refresh">刷新</sys:String>
+    <sys:String x:Key="PerformanceView_RefreshTooltip">刷新当前的仪表板快照</sys:String>
+    
+    <sys:String x:Key="PerformanceView_GlobalPowerPlan">全局电源计划</sys:String>
+    <sys:String x:Key="PerformanceView_MemoryUsed">已用内存</sys:String>
+    <sys:String x:Key="PerformanceView_CpuPercent">CPU %</sys:String>
+    <sys:String x:Key="PerformanceView_MemPercent">内存 %</sys:String>
+    <sys:String x:Key="PerformanceView_Threads">线程数</sys:String>
+    <sys:String x:Key="PerformanceView_Events">事件</sys:String>
+    <sys:String x:Key="PerformanceView_Severity">严重性</sys:String>
+    <sys:String x:Key="PerformanceView_Detail">详情</sys:String>
+    <sys:String x:Key="PerformanceView_Time">时间</sys:String>
+    <sys:String x:Key="PerformanceView_Category">类别</sys:String>
+    <sys:String x:Key="PerformanceView_Process">进程</sys:String>
+    <sys:String x:Key="PerformanceView_SelectedHotspot">选定的热点进程</sys:String>
+    <sys:String x:Key="PerformanceView_Metrics">指标</sys:String>
+    <sys:String x:Key="PerformanceView_Processes">进程</sys:String>
+
+    <!-- PowerPlanView -->
+    <sys:String x:Key="PowerPlanView_Title">电源计划管理</sys:String>
+    <sys:String x:Key="PowerPlanView_Subtitle">管理活动的 Windows 电源计划并导入自定义 .pow 配置文件</sys:String>
+    <sys:String x:Key="PowerPlanView_WindowsPowerPlans">Windows 电源计划</sys:String>
+    <sys:String x:Key="PowerPlanView_SelectActiveTip">选择要激活的 Windows 电源计划。</sys:String>
+    <sys:String x:Key="PowerPlanView_SetActive">设为活动 Windows 电源计划</sys:String>
+    <sys:String x:Key="PowerPlanView_SetActiveTooltip">将活动的 Windows 电源计划更改为所选计划</sys:String>
+    <sys:String x:Key="PowerPlanView_Refresh">刷新计划</sys:String>
+    <sys:String x:Key="PowerPlanView_RefreshTooltip">刷新可用电源计划的列表</sys:String>
+    <sys:String x:Key="PowerPlanView_CustomPowerPlans">自定义电源计划</sys:String>
+    <sys:String x:Key="PowerPlanView_LocalPlansTip">已准备好导入 Windows 的本地 .pow 文件。</sys:String>
+    <sys:String x:Key="PowerPlanView_ImportSelected">导入选中的 .pow</sys:String>
+    <sys:String x:Key="PowerPlanView_ImportSelectedTooltip">将所选的自定义 .pow 文件导入 Windows</sys:String>
+    <sys:String x:Key="PowerPlanView_AddFile">添加 .pow 文件</sys:String>
+    <sys:String x:Key="PowerPlanView_AddFileTooltip">向自定义库添加新的自定义电源计划文件</sys:String>
+    <sys:String x:Key="PowerPlanView_Delete">删除</sys:String>
+    <sys:String x:Key="PowerPlanView_Active">活动</sys:String>
+
+    <!-- ProcessPowerPlanAssociationView -->
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Title">规则与自动化</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Subtitle">自动化监控监视进程的启动/停止事件，并应用配置的电源计划、CPU 掩码和优先级规则。</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RuleEditor">规则编辑器</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_EditorSubtitle">从可执行文件或运行中的进程创建规则，以实现电源计划、CPU 掩码和优先级行为的自动化。</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_ExecutableMatch">可执行文件匹配:</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_MatchByPath">按路径匹配</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_MatchByPathTooltip">按完整路径而不是仅按可执行文件名称匹配进程</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Browse">浏览可执行文件</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_BrowseTooltip">点击以从您的计算机选择可执行文件 (.exe)</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_ExecutableHelp">选择可执行文件。按路径匹配更精确；按名称匹配适用于任何具有该可执行文件名称的进程。</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_UseRunningProcess">使用运行中的进程:</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_UseRunningProcessTooltip">选择当前运行的进程以使用其可执行文件</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_UseSelectedProcess">使用所选进程</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_UseSelectedProcessTooltip">使用所选运行中进程的可执行文件</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulePowerPlan">规则电源计划 (全局切换):</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulePowerPlanHelp">当此规则匹配时，Windows 将切换全局活动电源计划。</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RuleCpuMask">规则 CPU 掩码:</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RuleCpuMaskHelp">可选: 选择在该进程启动时要应用的 CPU 掩码</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulePriority">规则优先级</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulePriorityHelp">可选: 选择在该进程启动时要应用的进程优先级</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AssociationPriority">关联优先级:</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AssociationPriorityHelp">当有多个匹配时，优先级较高的关联优先使用</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AddRule">添加规则</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_UpdateRule">更新选定规则</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_UpdateRuleTooltip">更新所选的关联</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_ClearSelection">清除选择</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_ClearSelectionTooltip">清除选定的可执行文件</sys:String>
+    
+    <sys:String x:Key="ProcessPowerPlanAssociationView_CurrentRules">当前规则</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulesDescription">定义针对每个进程的规则。电源计划是全局的；掩码和优先级适用于匹配的进程。</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Remove">删除</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RemoveTooltip">删除所选关联</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_DefaultPowerPlan">默认电源计划 (当无规则匹配时的后备方案)</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_DefaultPowerPlanHelp">当没有关联的进程在运行时要使用的电源计划:</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SetDefault">设置默认电源计划</sys:String>
+    
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SettingsTitle">自动化监控设置</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_EnableWmi">启用基于事件的自动化 (WMI)</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_EnableFallback">启用自动化后备轮询</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_PollingInterval">轮询间隔 (秒):</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_ChangeDelay">电源计划切换延迟 (毫秒):</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_PreventDuplicates">防止重复更改电源计划</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SaveConfig">保存配置</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_NoRules">尚无自动化规则</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Status">状态:</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_StartAutomation">启动自动化监控</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_StopAutomation">停止自动化监控</sys:String>
+    
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AppliedToMatching">在运行自动化规则时应用于每个匹配的进程。</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AppliedOnlyToMatching">仅应用于匹配的进程；它不会更改全局 Windows 电源计划。</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SelectedExecutable">选定的可执行文件:</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_DescriptionLabel">描述:</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AutomationService">自动化服务</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulesHeader">规则</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">可执行文件</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_PowerPlan">电源计划</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_CpuMask">CPU 掩码</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Priority">优先级</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Description">描述</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_ProcessPriority">进程优先级:</sys:String>
+
+    <!-- ProcessView -->
+    <sys:String x:Key="ProcessView_Title">系统进程管理</sys:String>
+    <sys:String x:Key="ProcessView_Subtitle">搜索、过滤和控制活动的进程配置</sys:String>
+    <sys:String x:Key="ProcessView_SearchPlaceholder">按名称搜索进程</sys:String>
+    <sys:String x:Key="ProcessView_HideSystem">隐藏 Windows 系统进程</sys:String>
+    <sys:String x:Key="ProcessView_HideSystemShort">隐藏系统进程</sys:String>
+    <sys:String x:Key="ProcessView_HideLowCpu">隐藏 CPU 使用率极低的进程</sys:String>
+    <sys:String x:Key="ProcessView_HideIdle">隐藏空闲进程</sys:String>
+    <sys:String x:Key="ProcessView_VisibleWindowsOnly">仅显示具有可见窗口的应用程序</sys:String>
+    <sys:String x:Key="ProcessView_ActiveAppsOnly">仅限活动应用</sys:String>
+    <sys:String x:Key="ProcessView_LockList">锁定进程列表</sys:String>
+    <sys:String x:Key="ProcessView_LockListTooltip">在您处理当前列表时暂停进程列表刷新和排序更新。ThreadPilot 运行时，后台监控和保存的规则自动应用仍将继续。</sys:String>
+    <sys:String x:Key="ProcessView_SortBy">排序方式:</sys:String>
+    <sys:String x:Key="ProcessView_SortByTooltip">选择如何对进程列表进行排序</sys:String>
+    
+    <sys:String x:Key="ProcessView_SelectedProcess">选定的进程</sys:String>
+    <sys:String x:Key="ProcessView_NoProcessSelected">未选择进程</sys:String>
+    <sys:String x:Key="ProcessView_SelectProcessTip">从表格中选择一个进程以启用关联性、优先级、电源计划和规则操作。</sys:String>
+    <sys:String x:Key="ProcessView_PowerPlanPending">电源计划 / 待处理设置</sys:String>
+    <sys:String x:Key="ProcessView_PowerPlanTooltip">选择要手动激活的电源计划，或包含在快速应用中</sys:String>
+    <sys:String x:Key="ProcessView_SetPowerPlan">设置电源计划</sys:String>
+    <sys:String x:Key="ProcessView_SetPowerPlanTooltip">激活所选的 Windows 电源计划</sys:String>
+    
+    <sys:String x:Key="ProcessView_PendingCoreMask">待处理的核心掩码</sys:String>
+    <sys:String x:Key="ProcessView_StageMaskTooltip">选择一个掩码来暂存它。在点击“应用关联性”之前，这不会更改操作系统关联性。</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinity">应用关联性</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinityTooltip">将待处理的核心掩码应用于选定的进程，并验证 Windows 关联性状态</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinitySaveRule">应用关联性并保存为规则</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinitySaveRuleTooltip">将当前进程设置保存为规则。以后此进程启动时将自动应用这些设置。</sys:String>
+    
+    <sys:String x:Key="ProcessView_SetCpuPriority">设置 CPU 优先级</sys:String>
+    <sys:String x:Key="ProcessView_ApplyPriorityTooltip">将所选优先级应用于进程</sys:String>
+    <sys:String x:Key="ProcessView_EnforcePriorityRegistry">通过注册表强制执行优先级</sys:String>
+    <sys:String x:Key="ProcessView_EnforcePriorityRegistryTooltip">通过 Windows 注册表应用优先级。必须重新启动进程才能使更改生效。此设置在系统重启后仍然有效。</sys:String>
+    <sys:String x:Key="ProcessView_SetPriority">设置优先级</sys:String>
+    <sys:String x:Key="ProcessView_RealtimeBlockedHelp">实时优先级已被 ThreadPilot 阻止，因为它可能会使 Windows 不稳定或无响应。</sys:String>
+    <sys:String x:Key="ProcessView_RealtimeBlocked">实时 (已阻止)</sys:String>
+    
+    <sys:String x:Key="ProcessView_DisableIdleServer">禁用空闲服务</sys:String>
+    <sys:String x:Key="ProcessView_DisableIdleServerTooltip">在此进程运行时阻止系统进入空闲状态。适用于游戏和对性能要求严苛的应用程序。</sys:String>
+    
+    <sys:String x:Key="ProcessView_ProfileRule">配置文件 / 规则</sys:String>
+    <sys:String x:Key="ProcessView_ProfileNamePlaceholder">输入配置文件名称以保存或加载设置</sys:String>
+    <sys:String x:Key="ProcessView_SaveProfile">保存配置文件</sys:String>
+    <sys:String x:Key="ProcessView_SaveProfileTooltip">将当前 CPU 关联性和优先级保存为可复用的配置文件</sys:String>
+    <sys:String x:Key="ProcessView_LoadProfile">加载配置文件</sys:String>
+    <sys:String x:Key="ProcessView_LoadProfileTooltip">加载以前保存的配置文件</sys:String>
+    <sys:String x:Key="ProcessView_SaveCurrentRule">保存当前设置为规则</sys:String>
+    
+    <sys:String x:Key="ProcessView_LastAction">最后一次 ThreadPilot 操作:</sys:String>
+    <sys:String x:Key="ProcessView_Refresh">刷新</sys:String>
+    <sys:String x:Key="ProcessView_RefreshTooltip">刷新进程列表</sys:String>
+    <sys:String x:Key="ProcessView_LoadMore">加载更多</sys:String>
+    <sys:String x:Key="ProcessView_LoadMoreTooltip">加载更多进程</sys:String>
+    
+    <sys:String x:Key="ProcessView_ColProcessName">进程名称</sys:String>
+    <sys:String x:Key="ProcessView_ColWindowTitle">窗口标题</sys:String>
+    <sys:String x:Key="ProcessView_ColCpuUsage">CPU 使用率</sys:String>
+    <sys:String x:Key="ProcessView_ColMemory">内存使用</sys:String>
+    
+    <sys:String x:Key="ProcessView_AffinityStagedTooltip">关联性已暂存在 UI 中。在点击“应用关联性”之前不会应用。</sys:String>
+    <sys:String x:Key="ProcessView_AffinityCurrentTooltip">Windows 当前报告的所选进程的关联性</sys:String>
+    <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">当前或待处理 CPU 选择的只读预览</sys:String>
+    <sys:String x:Key="ProcessView_OpenMasksTabTooltip">打开 CPU 掩码选项卡以创建新的自定义掩码</sys:String>
+    <sys:String x:Key="ProcessView_HyperThreadingTooltip">显示此系统上是否具有并启用了超线程 (Intel) 或 SMT (AMD)</sys:String>
+    
+    <sys:String x:Key="ProcessView_CopyProcessInfo">复制进程信息</sys:String>
+    <sys:String x:Key="ProcessView_OpenLocation">打开可执行文件位置</sys:String>
+    <sys:String x:Key="ProcessView_ClearCpuSets">清除 CPU 集</sys:String>
+    <sys:String x:Key="ProcessView_ApplyPendingSettings">应用待处理设置</sys:String>
+    <sys:String x:Key="ProcessView_ApplyPendingSettingsTooltip">将待处理的关联性和选定的电源计划应用于选定的进程</sys:String>
+    <sys:String x:Key="ProcessView_RulesAppliedOnlyWhenConfigured">ThreadPilot 仅在配置后才应用规则和更改。</sys:String>
+    
+    <sys:String x:Key="ProcessView_PriorityAboveNormal">高于正常</sys:String>
+    <sys:String x:Key="ProcessView_PriorityBelowNormal">低于正常</sys:String>
+    <sys:String x:Key="ProcessView_PriorityHigh">高</sys:String>
+    <sys:String x:Key="ProcessView_PriorityIdle">空闲</sys:String>
+    <sys:String x:Key="ProcessView_PriorityLow">低</sys:String>
+    <sys:String x:Key="ProcessView_PriorityNormal">正常</sys:String>
+    <sys:String x:Key="ProcessView_PriorityRealtime">实时</sys:String>
+    <sys:String x:Key="ProcessView_PriorityBatch">批处理</sys:String>
+    <sys:String x:Key="ProcessView_PriorityCustom">自定义</sys:String>
+    
+    <sys:String x:Key="ProcessView_HasWindow">有窗口</sys:String>
+    <sys:String x:Key="ProcessView_Window">窗口</sys:String>
+    <sys:String x:Key="ProcessView_PID">PID</sys:String>
+    <sys:String x:Key="ProcessView_ID">ID</sys:String>
+    <sys:String x:Key="ProcessView_MemoryMb">内存 (MB)</sys:String>
+    <sys:String x:Key="ProcessView_Affinity">关联性</sys:String>
+    <sys:String x:Key="ProcessView_Priority">优先级</sys:String>
+    <sys:String x:Key="ProcessView_Rules">规则</sys:String>
+    <sys:String x:Key="ProcessView_Name">名称</sys:String>
+    <sys:String x:Key="ProcessView_SetMemoryPriority">设置内存优先级</sys:String>
+    <sys:String x:Key="ProcessView_PriorityVeryLow">极低</sys:String>
+    <sys:String x:Key="ProcessView_PriorityMedium">中</sys:String>
+    <sys:String x:Key="ProcessView_RefreshInfo">刷新进程信息</sys:String>
+
+    <!-- SettingsView -->
+    <sys:String x:Key="SettingsView_Title">ThreadPilot 系统设置</sys:String>
+    <sys:String x:Key="SettingsView_Subtitle">配置通知、系统托盘和应用程序行为</sys:String>
+    <sys:String x:Key="SettingsView_Notifications">系统通知</sys:String>
+    <sys:String x:Key="SettingsView_EnableNotifications">启用应用通知</sys:String>
+    <sys:String x:Key="SettingsView_NotificationLevel">通知级别</sys:String>
+    <sys:String x:Key="SettingsView_NotificationLevelAll">全部显示</sys:String>
+    <sys:String x:Key="SettingsView_NotificationLevelWarningsErrors">仅警告与错误</sys:String>
+    <sys:String x:Key="SettingsView_NotificationLevelSilent">静音模式</sys:String>
+    <sys:String x:Key="SettingsView_EnableBalloon">启用系统托盘气泡通知</sys:String>
+    <sys:String x:Key="SettingsView_EnableToast">启用 Windows 吐司通知 (Windows 10+)</sys:String>
+    <sys:String x:Key="SettingsView_NotificationTypes">通知事件类别</sys:String>
+    <sys:String x:Key="SettingsView_NotifyPowerPlan">电源计划变更</sys:String>
+    <sys:String x:Key="SettingsView_NotifyProcess">进程监控事件</sys:String>
+    <sys:String x:Key="SettingsView_NotifyError">错误与异常通知</sys:String>
+    <sys:String x:Key="SettingsView_NotifySuccess">操作成功提示</sys:String>
+    <sys:String x:Key="SettingsView_Duration">持续显示时间 (毫秒):</sys:String>
+    <sys:String x:Key="SettingsView_TestNotification">测试通知发送</sys:String>
+    
+    <sys:String x:Key="SettingsView_SystemTray">系统托盘栏</sys:String>
+    <sys:String x:Key="SettingsView_ShowTrayIcon">显示托盘图标</sys:String>
+    <sys:String x:Key="SettingsView_MinimizeToTray">最小化到托盘</sys:String>
+    <sys:String x:Key="SettingsView_CloseToTray">关闭主窗口时最小化到托盘</sys:String>
+    <sys:String x:Key="SettingsView_StartMinimized">开机启动时最小化</sys:String>
+    <sys:String x:Key="SettingsView_QuickApply">允许从托盘菜单应用待处理设置</sys:String>
+    <sys:String x:Key="SettingsView_MonitoringControl">允许从托盘菜单控制自动化监控</sys:String>
+    <sys:String x:Key="SettingsView_DetailedTooltips">托盘图标显示详细鼠标提示</sys:String>
+    
+    <sys:String x:Key="SettingsView_BasicPreferences">基本偏好设置</sys:String>
+    <sys:String x:Key="SettingsView_Autostart">系统开机启动</sys:String>
+    <sys:String x:Key="SettingsView_StartWithWindows">随 Windows 开机启动</sys:String>
+    <sys:String x:Key="SettingsView_AutostartDescription">在 Windows 系统启动时自动开启 ThreadPilot</sys:String>
+    <sys:String x:Key="SettingsView_LowImpactMode">后台低系统影响模式</sys:String>
+    <sys:String x:Key="SettingsView_LowImpactDescription">在最小化或隐藏至托盘时自动降低 ThreadPilot 的进程优先级。</sys:String>
+    
+    <sys:String x:Key="SettingsView_Appearance">外观主题</sys:String>
+    <sys:String x:Key="SettingsView_UseDarkTheme">启用暗黑主题</sys:String>
+    <sys:String x:Key="SettingsView_ThemeDescription">在所有选项卡上全局应用 亮色/暗色 视觉风格</sys:String>
+    
+    <sys:String x:Key="SettingsView_Language">显示语言</sys:String>
+    <sys:String x:Key="SettingsView_LanguageZhCn">简体中文 (Simplified Chinese)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageEnUs">English (English)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageDescription">在整个应用程序界面应用全局的语言设置。</sys:String>
+    
+    <sys:String x:Key="SettingsView_RulesAutomation">规则与自动化</sys:String>
+    <sys:String x:Key="SettingsView_RuleAutoApply">保存规则自动应用</sys:String>
+    <sys:String x:Key="SettingsView_ApplyOnStart">在匹配的进程启动时自动应用已保存规则</sys:String>
+    <sys:String x:Key="SettingsView_ApplyOnStartDescription">在 ThreadPilot 运行时自动应用已启用的保存规则。这不会注册 Windows 服务，也不使用注册表/IFEO 进行常驻。</sys:String>
+    <sys:String x:Key="SettingsView_EnableWmi">启用 WMI 进程启动监控</sys:String>
+    <sys:String x:Key="SettingsView_WmiDescription">使用 Windows Management Instrumentation 来监听进程启动/退出事件</sys:String>
+    <sys:String x:Key="SettingsView_EnableFallback">启用后备轮询监控</sys:String>
+    <sys:String x:Key="SettingsView_FallbackDescription">如果 WMI 进程事件订阅失败，自动启用定时轮询作为备份</sys:String>
+    <sys:String x:Key="SettingsView_PollingInterval">轮询间隔时间 (毫秒):</sys:String>
+    <sys:String x:Key="SettingsView_FallbackPollingInterval">后备轮询间隔时间 (毫秒):</sys:String>
+    
+    <sys:String x:Key="SettingsView_Advanced">高级与调试设置</sys:String>
+    <sys:String x:Key="SettingsView_NotificationHistory">启用通知历史记录</sys:String>
+    <sys:String x:Key="SettingsView_MaxHistory">最大历史条目数:</sys:String>
+    <sys:String x:Key="SettingsView_AutoHide">自动渐隐通知气泡</sys:String>
+    <sys:String x:Key="SettingsView_NotificationSound">播放提示音</sys:String>
+    <sys:String x:Key="SettingsView_DebugLogging">开启调试诊断日志记录</sys:String>
+    <sys:String x:Key="SettingsView_PerformanceCounters">启用内部性能计数器</sys:String>
+    
+    <sys:String x:Key="SettingsView_About">关于应用</sys:String>
+    <sys:String x:Key="SettingsView_Version">软件版本:</sys:String>
+    <sys:String x:Key="SettingsView_Copyright">版权所有 © 2026 PrimeBuild</sys:String>
+    <sys:String x:Key="SettingsView_Translator">翻译人员：Ylimhs</sys:String>
+    <sys:String x:Key="SettingsView_License">软件授权: AGPLv3</sys:String>
+    <sys:String x:Key="SettingsView_CheckUpdates">检查新版本</sys:String>
+    <sys:String x:Key="SettingsView_UpdatesDescription">按需通过官方 GitHub Releases API 检索最新稳定版本。</sys:String>
+    
+    <sys:String x:Key="SettingsView_ResetDefaults">重置为默认值</sys:String>
+    <sys:String x:Key="SettingsView_ExportConfig">导出配置包</sys:String>
+    <sys:String x:Key="SettingsView_ImportConfig">导入配置包</sys:String>
+    <sys:String x:Key="SettingsView_SaveSettings">保存并应用设置</sys:String>
+    <sys:String x:Key="SettingsView_ThreadPilot">ThreadPilot</sys:String>
+
+    <!-- SettingsWindow -->
+    <sys:String x:Key="SettingsWindow_Title">ThreadPilot 设置</sys:String>
+    <sys:String x:Key="SettingsWindow_UnsavedTitle">未保存的设置</sys:String>
+    <sys:String x:Key="SettingsWindow_UnsavedDescription">您有尚未保存的更改。请选择在关闭前保存、放弃修改或取消并返回编辑。</sys:String>
+    <sys:String x:Key="SettingsWindow_Cancel">取消</sys:String>
+    <sys:String x:Key="SettingsWindow_Discard">放弃更改</sys:String>
+    <sys:String x:Key="SettingsWindow_Save">保存</sys:String>
+
+    <!-- SystemTweaksView -->
+    <sys:String x:Key="SystemTweaksView_Title">系统微调与优化</sys:String>
+    <sys:String x:Key="SystemTweaksView_Subtitle">配置 Windows 系统级优化项和性能微调选项</sys:String>
+    <sys:String x:Key="SystemTweaksView_RefreshAll">刷新状态</sys:String>
+    <sys:String x:Key="SystemTweaksView_RefreshAllTooltip">刷新所有微调选项的状态</sys:String>
+    <sys:String x:Key="SystemTweaksView_TweakTooltip">切换此 Windows 系统微调项</sys:String>
+    <sys:String x:Key="SystemTweaksView_Status">当前状态</sys:String>
+
+    <!-- SystemTweaks Names and Descriptions -->
+    <sys:String x:Key="SystemTweak_CoreParking_Name">核心休眠 (Core Parking)</sys:String>
+    <sys:String x:Key="SystemTweak_CoreParking_Desc">控制 CPU 核心休眠以进行电源管理</sys:String>
+    <sys:String x:Key="SystemTweak_CStates_Name">C-States 状态</sys:String>
+    <sys:String x:Key="SystemTweak_CStates_Desc">控制 CPU C-States 以进行节能电源管理</sys:String>
+    <sys:String x:Key="SystemTweak_SysMain_Name">SysMain 服务</sys:String>
+    <sys:String x:Key="SystemTweak_SysMain_Desc">Windows Superfetch/SysMain 服务，用于内存管理</sys:String>
+    <sys:String x:Key="SystemTweak_Prefetch_Name">预取 (Prefetch)</sys:String>
+    <sys:String x:Key="SystemTweak_Prefetch_Desc">Windows Prefetch 功能，用于加速应用程序加载</sys:String>
+    <sys:String x:Key="SystemTweak_PowerThrottling_Name">电源限流 (Power Throttling)</sys:String>
+    <sys:String x:Key="SystemTweak_PowerThrottling_Desc">Windows 电源限流功能，用于能效优化</sys:String>
+    <sys:String x:Key="SystemTweak_Hpet_Name">HPET 定时器</sys:String>
+    <sys:String x:Key="SystemTweak_Hpet_Desc">高精度事件计时器，用于系统精准定时</sys:String>
+    <sys:String x:Key="SystemTweak_HighSchedulingCategory_Name">高调度优先级类别</sys:String>
+    <sys:String x:Key="SystemTweak_HighSchedulingCategory_Desc">为游戏应用程序提供高调度优先级</sys:String>
+    <sys:String x:Key="SystemTweak_MenuShowDelay_Name">菜单显示延迟</sys:String>
+    <sys:String x:Key="SystemTweak_MenuShowDelay_Desc">显示上下文菜单之前的延迟时间</sys:String>
+
+    <!-- SystemTweaksViewModel Messages -->
+    <sys:String x:Key="SystemTweaks_StatusReady">就绪</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusRefreshing">正在刷新系统微调选项...</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusLastRefreshedFormat">上次刷新时间: {0}</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusRefreshFailed">刷新系统微调失败</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusRefreshFailedShort">刷新失败</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusTogglingFormat">正在切换 {0}...</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusEnabledFormat">{0} 已成功启用</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusDisabledFormat">{0} 已成功禁用</sys:String>
+    <sys:String x:Key="SystemTweaks_NotifyEnabledFormat">{0} 已启用</sys:String>
+    <sys:String x:Key="SystemTweaks_NotifyDisabledFormat">{0} 已禁用</sys:String>
+    <sys:String x:Key="SystemTweaks_NotifyUpdatedTitle">系统微调已更新</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusToggleFailedFormat">无法切换 {0}</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusEnableFailedFormat">未能启用 {0}</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusDisableFailedFormat">未能禁用 {0}</sys:String>
+    <sys:String x:Key="SystemTweaks_NotifyFailedTitle">系统微调失败</sys:String>
+    <sys:String x:Key="SystemTweaks_NotifyFailedFormat">未能{0}{1}</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusErrorTogglingFormat">切换 {0} 出错</sys:String>
+    <sys:String x:Key="SystemTweaks_NotifyErrorFormat">切换 {0} 时出错: {1}</sys:String>
+    <sys:String x:Key="SystemTweaks_WordEnable">启用</sys:String>
+    <sys:String x:Key="SystemTweaks_WordDisable">禁用</sys:String>
+    <sys:String x:Key="SystemTweaks_WordEnabled">启用</sys:String>
+    <sys:String x:Key="SystemTweaks_WordDisabled">禁用</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusEnabled">已启用</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusDisabled">已禁用</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusNotAvailable">不可用</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusLoading">正在加载系统微调...</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusLoadedSuccess">系统微调已成功加载</sys:String>
+
+    <!-- SystemTray Context Menu & Status -->
+    <sys:String x:Key="SystemTray_OpenDashboard">打开主控制面板</sys:String>
+    <sys:String x:Key="SystemTray_OpenDiagnostics">打开性能诊断</sys:String>
+    <sys:String x:Key="SystemTray_PauseMonitoring">暂停自动化监控</sys:String>
+    <sys:String x:Key="SystemTray_ResumeMonitoring">恢复自动化监控</sys:String>
+    <sys:String x:Key="SystemTray_SystemStatus">系统状态</sys:String>
+    <sys:String x:Key="SystemTray_NoProcessSelected">未选择进程</sys:String>
+    <sys:String x:Key="SystemTray_SelectedProcessFormat">已选择: {0}</sys:String>
+    <sys:String x:Key="SystemTray_ApplyPendingToSelected">应用待处理设置到所选进程</sys:String>
+    <sys:String x:Key="SystemTray_ApplyPendingToProcessFormat">应用待处理设置到 {0}</sys:String>
+    <sys:String x:Key="SystemTray_PowerPlans">🔋 电源计划</sys:String>
+    <sys:String x:Key="SystemTray_Profiles">📋 配置文件</sys:String>
+    <sys:String x:Key="SystemTray_Settings">应用设置</sys:String>
+    <sys:String x:Key="SystemTray_Exit">退出程序</sys:String>
+    <sys:String x:Key="SystemTray_NoProfilesAvailable">无可用配置文件</sys:String>
+    <sys:String x:Key="SystemTray_PowerPlanFormat">电源计划: {0}</sys:String>
+    <sys:String x:Key="SystemTray_StatusWmiError">自动化 WMI 错误</sys:String>
+    <sys:String x:Key="SystemTray_StatusActive">自动化监控已启用</sys:String>
+    <sys:String x:Key="SystemTray_StatusDisabled">自动化监控已禁用</sys:String>
+    <sys:String x:Key="SystemTray_Unknown">未知</sys:String>
+    <sys:String x:Key="SystemTray_CpuRamStatusFormat">💻 CPU: {0:F1}% | 内存: {1:F1}% | {2}</sys:String>
+
+    <!-- ProcessOperationUserMessages -->
+    <sys:String x:Key="ProcessOperationUserMessages_AccessDenied">Windows 拒绝了此更改。该进程可能需要管理员权限或受保护。</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_AntiCheatProtectedLikely">该进程似乎受到反作弊系统或进程保护的保护。ThreadPilot 不会尝试绕过它。</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_AdminClarification">管理员模式可能有助于解决普通的权限问题，但无法绕过反作弊系统或受保护的进程限制。</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_LegacyFallbackBlocked">在此拓扑上，此 CPU 选择无法由传统关联性 API 安全地表示。此选择需要使用 CPU 集。</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_InvalidTopology">此 CPU 选择与当前 CPU 拓扑不匹配。请检查或重新创建预设。</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_ProcessExited">在 ThreadPilot 应用更改之前，进程已退出。</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_CpuSetsUnavailable">Windows CPU 集不可用或拒绝了此选择。ThreadPilot 将仅在可能时使用 safe 后备方案。</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_HighPriorityWarning">高优先级可以提高某些工作负载的响应速度，但可能会降低系统整体响应速度。</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_RealtimePriorityBlocked">实时优先级已被 ThreadPilot 阻止，因为它可能会使 Windows 不稳定或无响应。</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_PersistentLaunchTimePriorityNotice">普通进程可能支持持久的启动时优先级，但这不会绕过受保护进程或反作弊系统的限制。</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_PersistentRulesDescription">在匹配的进程启动时应用保存的规则。某些受保护或反作弊进程可能会拒绝更改。管理员模式有助于解决普通权限问题，但无法绕过进程保护。</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_PersistentRulesProtectedProcessWarning">该进程似乎受到反作弊系统或进程保护的保护。ThreadPilot 不会尝试对其进行改写。</sys:String>
+    
+    <!-- Notifications -->
+    <sys:String x:Key="Notification_PowerPlanChangedTitle">电源计划已更改</sys:String>
+    <sys:String x:Key="Notification_PowerPlanChangedFormat">电源计划已从“{0}”更改为“{1}”</sys:String>
+    <sys:String x:Key="Notification_PowerPlanChangedProcessFormat">已为进程“{1}”将电源计划切换为“{0}”</sys:String>
+    <sys:String x:Key="Notification_ProcessMonitoringEnabled">进程监控已启用</sys:String>
+    <sys:String x:Key="Notification_ProcessMonitoringDisabled">进程监控已禁用</sys:String>
+    <sys:String x:Key="Notification_CpuAffinityAppliedTitle">CPU 关联性已应用</sys:String>
+    <sys:String x:Key="Notification_CpuAffinityAppliedFormat">已为“{0}”设置 CPU 关联性: {1}</sys:String>
+    <sys:String x:Key="Notification_GameBoostActivatedTitle">游戏加速已启用</sys:String>
+    <sys:String x:Key="Notification_GameBoostActivatedFormat">已为 {0} 启用游戏加速模式</sys:String>
+    <sys:String x:Key="Notification_GameBoostDeactivatedTitle">游戏加速已关闭</sys:String>
+    <sys:String x:Key="Notification_GameBoostDeactivatedFormat">游戏加速模式已关闭，持续时间: {0}</sys:String>
+    <sys:String x:Key="Notification_ProcessMonitorErrorTitle">进程监控器错误</sys:String>
+    <sys:String x:Key="Notification_AffinityBlockedTitle">关联性应用被阻止</sys:String>
+    <sys:String x:Key="Notification_PriorityBlockedTitle">优先级应用被阻止</sys:String>
+
+    <!-- Elevation Service -->
+    <sys:String x:Key="Elevation_RequestPromptText">ThreadPilot 需要管理员权限来管理进程关联性和电源计划。&#x0a;&#x0a;您想以管理员权限重新启动应用程序吗？</sys:String>
+    <sys:String x:Key="Elevation_RequestPromptTitle">需要管理员权限</sys:String>
+    <sys:String x:Key="Elevation_FailedText">无法以管理员权限重新启动。请手动以管理员身份运行 ThreadPilot。</sys:String>
+    <sys:String x:Key="Elevation_FailedTitle">权限提升失败</sys:String>
+    <sys:String x:Key="Elevation_StatusRunning">以管理员权限运行中</sys:String>
+    <sys:String x:Key="Elevation_StatusLimited">以受限权限运行中</sys:String>
+
+    <!-- System Tweaks Errors -->
+    <sys:String x:Key="SystemTweak_Error_QueryCoreParking">无法通过 powercfg 查询核心停车值</sys:String>
+    <sys:String x:Key="SystemTweak_Error_QueryCStates">无法通过 powercfg 查询 C-States 值</sys:String>
+    <sys:String x:Key="SystemTweak_Error_PrefetchKeyNotFound">未找到预取注册表键</sys:String>
+    <sys:String x:Key="SystemTweak_Error_PowerThrottlingNotAvailable">此系统上不支持电源限流</sys:String>
+    <sys:String x:Key="SystemTweak_Error_PriorityControlKeyNotFound">未找到 PriorityControl 注册表键</sys:String>
+    <sys:String x:Key="SystemTweak_Error_DesktopKeyNotFound">未找到 Desktop 注册表键</sys:String>
+</ResourceDictionary>

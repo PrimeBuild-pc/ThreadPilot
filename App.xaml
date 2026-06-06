@@ -10,6 +10,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <ui:ThemesDictionary Theme="Dark"/>
                 <ui:ControlsDictionary/>
+                <ResourceDictionary Source="Locales/en-US.xaml"/>
                 <ResourceDictionary Source="Themes/FluentDark.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             <helpers:BytesToMbConverter x:Key="BytesToMbConverter"/>

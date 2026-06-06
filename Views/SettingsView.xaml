@@ -178,49 +178,60 @@
 
                 <!-- Basic Preferences Section -->
                 <StackPanel Width="372" Margin="0,0,16,16">
-                    <TextBlock Text="Basic Preferences" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
+                    <TextBlock Text="{DynamicResource SettingsView_BasicPreferences}" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
                     <Border Style="{StaticResource SettingsCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="Autostart" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                            <CheckBox Content="Start with Windows"
+                            <TextBlock Text="{DynamicResource SettingsView_Autostart}" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                            <CheckBox Content="{DynamicResource SettingsView_StartWithWindows}"
                                       IsChecked="{Binding Settings.AutostartWithWindows}"
                                       Margin="0,0,0,5"/>
-                            <TextBlock Text="Automatically start ThreadPilot when Windows starts"
+                            <TextBlock Text="{DynamicResource SettingsView_AutostartDescription}"
                                        Style="{StaticResource DescriptionStyle}"
                                        Margin="20,0,0,15"/>
 
-                            <CheckBox Content="Low impact mode in background"
+                            <CheckBox Content="{DynamicResource SettingsView_LowImpactMode}"
                                       IsChecked="{Binding Settings.EnableSelfLowImpactMode}"
                                       Margin="0,0,0,5"/>
-                            <TextBlock Text="Lower ThreadPilot's process priority while minimized or hidden to tray."
+                            <TextBlock Text="{DynamicResource SettingsView_LowImpactDescription}"
                                        Style="{StaticResource DescriptionStyle}"
                                        Margin="20,0,0,15"/>
                                        
                             <Separator Margin="0,0,0,15"/>
                             
-                            <TextBlock Text="Appearance" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                            <CheckBox Content="Use dark theme"
+                            <TextBlock Text="{DynamicResource SettingsView_Appearance}" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                            <CheckBox Content="{DynamicResource SettingsView_UseDarkTheme}"
                                       IsChecked="{Binding Settings.UseDarkTheme}"
                                       Margin="0,0,0,5"/>
-                            <TextBlock Text="Applies a global Dark/Light theme across all tabs"
+                            <TextBlock Text="{DynamicResource SettingsView_ThemeDescription}"
                                        Style="{StaticResource DescriptionStyle}"
                                        Margin="20,0,0,5"/>
+
+                            <Separator Margin="0,10"/>
+
+                            <TextBlock Text="{DynamicResource SettingsView_Language}" FontWeight="SemiBold" Margin="0,5,0,5"/>
+                            <ComboBox SelectedValue="{Binding Settings.Language}" SelectedValuePath="Tag" Margin="0,0,0,5">
+                                <ComboBoxItem Content="{DynamicResource SettingsView_LanguageEnUs}" Tag="en-US"/>
+                                <ComboBoxItem Content="{DynamicResource SettingsView_LanguageZhCn}" Tag="zh-CN"/>
+                            </ComboBox>
+                            <TextBlock Text="{DynamicResource SettingsView_LanguageDescription}"
+                                       Style="{StaticResource DescriptionStyle}"
+                                       Margin="0,2,0,5"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
 
                 <!-- Rules & automation Section -->
                 <StackPanel Width="372" Margin="0,0,16,16">
-                    <TextBlock Text="Rules &amp; automation" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
+                    <TextBlock Text="{DynamicResource SettingsView_RulesAutomation}" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
                     <Border Style="{StaticResource SettingsCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="Saved rule auto-apply" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                            <TextBlock Text="{DynamicResource SettingsView_RuleAutoApply}" FontWeight="SemiBold" Margin="0,0,0,5"/>
                             <CheckBox IsChecked="{Binding Settings.ApplyPersistentRulesOnProcessStart}"
                                       Margin="0,0,0,5">
-                                <TextBlock Text="Apply saved rules when matching processes start"
+                                <TextBlock Text="{DynamicResource SettingsView_ApplyOnStart}"
                                            TextWrapping="Wrap"/>
                             </CheckBox>
-                            <TextBlock Text="Applies enabled saved rules while ThreadPilot is running. This does not install a Windows Service and does not use registry/IFEO persistence."
+                            <TextBlock Text="{DynamicResource SettingsView_ApplyOnStartDescription}"
                                        Style="{StaticResource DescriptionStyle}"
                                        Margin="20,0,0,15"/>
 

@@ -94,11 +94,30 @@ namespace ThreadPilot.Core.Tests
                 "SettingsView.xaml");
             var serialized = File.ReadAllText(settingsViewPath);
 
-            Assert.Contains("Text=\"Rules &amp; automation\" Style=\"{StaticResource SectionHeaderStyle}\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Text=\"Apply saved rules when matching processes start\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Text=\"{DynamicResource SettingsView_RulesAutomation}\" Style=\"{StaticResource SectionHeaderStyle}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Text=\"{DynamicResource SettingsView_ApplyOnStart}\"", serialized, StringComparison.Ordinal);
             Assert.Contains("TextWrapping=\"Wrap\"", serialized, StringComparison.Ordinal);
             Assert.Contains("IsChecked=\"{Binding Settings.ApplyPersistentRulesOnProcessStart}\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("This does not install a Windows Service and does not use registry/IFEO persistence.", serialized, StringComparison.Ordinal);
+            Assert.Contains("Text=\"{DynamicResource SettingsView_ApplyOnStartDescription}\"", serialized, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void SettingsView_ExposesOptionalChineseLanguageSelection()
+        {
+            var settingsViewPath = Path.Combine(
+                AppContext.BaseDirectory,
+                "..",
+                "..",
+                "..",
+                "..",
+                "..",
+                "Views",
+                "SettingsView.xaml");
+            var serialized = File.ReadAllText(settingsViewPath);
+
+            Assert.Contains("SelectedValue=\"{Binding Settings.Language}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Tag=\"en-US\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Tag=\"zh-CN\"", serialized, StringComparison.Ordinal);
         }
 
         private sealed class Harness
@@ -120,6 +139,8 @@ namespace ThreadPilot.Core.Tests
             public Mock<IThemeService> Theme { get; } = new(MockBehavior.Loose);
 
             public Mock<ISystemTrayService> Tray { get; } = new(MockBehavior.Loose);
+
+            public Mock<ILocalizationService> Localization { get; } = new(MockBehavior.Loose);
 
             public Mock<IEnhancedLoggingService> Logging { get; } = new(MockBehavior.Loose);
 
@@ -159,6 +180,7 @@ namespace ThreadPilot.Core.Tests
                     this.Theme.Object,
                     this.Tray.Object,
                     new GitHubUpdateChecker(new Mock<IGitHubReleaseClient>().Object),
+                    this.Localization.Object,
                     this.Logging.Object,
                     this.Audit);
         }

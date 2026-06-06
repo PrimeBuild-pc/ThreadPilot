@@ -255,6 +255,8 @@ namespace ThreadPilot.Services
                     this.settings.UseCustomTrayIcon = false;
                 }
             }
+
+            this.settings.Language = LocalizationService.NormalizeLanguage(this.settings.Language);
         }
 
         public async Task ExportSettingsAsync(string filePath)
