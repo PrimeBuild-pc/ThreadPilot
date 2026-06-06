@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.3.0 - Localization support
+
+### Added
+
+- Added localization infrastructure.
+- Added English and Simplified Chinese resource dictionaries.
+- Added language selector in Settings.
+- Added localized notification support for selected user-facing messages.
+- Added tests for localization fallback, language persistence, Settings language selection, and localized notifications.
+
+### Changed
+
+- English remains the default application language.
+- Simplified Chinese is available as an optional display language.
+- Project version updated to 1.3.0.
+
+### Safety
+
+- Unsupported or invalid language settings now fall back to English.
+- Missing translation keys fall back safely to English or the key.
+- No changes to elevation, system tweaks, affinity, or privileged operation behavior.
+
 ## v1.2.0 - CPU topology, persistent rules, and process control update
 
 ### Added
