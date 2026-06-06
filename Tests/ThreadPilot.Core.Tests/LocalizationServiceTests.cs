@@ -1,5 +1,7 @@
 namespace ThreadPilot.Core.Tests
 {
+    using System.Reflection;
+    using System.Windows;
     using Microsoft.Extensions.Logging.Abstractions;
     using ThreadPilot.Services;
 
@@ -21,6 +23,61 @@ namespace ThreadPilot.Core.Tests
             service.ApplyLanguage("zh-CN");
 
             Assert.Equal("zh-CN", service.CurrentLanguage);
+        }
+
+        [Fact]
+        public void ApplyLanguage_FiresLanguageChangedWithNormalizedLanguage()
+        {
+            var service = CreateService();
+            var observedLanguages = new List<string>();
+            service.LanguageChanged += (_, language) => observedLanguages.Add(language);
+
+            service.ApplyLanguage("zh-cn");
+            service.ApplyLanguage("unsupported");
+
+            Assert.Equal(new[] { "zh-CN", "en-US" }, observedLanguages);
+        }
+
+        [Fact]
+        public void ApplyLanguage_RemovesDuplicateAndOldLocaleDictionaries()
+        {
+            var resources = new ResourceDictionary();
+            var nonLocaleDictionary = CreateDictionaryWithSource("Themes/FluentDark.xaml");
+            var oldEnglishDictionary = CreateDictionaryWithSource("Locales/en-US.xaml");
+            var duplicateChineseDictionary = CreateDictionaryWithSource("Locales/zh-CN.xaml");
+            var matchingChineseDictionary = CreateDictionaryWithSource("Locales/zh-CN.xaml");
+            resources.MergedDictionaries.Add(nonLocaleDictionary);
+            resources.MergedDictionaries.Add(oldEnglishDictionary);
+            resources.MergedDictionaries.Add(duplicateChineseDictionary);
+            resources.MergedDictionaries.Add(matchingChineseDictionary);
+            var service = CreateService();
+
+            InvokeApplyLanguageDictionary(service, resources, new Uri("Locales/zh-CN.xaml", UriKind.Relative));
+
+            Assert.Equal(2, resources.MergedDictionaries.Count);
+            Assert.Same(matchingChineseDictionary, resources.MergedDictionaries[0]);
+            Assert.Same(nonLocaleDictionary, resources.MergedDictionaries[1]);
+            Assert.DoesNotContain(resources.MergedDictionaries, dictionary => ReferenceEquals(dictionary, oldEnglishDictionary));
+            Assert.DoesNotContain(resources.MergedDictionaries, dictionary => ReferenceEquals(dictionary, duplicateChineseDictionary));
+        }
+
+        [Fact]
+        public void GetString_UsesCurrentLanguageOverrideBeforeEnglishFallback()
+        {
+            var service = CreateService(
+                new Dictionary<string, string>
+                {
+                    ["Shared_Key"] = "English",
+                },
+                new Dictionary<string, string>
+                {
+                    ["Shared_Key"] = "Chinese",
+                });
+            service.ApplyLanguage("zh-CN");
+
+            var result = service.GetString("Shared_Key");
+
+            Assert.Equal("Chinese", result);
         }
 
         [Theory]
@@ -66,6 +123,15 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void GetString_ReturnsEmpty_WhenKeyIsBlank()
+        {
+            var service = CreateService();
+
+            Assert.Equal(string.Empty, service.GetString(string.Empty));
+            Assert.Equal(string.Empty, service.GetString("   "));
+        }
+
+        [Fact]
         public void LocaleFiles_DefineEnglishDefaultAndOptionalChineseLanguageLabels()
         {
             var root = FindRepositoryRoot();
@@ -100,6 +166,35 @@ namespace ThreadPilot.Core.Tests
             }
 
             return directory?.FullName ?? throw new InvalidOperationException("Repository root was not found.");
+        }
+
+        private static ResourceDictionary CreateDictionaryWithSource(string source)
+        {
+            var dictionary = new ResourceDictionary();
+            var sourceField = typeof(ResourceDictionary).GetField("_source", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (sourceField == null)
+            {
+                throw new InvalidOperationException("ResourceDictionary source field was not found.");
+            }
+
+            sourceField.SetValue(dictionary, new Uri(source, UriKind.Relative));
+            return dictionary;
+        }
+
+        private static void InvokeApplyLanguageDictionary(
+            LocalizationService service,
+            ResourceDictionary resources,
+            Uri targetUri)
+        {
+            var method = typeof(LocalizationService).GetMethod(
+                "ApplyLanguageDictionary",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            if (method == null)
+            {
+                throw new InvalidOperationException("ApplyLanguageDictionary method was not found.");
+            }
+
+            method.Invoke(service, new object[] { resources, targetUri });
         }
     }
 }

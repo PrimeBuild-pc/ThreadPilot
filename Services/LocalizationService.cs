@@ -85,37 +85,7 @@ namespace ThreadPilot.Services
 
             try
             {
-                ResourceDictionary? matchingDictionary = null;
-                for (var i = appResources.MergedDictionaries.Count - 1; i >= 0; i--)
-                {
-                    var dictionary = appResources.MergedDictionaries[i];
-                    var source = dictionary.Source?.OriginalString;
-                    if (IsLocaleDictionary(source))
-                    {
-                        if (matchingDictionary == null &&
-                            string.Equals(source, targetUri.OriginalString, StringComparison.OrdinalIgnoreCase))
-                        {
-                            matchingDictionary = dictionary;
-                            continue;
-                        }
-
-                        appResources.MergedDictionaries.RemoveAt(i);
-                    }
-                }
-
-                if (matchingDictionary != null)
-                {
-                    appResources.MergedDictionaries.Remove(matchingDictionary);
-                    appResources.MergedDictionaries.Insert(0, matchingDictionary);
-                    this.activeLocaleDictionary = matchingDictionary;
-                }
-                else
-                {
-                    var nextDictionary = new ResourceDictionary { Source = targetUri };
-                    appResources.MergedDictionaries.Insert(0, nextDictionary);
-                    this.activeLocaleDictionary = nextDictionary;
-                }
-
+                this.ApplyLanguageDictionary(appResources, targetUri);
                 this.activeLocaleUri = targetUri;
                 this.logger.LogInformation("Applied display language {Language}", normalizedLanguage);
                 this.LanguageChanged?.Invoke(this, normalizedLanguage);
@@ -161,6 +131,40 @@ namespace ThreadPilot.Services
             }
 
             return key;
+        }
+
+        private void ApplyLanguageDictionary(ResourceDictionary appResources, Uri targetUri)
+        {
+            ResourceDictionary? matchingDictionary = null;
+            for (var i = appResources.MergedDictionaries.Count - 1; i >= 0; i--)
+            {
+                var dictionary = appResources.MergedDictionaries[i];
+                var source = dictionary.Source?.OriginalString;
+                if (IsLocaleDictionary(source))
+                {
+                    if (matchingDictionary == null &&
+                        string.Equals(source, targetUri.OriginalString, StringComparison.OrdinalIgnoreCase))
+                    {
+                        matchingDictionary = dictionary;
+                        continue;
+                    }
+
+                    appResources.MergedDictionaries.RemoveAt(i);
+                }
+            }
+
+            if (matchingDictionary != null)
+            {
+                appResources.MergedDictionaries.Remove(matchingDictionary);
+                appResources.MergedDictionaries.Insert(0, matchingDictionary);
+                this.activeLocaleDictionary = matchingDictionary;
+            }
+            else
+            {
+                var nextDictionary = new ResourceDictionary { Source = targetUri };
+                appResources.MergedDictionaries.Insert(0, nextDictionary);
+                this.activeLocaleDictionary = nextDictionary;
+            }
         }
 
         private static string GetDictionaryPath(string language)

@@ -1,6 +1,7 @@
 namespace ThreadPilot.Core.Tests
 {
     using System.Collections.ObjectModel;
+    using CommunityToolkit.Mvvm.Input;
     using Microsoft.Extensions.Logging.Abstractions;
     using Moq;
     using ThreadPilot.Models;
@@ -81,6 +82,45 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task ChangingLanguage_AppliesLanguageAndLogsVisibleActivityEntry()
+        {
+            var harness = new Harness();
+            var viewModel = harness.CreateViewModel();
+
+            viewModel.Settings.Language = "zh-CN";
+
+            harness.Localization.Verify(service => service.ApplyLanguage("zh-CN"), Times.Once);
+            harness.Logging.Verify(
+                service => service.LogUserActionAsync(
+                    "LanguageChanged",
+                    "Language changed to Simplified Chinese",
+                    null),
+                Times.Once);
+            var entry = Assert.Single(await harness.Audit.GetEntriesAsync());
+            Assert.Equal("Language changed to Simplified Chinese", entry.Message);
+            Assert.Equal("Language changed to Simplified Chinese.", viewModel.StatusMessage);
+        }
+
+        [Fact]
+        public async Task SaveSettingsCommand_PersistsSelectedLanguage()
+        {
+            var harness = new Harness();
+            ApplicationSettingsModel? savedSettings = null;
+            harness.SettingsService
+                .Setup(service => service.UpdateSettingsAsync(It.IsAny<ApplicationSettingsModel>()))
+                .Callback<ApplicationSettingsModel>(settings => savedSettings = (ApplicationSettingsModel)settings.Clone())
+                .Returns(Task.CompletedTask);
+            var viewModel = harness.CreateViewModel();
+            viewModel.Settings.Language = "zh-CN";
+
+            await ((IAsyncRelayCommand)viewModel.SaveSettingsCommand).ExecuteAsync(null);
+
+            Assert.NotNull(savedSettings);
+            Assert.Equal("zh-CN", savedSettings.Language);
+            Assert.False(viewModel.HasUnsavedChanges);
+        }
+
+        [Fact]
         public void SettingsView_ExposesPersistentRuleAutoApplyToggle()
         {
             var settingsViewPath = Path.Combine(
@@ -154,6 +194,9 @@ namespace ThreadPilot.Core.Tests
                     HasUserThemePreference = initialDarkTheme,
                 };
                 this.SettingsService.SetupGet(service => service.Settings).Returns(this.settings);
+                this.Autostart
+                    .Setup(service => service.CheckAutostartStatusAsync())
+                    .ReturnsAsync(true);
                 this.PowerPlans
                     .Setup(service => service.GetPowerPlansAsync())
                     .ReturnsAsync(new ObservableCollection<PowerPlanModel>());
