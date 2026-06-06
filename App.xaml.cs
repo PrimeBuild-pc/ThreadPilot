@@ -220,10 +220,12 @@ namespace ThreadPilot
             {
                 var settingsService = this.ServiceProvider.GetRequiredService<IApplicationSettingsService>();
                 var themeService = this.ServiceProvider.GetRequiredService<IThemeService>();
+                var localizationService = this.ServiceProvider.GetRequiredService<ILocalizationService>();
 
                 Task.Run(async () => await settingsService.LoadSettingsAsync()).GetAwaiter().GetResult();
                 var settings = settingsService.Settings;
                 loadedSettings = settings;
+                localizationService.ApplyLanguage(settings.Language);
                 effectiveStartMinimized = startMinimized || settings.StartMinimized;
                 var useDarkTheme = settings.HasUserThemePreference
                     ? settings.UseDarkTheme

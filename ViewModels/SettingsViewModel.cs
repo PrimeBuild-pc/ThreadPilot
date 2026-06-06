@@ -49,6 +49,7 @@ namespace ThreadPilot.ViewModels
         private readonly IThemeService themeService;
         private readonly ISystemTrayService systemTrayService;
         private readonly GitHubUpdateChecker gitHubUpdateChecker;
+        private readonly ILocalizationService localizationService;
         private ApplicationSettingsModel savedSettingsSnapshot;
         private bool isSyncingFromService = false;
         private bool? appliedThemePreference;
@@ -106,6 +107,7 @@ namespace ThreadPilot.ViewModels
             IThemeService themeService,
             ISystemTrayService systemTrayService,
             GitHubUpdateChecker gitHubUpdateChecker,
+            ILocalizationService localizationService,
             IEnhancedLoggingService? enhancedLoggingService = null,
             IActivityAuditService? activityAuditService = null)
             : base(logger, enhancedLoggingService, activityAuditService)
@@ -119,6 +121,7 @@ namespace ThreadPilot.ViewModels
             this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
             this.systemTrayService = systemTrayService ?? throw new ArgumentNullException(nameof(systemTrayService));
             this.gitHubUpdateChecker = gitHubUpdateChecker ?? throw new ArgumentNullException(nameof(gitHubUpdateChecker));
+            this.localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
 
             // Get version and strip the git commit hash (everything after '+')
             var rawVersion = typeof(App).Assembly
@@ -179,6 +182,13 @@ namespace ThreadPilot.ViewModels
                 return;
             }
 
+            if (string.Equals(e.PropertyName, nameof(ApplicationSettingsModel.Language), StringComparison.Ordinal))
+            {
+                this.UpdatePendingChangesState();
+                this.ApplyLanguagePreference(this.Settings.Language, logUserAction: true);
+                return;
+            }
+
             if (string.Equals(e.PropertyName, nameof(ApplicationSettingsModel.ApplyPersistentRulesOnProcessStart), StringComparison.Ordinal))
             {
                 this.UpdatePendingChangesState();
@@ -217,6 +227,31 @@ namespace ThreadPilot.ViewModels
                 this.StatusMessage = $"Failed to change theme to {themeName}.";
                 this.Logger.LogError(ex, "Failed to apply theme preference {ThemeName}", themeName);
                 _ = this.LogUserActionAsync("ThemeChangeFailed", $"Failed to change theme to {themeName}: {ex.Message}");
+            }
+        }
+
+        private void ApplyLanguagePreference(string language, bool logUserAction)
+        {
+            var normalizedLanguage = LocalizationService.NormalizeLanguage(language);
+            try
+            {
+                this.localizationService.ApplyLanguage(normalizedLanguage);
+                this.Settings.Language = normalizedLanguage;
+                var languageName = normalizedLanguage == LocalizationService.SimplifiedChineseLanguage
+                    ? "Simplified Chinese"
+                    : "English";
+                this.StatusMessage = $"Language changed to {languageName}.";
+
+                if (logUserAction)
+                {
+                    _ = this.LogUserActionAsync("LanguageChanged", $"Language changed to {languageName}");
+                }
+            }
+            catch (Exception ex)
+            {
+                this.StatusMessage = "Failed to change language.";
+                this.Logger.LogError(ex, "Failed to apply language preference {Language}", normalizedLanguage);
+                _ = this.LogUserActionAsync("LanguageChangeFailed", $"Failed to change language to {normalizedLanguage}: {ex.Message}");
             }
         }
 
@@ -279,6 +314,7 @@ namespace ThreadPilot.ViewModels
                 this.Settings.UseDarkTheme = useDarkTheme;
                 this.isSyncingFromService = false;
                 this.ApplyThemePreference(useDarkTheme, logUserAction: false);
+                this.ApplyLanguagePreference(this.Settings.Language, logUserAction: false);
 
                 // Update monitoring services with new settings
                 this.processMonitorManagerService.UpdateSettings();
@@ -549,6 +585,7 @@ namespace ThreadPilot.ViewModels
                 this.Settings.UseDarkTheme = useDarkTheme;
                 this.isSyncingFromService = false;
                 this.ApplyThemePreference(useDarkTheme, logUserAction: false);
+                this.ApplyLanguagePreference(this.Settings.Language, logUserAction: false);
 
                 this.SetSavedSettingsSnapshot(this.Settings);
                 this.StatusMessage = "Settings loaded";
@@ -590,6 +627,7 @@ namespace ThreadPilot.ViewModels
                         this.Settings.DefaultPowerPlanName = this.cachedDefaultPowerPlanName;
                     }
                     this.SetSavedSettingsSnapshot(this.Settings);
+                    this.ApplyLanguagePreference(this.Settings.Language, logUserAction: false);
                     this.StatusMessage = "Settings synchronized";
                 }
                 finally

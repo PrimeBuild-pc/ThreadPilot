@@ -13,6 +13,21 @@ namespace ThreadPilot.Core.Tests
             Assert.False(settings.StartMinimized);
             Assert.True(settings.ApplyPersistentRulesOnProcessStart);
             Assert.False(settings.HasSeenStartupMinimizedSuggestion);
+            Assert.Equal("en-US", settings.Language);
+        }
+
+        [Fact]
+        public void CopyFrom_CopiesLanguage()
+        {
+            var source = new ApplicationSettingsModel
+            {
+                Language = "zh-CN",
+            };
+            var target = new ApplicationSettingsModel();
+
+            target.CopyFrom(source);
+
+            Assert.Equal("zh-CN", target.Language);
         }
 
         [Fact]

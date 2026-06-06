@@ -26,6 +26,7 @@ namespace ThreadPilot.Core.Tests
             Assert.False(service.Settings.EnableSelfAffinityLimit);
             Assert.True(service.Settings.AutostartWithWindows);
             Assert.False(service.Settings.StartMinimized);
+            Assert.Equal("en-US", service.Settings.Language);
         }
 
         [Fact]
@@ -146,6 +147,42 @@ namespace ThreadPilot.Core.Tests
             await service.LoadSettingsAsync();
 
             Assert.True(service.Settings.HasSeenStartupMinimizedSuggestion);
+        }
+
+        [Fact]
+        public async Task LoadSettingsAsync_PreservesSupportedLanguage()
+        {
+            var storage = new FakeSettingsStorage();
+            storage.Files[TestPaths.SettingsFilePath] = """
+                {
+                  "language": "zh-CN"
+                }
+                """;
+            var service = CreateService(storage);
+
+            await service.LoadSettingsAsync();
+
+            Assert.Equal("zh-CN", service.Settings.Language);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("   ")]
+        [InlineData("fr-FR")]
+        [InlineData("zh")]
+        public async Task LoadSettingsAsync_FallsBackToEnglish_WhenLanguageIsInvalid(string language)
+        {
+            var storage = new FakeSettingsStorage();
+            storage.Files[TestPaths.SettingsFilePath] = $$"""
+                {
+                  "language": "{{language}}"
+                }
+                """;
+            var service = CreateService(storage);
+
+            await service.LoadSettingsAsync();
+
+            Assert.Equal("en-US", service.Settings.Language);
         }
 
         [Fact]

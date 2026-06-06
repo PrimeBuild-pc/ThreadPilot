@@ -1,6 +1,7 @@
 namespace ThreadPilot.Core.Tests
 {
     using System.Collections.ObjectModel;
+    using CommunityToolkit.Mvvm.Input;
     using Microsoft.Extensions.Logging.Abstractions;
     using Moq;
     using ThreadPilot.Models;
@@ -81,6 +82,45 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task ChangingLanguage_AppliesLanguageAndLogsVisibleActivityEntry()
+        {
+            var harness = new Harness();
+            var viewModel = harness.CreateViewModel();
+
+            viewModel.Settings.Language = "zh-CN";
+
+            harness.Localization.Verify(service => service.ApplyLanguage("zh-CN"), Times.Once);
+            harness.Logging.Verify(
+                service => service.LogUserActionAsync(
+                    "LanguageChanged",
+                    "Language changed to Simplified Chinese",
+                    null),
+                Times.Once);
+            var entry = Assert.Single(await harness.Audit.GetEntriesAsync());
+            Assert.Equal("Language changed to Simplified Chinese", entry.Message);
+            Assert.Equal("Language changed to Simplified Chinese.", viewModel.StatusMessage);
+        }
+
+        [Fact]
+        public async Task SaveSettingsCommand_PersistsSelectedLanguage()
+        {
+            var harness = new Harness();
+            ApplicationSettingsModel? savedSettings = null;
+            harness.SettingsService
+                .Setup(service => service.UpdateSettingsAsync(It.IsAny<ApplicationSettingsModel>()))
+                .Callback<ApplicationSettingsModel>(settings => savedSettings = (ApplicationSettingsModel)settings.Clone())
+                .Returns(Task.CompletedTask);
+            var viewModel = harness.CreateViewModel();
+            viewModel.Settings.Language = "zh-CN";
+
+            await ((IAsyncRelayCommand)viewModel.SaveSettingsCommand).ExecuteAsync(null);
+
+            Assert.NotNull(savedSettings);
+            Assert.Equal("zh-CN", savedSettings.Language);
+            Assert.False(viewModel.HasUnsavedChanges);
+        }
+
+        [Fact]
         public void SettingsView_ExposesPersistentRuleAutoApplyToggle()
         {
             var settingsViewPath = Path.Combine(
@@ -94,11 +134,30 @@ namespace ThreadPilot.Core.Tests
                 "SettingsView.xaml");
             var serialized = File.ReadAllText(settingsViewPath);
 
-            Assert.Contains("Text=\"Rules &amp; automation\" Style=\"{StaticResource SectionHeaderStyle}\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Text=\"Apply saved rules when matching processes start\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Text=\"{DynamicResource SettingsView_RulesAutomation}\" Style=\"{StaticResource SectionHeaderStyle}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Text=\"{DynamicResource SettingsView_ApplyOnStart}\"", serialized, StringComparison.Ordinal);
             Assert.Contains("TextWrapping=\"Wrap\"", serialized, StringComparison.Ordinal);
             Assert.Contains("IsChecked=\"{Binding Settings.ApplyPersistentRulesOnProcessStart}\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("This does not install a Windows Service and does not use registry/IFEO persistence.", serialized, StringComparison.Ordinal);
+            Assert.Contains("Text=\"{DynamicResource SettingsView_ApplyOnStartDescription}\"", serialized, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void SettingsView_ExposesOptionalChineseLanguageSelection()
+        {
+            var settingsViewPath = Path.Combine(
+                AppContext.BaseDirectory,
+                "..",
+                "..",
+                "..",
+                "..",
+                "..",
+                "Views",
+                "SettingsView.xaml");
+            var serialized = File.ReadAllText(settingsViewPath);
+
+            Assert.Contains("SelectedValue=\"{Binding Settings.Language}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Tag=\"en-US\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Tag=\"zh-CN\"", serialized, StringComparison.Ordinal);
         }
 
         private sealed class Harness
@@ -121,6 +180,8 @@ namespace ThreadPilot.Core.Tests
 
             public Mock<ISystemTrayService> Tray { get; } = new(MockBehavior.Loose);
 
+            public Mock<ILocalizationService> Localization { get; } = new(MockBehavior.Loose);
+
             public Mock<IEnhancedLoggingService> Logging { get; } = new(MockBehavior.Loose);
 
             public ActivityAuditService Audit { get; } = new(NullLogger<ActivityAuditService>.Instance);
@@ -133,6 +194,9 @@ namespace ThreadPilot.Core.Tests
                     HasUserThemePreference = initialDarkTheme,
                 };
                 this.SettingsService.SetupGet(service => service.Settings).Returns(this.settings);
+                this.Autostart
+                    .Setup(service => service.CheckAutostartStatusAsync())
+                    .ReturnsAsync(true);
                 this.PowerPlans
                     .Setup(service => service.GetPowerPlansAsync())
                     .ReturnsAsync(new ObservableCollection<PowerPlanModel>());
@@ -159,6 +223,7 @@ namespace ThreadPilot.Core.Tests
                     this.Theme.Object,
                     this.Tray.Object,
                     new GitHubUpdateChecker(new Mock<IGitHubReleaseClient>().Object),
+                    this.Localization.Object,
                     this.Logging.Object,
                     this.Audit);
         }

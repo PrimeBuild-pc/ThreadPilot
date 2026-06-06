@@ -151,6 +151,9 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private bool hasUserThemePreference = false;
 
+        [ObservableProperty]
+        private string language = LocalizationService.DefaultLanguage;
+
         // Monitoring Settings
         [ObservableProperty]
         private int pollingIntervalMs = 5000;
@@ -249,6 +252,7 @@ namespace ThreadPilot.Models
             this.ClearMasksOnClose = other.ClearMasksOnClose;
             this.UseDarkTheme = other.UseDarkTheme;
             this.HasUserThemePreference = other.HasUserThemePreference;
+            this.Language = LocalizationService.NormalizeLanguage(other.Language);
 
             // Monitoring Settings
             this.PollingIntervalMs = other.PollingIntervalMs;

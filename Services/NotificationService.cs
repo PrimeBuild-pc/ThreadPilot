@@ -35,6 +35,7 @@ namespace ThreadPilot.Services
         private readonly ILogger<NotificationService> logger;
         private readonly IApplicationSettingsService settingsService;
         private readonly ISystemTrayService systemTrayService;
+        private readonly ILocalizationService localizationService;
         private readonly List<NotificationModel> notificationHistory;
         private ApplicationSettingsModel settings;
         private bool disposed = false;
@@ -50,11 +51,13 @@ namespace ThreadPilot.Services
         public NotificationService(
             ILogger<NotificationService> logger,
             IApplicationSettingsService settingsService,
-            ISystemTrayService systemTrayService)
+            ISystemTrayService systemTrayService,
+            ILocalizationService localizationService)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
             this.systemTrayService = systemTrayService ?? throw new ArgumentNullException(nameof(systemTrayService));
+            this.localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
 
             this.notificationHistory = new List<NotificationModel>();
             this.settings = this.settingsService.Settings;
@@ -102,6 +105,9 @@ namespace ThreadPilot.Services
 
             try
             {
+                notification.Title = this.TryGetLocalizedNotificationString(notification.Title);
+                notification.Message = this.TryGetLocalizedNotificationString(notification.Message);
+
                 // Check if notifications are enabled
                 if (!this.AreNotificationsEnabled(notification.Type))
                 {
@@ -176,11 +182,18 @@ namespace ThreadPilot.Services
                 return;
             }
 
+            var title = this.GetLocalizedString("Notification_PowerPlanChangedTitle");
             var message = string.IsNullOrEmpty(processName)
-                ? $"Power plan changed from '{oldPlan}' to '{newPlan}'"
-                : $"Power plan changed to '{newPlan}' for process '{processName}'";
+                ? string.Format(
+                    this.GetLocalizedString("Notification_PowerPlanChangedFormat"),
+                    oldPlan,
+                    newPlan)
+                : string.Format(
+                    this.GetLocalizedString("Notification_PowerPlanChangedProcessFormat"),
+                    newPlan,
+                    processName);
 
-            var notification = new NotificationModel("Power Plan Changed", message, NotificationType.PowerPlanChange)
+            var notification = new NotificationModel(title, message, NotificationType.PowerPlanChange)
             {
                 Category = "PowerPlan",
                 SourceService = "PowerPlanService",
@@ -197,7 +210,9 @@ namespace ThreadPilot.Services
                 return;
             }
 
-            var title = isEnabled ? "Process Monitoring Enabled" : "Process Monitoring Disabled";
+            var title = isEnabled
+                ? this.GetLocalizedString("Notification_ProcessMonitoringEnabled")
+                : this.GetLocalizedString("Notification_ProcessMonitoringDisabled");
             var type = isEnabled ? NotificationType.Success : NotificationType.Warning;
 
             var notification = new NotificationModel(title, message, type)
@@ -212,9 +227,15 @@ namespace ThreadPilot.Services
 
         public async Task ShowCpuAffinityNotificationAsync(string processName, string affinityInfo)
         {
+            var title = this.GetLocalizedString("Notification_CpuAffinityAppliedTitle");
+            var message = string.Format(
+                this.GetLocalizedString("Notification_CpuAffinityAppliedFormat"),
+                processName,
+                affinityInfo);
+
             var notification = new NotificationModel(
-                "CPU Affinity Applied",
-                $"CPU affinity set for '{processName}': {affinityInfo}",
+                title,
+                message,
                 NotificationType.CpuAffinity)
             {
                 Category = "CpuAffinity",
@@ -396,6 +417,63 @@ namespace ThreadPilot.Services
             this.UpdateSettings(e.NewSettings);
         }
 
+        private string GetLocalizedString(string key)
+        {
+            var localized = this.localizationService.GetString(key);
+            return string.IsNullOrEmpty(localized) ? key : localized;
+        }
+
+        private string TryGetLocalizedNotificationString(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+            {
+                return input;
+            }
+
+            var key = input switch
+            {
+                "Game Boost Activated" => "Notification_GameBoostActivatedTitle",
+                "Game Boost Deactivated" => "Notification_GameBoostDeactivatedTitle",
+                "Process Monitor Error" => "Notification_ProcessMonitorErrorTitle",
+                "Affinity blocked" => "Notification_AffinityBlockedTitle",
+                "Priority blocked" => "Notification_PriorityBlockedTitle",
+                _ => null,
+            };
+
+            if (key != null)
+            {
+                var localized = this.GetLocalizedString(key);
+                if (!string.Equals(localized, key, StringComparison.Ordinal))
+                {
+                    return localized;
+                }
+            }
+
+            const string GameBoostActivatedPrefix = "Game Boost mode activated for ";
+            if (input.StartsWith(GameBoostActivatedPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                var processName = input[GameBoostActivatedPrefix.Length..];
+                var format = this.GetLocalizedString("Notification_GameBoostActivatedFormat");
+                if (!string.Equals(format, "Notification_GameBoostActivatedFormat", StringComparison.Ordinal))
+                {
+                    return string.Format(format, processName);
+                }
+            }
+
+            const string GameBoostDeactivatedPrefix = "Game Boost mode deactivated after ";
+            if (input.StartsWith(GameBoostDeactivatedPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                var duration = input[GameBoostDeactivatedPrefix.Length..];
+                var format = this.GetLocalizedString("Notification_GameBoostDeactivatedFormat");
+                if (!string.Equals(format, "Notification_GameBoostDeactivatedFormat", StringComparison.Ordinal))
+                {
+                    return string.Format(format, duration);
+                }
+            }
+
+            return input;
+        }
+
         public void Dispose()
         {
             if (this.disposed)
@@ -416,4 +494,3 @@ namespace ThreadPilot.Services
         }
     }
 }
-
