@@ -63,49 +63,21 @@ namespace ThreadPilot
         protected override void OnStartup(StartupEventArgs e)
         {
             // Parse command line arguments early so special startup modes can short-circuit normal flow.
-            bool startMinimized = false;
-            bool isAutostart = false;
-            bool isSmokeTest = false;
-            bool registerLaunchTask = false;
-            bool launchedViaTask = false;
-#if DEBUG
-            bool isTestMode = false;
-#endif
+            var startupMode = StartupMode.Parse(e.Args);
             bool effectiveStartMinimized = false;
             ApplicationSettingsModel? loadedSettings = null;
 
-            foreach (var arg in e.Args)
-            {
-                switch (arg.ToLowerInvariant())
-                {
-#if DEBUG
-                    case "--test":
-                        isTestMode = true;
-                        break;
-#endif
-                    case "--smoke-test":
-                        isSmokeTest = true;
-                        break;
-                    case "--start-minimized":
-                        startMinimized = true;
-                        break;
-                    case "--autostart":
-                        isAutostart = true;
-                        break;
-                    case "--startup": // Alternative startup argument
-                        isAutostart = true;
-                        startMinimized = true;
-                        break;
-                    case RegisterLaunchTaskArgument:
-                        registerLaunchTask = true;
-                        break;
-                    case LaunchedViaTaskArgument:
-                        launchedViaTask = true;
-                        break;
-                }
-            }
+            effectiveStartMinimized = startupMode.StartMinimized;
 
-            effectiveStartMinimized = startMinimized;
+            if (startupMode.IsSmokeTest)
+            {
+                var smokeLogger = this.ServiceProvider.GetRequiredService<ILogger<App>>();
+                var smokeTestResult = this.RunSmokeTestWithTimeout(smokeLogger, TimeSpan.FromSeconds(10));
+                Environment.ExitCode = smokeTestResult;
+                this.Shutdown(smokeTestResult);
+                Environment.Exit(smokeTestResult);
+                return;
+            }
 
             // Set up global exception handlers first
             AppDomain.CurrentDomain.UnhandledException += this.OnUnhandledException;
@@ -130,14 +102,14 @@ namespace ThreadPilot
             }
             else
             {
-                if (launchedViaTask)
+                if (startupMode.LaunchedViaTask)
                 {
                     logger.LogError("Application was launched via managed task marker but is still not elevated.");
                 }
 #if DEBUG
-                else if (!isSmokeTest && !isTestMode)
+                else if (!startupMode.IsTestMode)
 #else
-                else if (!isSmokeTest)
+                else
 #endif
                 {
                     var launchedElevatedInstance = Task.Run(async () => await elevatedTaskService.TryRunLaunchTaskAsync()).GetAwaiter().GetResult();
@@ -148,7 +120,7 @@ namespace ThreadPilot
                         return;
                     }
 
-                    if (!registerLaunchTask)
+                    if (!startupMode.RegisterLaunchTask)
                     {
                         logger.LogInformation("Managed elevated launch task is unavailable. Requesting one-time elevation to bootstrap persistent launch.");
                         var restartInitiated = Task.Run(async () => await elevationService.RestartWithElevation(new[] { RegisterLaunchTaskArgument })).GetAwaiter().GetResult();
@@ -160,9 +132,9 @@ namespace ThreadPilot
                 }
 
 #if DEBUG
-                if (!isSmokeTest && !isTestMode)
+                if (!startupMode.IsTestMode)
 #else
-                if (!isSmokeTest)
+                if (true)
 #endif
                 {
                     logger.LogError("ThreadPilot requires administrator privileges and cannot continue without elevation.");
@@ -170,33 +142,28 @@ namespace ThreadPilot
                     this.Shutdown(1);
                     return;
                 }
-
-                logger.LogWarning("Application is running without administrator privileges in smoke test mode.");
             }
 
             // Enforce single-instance after elevation bootstrap logic to avoid mutex races during handoff.
-            if (!isSmokeTest)
+            bool createdNew;
+            this.singleInstanceMutex = new Mutex(initiallyOwned: true, name: "Global\\ThreadPilot_SingleInstance", createdNew: out createdNew);
+            if (!createdNew)
             {
-                bool createdNew;
-                this.singleInstanceMutex = new Mutex(initiallyOwned: true, name: "Global\\ThreadPilot_SingleInstance", createdNew: out createdNew);
-                if (!createdNew)
-                {
-                    System.Windows.MessageBox.Show(
-                        "ThreadPilot is already running.",
-                        "Instance already open",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
+                System.Windows.MessageBox.Show(
+                    "ThreadPilot is already running.",
+                    "Instance already open",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
 
-                    this.Shutdown();
-                    return;
-                }
+                this.Shutdown();
+                return;
             }
 
             base.OnStartup(e);
 
             // Check for test mode
 #if DEBUG
-            if (isTestMode)
+            if (startupMode.IsTestMode)
             {
                 // Run in console test mode
                 AllocConsole();
@@ -209,13 +176,6 @@ namespace ThreadPilot
             }
 #endif
 
-            if (isSmokeTest)
-            {
-                var smokeTestResult = Task.Run(async () => await this.RunSmokeTestAsync(logger)).GetAwaiter().GetResult();
-                this.Shutdown(smokeTestResult);
-                return;
-            }
-
             try
             {
                 var settingsService = this.ServiceProvider.GetRequiredService<IApplicationSettingsService>();
@@ -226,7 +186,7 @@ namespace ThreadPilot
                 var settings = settingsService.Settings;
                 loadedSettings = settings;
                 localizationService.ApplyLanguage(settings.Language);
-                effectiveStartMinimized = startMinimized || settings.StartMinimized;
+                effectiveStartMinimized = startupMode.StartMinimized || settings.StartMinimized;
                 var useDarkTheme = settings.HasUserThemePreference
                     ? settings.UseDarkTheme
                     : themeService.GetSystemUsesDarkTheme();
@@ -258,7 +218,7 @@ namespace ThreadPilot
                     throw new InvalidOperationException("MainWindow could not be created");
                 }
 
-                var startupWindowBehavior = StartupWindowBehavior.Resolve(isAutostart, effectiveStartMinimized);
+                var startupWindowBehavior = StartupWindowBehavior.Resolve(startupMode.IsAutostart, effectiveStartMinimized);
                 var showStartupSuggestion = loadedSettings != null
                     && StartupMinimizedSuggestionPolicy.ShouldShow(loadedSettings, startupWindowBehavior);
                 mainWindow.ConfigureStartupMode(
@@ -301,16 +261,33 @@ namespace ThreadPilot
             }
         }
 
-        private async Task<int> RunSmokeTestAsync(ILogger logger)
+        private int RunSmokeTestWithTimeout(ILogger logger, TimeSpan timeout)
+        {
+            var smokeTestTask = Task.Run(() => this.RunSmokeTest(logger));
+            if (smokeTestTask.Wait(timeout))
+            {
+                return smokeTestTask.GetAwaiter().GetResult();
+            }
+
+            logger.LogError("ThreadPilot smoke test timed out after {TimeoutSeconds} seconds", timeout.TotalSeconds);
+            return 2;
+        }
+
+        private int RunSmokeTest(ILogger logger)
         {
             try
             {
                 logger.LogInformation("Starting ThreadPilot smoke test");
 
-                var settingsService = this.ServiceProvider.GetRequiredService<IApplicationSettingsService>();
-                await settingsService.LoadSettingsAsync().ConfigureAwait(false);
-                _ = this.ServiceProvider.GetRequiredService<ProcessViewModel>();
-                _ = this.ServiceProvider.GetRequiredService<PowerPlanViewModel>();
+                _ = this.ServiceProvider.GetRequiredService<ILoggerFactory>();
+                _ = this.ServiceProvider.GetRequiredService<IApplicationSettingsService>();
+                _ = this.ServiceProvider.GetRequiredService<IThemeService>();
+                _ = this.ServiceProvider.GetRequiredService<ILocalizationService>();
+
+                if (!System.IO.Directory.Exists(AppContext.BaseDirectory))
+                {
+                    throw new InvalidOperationException("Application base directory was not found.");
+                }
 
                 logger.LogInformation("ThreadPilot smoke test completed successfully");
                 return 0;
@@ -319,6 +296,55 @@ namespace ThreadPilot
             {
                 logger.LogError(ex, "ThreadPilot smoke test failed");
                 return 1;
+            }
+        }
+
+        private readonly struct StartupMode
+        {
+            public bool StartMinimized { get; init; }
+
+            public bool IsAutostart { get; init; }
+
+            public bool IsSmokeTest { get; init; }
+
+            public bool RegisterLaunchTask { get; init; }
+
+            public bool LaunchedViaTask { get; init; }
+
+            public bool IsTestMode { get; init; }
+
+            public static StartupMode Parse(IEnumerable<string> args)
+            {
+                var mode = default(StartupMode);
+                foreach (var arg in args)
+                {
+                    switch (arg.ToLowerInvariant())
+                    {
+                        case "--test":
+                            mode = mode with { IsTestMode = true };
+                            break;
+                        case "--smoke-test":
+                            mode = mode with { IsSmokeTest = true };
+                            break;
+                        case "--start-minimized":
+                            mode = mode with { StartMinimized = true };
+                            break;
+                        case "--autostart":
+                            mode = mode with { IsAutostart = true };
+                            break;
+                        case "--startup":
+                            mode = mode with { IsAutostart = true, StartMinimized = true };
+                            break;
+                        case RegisterLaunchTaskArgument:
+                            mode = mode with { RegisterLaunchTask = true };
+                            break;
+                        case LaunchedViaTaskArgument:
+                            mode = mode with { LaunchedViaTask = true };
+                            break;
+                    }
+                }
+
+                return mode;
             }
         }
 
