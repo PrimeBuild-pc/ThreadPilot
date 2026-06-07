@@ -4,8 +4,8 @@ namespace ThreadPilot.Core.Tests
 
     public sealed partial class PackagingMetadataTests
     {
-        private const string HotfixVersion = "1.3.1";
-        private const string HotfixAssemblyVersion = "1.3.1.0";
+        private const string ReleaseVersion = "1.4.0";
+        private const string ReleaseAssemblyVersion = "1.4.0.0";
 
         [Fact]
         public void InnoInstallers_UseStableDisplayNameAndSeparateVersionMetadata()
@@ -57,24 +57,24 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public void VersionMetadata_IsBumpedToHotfixVersion()
+        public void VersionMetadata_IsBumpedToReleaseVersion()
         {
             var root = FindRepositoryRoot();
 
-            AssertFileContains(Path.Combine(root, "ThreadPilot.csproj"), $"<Version>{HotfixVersion}</Version>");
-            AssertFileContains(Path.Combine(root, "ThreadPilot.csproj"), $"<AssemblyVersion>{HotfixAssemblyVersion}</AssemblyVersion>");
-            AssertFileContains(Path.Combine(root, "ThreadPilot.csproj"), $"<FileVersion>{HotfixAssemblyVersion}</FileVersion>");
-            AssertFileContains(Path.Combine(root, "ThreadPilot.csproj"), $"<InformationalVersion>{HotfixVersion}</InformationalVersion>");
-            AssertFileContains(Path.Combine(root, "app.manifest"), $"version=\"{HotfixAssemblyVersion}\"");
-            AssertFileContains(Path.Combine(root, "Installer", "ThreadPilot.wxs"), $"Version=\"{HotfixAssemblyVersion}\"");
-            AssertFileContains(Path.Combine(root, "chocolatey", "threadpilot.nuspec"), $"<version>{HotfixVersion}</version>");
-            AssertFileContains(Path.Combine(root, "chocolatey", "threadpilot.nuspec"), $"releases/tag/v{HotfixVersion}");
-            AssertFileContains(Path.Combine(root, "sonar-project.properties"), $"sonar.projectVersion={HotfixVersion}");
-            AssertFileContains(Path.Combine(root, "build", "build-release.ps1"), $"[string]$Version = \"{HotfixVersion}\"");
-            AssertFileContains(Path.Combine(root, "build", "build-installer.ps1"), $"[string]$Version = \"{HotfixVersion}\"");
-            AssertFileContains(Path.Combine(root, "build", "package-release-zips.ps1"), $"[string]$Version = \"{HotfixVersion}\"");
-            Assert.True(File.Exists(Path.Combine(root, "docs", "releases", $"v{HotfixVersion}.md")));
-            AssertFileContains(Path.Combine(root, "docs", "release", "RELEASE_NOTES.md"), $"v{HotfixVersion}");
+            AssertFileContains(Path.Combine(root, "ThreadPilot.csproj"), $"<Version>{ReleaseVersion}</Version>");
+            AssertFileContains(Path.Combine(root, "ThreadPilot.csproj"), $"<AssemblyVersion>{ReleaseAssemblyVersion}</AssemblyVersion>");
+            AssertFileContains(Path.Combine(root, "ThreadPilot.csproj"), $"<FileVersion>{ReleaseAssemblyVersion}</FileVersion>");
+            AssertFileContains(Path.Combine(root, "ThreadPilot.csproj"), $"<InformationalVersion>{ReleaseVersion}</InformationalVersion>");
+            AssertFileContains(Path.Combine(root, "app.manifest"), $"version=\"{ReleaseAssemblyVersion}\"");
+            AssertFileContains(Path.Combine(root, "Installer", "ThreadPilot.wxs"), $"Version=\"{ReleaseAssemblyVersion}\"");
+            AssertFileContains(Path.Combine(root, "chocolatey", "threadpilot.nuspec"), $"<version>{ReleaseVersion}</version>");
+            AssertFileContains(Path.Combine(root, "chocolatey", "threadpilot.nuspec"), $"releases/tag/v{ReleaseVersion}");
+            AssertFileContains(Path.Combine(root, "sonar-project.properties"), $"sonar.projectVersion={ReleaseVersion}");
+            AssertFileContains(Path.Combine(root, "build", "build-release.ps1"), $"[string]$Version = \"{ReleaseVersion}\"");
+            AssertFileContains(Path.Combine(root, "build", "build-installer.ps1"), $"[string]$Version = \"{ReleaseVersion}\"");
+            AssertFileContains(Path.Combine(root, "build", "package-release-zips.ps1"), $"[string]$Version = \"{ReleaseVersion}\"");
+            Assert.True(File.Exists(Path.Combine(root, "docs", "releases", $"v{ReleaseVersion}.md")));
+            AssertFileContains(Path.Combine(root, "docs", "release", "RELEASE_NOTES.md"), $"v{ReleaseVersion}");
         }
 
         private static void AssertFileContains(string path, string expected)
@@ -100,7 +100,7 @@ namespace ThreadPilot.Core.Tests
             throw new InvalidOperationException("Repository root could not be located.");
         }
 
-        [GeneratedRegex("#define MyAppVersion \"1\\.3\\.1\"", RegexOptions.CultureInvariant)]
+        [GeneratedRegex("#define MyAppVersion \"1\\.4\\.0\"", RegexOptions.CultureInvariant)]
         private static partial Regex MyAppVersionRegex();
     }
 }

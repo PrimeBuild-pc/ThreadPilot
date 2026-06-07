@@ -178,9 +178,9 @@ Generate manifests locally with:
 
 ```powershell
 ./build/generate-winget-manifests.ps1 `
-  -Version "1.3.0" `
-  -Tag "v1.3.0" `
-  -InstallerUrl "https://github.com/PrimeBuild-pc/ThreadPilot/releases/download/v1.3.0/ThreadPilot_v1.3.0_Setup.exe" `
+  -Version "1.4.0" `
+  -Tag "v1.4.0" `
+  -InstallerUrl "https://github.com/PrimeBuild-pc/ThreadPilot/releases/download/v1.4.0/ThreadPilot_v1.4.0_Setup.exe" `
   -InstallerSha256 "<sha256>" `
   -OutputRoot "winget-manifests"
 ```
@@ -224,9 +224,9 @@ Local packaging-only validation:
 
 ```powershell
 ./build/publish-chocolatey.ps1 `
-  -Version "1.3.0" `
-  -Tag "v1.3.0" `
-  -InstallerPath ".\artifacts\release\installer\ThreadPilot_v1.3.0_Setup.exe" `
+  -Version "1.4.0" `
+  -Tag "v1.4.0" `
+  -InstallerPath ".\artifacts\release\installer\ThreadPilot_v1.4.0_Setup.exe" `
   -DryRun `
   -PackageOutputDirectory ".\artifacts\choco-dryrun" `
   -MetadataOutputPath ".\artifacts\choco-dryrun\chocolatey-package-metadata.json"
@@ -250,9 +250,9 @@ Public publish path:
 
 ```powershell
 ./build/publish-chocolatey.ps1 `
-  -Version "1.3.0" `
-  -Tag "v1.3.0" `
-  -InstallerPath ".\artifacts\release\installer\ThreadPilot_v1.3.0_Setup.exe" `
+  -Version "1.4.0" `
+  -Tag "v1.4.0" `
+  -InstallerPath ".\artifacts\release\installer\ThreadPilot_v1.4.0_Setup.exe" `
   -ApiKey "<chocolatey-api-key>"
 ```
 
