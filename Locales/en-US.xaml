@@ -436,6 +436,12 @@
     <sys:String x:Key="SettingsView_Translator">Translator: Ylimhs</sys:String>
     <sys:String x:Key="SettingsView_License">License: AGPLv3</sys:String>
     <sys:String x:Key="SettingsView_CheckUpdates">Check for updates</sys:String>
+    <sys:String x:Key="SettingsView_DownloadInstallUpdate">Download and install update</sys:String>
+    <sys:String x:Key="SettingsView_EnableAutomaticUpdateChecks">Check automatically on startup</sys:String>
+    <sys:String x:Key="SettingsView_UpdateIntervalDays">Check interval (days):</sys:String>
+    <sys:String x:Key="SettingsView_IncludePrereleaseUpdates">Include prerelease updates</sys:String>
+    <sys:String x:Key="SettingsView_LatestVersion">Latest version:</sys:String>
+    <sys:String x:Key="SettingsView_LastUpdateCheck">Last checked:</sys:String>
     <sys:String x:Key="SettingsView_UpdatesDescription">Checks on demand using the official GitHub Releases.</sys:String>
     
     <sys:String x:Key="SettingsView_ResetDefaults">Reset to Defaults</sys:String>
@@ -474,6 +480,15 @@
     <sys:String x:Key="Settings_StatusNewVersionFormat">New version available: {0}</sys:String>
     <sys:String x:Key="Settings_StatusUpToDateFormat">Application is up to date. Installed version: {0}</sys:String>
     <sys:String x:Key="Settings_StatusUpdateErrorFormat">Error while checking updates: {0}</sys:String>
+    <sys:String x:Key="Settings_UpdateLatestUnknown">Unknown</sys:String>
+    <sys:String x:Key="Settings_UpdateNotChecked">Not checked</sys:String>
+    <sys:String x:Key="Settings_UpdateLastCheckedNever">Never</sys:String>
+    <sys:String x:Key="Settings_UpdateConfirmTitle">Install ThreadPilot update</sys:String>
+    <sys:String x:Key="Settings_UpdateConfirmMessageFormat">ThreadPilot will download and verify version {0}, then ask Windows for permission to run the installer. Continue?</sys:String>
+    <sys:String x:Key="Settings_StatusUpdateCanceled">Update canceled.</sys:String>
+    <sys:String x:Key="Settings_StatusDownloadingUpdate">Downloading and verifying update...</sys:String>
+    <sys:String x:Key="Settings_StatusUpdateInstallerStarted">Update installer started.</sys:String>
+    <sys:String x:Key="Settings_StatusUpdateInstallFailedFormat">Update install failed: {0}</sys:String>
     <sys:String x:Key="Settings_StatusModified">Settings have been modified</sys:String>
     <sys:String x:Key="Settings_StatusMatchSaved">Settings match the saved configuration</sys:String>
     <sys:String x:Key="Settings_LanguageSimplifiedChinese">Simplified Chinese</sys:String>

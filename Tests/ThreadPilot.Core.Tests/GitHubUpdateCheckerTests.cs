@@ -80,6 +80,11 @@ namespace ThreadPilot.Core.Tests
             {
                 return Task.FromResult(this.responseJson);
             }
+
+            public Task<string> GetReleasesJsonAsync(string owner, string repo, CancellationToken cancellationToken = default)
+            {
+                return Task.FromResult($"[{this.responseJson}]");
+            }
         }
     }
 }

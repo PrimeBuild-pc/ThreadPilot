@@ -157,27 +157,26 @@ namespace ThreadPilot
             try
             {
                 this.LogDebug("Startup update check started");
-                var checker = this.serviceProvider.GetRequiredService<GitHubUpdateChecker>();
-                var currentVersion = GetCurrentApplicationVersion();
-                var (latest, _) = await checker.GetLatestVersionAsync("PrimeBuild-pc", "ThreadPilot");
+                var updateService = this.serviceProvider.GetRequiredService<IUpdateService>();
+                var result = await updateService.CheckForUpdatesAsync(new UpdateCheckRequest(UpdateCheckTrigger.Startup));
 
-                if (latest == null)
+                if (result.Status == UpdateCheckStatus.Skipped)
                 {
-                    this.LogDebug("Startup update check completed without release information");
+                    this.LogDebug($"Startup update check skipped: {result.Message}");
                     return;
                 }
 
-                if (latest <= currentVersion)
+                if (!result.IsUpdateAvailable || result.Release == null)
                 {
-                    this.LogDebug($"Startup update check complete: installed {currentVersion}, latest {latest}");
+                    this.LogDebug($"Startup update check complete: {result.Message}");
                     return;
                 }
 
                 await this.notificationService.ShowNotificationAsync(
                     "Update available",
-                    $"ThreadPilot {latest} is available from GitHub releases.",
+                    $"ThreadPilot {result.Release.Version} is available. Open Settings to download and install it.",
                     NotificationType.Information);
-                this.LogDebug($"Startup update check found update: installed {currentVersion}, latest {latest}");
+                this.LogDebug($"Startup update check found update: installed {result.CurrentVersion}, latest {result.Release.Version}");
             }
             catch (Exception ex)
             {

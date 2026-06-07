@@ -78,6 +78,16 @@ namespace ThreadPilot.Services
             });
             services.AddSingleton<IGitHubReleaseClient, GitHubReleaseClient>();
             services.AddSingleton<GitHubUpdateChecker>();
+            services.AddSingleton<IApplicationVersionProvider, ApplicationVersionProvider>();
+            services.AddSingleton<IUpdateClock, SystemUpdateClock>();
+            services.AddSingleton<IUpdateDownloadClient, HttpUpdateDownloadClient>();
+            services.AddSingleton<IUpdateTempDirectoryProvider, UpdateTempDirectoryProvider>();
+            services.AddSingleton<IUpdateSignatureVerifier, AuthenticodeSignatureVerifier>();
+            services.AddSingleton<IUpdateDownloadService, UpdateDownloadService>();
+            services.AddSingleton<IUpdateProcessLauncher, ShellUpdateProcessLauncher>();
+            services.AddSingleton<IUpdateInstallerService, UpdateInstallerService>();
+            services.AddSingleton<IApplicationShutdownService, WpfApplicationShutdownService>();
+            services.AddSingleton<IUpdateService, UpdateService>();
 
             // Memory caching for performance - PERFORMANCE IMPROVEMENT
             services.AddMemoryCache();

@@ -23,5 +23,11 @@ namespace ThreadPilot.Services
             var url = $"https://api.github.com/repos/{owner}/{repo}/releases/latest";
             return this.httpClient.GetStringAsync(url, cancellationToken);
         }
+
+        public Task<string> GetReleasesJsonAsync(string owner, string repo, CancellationToken cancellationToken = default)
+        {
+            var url = $"https://api.github.com/repos/{owner}/{repo}/releases";
+            return this.httpClient.GetStringAsync(url, cancellationToken);
+        }
     }
 }

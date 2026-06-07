@@ -154,6 +154,18 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private string language = LocalizationService.DefaultLanguage;
 
+        [ObservableProperty]
+        private bool enableAutomaticUpdateChecks = true;
+
+        [ObservableProperty]
+        private DateTimeOffset? lastUpdateCheckUtc = null;
+
+        [ObservableProperty]
+        private int updateCheckIntervalDays = 7;
+
+        [ObservableProperty]
+        private bool includePrereleaseUpdates = false;
+
         // Monitoring Settings
         [ObservableProperty]
         private int pollingIntervalMs = 5000;
@@ -253,6 +265,10 @@ namespace ThreadPilot.Models
             this.UseDarkTheme = other.UseDarkTheme;
             this.HasUserThemePreference = other.HasUserThemePreference;
             this.Language = LocalizationService.NormalizeLanguage(other.Language);
+            this.EnableAutomaticUpdateChecks = other.EnableAutomaticUpdateChecks;
+            this.LastUpdateCheckUtc = other.LastUpdateCheckUtc;
+            this.UpdateCheckIntervalDays = other.UpdateCheckIntervalDays;
+            this.IncludePrereleaseUpdates = other.IncludePrereleaseUpdates;
 
             // Monitoring Settings
             this.PollingIntervalMs = other.PollingIntervalMs;
@@ -296,6 +312,11 @@ namespace ThreadPilot.Models
             if (this.FallbackPollingIntervalMs < 1000 || this.FallbackPollingIntervalMs > 60000)
             {
                 errors.Add("Fallback polling interval must be between 1 and 60 seconds");
+            }
+
+            if (this.UpdateCheckIntervalDays < 1 || this.UpdateCheckIntervalDays > 365)
+            {
+                errors.Add("Update check interval must be between 1 and 365 days");
             }
 
             return errors.Count == 0 ? ValidationResult.Success() : ValidationResult.Failure(errors.ToArray());

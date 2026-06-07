@@ -350,6 +350,38 @@
                             <TextBlock Text="{DynamicResource SettingsView_Version}" FontWeight="SemiBold" Margin="0,8,0,0"/>
                             <TextBlock Text="{Binding ApplicationVersion}" Margin="0,0,0,10"/>
 
+                            <CheckBox Content="{DynamicResource SettingsView_EnableAutomaticUpdateChecks}"
+                                      IsChecked="{Binding Settings.EnableAutomaticUpdateChecks}"
+                                      Margin="0,0,0,6"/>
+
+                            <Grid Margin="20,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Text="{DynamicResource SettingsView_UpdateIntervalDays}" VerticalAlignment="Center"/>
+                                <Slider Grid.Column="1"
+                                        Value="{Binding Settings.UpdateCheckIntervalDays}"
+                                        Minimum="1" Maximum="30"
+                                        TickFrequency="1"
+                                        IsSnapToTickEnabled="True"
+                                        Margin="10,0"/>
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding Settings.UpdateCheckIntervalDays}"
+                                           VerticalAlignment="Center" MinWidth="30"/>
+                            </Grid>
+
+                            <CheckBox Content="{DynamicResource SettingsView_IncludePrereleaseUpdates}"
+                                      IsChecked="{Binding Settings.IncludePrereleaseUpdates}"
+                                      Margin="0,0,0,10"/>
+
+                            <TextBlock Text="{DynamicResource SettingsView_LatestVersion}" FontWeight="SemiBold" Margin="0,0,0,0"/>
+                            <TextBlock Text="{Binding LatestUpdateVersion}" Margin="0,0,0,6"/>
+                            <TextBlock Text="{DynamicResource SettingsView_LastUpdateCheck}" FontWeight="SemiBold" Margin="0,0,0,0"/>
+                            <TextBlock Text="{Binding LastUpdateCheckText}" Margin="0,0,0,10"/>
+
                             <TextBlock Text="{DynamicResource SettingsView_Copyright}" Margin="0,0,0,4"/>
                             <TextBlock Text="{DynamicResource SettingsView_License}" Style="{StaticResource DescriptionStyle}"/>
 
@@ -359,6 +391,12 @@
                                     Command="{Binding CheckUpdatesCommand}"
                                     Padding="15,6"
                                     HorizontalAlignment="Left"/>
+                            <Button Content="{DynamicResource SettingsView_DownloadInstallUpdate}"
+                                    Command="{Binding DownloadAndInstallUpdateCommand}"
+                                    IsEnabled="{Binding CanDownloadAndInstallUpdate}"
+                                    Padding="15,6"
+                                    HorizontalAlignment="Left"
+                                    Margin="0,8,0,0"/>
                             <TextBlock Text="{DynamicResource SettingsView_UpdatesDescription}"
                                        Style="{StaticResource DescriptionStyle}"
                                        Margin="0,6,0,0"/>
