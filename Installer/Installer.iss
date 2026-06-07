@@ -5,7 +5,7 @@
 #define MyAppPublisher "ThreadPilot"
 #define MyAppURL "https://github.com/"
 #define MyAppExeName "ThreadPilot.exe"
-#define MyAppVersion "1.3.0"
+#define MyAppVersion "1.3.1"
 
 #ifndef MyWizardStyle
   #define MyWizardStyle "modern dynamic windows11"
@@ -20,7 +20,7 @@
 AppId={{A2A4C8B5-4A9A-4B1B-93F4-5F8B1C7E8C2A}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-AppVerName={#MyAppName} {#MyAppVersion}
+AppVerName={#MyAppName}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
@@ -54,7 +54,15 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-Filename: taskkill.exe; Parameters: "/IM '{#MyAppExeName}' /F"; Flags: runhidden waituntilterminated; RunOnceId: UninstallKill
+Filename: "taskkill.exe"; Parameters: "/IM ""{#MyAppExeName}"" /F"; Flags: runhidden waituntilterminated; RunOnceId: "UninstallKill"
+Filename: "schtasks.exe"; Parameters: "/Delete /TN ""ThreadPilot_Startup"" /F"; Flags: runhidden waituntilterminated; RunOnceId: "UninstallRemoveThreadPilotStartupTask"
+Filename: "reg.exe"; Parameters: "delete ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v ""ThreadPilot"" /f"; Flags: runhidden waituntilterminated; RunOnceId: "UninstallRemoveThreadPilotRunEntry"
+
+; ThreadPilot user data is preserved during install/update and removed only when
+; the generated uninstaller runs. Per-user AppData cleanup is limited to the
+; account context used by uninstall.
+[UninstallDelete]
+Type: filesandordirs; Name: "{userappdata}\ThreadPilot"
 
 [Code]
 

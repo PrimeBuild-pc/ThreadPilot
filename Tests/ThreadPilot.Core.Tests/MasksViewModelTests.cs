@@ -14,8 +14,10 @@ namespace ThreadPilot.Core.Tests
         {
             var document = LoadMasksViewXaml();
             var serialized = document.ToString(SaveOptions.DisableFormatting);
+            var locale = LoadEnglishLocale();
 
-            Assert.Contains("per-process use", serialized, StringComparison.Ordinal);
+            Assert.Contains("MasksView_Subtitle", serialized, StringComparison.Ordinal);
+            Assert.Contains("per-process use", locale, StringComparison.Ordinal);
         }
 
         [Fact]
@@ -33,9 +35,11 @@ namespace ThreadPilot.Core.Tests
         {
             var document = LoadMasksViewXaml();
             var serialized = document.ToString(SaveOptions.DisableFormatting);
+            var locale = LoadEnglishLocale();
 
-            Assert.Contains("does not apply CPU affinity automatically", serialized, StringComparison.Ordinal);
-            Assert.Contains("Pre-selected when ThreadPilot", serialized, StringComparison.Ordinal);
+            Assert.Contains("MasksView_DefaultPresetTip", serialized, StringComparison.Ordinal);
+            Assert.Contains("does not apply CPU affinity automatically", locale, StringComparison.Ordinal);
+            Assert.Contains("Pre-selected when ThreadPilot", locale, StringComparison.Ordinal);
         }
 
         [Fact]
@@ -55,8 +59,10 @@ namespace ThreadPilot.Core.Tests
         {
             var document = LoadMasksViewXaml();
             var serialized = document.ToString(SaveOptions.DisableFormatting);
+            var locale = LoadEnglishLocale();
 
-            Assert.Contains("do not affect running processes", serialized, StringComparison.Ordinal);
+            Assert.Contains("MasksView_SelectCpusTip", serialized, StringComparison.Ordinal);
+            Assert.Contains("do not affect running processes", locale, StringComparison.Ordinal);
         }
 
         [Fact]
@@ -116,8 +122,10 @@ namespace ThreadPilot.Core.Tests
         {
             var document = LoadMasksViewXaml();
             var serialized = document.ToString(SaveOptions.DisableFormatting);
+            var locale = LoadEnglishLocale();
 
-            Assert.Contains("All Cores is the protected default preset", serialized, StringComparison.Ordinal);
+            Assert.Contains("MasksView_SelectCpusTip", serialized, StringComparison.Ordinal);
+            Assert.Contains("All Cores is the protected default preset", locale, StringComparison.Ordinal);
         }
 
         private static XDocument LoadMasksViewXaml()
@@ -125,6 +133,12 @@ namespace ThreadPilot.Core.Tests
             var repoRoot = GetRepositoryRoot();
             var path = Path.Combine(repoRoot, "Views", "MasksView.xaml");
             return XDocument.Load(path, LoadOptions.PreserveWhitespace);
+        }
+
+        private static string LoadEnglishLocale()
+        {
+            var repoRoot = GetRepositoryRoot();
+            return File.ReadAllText(Path.Combine(repoRoot, "Locales", "en-US.xaml"));
         }
 
         private static string GetRepositoryRoot()

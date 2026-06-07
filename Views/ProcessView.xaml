@@ -156,8 +156,8 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
-            <TextBlock Text="Process Management" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
-            <TextBlock Text="Search, filter, and control active process configurations" Style="{StaticResource PageSubtitleTextStyle}"/>
+            <TextBlock Text="{DynamicResource ProcessView_Title}" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
+            <TextBlock Text="{DynamicResource ProcessView_Subtitle}" Style="{StaticResource PageSubtitleTextStyle}"/>
         </StackPanel>
 
         <Grid Grid.Row="1">
@@ -201,53 +201,53 @@
 
                             <TextBox Grid.Column="0"
                                      Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                     ToolTip="Search processes by name"
+                                     ToolTip="{DynamicResource ProcessView_SearchPlaceholder}"
                                      HorizontalAlignment="Stretch"
-                                     AutomationProperties.Name="Process search"/>
+                                     AutomationProperties.Name="{DynamicResource ProcessView_SearchAutomationName}"/>
                             <CheckBox Grid.Column="2"
-                                      Content="Active Apps Only"
+                                      Content="{DynamicResource ProcessView_ActiveAppsOnly}"
                                       IsChecked="{Binding ShowActiveApplicationsOnly}"
                                       VerticalAlignment="Center"
-                                      ToolTip="Show only applications with visible windows"/>
+                                      ToolTip="{DynamicResource ProcessView_VisibleWindowsOnly}"/>
                             <Button Grid.Column="4"
                                     Command="{Binding LoadProcessesCommand}"
-                                    Content="Refresh"
-                                    ToolTip="Refresh the process list"
-                                    AutomationProperties.Name="Refresh processes"/>
+                                    Content="{DynamicResource ProcessView_Refresh}"
+                                    ToolTip="{DynamicResource ProcessView_RefreshTooltip}"
+                                    AutomationProperties.Name="{DynamicResource ProcessView_RefreshAutomationName}"/>
                             <Button Grid.Column="6"
                                     Command="{Binding LoadMoreProcessesCommand}"
-                                    Content="Load More"
+                                    Content="{DynamicResource ProcessView_LoadMore}"
                                     Visibility="{Binding HasMoreBatches, Converter={StaticResource BoolToVisibilityConverter}}"
-                                    ToolTip="Load more processes"
-                                    AutomationProperties.Name="Load more processes"/>
+                                    ToolTip="{DynamicResource ProcessView_LoadMoreTooltip}"
+                                    AutomationProperties.Name="{DynamicResource ProcessView_LoadMoreAutomationName}"/>
                         </Grid>
 
                         <WrapPanel Grid.Row="2" Orientation="Horizontal">
-                            <CheckBox Content="Hide System Processes"
+                            <CheckBox Content="{DynamicResource ProcessView_HideSystemShort}"
                                       IsChecked="{Binding HideSystemProcesses}"
                                       Margin="0,0,15,0"
                                       VerticalAlignment="Center"
-                                      ToolTip="Hide Windows system processes"/>
-                            <CheckBox Content="Hide Idle Processes"
+                                      ToolTip="{DynamicResource ProcessView_HideSystem}"/>
+                            <CheckBox Content="{DynamicResource ProcessView_HideIdle}"
                                       IsChecked="{Binding HideIdleProcesses}"
                                       Margin="0,0,15,0"
                                       VerticalAlignment="Center"
-                                      ToolTip="Hide processes with very low CPU usage"/>
-                            <CheckBox Content="Lock process list"
+                                      ToolTip="{DynamicResource ProcessView_HideLowCpu}"/>
+                            <CheckBox Content="{DynamicResource ProcessView_LockList}"
                                       IsChecked="{Binding IsProcessListLocked}"
                                       Margin="0,0,15,0"
                                       VerticalAlignment="Center"
-                                      ToolTip="Pause process list refresh and sorting updates while you work with the current list. Background monitoring and saved-rule auto-apply continue while ThreadPilot is running."/>
-                            <TextBlock Text="Sort by:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                      ToolTip="{DynamicResource ProcessView_LockListTooltip}"/>
+                            <TextBlock Text="{DynamicResource ProcessView_SortBy}" VerticalAlignment="Center" Margin="0,0,5,0"/>
                             <ComboBox SelectedValue="{Binding SortMode}"
                                       SelectedValuePath="Tag"
                                       Width="120"
                                       VerticalAlignment="Center"
-                                      ToolTip="Choose how to sort the process list">
-                                <ComboBoxItem Content="CPU Usage" Tag="CpuUsage"/>
-                                <ComboBoxItem Content="Memory Usage" Tag="MemoryUsage"/>
-                                <ComboBoxItem Content="Process Name" Tag="Name"/>
-                                <ComboBoxItem Content="Process ID" Tag="ProcessId"/>
+                                      ToolTip="{DynamicResource ProcessView_SortByTooltip}">
+                                <ComboBoxItem Content="{DynamicResource ProcessView_ColCpuUsage}" Tag="CpuUsage"/>
+                                <ComboBoxItem Content="{DynamicResource ProcessView_ColMemory}" Tag="MemoryUsage"/>
+                                <ComboBoxItem Content="{DynamicResource ProcessView_ColProcessName}" Tag="Name"/>
+                                <ComboBoxItem Content="{DynamicResource ProcessView_ID}" Tag="ProcessId"/>
                             </ComboBox>
                         </WrapPanel>
                     </Grid>
@@ -269,8 +269,8 @@
                               EnableRowVirtualization="True"
                               EnableColumnVirtualization="True"
                               ScrollViewer.CanContentScroll="True"
-                              AutomationProperties.Name="Running process list"
-                              AutomationProperties.HelpText="Virtualized process table with sorting and selection">
+                              AutomationProperties.Name="{DynamicResource ProcessView_RunningListAutomationName}"
+                              AutomationProperties.HelpText="{DynamicResource ProcessView_RunningListAutomationHelp}">
                         <DataGrid.RowStyle>
                             <Style TargetType="DataGridRow">
                                 <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=DataGrid}}"/>
@@ -283,84 +283,84 @@
                                         <ContextMenu Style="{StaticResource ProcessContextMenuStyle}"
                                                      DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
                                             <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
-                                                      Header="Apply Affinity"
+                                                      Header="{DynamicResource ProcessView_ApplyAffinity}"
                                                       Command="{Binding ApplyContextAffinityCommand}"
                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                             <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
-                                                      Header="Clear CPU Sets"
+                                                      Header="{DynamicResource ProcessView_ClearCpuSets}"
                                                       Command="{Binding ClearContextCpuSetsCommand}"
                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                             <Separator Style="{StaticResource ProcessContextMenuSeparatorStyle}"/>
                                             <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
-                                                      Header="Rules">
+                                                      Header="{DynamicResource ProcessView_Rules}">
                                                 <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
-                                                          Header="Save Current Settings as Rule"
+                                                          Header="{DynamicResource ProcessView_SaveCurrentRule}"
                                                           Command="{Binding SaveCurrentSettingsAsRuleCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                 <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
-                                                          Header="Apply Affinity and Save as Rule"
+                                                          Header="{DynamicResource ProcessView_ApplyAffinitySaveRule}"
                                                           Command="{Binding ApplyAffinityAndSaveAsRuleCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                             </MenuItem>
                                             <Separator Style="{StaticResource ProcessContextMenuSeparatorStyle}"/>
                                             <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
-                                                      Header="Set CPU Priority">
+                                                      Header="{DynamicResource ProcessView_SetCpuPriority}">
                                                 <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
-                                                          Header="Below Normal"
+                                                          Header="{DynamicResource ProcessView_PriorityBelowNormal}"
                                                           Command="{Binding SetContextBelowNormalPriorityCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                 <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
-                                                          Header="Normal"
+                                                          Header="{DynamicResource ProcessView_PriorityNormal}"
                                                           Command="{Binding SetContextNormalPriorityCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                 <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
-                                                          Header="Above Normal"
+                                                          Header="{DynamicResource ProcessView_PriorityAboveNormal}"
                                                           Command="{Binding SetContextAboveNormalPriorityCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                 <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
-                                                          Header="High"
+                                                          Header="{DynamicResource ProcessView_PriorityHigh}"
                                                           Command="{Binding SetContextHighPriorityCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                 <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
-                                                          Header="Realtime (blocked)"
+                                                          Header="{DynamicResource ProcessView_RealtimeBlocked}"
                                                           IsEnabled="False"
                                                           ToolTipService.ShowOnDisabled="True"
-                                                          ToolTip="Realtime priority is blocked by ThreadPilot because it can make Windows unstable or unresponsive."/>
+                                                          ToolTip="{DynamicResource ProcessView_RealtimeBlockedHelp}"/>
                                             </MenuItem>
                                             <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
-                                                      Header="Set Memory Priority">
+                                                      Header="{DynamicResource ProcessView_SetMemoryPriority}">
                                                 <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
-                                                          Header="Very Low"
+                                                          Header="{DynamicResource ProcessView_PriorityVeryLow}"
                                                           Command="{Binding SetContextMemoryPriorityVeryLowCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                 <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
-                                                          Header="Low"
+                                                          Header="{DynamicResource ProcessView_PriorityLow}"
                                                           Command="{Binding SetContextMemoryPriorityLowCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                 <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
-                                                          Header="Medium"
+                                                          Header="{DynamicResource ProcessView_PriorityMedium}"
                                                           Command="{Binding SetContextMemoryPriorityMediumCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                 <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
-                                                          Header="Below Normal"
+                                                          Header="{DynamicResource ProcessView_PriorityBelowNormal}"
                                                           Command="{Binding SetContextMemoryPriorityBelowNormalCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                 <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
-                                                          Header="Normal"
+                                                          Header="{DynamicResource ProcessView_PriorityNormal}"
                                                           Command="{Binding SetContextMemoryPriorityNormalCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                             </MenuItem>
                                             <Separator Style="{StaticResource ProcessContextMenuSeparatorStyle}"/>
                                             <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
-                                                      Header="Open Executable Location"
+                                                      Header="{DynamicResource ProcessView_OpenLocation}"
                                                       Command="{Binding OpenContextExecutableLocationCommand}"
                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                             <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
-                                                      Header="Copy Process Info"
+                                                      Header="{DynamicResource ProcessView_CopyProcessInfo}"
                                                       Command="{Binding CopyContextProcessInfoCommand}"
                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                             <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
-                                                      Header="Refresh Process Info"
+                                                      Header="{DynamicResource ProcessView_RefreshInfo}"
                                                       Command="{Binding RefreshContextProcessInfoCommand}"
                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                         </ContextMenu>
@@ -386,15 +386,15 @@
                             </Style>
                         </DataGrid.RowStyle>
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="160"/>
-                            <DataGridTextColumn Header="ID" Binding="{Binding ProcessId}" Width="70"/>
-                            <DataGridTextColumn Header="Window Title" Binding="{Binding MainWindowTitle}" Width="220"/>
-                            <DataGridCheckBoxColumn Header="Has Window" Binding="{Binding HasVisibleWindow}" Width="90"/>
-                            <DataGridTextColumn Header="CPU Usage" Binding="{Binding CpuUsage, StringFormat={}{0:N1}%}" Width="90"/>
-                            <DataGridTextColumn Header="Memory (MB)"
+                            <DataGridTextColumn Header="{DynamicResource ProcessView_Name}" Binding="{Binding Name}" Width="160"/>
+                            <DataGridTextColumn Header="{DynamicResource ProcessView_ID}" Binding="{Binding ProcessId}" Width="70"/>
+                            <DataGridTextColumn Header="{DynamicResource ProcessView_ColWindowTitle}" Binding="{Binding MainWindowTitle}" Width="220"/>
+                            <DataGridCheckBoxColumn Header="{DynamicResource ProcessView_HasWindow}" Binding="{Binding HasVisibleWindow}" Width="90"/>
+                            <DataGridTextColumn Header="{DynamicResource ProcessView_ColCpuUsage}" Binding="{Binding CpuUsage, StringFormat={}{0:N1}%}" Width="90"/>
+                            <DataGridTextColumn Header="{DynamicResource ProcessView_MemoryMb}"
                                                 Binding="{Binding MemoryUsage, Converter={StaticResource BytesToMbConverter}}"
                                                 Width="90"/>
-                            <DataGridTextColumn Header="Priority" Binding="{Binding Priority}" Width="*"/>
+                            <DataGridTextColumn Header="{DynamicResource ProcessView_Priority}" Binding="{Binding Priority}" Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
@@ -415,13 +415,13 @@
                             Padding="8,5"
                             CornerRadius="{DynamicResource StandardCardCornerRadius}">
                         <TextBlock FontSize="{StaticResource ProcessFontSmall}" Foreground="{DynamicResource TextSecondaryBrush}">
-                            <Run Text="Batch "/>
+                            <Run Text="{DynamicResource ProcessView_BatchLabel}"/>
                             <Run Text="{Binding CurrentBatchIndex, StringFormat={}{0:N0}}"/>
                             <Run Text="/"/>
                             <Run Text="{Binding TotalBatches, StringFormat={}{0:N0}}"/>
                             <Run Text=" ("/>
                             <Run Text="{Binding TotalProcessCount, StringFormat={}{0:N0}}"/>
-                            <Run Text=" total)"/>
+                            <Run Text="{DynamicResource ProcessView_TotalSuffix}"/>
                         </TextBlock>
                     </Border>
                 </Grid>
@@ -434,11 +434,11 @@
                         Padding="10"
                         Margin="0,12,0,0">
                     <StackPanel>
-                        <TextBlock Text="Current process status"
+                        <TextBlock Text="{DynamicResource ProcessView_CurrentProcessStatus}"
                                    FontSize="{StaticResource ProcessFontMediumSmall}"
                                    FontWeight="SemiBold"
                                    Margin="0,0,0,2"/>
-                        <TextBlock Text="Rules and changes are applied by ThreadPilot only when configured."
+                        <TextBlock Text="{DynamicResource ProcessView_RulesAppliedOnlyWhenConfigured}"
                                    FontSize="{StaticResource ProcessFontSmall}"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextWrapping="Wrap"
@@ -481,12 +481,12 @@
                             <TextBlock FontSize="{StaticResource ProcessFontSmall}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        TextWrapping="Wrap">
-                                <Run Text="Last ThreadPilot action: "/>
+                                <Run Text="{DynamicResource ProcessView_LastAction}"/>
                                 <Run Text="{Binding SelectedProcessSummary.LastOperationMessage, Mode=OneWay}"/>
                             </TextBlock>
                         </WrapPanel>
 
-                        <Expander Header="Advanced affinity picker"
+                        <Expander Header="{DynamicResource ProcessView_AdvancedAffinityPicker}"
                                   IsExpanded="False"
                                   Margin="0,10,0,0">
                             <StackPanel Margin="0,8,0,0">
@@ -499,7 +499,7 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0"
-                                               Text="Pending core mask"
+                                               Text="{DynamicResource ProcessView_PendingCoreMask}"
                                                FontSize="{StaticResource ProcessFontSmall}"
                                                FontWeight="SemiBold"
                                                VerticalAlignment="Center"/>
@@ -508,14 +508,14 @@
                                               SelectedItem="{Binding SelectedCoreMask, Mode=TwoWay}"
                                               DisplayMemberPath="Name"
                                               IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
-                                              ToolTip="Select the pending mask for row context-menu affinity actions"/>
+                                              ToolTip="{DynamicResource ProcessView_RowMaskTooltip}"/>
                                     <Button Grid.Column="4"
                                             Command="{Binding CreateCustomMaskCommand}"
                                             Padding="8,5"
-                                            ToolTip="Open CPU Masks tab to create a new custom mask">
+                                            ToolTip="{DynamicResource ProcessView_OpenMasksTabTooltip}">
                                         <StackPanel Orientation="Horizontal">
                                             <ui:SymbolIcon Symbol="Add12" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                            <TextBlock Text="Custom" FontSize="{StaticResource ProcessFontMediumSmall}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{DynamicResource ProcessView_PriorityCustom}" FontSize="{StaticResource ProcessFontMediumSmall}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
                                 </Grid>
@@ -583,7 +583,7 @@
                     CornerRadius="8">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="14">
-                        <TextBlock Text="Selected Process"
+                        <TextBlock Text="{DynamicResource ProcessView_SelectedProcess}"
                                    FontSize="{StaticResource ProcessFontMedium}"
                                    FontWeight="SemiBold"
                                    Margin="0,0,0,8"/>
@@ -595,7 +595,7 @@
                                 Background="{DynamicResource QuietRowBackgroundBrush}"
                                 Margin="0,0,0,12">
                             <StackPanel>
-                                <TextBlock Text="No process selected"
+                                <TextBlock Text="{DynamicResource ProcessView_NoProcessSelected}"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                            TextWrapping="Wrap">
@@ -610,7 +610,7 @@
                                         </Style>
                                     </TextBlock.Style>
                                 </TextBlock>
-                                <TextBlock Text="Select a process from the table to enable affinity, priority, power plan, and rule actions."
+                                <TextBlock Text="{DynamicResource ProcessView_SelectProcessTip}"
                                            FontSize="{StaticResource ProcessFontSmall}"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                            TextWrapping="Wrap"
@@ -643,7 +643,7 @@
                                     <TextBlock FontSize="{StaticResource ProcessFontSmall}" Foreground="{DynamicResource TextSecondaryBrush}">
                                         <Run Text="PID "/>
                                         <Run Text="{Binding SelectedProcess.ProcessId}"/>
-                                        <Run Text="  Priority "/>
+                                        <Run Text="{DynamicResource ProcessView_PriorityInlineLabel}"/>
                                         <Run Text="{Binding SelectedProcess.Priority}"/>
                                     </TextBlock>
                                     <TextBlock Text="{Binding SelectedProcess.MainWindowTitle, TargetNullValue=No visible window title}"
@@ -655,31 +655,31 @@
                             </StackPanel>
                         </Border>
 
-                        <GroupBox Header="Affinity" Margin="0,0,0,12">
+                        <GroupBox Header="{DynamicResource ProcessView_Affinity}" Margin="0,0,0,12">
                             <StackPanel Margin="8">
                                 <TextBlock Text="{Binding CurrentAffinityText}"
                                            FontSize="{StaticResource ProcessFontSmall}"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                            TextWrapping="Wrap"
-                                           ToolTip="Affinity currently reported by Windows for the selected process"/>
+                                           ToolTip="{DynamicResource ProcessView_AffinityCurrentTooltip}"/>
                                 <TextBlock Text="{Binding PendingAffinityText}"
                                            FontSize="{StaticResource ProcessFontSmall}"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                            TextWrapping="Wrap"
                                            Margin="0,3,0,0"
-                                           ToolTip="Affinity staged in the UI. It is not applied until Apply Affinity is clicked."/>
+                                           ToolTip="{DynamicResource ProcessView_AffinityStagedTooltip}"/>
                                 <TextBlock Text="{Binding AffinityEditStateText}"
                                            FontSize="{StaticResource ProcessFontSmall}"
                                            Foreground="{DynamicResource WarningTextBrush}"
                                            TextWrapping="Wrap"
                                            Margin="0,3,0,10"/>
 
-                                <TextBlock Text="Pending core mask" FontSize="{StaticResource ProcessFontSmall}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBlock Text="{DynamicResource ProcessView_PendingCoreMask}" FontSize="{StaticResource ProcessFontSmall}" FontWeight="SemiBold" Margin="0,0,0,4"/>
                                 <ComboBox ItemsSource="{Binding AvailableCoreMasks}"
                                           SelectedItem="{Binding SelectedCoreMask, Mode=TwoWay}"
                                           IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
                                           Margin="0,0,0,8"
-                                          ToolTip="Select a mask to stage it. This does not change OS affinity until Apply Affinity is clicked.">
+                                          ToolTip="{DynamicResource ProcessView_StageMaskTooltip}">
                                     <ComboBox.ItemTemplate>
                                         <DataTemplate>
                                             <StackPanel Orientation="Horizontal">
@@ -700,7 +700,7 @@
                                            FontSize="{StaticResource ProcessFontSmall}"
                                            Margin="0,2,0,6"
                                            Foreground="{Binding IsHyperThreadingActive, Converter={StaticResource BoolToColorConverter}}"
-                                           ToolTip="Shows whether Hyper-Threading (Intel) or SMT (AMD) is present and active on this system"/>
+                                           ToolTip="{DynamicResource ProcessView_HyperThreadingTooltip}"/>
 
                                 <ScrollViewer MaxHeight="92"
                                               VerticalScrollBarVisibility="Auto"
@@ -722,7 +722,7 @@
                                                           Margin="2"
                                                           FontSize="{StaticResource ProcessFontSmall}"
                                                           Foreground="{DynamicResource TextPrimaryBrush}"
-                                                          ToolTip="Read-only preview of current or pending CPU selection"/>
+                                                          ToolTip="{DynamicResource ProcessView_CpuSelectionPreviewTooltip}"/>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
@@ -736,59 +736,59 @@
                                     </Grid.ColumnDefinitions>
                                     <Button Grid.Column="0"
                                             Command="{Binding SetAffinityCommand}"
-                                            Content="Apply Affinity"
+                                            Content="{DynamicResource ProcessView_ApplyAffinity}"
                                             Padding="10,6"
                                             IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
-                                            ToolTip="Apply the pending core mask to the selected process and verify the Windows affinity state"/>
+                                            ToolTip="{DynamicResource ProcessView_ApplyAffinityTooltip}"/>
                                     <Button Grid.Column="2"
                                             Command="{Binding CreateCustomMaskCommand}"
                                             Padding="8,6"
-                                            ToolTip="Open CPU Masks tab to create a new custom mask">
+                                            ToolTip="{DynamicResource ProcessView_OpenMasksTabTooltip}">
                                         <StackPanel Orientation="Horizontal">
                                             <ui:SymbolIcon Symbol="Add12" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                            <TextBlock Text="Custom" FontSize="{StaticResource ProcessFontMediumSmall}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{DynamicResource ProcessView_PriorityCustom}" FontSize="{StaticResource ProcessFontMediumSmall}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
                                 </Grid>
                             </StackPanel>
                         </GroupBox>
 
-                        <GroupBox Header="Priority" Margin="0,0,0,12">
+                        <GroupBox Header="{DynamicResource ProcessView_Priority}" Margin="0,0,0,12">
                             <StackPanel Margin="8">
                                 <ComboBox x:Name="PriorityComboBox"
                                           SelectedValue="{Binding SelectedProcess.Priority, Mode=TwoWay}"
                                           SelectedValuePath="Tag"
                                           Margin="0,0,0,6"
                                           IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}">
-                                    <ComboBoxItem Content="Realtime" Tag="{x:Static Diagnostics:ProcessPriorityClass.RealTime}"/>
-                                    <ComboBoxItem Content="High" Tag="{x:Static Diagnostics:ProcessPriorityClass.High}"/>
-                                    <ComboBoxItem Content="Above Normal" Tag="{x:Static Diagnostics:ProcessPriorityClass.AboveNormal}"/>
-                                    <ComboBoxItem Content="Normal" Tag="{x:Static Diagnostics:ProcessPriorityClass.Normal}"/>
-                                    <ComboBoxItem Content="Below Normal" Tag="{x:Static Diagnostics:ProcessPriorityClass.BelowNormal}"/>
-                                    <ComboBoxItem Content="Idle" Tag="{x:Static Diagnostics:ProcessPriorityClass.Idle}"/>
+                                    <ComboBoxItem Content="{DynamicResource ProcessView_PriorityRealtime}" Tag="{x:Static Diagnostics:ProcessPriorityClass.RealTime}"/>
+                                    <ComboBoxItem Content="{DynamicResource ProcessView_PriorityHigh}" Tag="{x:Static Diagnostics:ProcessPriorityClass.High}"/>
+                                    <ComboBoxItem Content="{DynamicResource ProcessView_PriorityAboveNormal}" Tag="{x:Static Diagnostics:ProcessPriorityClass.AboveNormal}"/>
+                                    <ComboBoxItem Content="{DynamicResource ProcessView_PriorityNormal}" Tag="{x:Static Diagnostics:ProcessPriorityClass.Normal}"/>
+                                    <ComboBoxItem Content="{DynamicResource ProcessView_PriorityBelowNormal}" Tag="{x:Static Diagnostics:ProcessPriorityClass.BelowNormal}"/>
+                                    <ComboBoxItem Content="{DynamicResource ProcessView_PriorityIdle}" Tag="{x:Static Diagnostics:ProcessPriorityClass.Idle}"/>
                                 </ComboBox>
                                 <Button Command="{Binding SetPriorityCommand}"
                                         CommandParameter="{Binding ElementName=PriorityComboBox, Path=SelectedValue}"
-                                        Content="Set Priority"
+                                        Content="{DynamicResource ProcessView_SetPriority}"
                                         Padding="10,6"
                                         Margin="0,0,0,8"
                                         IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
-                                        ToolTip="Apply the selected priority to the process"/>
-                                <CheckBox Content="Enforce Priority by Registry"
+                                        ToolTip="{DynamicResource ProcessView_ApplyPriorityTooltip}"/>
+                                <CheckBox Content="{DynamicResource ProcessView_EnforcePriorityRegistry}"
                                           IsChecked="{Binding IsRegistryPriorityEnabled}"
                                           IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
                                           Margin="0,0,0,6"
-                                          ToolTip="Apply priority through Windows registry. Process must be restarted for changes to take effect. This setting persists across system reboots."/>
-                                <CheckBox Content="Disable Idle Server"
+                                          ToolTip="{DynamicResource ProcessView_EnforcePriorityRegistryTooltip}"/>
+                                <CheckBox Content="{DynamicResource ProcessView_DisableIdleServer}"
                                           IsChecked="{Binding IsIdleServerDisabled}"
                                           IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
-                                          ToolTip="Prevents the system from entering idle state while this process is running. Useful for games and performance-critical applications."/>
+                                          ToolTip="{DynamicResource ProcessView_DisableIdleServerTooltip}"/>
                             </StackPanel>
                         </GroupBox>
 
-                        <GroupBox Header="Power Plan / Pending Settings" Margin="0,0,0,12">
+                        <GroupBox Header="{DynamicResource ProcessView_PowerPlanPending}" Margin="0,0,0,12">
                             <StackPanel Margin="8">
-                                <TextBlock Text="Selected power plan"
+                                <TextBlock Text="{DynamicResource ProcessView_SelectedPowerPlan}"
                                            FontSize="{StaticResource ProcessFontSmall}"
                                            FontWeight="SemiBold"
                                            Margin="0,0,0,4"/>
@@ -796,7 +796,7 @@
                                           SelectedItem="{Binding SelectedPowerPlan, Mode=TwoWay}"
                                           DisplayMemberPath="Name"
                                           Margin="0,0,0,8"
-                                          ToolTip="Choose the power plan to activate manually or include with quick apply"/>
+                                          ToolTip="{DynamicResource ProcessView_PowerPlanTooltip}"/>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -805,24 +805,24 @@
                                     </Grid.ColumnDefinitions>
                                     <Button Grid.Column="0"
                                             Command="{Binding SetPowerPlanCommand}"
-                                            Content="Set Power Plan"
+                                            Content="{DynamicResource ProcessView_SetPowerPlan}"
                                             Padding="10,6"
-                                            ToolTip="Activate the selected Windows power plan"/>
+                                            ToolTip="{DynamicResource ProcessView_SetPowerPlanTooltip}"/>
                                     <Button Grid.Column="2"
                                             Command="{Binding QuickApplyAffinityAndPowerPlanCommand}"
-                                            Content="Apply Pending Settings"
+                                            Content="{DynamicResource ProcessView_ApplyPendingSettings}"
                                             Padding="10,6"
                                             IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
-                                            ToolTip="Apply the pending affinity and selected power plan to the selected process"/>
+                                            ToolTip="{DynamicResource ProcessView_ApplyPendingSettingsTooltip}"/>
                                 </Grid>
                             </StackPanel>
                         </GroupBox>
 
-                        <GroupBox Header="Profile / Rule" Margin="0,0,0,12">
+                        <GroupBox Header="{DynamicResource ProcessView_ProfileRule}" Margin="0,0,0,12">
                             <StackPanel Margin="8">
                                 <TextBox Text="{Binding ProfileName, UpdateSourceTrigger=PropertyChanged}"
                                          Margin="0,0,0,8"
-                                         ToolTip="Enter a profile name to save or load settings"/>
+                                         ToolTip="{DynamicResource ProcessView_ProfileNamePlaceholder}"/>
                                 <Grid Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -831,21 +831,21 @@
                                     </Grid.ColumnDefinitions>
                                     <Button Grid.Column="0"
                                             Command="{Binding SaveProfileCommand}"
-                                            Content="Save Profile"
+                                            Content="{DynamicResource ProcessView_SaveProfile}"
                                             Padding="10,6"
-                                            ToolTip="Save current CPU affinity and priority as a reusable profile"/>
+                                            ToolTip="{DynamicResource ProcessView_SaveProfileTooltip}"/>
                                     <Button Grid.Column="2"
                                             Command="{Binding LoadProfileCommand}"
-                                            Content="Load Profile"
+                                            Content="{DynamicResource ProcessView_LoadProfile}"
                                             Padding="10,6"
-                                            ToolTip="Load a previously saved profile"/>
+                                            ToolTip="{DynamicResource ProcessView_LoadProfileTooltip}"/>
                                 </Grid>
                                 <Button Command="{Binding SaveCurrentAsAssociationCommand}"
-                                        Content="Save as Rule"
+                                        Content="{DynamicResource ProcessView_SaveAsRule}"
                                         Padding="10,6"
                                         FontWeight="SemiBold"
                                         IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
-                                        ToolTip="Save current process settings as a rule. These settings will be automatically applied when this process starts in the future."/>
+                                        ToolTip="{DynamicResource ProcessView_ApplyAffinitySaveRuleTooltip}"/>
                             </StackPanel>
                         </GroupBox>
 

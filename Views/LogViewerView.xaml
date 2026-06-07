@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="ThreadPilot.Views.LogViewerView"
+<UserControl x:Class="ThreadPilot.Views.LogViewerView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -63,8 +63,8 @@
 
         <!-- Standardized Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
-            <TextBlock Text="ThreadPilot Activity" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
-            <TextBlock Text="Shows actions performed by ThreadPilot, including applied rules, affinity changes, priority changes, power plan changes, settings changes, tweaks, optimizations, and safe failure messages." Style="{StaticResource PageSubtitleTextStyle}" TextWrapping="Wrap"/>
+            <TextBlock Text="{DynamicResource LogViewerView_Title}" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
+            <TextBlock Text="{DynamicResource LogViewerView_Subtitle}" Style="{StaticResource PageSubtitleTextStyle}" TextWrapping="Wrap"/>
         </StackPanel>
 
         <!-- Filter and Control Panel -->
@@ -92,14 +92,14 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Column="0" Text="Search:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Grid.Column="0" Text="{DynamicResource LogViewerView_Search}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <TextBox Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
 
-                    <TextBlock Grid.Column="3" Text="Category:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Grid.Column="3" Text="{DynamicResource LogViewerView_CategoryLabel}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <ComboBox Grid.Column="4" ItemsSource="{Binding AvailableCategories}"
                               SelectedItem="{Binding SelectedCategory}" HorizontalAlignment="Stretch"/>
 
-                    <TextBlock Grid.Column="6" Text="Level:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Grid.Column="6" Text="{DynamicResource LogViewerView_LevelLabel}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <ComboBox Grid.Column="7" ItemsSource="{Binding AvailableLogLevels}"
                               SelectedItem="{Binding SelectedLogLevel}" HorizontalAlignment="Stretch"/>
                 </Grid>
@@ -114,16 +114,16 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Column="0" Text="From:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Grid.Column="0" Text="{DynamicResource LogViewerView_From}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <DatePicker Grid.Column="1" SelectedDate="{Binding FromDate}" HorizontalAlignment="Stretch"/>
 
-                    <TextBlock Grid.Column="3" Text="To:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Grid.Column="3" Text="{DynamicResource LogViewerView_To}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <DatePicker Grid.Column="4" SelectedDate="{Binding ToDate}" HorizontalAlignment="Stretch"/>
                 </Grid>
 
                 <!-- Action Buttons -->
                 <StackPanel Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
-                    <Button Content="Refresh" Command="{Binding RefreshLogsCommand}" Margin="5,0">
+                    <Button Content="{DynamicResource LogViewerView_Refresh}" Command="{Binding RefreshLogsCommand}" Margin="5,0">
                         <Button.IsEnabled>
                             <Binding Path="IsLoading">
                                 <Binding.Converter>
@@ -132,10 +132,10 @@
                             </Binding>
                         </Button.IsEnabled>
                     </Button>
-                    <Button Content="Clear Display" Command="{Binding ClearLogsCommand}" Margin="5,0"/>
-                    <Button Content="Export Activity" Command="{Binding ExportLogsCommand}" Margin="5,0"/>
-                    <Button Content="Cleanup Diagnostic Files" Command="{Binding CleanupOldLogsCommand}" Margin="5,0"/>
-                    <Button Content="Open Diagnostic Folder" Command="{Binding OpenLogDirectoryCommand}" Margin="5,0"/>
+                    <Button Content="{DynamicResource LogViewerView_ClearDisplay}" Command="{Binding ClearLogsCommand}" Margin="5,0"/>
+                    <Button Content="{DynamicResource LogViewerView_ExportActivity}" Command="{Binding ExportLogsCommand}" Margin="5,0"/>
+                    <Button Content="{DynamicResource LogViewerView_CleanupDiagnostics}" Command="{Binding CleanupOldLogsCommand}" Margin="5,0"/>
+                    <Button Content="{DynamicResource LogViewerView_OpenFolder}" Command="{Binding OpenLogDirectoryCommand}" Margin="5,0"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -154,7 +154,7 @@
                       ScrollViewer.CanContentScroll="True">
                 <ListView.View>
                     <GridView ColumnHeaderContainerStyle="{StaticResource LogGridViewHeaderStyle}">
-                    <GridViewColumn Header="Time" Width="150">
+                    <GridViewColumn Header="{DynamicResource LogViewerView_HeaderTime}" Width="150">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding FormattedTimestamp}"/>
@@ -162,7 +162,7 @@
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
 
-                    <GridViewColumn Header="Status" Width="90">
+                    <GridViewColumn Header="{DynamicResource LogViewerView_HeaderStatus}" Width="90">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Status}"
@@ -172,7 +172,7 @@
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
 
-                    <GridViewColumn Header="Category" Width="120">
+                    <GridViewColumn Header="{DynamicResource LogViewerView_HeaderCategory}" Width="120">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Category}" FontWeight="SemiBold"/>
@@ -180,7 +180,7 @@
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
 
-                    <GridViewColumn Header="Message" Width="500">
+                    <GridViewColumn Header="{DynamicResource LogViewerView_HeaderMessage}" Width="500">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding ShortMessage}" TextWrapping="NoWrap"/>
@@ -188,7 +188,7 @@
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
 
-                    <GridViewColumn Header="Details" Width="70">
+                    <GridViewColumn Header="{DynamicResource LogViewerView_HeaderDetails}" Width="70">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Foreground="{DynamicResource ErrorTextBrush}" FontWeight="SemiBold">
@@ -209,7 +209,7 @@
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
 
-                    <GridViewColumn Header="ID" Width="60">
+                    <GridViewColumn Header="{DynamicResource LogViewerView_HeaderId}" Width="60">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding CorrelationId}" FontSize="10"/>
@@ -221,10 +221,10 @@
 
                 <ListView.ContextMenu>
                     <ContextMenu>
-                        <MenuItem Header="Copy Entry" Command="{Binding CopyLogEntryCommand}"
+                        <MenuItem Header="{DynamicResource LogViewerView_ContextMenuCopy}" Command="{Binding CopyLogEntryCommand}"
                                   CommandParameter="{Binding SelectedLogEntry}"/>
                         <Separator/>
-                        <MenuItem Header="Refresh" Command="{Binding RefreshLogsCommand}"/>
+                        <MenuItem Header="{DynamicResource LogViewerView_ContextMenuRefresh}" Command="{Binding RefreshLogsCommand}"/>
                     </ContextMenu>
                 </ListView.ContextMenu>
             </ListView>
@@ -244,11 +244,11 @@
                     </Style>
                 </Border.Style>
                 <StackPanel>
-                    <TextBlock Text="No log entries to display"
+                    <TextBlock Text="{DynamicResource LogViewerView_NoEntries}"
                                FontWeight="SemiBold"
                                HorizontalAlignment="Center"
                                Margin="0,0,0,4"/>
-                    <TextBlock Text="Adjust filters or refresh logs to load recent ThreadPilot activity."
+                    <TextBlock Text="{DynamicResource LogViewerView_NoEntriesTip}"
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                TextAlignment="Center"
                                TextWrapping="Wrap"
@@ -265,7 +265,7 @@
         <Border Grid.Row="4" Background="{DynamicResource SolidBackgroundFillColorBaseBrush}" BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                 <StackPanel Margin="16" DataContext="{Binding SelectedLogEntry}">
-                    <TextBlock Text="Activity Details" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,16"/>
+                    <TextBlock Text="{DynamicResource LogViewerView_DetailsTitle}" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,16"/>
 
                     <Grid>
                         <Grid.Style>
@@ -290,22 +290,22 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Timestamp:" FontWeight="SemiBold" Margin="0,0,10,5"/>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource LogViewerView_Timestamp}" FontWeight="SemiBold" Margin="0,0,10,5"/>
                         <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding FormattedTimestamp}" Margin="0,0,0,5"/>
 
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Status:" FontWeight="SemiBold" Margin="0,0,10,5"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{DynamicResource LogViewerView_Status}" FontWeight="SemiBold" Margin="0,0,10,5"/>
                         <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Status}"
                                    Foreground="{Binding LevelColor}" FontWeight="SemiBold" Margin="0,0,0,5"/>
 
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Category:" FontWeight="SemiBold" Margin="0,0,10,5"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{DynamicResource LogViewerView_CategoryLabel}" FontWeight="SemiBold" Margin="0,0,10,5"/>
                         <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Category}" Margin="0,0,0,5"/>
 
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Message:" FontWeight="SemiBold" Margin="0,0,10,5" VerticalAlignment="Top"/>
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="{DynamicResource LogViewerView_Message}" FontWeight="SemiBold" Margin="0,0,10,5" VerticalAlignment="Top"/>
                         <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Message, Mode=OneWay}"
                                  IsReadOnly="True" TextWrapping="Wrap" Background="Transparent"
                                  BorderThickness="0" Margin="0,0,0,10"/>
 
-                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Details:" FontWeight="SemiBold" Margin="0,0,10,5"
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="{DynamicResource LogViewerView_Details}" FontWeight="SemiBold" Margin="0,0,10,5"
                                    VerticalAlignment="Top">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -331,11 +331,11 @@
                             </TextBox.Style>
                         </TextBox>
 
-                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Correlation ID:" FontWeight="SemiBold" Margin="0,0,10,5"/>
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="{DynamicResource LogViewerView_CorrelationId}" FontWeight="SemiBold" Margin="0,0,10,5"/>
                         <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding CorrelationId}"/>
                     </Grid>
 
-                    <TextBlock Text="No log entry selected"
+                    <TextBlock Text="{DynamicResource LogViewerView_NoEntrySelected}"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                Foreground="{DynamicResource TextSecondaryBrush}" FontStyle="Italic">
                         <TextBlock.Style>
@@ -365,10 +365,10 @@
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
                     <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" Margin="0,0,20,0" Opacity="{Binding StatusOpacity}"/>
 
-                    <TextBlock Text="Files:" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="SemiBold"/>
+                    <TextBlock Text="{DynamicResource LogViewerView_Files}" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="SemiBold"/>
                     <TextBlock Text="{Binding LogStatistics.TotalLogFiles}" VerticalAlignment="Center" Margin="0,0,15,0"/>
 
-                    <TextBlock Text="Size:" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="SemiBold"/>
+                    <TextBlock Text="{DynamicResource LogViewerView_Size}" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="SemiBold"/>
                     <TextBlock VerticalAlignment="Center" Margin="0,0,15,0">
                         <TextBlock.Text>
                             <MultiBinding StringFormat="{}{0:F1} MB">
@@ -392,16 +392,16 @@
 
                 <!-- Settings Panel -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <CheckBox Content="Debug Diagnostics" IsChecked="{Binding EnableDebugLogging}"
+                    <CheckBox Content="{DynamicResource LogViewerView_DebugDiagnostics}" IsChecked="{Binding EnableDebugLogging}"
                               VerticalAlignment="Center" Margin="0,0,15,0"/>
 
-                    <TextBlock Text="Max Size (MB):" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBlock Text="{DynamicResource LogViewerView_MaxSize}" VerticalAlignment="Center" Margin="0,0,5,0"/>
                     <TextBox Text="{Binding MaxLogFileSizeMb}" Width="50" Margin="0,0,15,0"/>
 
-                    <TextBlock Text="Retention (Days):" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBlock Text="{DynamicResource LogViewerView_Retention}" VerticalAlignment="Center" Margin="0,0,5,0"/>
                     <TextBox Text="{Binding LogRetentionDays}" Width="50" Margin="0,0,15,0"/>
 
-                    <Button Content="Save Settings" Command="{Binding SaveSettingsCommand}"
+                    <Button Content="{DynamicResource LogViewerView_SaveSettings}" Command="{Binding SaveSettingsCommand}"
                             Padding="10,5" Margin="5,0"/>
                 </StackPanel>
             </Grid>

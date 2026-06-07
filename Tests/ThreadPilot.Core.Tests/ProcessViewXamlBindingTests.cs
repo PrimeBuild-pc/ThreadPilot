@@ -161,24 +161,24 @@ namespace ThreadPilot.Core.Tests
             var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);
             var serialized = document.ToString(SaveOptions.DisableFormatting);
 
-            Assert.Contains("Header=\"Apply Affinity\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Header=\"Clear CPU Sets\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Header=\"Rules\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Header=\"Save Current Settings as Rule\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Header=\"Apply Affinity and Save as Rule\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Header=\"Set CPU Priority\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Header=\"Below Normal\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Header=\"Normal\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Header=\"Above Normal\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Header=\"High\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Header=\"Realtime (blocked)\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Header=\"Set Memory Priority\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Header=\"Very Low\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Header=\"Low\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Header=\"Medium\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Header=\"Open Executable Location\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Header=\"Copy Process Info\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Header=\"Refresh Process Info\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"{DynamicResource ProcessView_ApplyAffinity}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"{DynamicResource ProcessView_ClearCpuSets}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"{DynamicResource ProcessView_Rules}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"{DynamicResource ProcessView_SaveCurrentRule}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"{DynamicResource ProcessView_ApplyAffinitySaveRule}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"{DynamicResource ProcessView_SetCpuPriority}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"{DynamicResource ProcessView_PriorityBelowNormal}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"{DynamicResource ProcessView_PriorityNormal}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"{DynamicResource ProcessView_PriorityAboveNormal}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"{DynamicResource ProcessView_PriorityHigh}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"{DynamicResource ProcessView_RealtimeBlocked}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"{DynamicResource ProcessView_SetMemoryPriority}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"{DynamicResource ProcessView_PriorityVeryLow}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"{DynamicResource ProcessView_PriorityLow}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"{DynamicResource ProcessView_PriorityMedium}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"{DynamicResource ProcessView_OpenLocation}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"{DynamicResource ProcessView_CopyProcessInfo}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Header=\"{DynamicResource ProcessView_RefreshInfo}\"", serialized, StringComparison.Ordinal);
         }
 
         [Fact]
@@ -187,9 +187,9 @@ namespace ThreadPilot.Core.Tests
             var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);
             var serialized = document.ToString(SaveOptions.DisableFormatting);
 
-            Assert.Contains("Lock process list", serialized, StringComparison.Ordinal);
+            Assert.Contains("ProcessView_LockList", serialized, StringComparison.Ordinal);
             Assert.Contains("IsChecked=\"{Binding IsProcessListLocked}\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Pause process list refresh and sorting updates while you work with the current list.", serialized, StringComparison.Ordinal);
+            Assert.Contains("ProcessView_LockListTooltip", serialized, StringComparison.Ordinal);
         }
 
         [Fact]
@@ -237,9 +237,9 @@ namespace ThreadPilot.Core.Tests
             var serialized = document.ToString(SaveOptions.DisableFormatting);
 
             Assert.Contains("StartupMinimizedSuggestionOverlay", serialized, StringComparison.Ordinal);
-            Assert.Contains("Startup minimized", serialized, StringComparison.Ordinal);
-            Assert.Contains("Open Settings", serialized, StringComparison.Ordinal);
-            Assert.Contains("Don't show again", serialized, StringComparison.Ordinal);
+            Assert.Contains("MainWindow_StartupMinimizedSuggestionTitle", serialized, StringComparison.Ordinal);
+            Assert.Contains("MainWindow_OpenSettings", serialized, StringComparison.Ordinal);
+            Assert.Contains("MainWindow_DontShowAgain", serialized, StringComparison.Ordinal);
         }
 
         [Fact]
@@ -266,7 +266,7 @@ namespace ThreadPilot.Core.Tests
             var serialized = document.ToString(SaveOptions.DisableFormatting);
 
             Assert.Contains("Grid.Column=\"2\" Visibility=\"Collapsed\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Advanced affinity picker", serialized, StringComparison.Ordinal);
+            Assert.Contains("ProcessView_AdvancedAffinityPicker", serialized, StringComparison.Ordinal);
         }
 
         private static string GetRepositoryRoot()

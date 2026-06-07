@@ -75,33 +75,33 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="Optional Diagnostics" Style="{StaticResource TitleTextStyle}"/>
-                            <TextBlock Text="Diagnostics are optional and intended for troubleshooting." Style="{StaticResource LabelTextStyle}" Margin="0,4,0,0"/>
-                            <TextBlock Text="For in-game overlays and detailed performance graphs, use dedicated tools." Style="{StaticResource LabelTextStyle}" Margin="0,2,0,0"/>
+                            <TextBlock Text="{DynamicResource PerformanceView_OptionalDiagnostics}" Style="{StaticResource TitleTextStyle}"/>
+                            <TextBlock Text="{DynamicResource PerformanceView_DiagnosticsDesc1}" Style="{StaticResource LabelTextStyle}" Margin="0,4,0,0"/>
+                            <TextBlock Text="{DynamicResource PerformanceView_DiagnosticsDesc2}" Style="{StaticResource LabelTextStyle}" Margin="0,2,0,0"/>
                         </StackPanel>
 
                         <WrapPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" ItemHeight="32">
-                            <Button Content="Start Live Metrics"
+                            <Button Content="{DynamicResource PerformanceView_StartLive}"
                                     Command="{Binding StartMonitoringCommand}"
                                     IsEnabled="{Binding IsMonitoring, Converter={StaticResource InverseBooleanConverter}}"
                                     MinWidth="128"
                                     Margin="0,0,8,0"
-                                    ToolTip="Start live metrics collection for this dashboard"/>
-                            <Button Content="Stop Live Metrics"
+                                    ToolTip="{DynamicResource PerformanceView_StartLiveTooltip}"/>
+                            <Button Content="{DynamicResource PerformanceView_StopLive}"
                                     Command="{Binding StopMonitoringCommand}"
                                     IsEnabled="{Binding IsMonitoring}"
                                     MinWidth="120"
                                     Margin="0,0,8,0"
-                                    ToolTip="Pause live metrics collection; background automation is separate"/>
-                            <Button Content="Refresh"
+                                    ToolTip="{DynamicResource PerformanceView_StopLiveTooltip}"/>
+                            <Button Content="{DynamicResource PerformanceView_Refresh}"
                                     Command="{Binding RefreshMetricsCommand}"
                                     MinWidth="84"
                                     Margin="0,0,8,0"
-                                    ToolTip="Refresh the current dashboard snapshot"/>
-                            <Button Content="Clear History"
+                                    ToolTip="{DynamicResource PerformanceView_RefreshTooltip}"/>
+                            <Button Content="{DynamicResource PerformanceView_ClearHistory}"
                                     MinWidth="104"
                                     Command="{Binding ClearHistoricalDataCommand}"
-                                    ToolTip="Clear the displayed metrics and timeline history"/>
+                                    ToolTip="{DynamicResource PerformanceView_ClearHistoryTooltip}"/>
                         </WrapPanel>
                     </Grid>
                 </Border>
@@ -124,7 +124,7 @@
 
                     <Border Grid.Column="1" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
                         <StackPanel>
-                            <TextBlock Text="Memory" Style="{StaticResource LabelTextStyle}"/>
+                            <TextBlock Text="{DynamicResource PerformanceView_Memory}" Style="{StaticResource LabelTextStyle}"/>
                             <TextBlock Text="{Binding MemoryUsageText}" Style="{StaticResource MetricValueTextStyle}" FontSize="18"/>
                             <TextBlock Text="{Binding MemoryUsagePercentage, StringFormat={}{0:F1}% utilized}" Style="{StaticResource LabelTextStyle}"/>
                         </StackPanel>
@@ -132,7 +132,7 @@
 
                     <Border Grid.Column="2" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
                         <StackPanel>
-                            <TextBlock Text="Active Processes" Style="{StaticResource LabelTextStyle}"/>
+                            <TextBlock Text="{DynamicResource PerformanceView_ActiveProcesses}" Style="{StaticResource LabelTextStyle}"/>
                             <TextBlock Text="{Binding ProcessCountText}" Style="{StaticResource MetricValueTextStyle}"/>
                             <TextBlock Text="{Binding MonitoringStateText, StringFormat=Live metrics: {0}}" Style="{StaticResource LabelTextStyle}"/>
                         </StackPanel>
@@ -140,7 +140,7 @@
 
                     <Border Grid.Column="3" Style="{StaticResource CardStyle}" Margin="0">
                         <StackPanel>
-                            <TextBlock Text="Global Power Plan" Style="{StaticResource LabelTextStyle}"/>
+                            <TextBlock Text="{DynamicResource PerformanceView_GlobalPowerPlan}" Style="{StaticResource LabelTextStyle}"/>
                             <TextBlock Text="{Binding CurrentGlobalPowerPlanText}" Style="{StaticResource MetricValueTextStyle}" FontSize="16"/>
                             <TextBlock Text="{Binding LastUpdateTime, StringFormat=Last metric update: {0:HH:mm:ss}}" Style="{StaticResource LabelTextStyle}"/>
                         </StackPanel>
@@ -169,20 +169,20 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Grid.Column="0">
-                                    <TextBlock Text="Process Hotspots" Style="{StaticResource TitleTextStyle}"/>
-                                    <TextBlock Text="Top CPU and memory consumers with one-click rule creation." Style="{StaticResource LabelTextStyle}" Margin="0,2,0,0"/>
+                                    <TextBlock Text="{DynamicResource PerformanceView_ProcessHotspots}" Style="{StaticResource TitleTextStyle}"/>
+                                    <TextBlock Text="{DynamicResource PerformanceView_TopConsumersDesc}" Style="{StaticResource LabelTextStyle}" Margin="0,2,0,0"/>
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Button Content="Create/Update Rule from Selection"
+                                    <Button Content="{DynamicResource PerformanceView_CreateRuleButton}"
                                             Command="{Binding CreateRuleFromSelectedProcessCommand}"
                                             IsEnabled="{Binding CanCreateRuleFromSelectedProcess}"
                                             Margin="0,0,8,0"
-                                            ToolTip="Create or update an automation rule from the selected hotspot process"/>
-                                    <Button Content="Toggle Core Panel"
+                                            ToolTip="{DynamicResource PerformanceView_CreateRuleTooltip}"/>
+                                    <Button Content="{DynamicResource PerformanceView_ToggleCore}"
                                             Command="{Binding ToggleCoreDetailsCommand}"
                                             Margin="0,0,8,0"/>
-                                    <Button Content="Toggle Process Panel"
+                                    <Button Content="{DynamicResource PerformanceView_ToggleProcess}"
                                             Command="{Binding ToggleProcessDetailsCommand}"/>
                                 </StackPanel>
                             </Grid>
@@ -198,7 +198,7 @@
                                 </Grid.ColumnDefinitions>
 
                                 <TextBlock Grid.Column="0"
-                                           Text="Filter"
+                                           Text="{DynamicResource PerformanceView_Filter}"
                                            Style="{StaticResource LabelTextStyle}"
                                            Margin="0,0,8,0"
                                            VerticalAlignment="Center"/>
@@ -215,18 +215,18 @@
                                           Width="110"
                                           Margin="0,0,8,0">
                                     <ComboBoxItem Content="CPU" Tag="Cpu"/>
-                                    <ComboBoxItem Content="Memory" Tag="Memory"/>
-                                    <ComboBoxItem Content="Name" Tag="Name"/>
+                                    <ComboBoxItem Content="{DynamicResource PerformanceView_Memory}" Tag="Memory"/>
+                                    <ComboBoxItem Content="{DynamicResource PerformanceView_Name}" Tag="Name"/>
                                 </ComboBox>
 
                                 <CheckBox Grid.Column="3"
-                                          Content="Actionable only"
+                                          Content="{DynamicResource PerformanceView_ActionableOnly}"
                                           IsChecked="{Binding ShowOnlyActionableHotspots}"
                                           Margin="0,0,8,0"
                                           VerticalAlignment="Center"/>
 
                                 <CheckBox Grid.Column="4"
-                                          Content="Rule-backed only"
+                                          Content="{DynamicResource PerformanceView_RuleBackedOnly}"
                                           IsChecked="{Binding ShowOnlyRuleBackedHotspots}"
                                           Margin="0,0,8,0"
                                           VerticalAlignment="Center"/>
@@ -250,12 +250,12 @@
                                        MinHeight="220"
                                        MaxHeight="380">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="2*"/>
-                                    <DataGridTextColumn Header="CPU %" Binding="{Binding CpuUsage, StringFormat={}{0:F1}}" Width="90"/>
-                                    <DataGridTextColumn Header="Memory" Binding="{Binding MemoryUsage, Converter={StaticResource BytesToStringConverter}}" Width="110"/>
-                                    <DataGridTextColumn Header="Threads" Binding="{Binding ThreadCount}" Width="80"/>
-                                    <DataGridTextColumn Header="Priority" Binding="{Binding Priority}" Width="110"/>
-                                    <DataGridTextColumn Header="Window" Binding="{Binding WindowTitle}" Width="3*"/>
+                                    <DataGridTextColumn Header="{DynamicResource PerformanceView_Process}" Binding="{Binding ProcessName}" Width="2*"/>
+                                    <DataGridTextColumn Header="{DynamicResource PerformanceView_CpuPercent}" Binding="{Binding CpuUsage, StringFormat={}{0:F1}}" Width="90"/>
+                                    <DataGridTextColumn Header="{DynamicResource PerformanceView_Memory}" Binding="{Binding MemoryUsage, Converter={StaticResource BytesToStringConverter}}" Width="110"/>
+                                    <DataGridTextColumn Header="{DynamicResource PerformanceView_Threads}" Binding="{Binding ThreadCount}" Width="80"/>
+                                    <DataGridTextColumn Header="{DynamicResource PerformanceView_Priority}" Binding="{Binding Priority}" Width="110"/>
+                                    <DataGridTextColumn Header="{DynamicResource PerformanceView_Window}" Binding="{Binding WindowTitle}" Width="3*"/>
                                 </DataGrid.Columns>
                             </DataGrid>
 
@@ -303,8 +303,8 @@
 
                         <Border Grid.Row="0" Style="{StaticResource CardStyle}">
                             <StackPanel>
-                                <TextBlock Text="Rule Impact" Style="{StaticResource TitleTextStyle}"/>
-                                <TextBlock Text="Selected hotspot process" Style="{StaticResource LabelTextStyle}" Margin="0,4,0,8"/>
+                                <TextBlock Text="{DynamicResource PerformanceView_RuleImpact}" Style="{StaticResource TitleTextStyle}"/>
+                                <TextBlock Text="{DynamicResource PerformanceView_SelectedHotspot}" Style="{StaticResource LabelTextStyle}" Margin="0,4,0,8"/>
 
                                 <TextBlock Text="{Binding SelectedProcessName}" FontWeight="SemiBold" FontSize="14"/>
                                 <TextBlock Text="{Binding SelectedProcessExecutable}" Style="{StaticResource LabelTextStyle}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" Margin="0,2,0,8"/>
@@ -320,8 +320,8 @@
 
                         <Border Grid.Row="1" Style="{StaticResource CardStyle}">
                             <StackPanel>
-                                <TextBlock Text="Core Snapshot" Style="{StaticResource TitleTextStyle}"/>
-                                <TextBlock Text="Per-core utilization for quick imbalance checks." Style="{StaticResource LabelTextStyle}" Margin="0,4,0,8"/>
+                                <TextBlock Text="{DynamicResource PerformanceView_CoreSnapshot}" Style="{StaticResource TitleTextStyle}"/>
+                                <TextBlock Text="{DynamicResource PerformanceView_CoreSnapshotDesc}" Style="{StaticResource LabelTextStyle}" Margin="0,4,0,8"/>
 
                                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                                               HorizontalScrollBarVisibility="Disabled"
@@ -358,14 +358,14 @@
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Text="Stability Timeline" Style="{StaticResource TitleTextStyle}"/>
+                                <TextBlock Grid.Row="0" Text="{DynamicResource PerformanceView_Timeline}" Style="{StaticResource TitleTextStyle}"/>
                                 <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,6,0,8">
                                     <TextBlock Text="{Binding TimelineSampleCountText}" Style="{StaticResource LabelTextStyle}" Margin="0,0,14,0"/>
                                     <TextBlock Text="{Binding LastTimelineEventText}" Style="{StaticResource LabelTextStyle}"/>
                                 </StackPanel>
 
                                 <TabControl Grid.Row="2" MinHeight="260">
-                                    <TabItem Header="Events">
+                                    <TabItem Header="{DynamicResource PerformanceView_Events}">
                                         <DataGrid ItemsSource="{Binding TimelineEvents}"
                                                   AutoGenerateColumns="False"
                                                   IsReadOnly="True"
@@ -376,14 +376,14 @@
                                                   MaxHeight="280"
                                                   MinHeight="220">
                                             <DataGrid.Columns>
-                                                <DataGridTextColumn Header="Time" Binding="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}" Width="80"/>
-                                                <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="110"/>
-                                                <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="90"/>
-                                                <DataGridTextColumn Header="Detail" Binding="{Binding Detail}" Width="*"/>
+                                                <DataGridTextColumn Header="{DynamicResource PerformanceView_Time}" Binding="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}" Width="80"/>
+                                                <DataGridTextColumn Header="{DynamicResource PerformanceView_Category}" Binding="{Binding Category}" Width="110"/>
+                                                <DataGridTextColumn Header="{DynamicResource PerformanceView_Severity}" Binding="{Binding Severity}" Width="90"/>
+                                                <DataGridTextColumn Header="{DynamicResource PerformanceView_Detail}" Binding="{Binding Detail}" Width="*"/>
                                             </DataGrid.Columns>
                                         </DataGrid>
                                     </TabItem>
-                                    <TabItem Header="Metrics">
+                                    <TabItem Header="{DynamicResource PerformanceView_Metrics}">
                                         <DataGrid ItemsSource="{Binding HistoricalData}"
                                                   AutoGenerateColumns="False"
                                                   IsReadOnly="True"
@@ -394,11 +394,11 @@
                                                   MaxHeight="280"
                                                   MinHeight="220">
                                             <DataGrid.Columns>
-                                                <DataGridTextColumn Header="Time" Binding="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}" Width="80"/>
-                                                <DataGridTextColumn Header="CPU %" Binding="{Binding TotalCpuUsage, StringFormat={}{0:F1}}" Width="70"/>
-                                                <DataGridTextColumn Header="Mem %" Binding="{Binding MemoryUsagePercentage, StringFormat={}{0:F1}}" Width="70"/>
-                                                <DataGridTextColumn Header="Processes" Binding="{Binding ActiveProcessCount}" Width="90"/>
-                                                <DataGridTextColumn Header="Memory Used" Binding="{Binding TotalMemoryUsage, Converter={StaticResource BytesToStringConverter}}" Width="110"/>
+                                                <DataGridTextColumn Header="{DynamicResource PerformanceView_Time}" Binding="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}" Width="80"/>
+                                                <DataGridTextColumn Header="{DynamicResource PerformanceView_CpuPercent}" Binding="{Binding TotalCpuUsage, StringFormat={}{0:F1}}" Width="70"/>
+                                                <DataGridTextColumn Header="{DynamicResource PerformanceView_MemPercent}" Binding="{Binding MemoryUsagePercentage, StringFormat={}{0:F1}}" Width="70"/>
+                                                <DataGridTextColumn Header="{DynamicResource PerformanceView_Processes}" Binding="{Binding ActiveProcessCount}" Width="90"/>
+                                                <DataGridTextColumn Header="{DynamicResource PerformanceView_MemoryUsed}" Binding="{Binding TotalMemoryUsage, Converter={StaticResource BytesToStringConverter}}" Width="110"/>
                                             </DataGrid.Columns>
                                         </DataGrid>
                                     </TabItem>

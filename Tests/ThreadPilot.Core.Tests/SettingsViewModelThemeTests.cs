@@ -102,6 +102,25 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void ChangingLanguage_UsesLocalizedStatusMessage()
+        {
+            var harness = new Harness();
+            harness.Localization
+                .Setup(service => service.GetString(It.IsAny<string>()))
+                .Returns<string>(key => key switch
+                {
+                    "Settings_LanguageSimplifiedChinese" => "简体中文",
+                    "Settings_StatusLanguageChangedFormat" => "语言已切换为{0}。",
+                    _ => key,
+                });
+            var viewModel = harness.CreateViewModel();
+
+            viewModel.Settings.Language = "zh-CN";
+
+            Assert.Equal("语言已切换为简体中文。", viewModel.StatusMessage);
+        }
+
+        [Fact]
         public async Task SaveSettingsCommand_PersistsSelectedLanguage()
         {
             var harness = new Harness();

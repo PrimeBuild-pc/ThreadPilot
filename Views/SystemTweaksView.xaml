@@ -103,18 +103,18 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="System Tweaks &amp; Optimizations"
+                        <TextBlock Text="{DynamicResource SystemTweaksView_Title}"
                                    Style="{StaticResource PageTitleTextStyle}"
                                    Margin="0,0,0,4"/>
-                        <TextBlock Text="Configure Windows system optimizations and performance tweaks"
+                        <TextBlock Text="{DynamicResource SystemTweaksView_Subtitle}"
                                    Style="{StaticResource PageSubtitleTextStyle}"/>
                     </StackPanel>
 
                     <Button Grid.Column="1"
-                            Content="Refresh All"
+                            Content="{DynamicResource SystemTweaksView_RefreshAll}"
                             Command="{Binding RefreshAllTweaksCommand}"
                             Padding="12,6"
-                            ToolTip="Refresh all tweak states"
+                            ToolTip="{DynamicResource SystemTweaksView_RefreshAllTooltip}"
                             IsEnabled="{Binding IsRefreshing, Converter={StaticResource InverseBooleanConverter}}"/>
                 </Grid>
 
@@ -127,7 +127,7 @@
                     </Grid.ColumnDefinitions>
 
                     <TextBlock Grid.Column="0"
-                               Text="Status"
+                               Text="{DynamicResource SystemTweaksView_Status}"
                                FontWeight="SemiBold"
                                VerticalAlignment="Center"/>
 
@@ -227,7 +227,7 @@
                                               VerticalAlignment="Center"
                                               HorizontalAlignment="Right"
                                               Margin="10,0,0,0"
-                                              ToolTip="Toggle this Windows tweak"/>
+                                              ToolTip="{DynamicResource SystemTweaksView_TweakTooltip}"/>
                                 </Grid>
 
                                  <TextBlock Text="{Binding ErrorMessage}"

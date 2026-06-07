@@ -1,11 +1,12 @@
 namespace ThreadPilot.Core.Tests
 {
     using System.Reflection;
+    using System.Text.RegularExpressions;
     using System.Windows;
     using Microsoft.Extensions.Logging.Abstractions;
     using ThreadPilot.Services;
 
-    public sealed class LocalizationServiceTests
+    public sealed partial class LocalizationServiceTests
     {
         [Fact]
         public void Constructor_DefaultsToEnglish()
@@ -147,6 +148,56 @@ namespace ThreadPilot.Core.Tests
             Assert.Contains("x:Key=\"SettingsView_LanguageZhCn\"", chinese, StringComparison.Ordinal);
         }
 
+        [Fact]
+        public void LocaleFiles_DefineTheSameResourceKeys()
+        {
+            var root = FindRepositoryRoot();
+            var english = ReadLocaleKeys(Path.Combine(root, "Locales", "en-US.xaml"));
+            var chinese = ReadLocaleKeys(Path.Combine(root, "Locales", "zh-CN.xaml"));
+
+            Assert.Empty(english.Except(chinese).Order(StringComparer.Ordinal));
+            Assert.Empty(chinese.Except(english).Order(StringComparer.Ordinal));
+        }
+
+        [Fact]
+        public void ImportantViews_DoNotUseHardcodedEnglishUiText()
+        {
+            var root = FindRepositoryRoot();
+            var viewPaths = new[]
+            {
+                "MainWindow.xaml",
+                Path.Combine("Views", "ProcessView.xaml"),
+                Path.Combine("Views", "MasksView.xaml"),
+                Path.Combine("Views", "PowerPlanView.xaml"),
+                Path.Combine("Views", "ProcessPowerPlanAssociationView.xaml"),
+                Path.Combine("Views", "PerformanceView.xaml"),
+                Path.Combine("Views", "LogViewerView.xaml"),
+                Path.Combine("Views", "SystemTweaksView.xaml"),
+                Path.Combine("Views", "SettingsView.xaml"),
+                Path.Combine("Views", "SettingsWindow.xaml"),
+            };
+
+            var failures = new List<string>();
+            foreach (var relativePath in viewPaths)
+            {
+                var fullPath = Path.Combine(root, relativePath);
+                var xaml = File.ReadAllText(fullPath);
+                foreach (Match match in HardcodedUiAttributeRegex().Matches(xaml))
+                {
+                    var attribute = match.Groups["attribute"].Value;
+                    var value = match.Groups["value"].Value;
+                    if (IsAllowedHardcodedUiValue(attribute, value))
+                    {
+                        continue;
+                    }
+
+                    failures.Add($"{relativePath}: {attribute}=\"{value}\"");
+                }
+            }
+
+            Assert.Empty(failures);
+        }
+
         private static LocalizationService CreateService(
             IReadOnlyDictionary<string, string>? englishStrings = null,
             IReadOnlyDictionary<string, string>? chineseStrings = null)
@@ -196,5 +247,56 @@ namespace ThreadPilot.Core.Tests
 
             method.Invoke(service, new object[] { resources, targetUri });
         }
+
+        private static SortedSet<string> ReadLocaleKeys(string path)
+        {
+            var keys = new SortedSet<string>(StringComparer.Ordinal);
+            var xaml = File.ReadAllText(path);
+            foreach (Match match in Regex.Matches(xaml, "x:Key=\"(?<key>[^\"]+)\"", RegexOptions.CultureInvariant))
+            {
+                keys.Add(match.Groups["key"].Value);
+            }
+
+            return keys;
+        }
+
+        private static bool IsAllowedHardcodedUiValue(string attribute, string value)
+        {
+            if (value.Contains('{', StringComparison.Ordinal) ||
+                value.Contains("DynamicResource", StringComparison.Ordinal) ||
+                value.Contains("StaticResource", StringComparison.Ordinal) ||
+                value.Contains("Binding", StringComparison.Ordinal) ||
+                value.Contains("x:Static", StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            if (string.Equals(attribute, "Tag", StringComparison.Ordinal) ||
+                string.Equals(attribute, "TargetPageTag", StringComparison.Ordinal) ||
+                string.Equals(attribute, "Name", StringComparison.Ordinal) ||
+                string.Equals(attribute, "x:Name", StringComparison.Ordinal) ||
+                string.Equals(attribute, "SelectedValuePath", StringComparison.Ordinal) ||
+                string.Equals(attribute, "DisplayMemberPath", StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            var trimmedValue = value.Trim();
+
+            if (value.Contains("ThreadPilot", StringComparison.Ordinal) ||
+                value.Contains("Segoe", StringComparison.Ordinal) ||
+                value.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ||
+                value.EndsWith(".pow", StringComparison.OrdinalIgnoreCase) ||
+                value.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ||
+                trimmedValue is "CPU" or "PID" or "ID" or "MB" or "AGPLv3" or "Windows" or "WMI" or "HPET" or "SMT" or "CPU %")
+            {
+                return true;
+            }
+
+            return !Regex.IsMatch(value, "[A-Za-z]{3,}", RegexOptions.CultureInvariant);
+        }
+
+        [GeneratedRegex("(?<attribute>Text|Content|Header|Title|ToolTip|PlaceholderText|AutomationProperties\\.Name|AutomationProperties\\.HelpText)=\"(?<value>[^\"]*[A-Za-z][^\"]*)\"", RegexOptions.CultureInvariant)]
+        private static partial Regex HardcodedUiAttributeRegex();
     }
 }

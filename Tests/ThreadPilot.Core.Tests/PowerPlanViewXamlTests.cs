@@ -34,8 +34,8 @@ namespace ThreadPilot.Core.Tests
                 .Descendants()
                 .Where(element => element.Name.LocalName == "TextBlock")
                 .Where(element => element.Attributes().Any(attribute =>
-                    attribute.Value.Contains("Select the Windows plan", StringComparison.Ordinal) ||
-                    attribute.Value.Contains("Local .pow files", StringComparison.Ordinal)))
+                    attribute.Value.Contains("PowerPlanView_SelectActiveTip", StringComparison.Ordinal) ||
+                    attribute.Value.Contains("PowerPlanView_LocalPlansTip", StringComparison.Ordinal)))
                 .ToList();
 
             Assert.Equal(2, instructionTextBlocks.Count);
@@ -50,7 +50,7 @@ namespace ThreadPilot.Core.Tests
             var document = XDocument.Load(PowerPlanViewPath, LoadOptions.PreserveWhitespace);
             var serialized = document.ToString(SaveOptions.DisableFormatting);
 
-            Assert.Contains("Active", serialized, StringComparison.Ordinal);
+            Assert.Contains("PowerPlanView_Active", serialized, StringComparison.Ordinal);
             Assert.Contains("IsActive", serialized, StringComparison.Ordinal);
             Assert.Contains("Accent", serialized, StringComparison.Ordinal);
         }

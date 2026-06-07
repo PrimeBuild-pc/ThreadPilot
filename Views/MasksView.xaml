@@ -55,8 +55,8 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
-            <TextBlock Text="CPU Masks" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
-            <TextBlock Text="Create reusable CPU affinity presets for per-process use." Style="{StaticResource PageSubtitleTextStyle}"/>
+            <TextBlock Text="{DynamicResource MasksView_Title}" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
+            <TextBlock Text="{DynamicResource MasksView_Subtitle}" Style="{StaticResource PageSubtitleTextStyle}"/>
             <TextBlock FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="0,6,0,0">
                 Selecting a mask here only edits the preset. It does not change CPU affinity until you apply it to a process or save it in a process rule.
             </TextBlock>
@@ -72,12 +72,12 @@
             <DockPanel Grid.Column="0">
                 <!-- Mask list actions -->
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
-                    <Button Content="New" Command="{Binding CreateMaskCommand}"
+                    <Button Content="{DynamicResource MasksView_New}" Command="{Binding CreateMaskCommand}"
                             Padding="10,5" FontSize="13" Margin="0,0,5,0"
-                            ToolTip="Create a new CPU mask"/>
-                    <Button Content="Delete" Command="{Binding DeleteMaskCommand}"
+                            ToolTip="{DynamicResource MasksView_CreateNewTooltip}"/>
+                    <Button Content="{DynamicResource MasksView_Delete}" Command="{Binding DeleteMaskCommand}"
                             Padding="10,5" FontSize="13"
-                            ToolTip="Delete selected mask"/>
+                            ToolTip="{DynamicResource MasksView_DeleteTooltip}"/>
                 </StackPanel>
 
                 <Border BorderBrush="{DynamicResource BorderSubtleBrush}"
@@ -107,7 +107,7 @@
                                             <Run Text="{Binding SelectedCoreCount, Mode=OneWay}"/>
                                             <Run Text="/"/>
                                             <Run Text="{Binding BoolMask.Count, Mode=OneWay}"/>
-                                            <Run Text="CPUs"/>
+                                            <Run Text="{DynamicResource MasksView_CpusHeader}"/>
                                         </TextBlock>
                                     </StackPanel>
 
@@ -149,18 +149,18 @@
                         </Style>
                     </StackPanel.Style>
 
-                      <GroupBox Header="Mask Information" Padding="{DynamicResource CompactCardPadding}" Margin="0,0,0,10">
+                      <GroupBox Header="{DynamicResource MasksView_Info}" Padding="{DynamicResource CompactCardPadding}" Margin="0,0,0,10">
                         <StackPanel>
-                            <TextBlock Text="Mask names, descriptions, CPU selections, and options are saved automatically."
+                            <TextBlock Text="{DynamicResource MasksView_SavedAutomatically}"
                                        FontSize="11"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                        TextWrapping="Wrap"
                                        Margin="0,0,0,10"/>
-                            <TextBlock Text="Name:" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                            <TextBlock Text="{DynamicResource MasksView_Name}" FontWeight="SemiBold" Margin="0,0,0,5"/>
                             <TextBox Text="{Binding SelectedCoreMask.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                      Padding="8,6" FontSize="13" Margin="0,0,0,10"/>
 
-                            <TextBlock Text="Description:" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                            <TextBlock Text="{DynamicResource MasksView_Description}" FontWeight="SemiBold" Margin="0,0,0,5"/>
                             <TextBox Text="{Binding SelectedCoreMask.Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                      Padding="8,6" MinHeight="52" MaxHeight="90" TextWrapping="Wrap" AcceptsReturn="True"
                                      VerticalScrollBarVisibility="Auto"/>
@@ -168,9 +168,9 @@
                     </GroupBox>
 
                     <!-- CPU Selection Grid -->
-                    <GroupBox Header="Select CPUs" Padding="{DynamicResource CompactCardPadding}" Margin="0,10,0,10">
+                    <GroupBox Header="{DynamicResource MasksView_SelectCpus}" Padding="{DynamicResource CompactCardPadding}" Margin="0,10,0,10">
                         <StackPanel>
-                            <TextBlock Text="Toggle CPUs to edit this mask preset. Changes are saved automatically and do not affect running processes. All Cores is the protected default preset."
+                            <TextBlock Text="{DynamicResource MasksView_SelectCpusTip}"
                                        FontSize="11"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                        TextWrapping="Wrap"
@@ -206,7 +206,7 @@
                                                           MinWidth="60">
                                                     <CheckBox.Content>
                                                         <TextBlock>
-                                                            <Run Text="CPU "/>
+                                                            <Run Text="{DynamicResource MasksView_Cpu}"/>
                                                             <Run Text="{Binding Index, Mode=OneWay}"/>
                                                         </TextBlock>
                                                     </CheckBox.Content>
@@ -219,20 +219,20 @@
                         </StackPanel>
                     </GroupBox>
 
-                    <GroupBox Header="Mask Options" Padding="{DynamicResource CompactCardPadding}">
+                    <GroupBox Header="{DynamicResource MasksView_Options}" Padding="{DynamicResource CompactCardPadding}">
                         <StackPanel>
-                            <Button Content="Duplicate Mask" Command="{Binding DuplicateMaskCommand}"
+                            <Button Content="{DynamicResource MasksView_Duplicate}" Command="{Binding DuplicateMaskCommand}"
                                     HorizontalAlignment="Left" Padding="10,6" Margin="0,0,0,5"/>
 
-                            <CheckBox Content="Default preset"
+                            <CheckBox Content="{DynamicResource MasksView_DefaultPreset}"
                                       IsChecked="{Binding SelectedCoreMask.IsDefault, Mode=TwoWay}"
                                       Margin="0,10,0,5"
-                                      ToolTip="Pre-selected when ThreadPilot needs a fallback mask or when creating per-process rules. It does not apply CPU affinity automatically."/>
+                                      ToolTip="{DynamicResource MasksView_DefaultPresetTip}"/>
 
-                            <CheckBox Content="Enabled"
+                            <CheckBox Content="{DynamicResource MasksView_Enabled}"
                                       IsChecked="{Binding SelectedCoreMask.IsEnabled, Mode=TwoWay}"
                                       Margin="0,5"
-                                      ToolTip="Disable to temporarily hide this mask"/>
+                                      ToolTip="{DynamicResource MasksView_DisableTip}"/>
                         </StackPanel>
                     </GroupBox>
                 </StackPanel>

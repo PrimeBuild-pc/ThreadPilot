@@ -30,6 +30,12 @@
     <sys:String x:Key="MainWindow_Recommended">Recommended</sys:String>
     <sys:String x:Key="MainWindow_DontShowAgain">Don't show again</sys:String>
     <sys:String x:Key="MainWindow_OpenSettings">Open Settings</sys:String>
+    <sys:String x:Key="MainWindow_PrimaryNavigation">Primary navigation</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningOverlay">Elevation warning overlay</sys:String>
+    <sys:String x:Key="MainWindow_PerformanceIntroductionOverlay">Performance introduction overlay</sys:String>
+    <sys:String x:Key="MainWindow_StartupMinimizedSuggestion">Startup minimized suggestion</sys:String>
+    <sys:String x:Key="MainWindow_UnsavedSettingsDialog">Unsaved settings dialog</sys:String>
+    <sys:String x:Key="MainWindow_LoadingOverlay">Application startup loading overlay</sys:String>
     
     <!-- LogViewerView -->
     <sys:String x:Key="LogViewerView_Title">ThreadPilot Activity</sys:String>
@@ -94,10 +100,13 @@
     <sys:String x:Key="MasksView_DeleteTooltip">Delete selected mask</sys:String>
     <sys:String x:Key="MasksView_CpusHeader">CPUs</sys:String>
     <sys:String x:Key="MasksView_Cpu">CPU</sys:String>
+    <sys:String x:Key="MasksView_Options">Mask Options</sys:String>
 
     <!-- PerformanceView -->
     <sys:String x:Key="PerformanceView_OptionalDiagnostics">Optional Diagnostics</sys:String>
     <sys:String x:Key="PerformanceView_DiagnosticsDesc">Diagnostics are optional and intended for troubleshooting. For in-game overlays and detailed performance graphs, use dedicated tools.</sys:String>
+    <sys:String x:Key="PerformanceView_DiagnosticsDesc1">Diagnostics are optional and intended for troubleshooting.</sys:String>
+    <sys:String x:Key="PerformanceView_DiagnosticsDesc2">For in-game overlays and detailed performance graphs, use dedicated tools.</sys:String>
     <sys:String x:Key="PerformanceView_QuickTips">Quick tips:</sys:String>
     <sys:String x:Key="PerformanceView_Tip1">1. Open diagnostics only when you need a focused troubleshooting snapshot.</sys:String>
     <sys:String x:Key="PerformanceView_Tip2">2. Review hotspots only as a hint before creating automation rules.</sys:String>
@@ -128,6 +137,12 @@
     <sys:String x:Key="PerformanceView_RefreshTooltip">Refresh the current dashboard snapshot</sys:String>
     
     <sys:String x:Key="PerformanceView_GlobalPowerPlan">Global Power Plan</sys:String>
+    <sys:String x:Key="PerformanceView_ProcessHotspots">Process Hotspots</sys:String>
+    <sys:String x:Key="PerformanceView_Filter">Filter</sys:String>
+    <sys:String x:Key="PerformanceView_Memory">Memory</sys:String>
+    <sys:String x:Key="PerformanceView_Name">Name</sys:String>
+    <sys:String x:Key="PerformanceView_Priority">Priority</sys:String>
+    <sys:String x:Key="PerformanceView_Window">Window</sys:String>
     <sys:String x:Key="PerformanceView_MemoryUsed">Memory Used</sys:String>
     <sys:String x:Key="PerformanceView_CpuPercent">CPU %</sys:String>
     <sys:String x:Key="PerformanceView_MemPercent">Mem %</sys:String>
@@ -180,6 +195,7 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_RuleCpuMask">Rule CPU Mask:</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_RuleCpuMaskHelp">Optional: Select a CPU mask to apply when this process starts</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_RulePriority">Rule Priority</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Update">Update</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_RulePriorityHelp">Optional: Select the process priority to apply when this process starts</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_AssociationPriority">Association Priority:</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_AssociationPriorityHelp">Higher priority associations take precedence when multiple match</sys:String>
@@ -206,6 +222,7 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SaveConfig">Save Configuration</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_NoRules">No automation rules yet</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Status">Status:</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AutomationMonitoring">Automation Monitoring</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_StartAutomation">Start Automation Monitoring</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_StopAutomation">Stop Automation Monitoring</sys:String>
     
@@ -226,6 +243,7 @@
     <sys:String x:Key="ProcessView_Title">Process Management</sys:String>
     <sys:String x:Key="ProcessView_Subtitle">Search, filter, and control active process configurations</sys:String>
     <sys:String x:Key="ProcessView_SearchPlaceholder">Search processes by name</sys:String>
+    <sys:String x:Key="ProcessView_SearchAutomationName">Process search</sys:String>
     <sys:String x:Key="ProcessView_HideSystem">Hide Windows system processes</sys:String>
     <sys:String x:Key="ProcessView_HideSystemShort">Hide System Processes</sys:String>
     <sys:String x:Key="ProcessView_HideLowCpu">Hide processes with very low CPU usage</sys:String>
@@ -276,7 +294,11 @@
     <sys:String x:Key="ProcessView_RefreshTooltip">Refresh the process list</sys:String>
     <sys:String x:Key="ProcessView_LoadMore">Load More</sys:String>
     <sys:String x:Key="ProcessView_LoadMoreTooltip">Load more processes</sys:String>
-    
+    <sys:String x:Key="ProcessView_RefreshAutomationName">Refresh processes</sys:String>
+    <sys:String x:Key="ProcessView_LoadMoreAutomationName">Load more processes</sys:String>
+    <sys:String x:Key="ProcessView_RunningListAutomationName">Running process list</sys:String>
+    <sys:String x:Key="ProcessView_RunningListAutomationHelp">Virtualized process table with sorting and selection</sys:String>
+
     <sys:String x:Key="ProcessView_ColProcessName">Process Name</sys:String>
     <sys:String x:Key="ProcessView_ColWindowTitle">Window Title</sys:String>
     <sys:String x:Key="ProcessView_ColCpuUsage">CPU Usage</sys:String>
@@ -294,6 +316,32 @@
     <sys:String x:Key="ProcessView_ApplyPendingSettings">Apply Pending Settings</sys:String>
     <sys:String x:Key="ProcessView_ApplyPendingSettingsTooltip">Apply the pending affinity and selected power plan to the selected process</sys:String>
     <sys:String x:Key="ProcessView_RulesAppliedOnlyWhenConfigured">Rules and changes are applied by ThreadPilot only when configured.</sys:String>
+    <sys:String x:Key="ProcessView_CurrentProcessStatus">Current process status</sys:String>
+    <sys:String x:Key="ProcessView_AdvancedAffinityPicker">Advanced affinity picker</sys:String>
+    <sys:String x:Key="ProcessView_RowMaskTooltip">Select the pending mask for row context-menu affinity actions</sys:String>
+    <sys:String x:Key="ProcessView_SelectedPowerPlan">Selected power plan</sys:String>
+    <sys:String x:Key="ProcessView_SaveAsRule">Save as Rule</sys:String>
+    <sys:String x:Key="ProcessView_NoVisibleWindowTitle">No visible window title</sys:String>
+    <sys:String x:Key="ProcessView_BatchLabel">Batch </sys:String>
+    <sys:String x:Key="ProcessView_TotalSuffix"> total)</sys:String>
+    <sys:String x:Key="ProcessView_PriorityInlineLabel">  Priority </sys:String>
+    <sys:String x:Key="ProcessSummary_CpuUnavailable">CPU: unavailable</sys:String>
+    <sys:String x:Key="ProcessSummary_MemoryUnavailable">Memory: unavailable</sys:String>
+    <sys:String x:Key="ProcessSummary_CpuPriorityUnavailable">CPU priority: unavailable</sys:String>
+    <sys:String x:Key="ProcessSummary_MemoryPriorityUnavailable">Memory priority unavailable</sys:String>
+    <sys:String x:Key="ProcessSummary_AffinityUnavailable">Affinity: unavailable</sys:String>
+    <sys:String x:Key="ProcessSummary_NoSavedRule">No saved rule</sys:String>
+    <sys:String x:Key="ProcessSummary_NoRecentAction">No recent ThreadPilot action</sys:String>
+    <sys:String x:Key="ProcessSummary_SelectedProcessFormat">Selected process: {0} (PID {1})</sys:String>
+    <sys:String x:Key="ProcessSummary_StatusProtected">Current process status: protected or access denied</sys:String>
+    <sys:String x:Key="ProcessSummary_StatusSelected">Current process status: selected</sys:String>
+    <sys:String x:Key="ProcessSummary_CpuFormat">CPU: {0:N1}%</sys:String>
+    <sys:String x:Key="ProcessSummary_MemoryFormat">Memory: {0}</sys:String>
+    <sys:String x:Key="ProcessSummary_CpuPriorityFormat">CPU priority: {0}</sys:String>
+    <sys:String x:Key="ProcessSummary_AffinityLegacyFormat">Affinity: legacy mask 0x{0:X}</sys:String>
+    <sys:String x:Key="ProcessSummary_MemoryPriorityFormat">Memory priority: {0}</sys:String>
+    <sys:String x:Key="ProcessSummary_SavedRuleFallback">saved rule</sys:String>
+    <sys:String x:Key="ProcessSummary_SavedRuleExistsFormat">Saved rule exists: {0}</sys:String>
     
     <sys:String x:Key="ProcessView_PriorityAboveNormal">Above Normal</sys:String>
     <sys:String x:Key="ProcessView_PriorityBelowNormal">Below Normal</sys:String>
@@ -395,6 +443,46 @@
     <sys:String x:Key="SettingsView_ImportConfig">Import Configuration</sys:String>
     <sys:String x:Key="SettingsView_SaveSettings">Save Settings</sys:String>
     <sys:String x:Key="SettingsView_ThreadPilot">ThreadPilot</sys:String>
+    <sys:String x:Key="Settings_StatusThemeChangedFormat">Theme changed to {0}.</sys:String>
+    <sys:String x:Key="Settings_StatusThemeChangeFailedFormat">Failed to change theme to {0}.</sys:String>
+    <sys:String x:Key="Settings_StatusLanguageChangedFormat">Language changed to {0}.</sys:String>
+    <sys:String x:Key="Settings_StatusLanguageChangeFailed">Failed to change language.</sys:String>
+    <sys:String x:Key="Settings_StatusSaving">Saving settings...</sys:String>
+    <sys:String x:Key="Settings_StatusSavedWarningsFormat">Settings saved with warnings: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusSavedApplied">Settings saved and applied successfully.</sys:String>
+    <sys:String x:Key="Settings_StatusErrorSavingFormat">Error saving settings: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusResetting">Resetting to defaults...</sys:String>
+    <sys:String x:Key="Settings_StatusResetPending">Settings reset to defaults (not saved yet)</sys:String>
+    <sys:String x:Key="Settings_StatusErrorResettingFormat">Error resetting settings: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusExporting">Exporting configuration bundle...</sys:String>
+    <sys:String x:Key="Settings_StatusExportCanceled">Export canceled</sys:String>
+    <sys:String x:Key="Settings_StatusExportedFormat">Configuration exported to: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusErrorExportingFormat">Error exporting settings: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusImporting">Importing configuration...</sys:String>
+    <sys:String x:Key="Settings_StatusImportCanceled">Import canceled</sys:String>
+    <sys:String x:Key="Settings_StatusImportedApplied">Configuration bundle imported and applied</sys:String>
+    <sys:String x:Key="Settings_StatusLegacyImported">Legacy settings imported (rules unchanged)</sys:String>
+    <sys:String x:Key="Settings_StatusErrorImportingFormat">Error importing settings: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusTestSent">Test notification sent</sys:String>
+    <sys:String x:Key="Settings_StatusErrorTestFormat">Error sending test notification: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusLoading">Loading settings...</sys:String>
+    <sys:String x:Key="Settings_StatusLoaded">Settings loaded</sys:String>
+    <sys:String x:Key="Settings_StatusErrorLoadingFormat">Error loading settings: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusSynchronized">Settings synchronized</sys:String>
+    <sys:String x:Key="Settings_StatusCheckingUpdates">Checking for updates...</sys:String>
+    <sys:String x:Key="Settings_StatusLatestUnknown">Unable to determine the latest version.</sys:String>
+    <sys:String x:Key="Settings_StatusNewVersionFormat">New version available: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusUpToDateFormat">Application is up to date. Installed version: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusUpdateErrorFormat">Error while checking updates: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusModified">Settings have been modified</sys:String>
+    <sys:String x:Key="Settings_StatusMatchSaved">Settings match the saved configuration</sys:String>
+    <sys:String x:Key="Settings_LanguageSimplifiedChinese">Simplified Chinese</sys:String>
+    <sys:String x:Key="Settings_LanguageEnglish">English</sys:String>
+    <sys:String x:Key="Settings_ThemeDark">Dark</sys:String>
+    <sys:String x:Key="Settings_ThemeLight">Light</sys:String>
+    <sys:String x:Key="Settings_DialogExportTitle">Export ThreadPilot Configuration</sys:String>
+    <sys:String x:Key="Settings_DialogImportTitle">Import ThreadPilot Configuration</sys:String>
+    <sys:String x:Key="Settings_WarningAutostartFailed">Failed to update Windows autostart. Keeping previous autostart state.</sys:String>
 
     <!-- SettingsWindow -->
     <sys:String x:Key="SettingsWindow_Title">ThreadPilot Settings</sys:String>
@@ -509,7 +597,30 @@
     <sys:String x:Key="Notification_GameBoostDeactivatedFormat">Game Boost mode deactivated after {0}</sys:String>
     <sys:String x:Key="Notification_ProcessMonitorErrorTitle">Process Monitor Error</sys:String>
     <sys:String x:Key="Notification_AffinityBlockedTitle">Affinity blocked</sys:String>
+    <sys:String x:Key="Notification_AffinityAppliedTitle">Affinity applied</sys:String>
+    <sys:String x:Key="Notification_AffinityAdjustedTitle">Affinity adjusted</sys:String>
+    <sys:String x:Key="Notification_AffinityFailedTitle">Affinity failed</sys:String>
+    <sys:String x:Key="Notification_AffinityErrorTitle">Affinity error</sys:String>
     <sys:String x:Key="Notification_PriorityBlockedTitle">Priority blocked</sys:String>
+    <sys:String x:Key="Notification_PriorityWarningTitle">Priority warning</sys:String>
+    <sys:String x:Key="Notification_PriorityAppliedTitle">Priority applied</sys:String>
+    <sys:String x:Key="Notification_PriorityAdjustedTitle">Priority adjusted</sys:String>
+    <sys:String x:Key="Notification_PriorityErrorTitle">Priority error</sys:String>
+    <sys:String x:Key="Notification_KeyboardShortcutTitle">Keyboard Shortcut</sys:String>
+    <sys:String x:Key="Notification_ToggleMonitoringShortcut">Toggle monitoring shortcut activated</sys:String>
+    <sys:String x:Key="Notification_HighPerformanceShortcut">High Performance power plan shortcut activated</sys:String>
+    <sys:String x:Key="Notification_RefreshProcessListShortcut">Refresh process list shortcut activated</sys:String>
+    <sys:String x:Key="Notification_ThreadPilotStartedTitle">ThreadPilot Started</sys:String>
+    <sys:String x:Key="Notification_ThreadPilotStartedMessage">Process monitoring and power plan management is now active</sys:String>
+    <sys:String x:Key="Notification_StartupErrorTitle">Startup Error</sys:String>
+    <sys:String x:Key="Notification_ProcessMonitoringStartFailed">Failed to start process monitoring manager</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringErrorTitle">Automation Monitoring Error</sys:String>
+    <sys:String x:Key="Notification_SettingsSavedTitle">Settings Saved</sys:String>
+    <sys:String x:Key="Notification_SettingsSavedMessage">Application settings have been saved successfully</sys:String>
+    <sys:String x:Key="Notification_SettingsSavedWarningsTitle">Settings Saved with Warnings</sys:String>
+    <sys:String x:Key="Notification_SettingsErrorTitle">Settings Error</sys:String>
+    <sys:String x:Key="Notification_SettingsSaveFailed">Failed to save settings</sys:String>
+    <sys:String x:Key="Notification_TestNotificationMessage">This is a test notification to verify your settings are working correctly.</sys:String>
 
     <!-- Elevation Service -->
     <sys:String x:Key="Elevation_RequestPromptText">ThreadPilot requires administrator privileges to manage process affinity and power plans.&#x0a;&#x0a;Would you like to restart the application with administrator privileges?</sys:String>

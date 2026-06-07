@@ -40,8 +40,8 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
-            <TextBlock Text="Application Settings" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
-            <TextBlock Text="Configure notifications, system tray, and application behavior"
+            <TextBlock Text="{DynamicResource SettingsView_Title}" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
+            <TextBlock Text="{DynamicResource SettingsView_Subtitle}"
                        Style="{StaticResource PageSubtitleTextStyle}"/>
         </StackPanel>
 
@@ -51,54 +51,54 @@
                 
                  <!-- Notifications Section -->
                  <StackPanel Width="372" Margin="0,0,16,16">
-                     <TextBlock Text="Notifications" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
+                     <TextBlock Text="{DynamicResource SettingsView_Notifications}" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
                      <Border Style="{StaticResource SettingsCardStyle}">
                         <StackPanel>
-                            <CheckBox Content="Enable notifications" 
+                            <CheckBox Content="{DynamicResource SettingsView_EnableNotifications}" 
                                       IsChecked="{Binding Settings.EnableNotifications}"
                                       Margin="0,0,0,10"/>
 
                             <StackPanel Margin="20,0,0,10"
                                         IsEnabled="{Binding Settings.EnableNotifications}">
-                                <TextBlock Text="Notification Level" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBlock Text="{DynamicResource SettingsView_NotificationLevel}" FontWeight="SemiBold" Margin="0,0,0,4"/>
                                 <ComboBox SelectedValue="{Binding Settings.NotificationLevel}"
                                           SelectedValuePath="Tag">
-                                    <ComboBoxItem Content="All" Tag="{x:Static models:NotificationLevelProfile.All}"/>
-                                    <ComboBoxItem Content="Warnings/Errors only" Tag="{x:Static models:NotificationLevelProfile.WarningsAndErrorsOnly}"/>
-                                    <ComboBoxItem Content="Silent" Tag="{x:Static models:NotificationLevelProfile.Silent}"/>
+                                    <ComboBoxItem Content="{DynamicResource SettingsView_NotificationLevelAll}" Tag="{x:Static models:NotificationLevelProfile.All}"/>
+                                    <ComboBoxItem Content="{DynamicResource SettingsView_NotificationLevelWarningsErrors}" Tag="{x:Static models:NotificationLevelProfile.WarningsAndErrorsOnly}"/>
+                                    <ComboBoxItem Content="{DynamicResource SettingsView_NotificationLevelSilent}" Tag="{x:Static models:NotificationLevelProfile.Silent}"/>
                                 </ComboBox>
                             </StackPanel>
                             
-                            <CheckBox Content="Enable balloon notifications (system tray)" 
+                            <CheckBox Content="{DynamicResource SettingsView_EnableBalloon}" 
                                       IsChecked="{Binding Settings.EnableBalloonNotifications}"
                                       IsEnabled="{Binding Settings.EnableNotifications}"
                                       Margin="20,0,0,5"/>
                             
-                            <CheckBox Content="Enable toast notifications (Windows 10+)" 
+                            <CheckBox Content="{DynamicResource SettingsView_EnableToast}" 
                                       IsChecked="{Binding Settings.EnableToastNotifications}"
                                       IsEnabled="{Binding Settings.EnableNotifications}"
                                       Margin="20,0,0,10"/>
                             
                             <Separator Margin="0,10"/>
                             
-                            <TextBlock Text="Notification Types" FontWeight="SemiBold" Margin="0,5"/>
+                            <TextBlock Text="{DynamicResource SettingsView_NotificationTypes}" FontWeight="SemiBold" Margin="0,5"/>
                             
-                            <CheckBox Content="Power plan changes" 
+                            <CheckBox Content="{DynamicResource SettingsView_NotifyPowerPlan}" 
                                       IsChecked="{Binding Settings.EnablePowerPlanChangeNotifications}"
                                       IsEnabled="{Binding Settings.EnableNotifications}"
                                       Margin="20,5,0,5"/>
                             
-                            <CheckBox Content="Process monitoring events" 
+                            <CheckBox Content="{DynamicResource SettingsView_NotifyProcess}" 
                                       IsChecked="{Binding Settings.EnableProcessMonitoringNotifications}"
                                       IsEnabled="{Binding Settings.EnableNotifications}"
                                       Margin="20,0,0,5"/>
                             
-                            <CheckBox Content="Error notifications" 
+                            <CheckBox Content="{DynamicResource SettingsView_NotifyError}" 
                                       IsChecked="{Binding Settings.EnableErrorNotifications}"
                                       IsEnabled="{Binding Settings.EnableNotifications}"
                                       Margin="20,0,0,5"/>
                             
-                            <CheckBox Content="Success notifications" 
+                            <CheckBox Content="{DynamicResource SettingsView_NotifySuccess}" 
                                       IsChecked="{Binding Settings.EnableSuccessNotifications}"
                                       IsEnabled="{Binding Settings.EnableNotifications}"
                                       Margin="20,0,0,10"/>
@@ -112,7 +112,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 
-                                <TextBlock Text="Duration (ms):" VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource SettingsView_Duration}" VerticalAlignment="Center"/>
                                 <Slider Grid.Column="1" 
                                         Value="{Binding Settings.NotificationDisplayDurationMs}"
                                         Minimum="1000" Maximum="30000" 
@@ -124,7 +124,7 @@
                                            VerticalAlignment="Center" MinWidth="40"/>
                             </Grid>
                             
-                            <Button Content="Test Notification" 
+                            <Button Content="{DynamicResource SettingsView_TestNotification}" 
                                     Command="{Binding TestNotificationCommand}"
                                     HorizontalAlignment="Left" 
                                     Margin="0,10,0,0" 
@@ -135,40 +135,40 @@
 
                 <!-- System Tray Section -->
                 <StackPanel Width="372" Margin="0,0,16,16">
-                    <TextBlock Text="System Tray" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
+                    <TextBlock Text="{DynamicResource SettingsView_SystemTray}" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
                     <Border Style="{StaticResource SettingsCardStyle}">
                         <StackPanel>
-                            <CheckBox Content="Show tray icon" 
+                            <CheckBox Content="{DynamicResource SettingsView_ShowTrayIcon}" 
                                       IsChecked="{Binding Settings.ShowTrayIcon}"
                                       Margin="0,0,0,10"/>
                             
-                            <CheckBox Content="Minimize to tray" 
+                            <CheckBox Content="{DynamicResource SettingsView_MinimizeToTray}" 
                                       IsChecked="{Binding Settings.MinimizeToTray}"
                                       IsEnabled="{Binding Settings.ShowTrayIcon}"
                                       Margin="20,0,0,5"/>
                             
-                            <CheckBox Content="Close to tray (instead of exit)" 
+                            <CheckBox Content="{DynamicResource SettingsView_CloseToTray}" 
                                       IsChecked="{Binding Settings.CloseToTray}"
                                       IsEnabled="{Binding Settings.ShowTrayIcon}"
                                       Margin="20,0,0,5"/>
                             
-                            <CheckBox Content="Start minimized" 
+                            <CheckBox Content="{DynamicResource SettingsView_StartMinimized}" 
                                       IsChecked="{Binding Settings.StartMinimized}"
                                       Margin="20,0,0,10"/>
                             
                             <Separator Margin="0,10"/>
                             
-                            <CheckBox Content="Enable pending settings apply from tray"
+                            <CheckBox Content="{DynamicResource SettingsView_QuickApply}"
                                       IsChecked="{Binding Settings.EnableQuickApplyFromTray}"
                                       IsEnabled="{Binding Settings.ShowTrayIcon}"
                                       Margin="0,5"/>
                             
-                            <CheckBox Content="Enable automation monitoring controls from tray"
+                            <CheckBox Content="{DynamicResource SettingsView_MonitoringControl}"
                                       IsChecked="{Binding Settings.EnableMonitoringControlFromTray}"
                                       IsEnabled="{Binding Settings.ShowTrayIcon}"
                                       Margin="0,0,0,5"/>
                             
-                            <CheckBox Content="Show detailed tooltips" 
+                            <CheckBox Content="{DynamicResource SettingsView_DetailedTooltips}" 
                                       IsChecked="{Binding Settings.ShowDetailedTooltips}"
                                       IsEnabled="{Binding Settings.ShowTrayIcon}"
                                       Margin="0,0,0,10"/>
@@ -237,17 +237,17 @@
 
                             <Separator Margin="0,0,0,15"/>
 
-                            <CheckBox Content="Enable WMI process events"
+                            <CheckBox Content="{DynamicResource SettingsView_EnableWmi}"
                                       IsChecked="{Binding Settings.EnableWmiMonitoring}"
                                       Margin="0,0,0,5"/>
-                            <TextBlock Text="Use Windows Management Instrumentation for process start/stop events"
+                            <TextBlock Text="{DynamicResource SettingsView_WmiDescription}"
                                        Style="{StaticResource DescriptionStyle}"
                                        Margin="20,0,0,15"/>
 
-                            <CheckBox Content="Enable fallback polling"
+                            <CheckBox Content="{DynamicResource SettingsView_EnableFallback}"
                                       IsChecked="{Binding Settings.EnableFallbackPolling}"
                                       Margin="0,0,0,5"/>
-                            <TextBlock Text="Use polling as backup when WMI process events fail"
+                            <TextBlock Text="{DynamicResource SettingsView_FallbackDescription}"
                                        Style="{StaticResource DescriptionStyle}"
                                        Margin="20,0,0,15"/>
 
@@ -260,7 +260,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
-                                <TextBlock Text="Polling interval (ms):" VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource SettingsView_PollingInterval}" VerticalAlignment="Center"/>
                                 <Slider Grid.Column="1"
                                         Value="{Binding Settings.PollingIntervalMs}"
                                         Minimum="1000" Maximum="30000"
@@ -279,7 +279,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
-                                <TextBlock Text="Fallback polling (ms):" VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource SettingsView_FallbackPollingInterval}" VerticalAlignment="Center"/>
                                 <Slider Grid.Column="1"
                                         Value="{Binding Settings.FallbackPollingIntervalMs}"
                                         Minimum="5000" Maximum="60000"
@@ -296,10 +296,10 @@
 
                 <!-- Advanced Section -->
                 <StackPanel Width="372" Margin="0,0,16,16">
-                    <TextBlock Text="Advanced" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
+                    <TextBlock Text="{DynamicResource SettingsView_Advanced}" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
                     <Border Style="{StaticResource SettingsCardStyle}">
                         <StackPanel>
-                            <CheckBox Content="Enable notification history"
+                            <CheckBox Content="{DynamicResource SettingsView_NotificationHistory}"
                                       IsChecked="{Binding Settings.EnableNotificationHistory}"
                                       Margin="0,0,0,10"/>
 
@@ -310,7 +310,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
-                                <TextBlock Text="Max history items:" VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource SettingsView_MaxHistory}" VerticalAlignment="Center"/>
                                 <Slider Grid.Column="1"
                                         Value="{Binding Settings.MaxNotificationHistoryItems}"
                                         Minimum="10" Maximum="1000"
@@ -322,19 +322,19 @@
                                            VerticalAlignment="Center" MinWidth="40"/>
                             </Grid>
 
-                            <CheckBox Content="Auto-hide notifications"
+                            <CheckBox Content="{DynamicResource SettingsView_AutoHide}"
                                       IsChecked="{Binding Settings.AutoHideNotifications}"
                                       Margin="0,10,0,5"/>
 
-                            <CheckBox Content="Enable notification sound"
+                            <CheckBox Content="{DynamicResource SettingsView_NotificationSound}"
                                       IsChecked="{Binding Settings.EnableNotificationSound}"
                                       Margin="0,0,0,5"/>
 
-                            <CheckBox Content="Enable debug logging"
+                            <CheckBox Content="{DynamicResource SettingsView_DebugLogging}"
                                       IsChecked="{Binding Settings.EnableDebugLogging}"
                                       Margin="0,0,0,5"/>
 
-                            <CheckBox Content="Enable performance counters"
+                            <CheckBox Content="{DynamicResource SettingsView_PerformanceCounters}"
                                       IsChecked="{Binding Settings.EnablePerformanceCounters}"
                                       Margin="0,0,0,10"/>
                         </StackPanel>
@@ -343,23 +343,23 @@
 
                 <!-- About Section -->
                 <StackPanel Width="372" Margin="0,0,16,16">
-                    <TextBlock Text="About" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
+                    <TextBlock Text="{DynamicResource SettingsView_About}" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
                     <Border Style="{StaticResource SettingsCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="ThreadPilot" FontWeight="SemiBold" FontSize="14"/>
-                            <TextBlock Text="Version:" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                            <TextBlock Text="{DynamicResource SettingsView_ThreadPilot}" FontWeight="SemiBold" FontSize="14"/>
+                            <TextBlock Text="{DynamicResource SettingsView_Version}" FontWeight="SemiBold" Margin="0,8,0,0"/>
                             <TextBlock Text="{Binding ApplicationVersion}" Margin="0,0,0,10"/>
 
-                            <TextBlock Text="Copyright © 2026 PrimeBuild" Margin="0,0,0,4"/>
-                            <TextBlock Text="License: AGPLv3" Style="{StaticResource DescriptionStyle}"/>
+                            <TextBlock Text="{DynamicResource SettingsView_Copyright}" Margin="0,0,0,4"/>
+                            <TextBlock Text="{DynamicResource SettingsView_License}" Style="{StaticResource DescriptionStyle}"/>
 
                             <Separator Margin="0,12,0,12"/>
 
-                            <Button Content="Check for updates"
+                            <Button Content="{DynamicResource SettingsView_CheckUpdates}"
                                     Command="{Binding CheckUpdatesCommand}"
                                     Padding="15,6"
                                     HorizontalAlignment="Left"/>
-                            <TextBlock Text="Checks on demand using the official GitHub Releases."
+                            <TextBlock Text="{DynamicResource SettingsView_UpdatesDescription}"
                                        Style="{StaticResource DescriptionStyle}"
                                        Margin="0,6,0,0"/>
                         </StackPanel>
@@ -412,22 +412,22 @@
             
             <!-- Buttons -->
             <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Reset to Defaults" 
+                <Button Content="{DynamicResource SettingsView_ResetDefaults}" 
                         Command="{Binding ResetToDefaultsCommand}"
                         Margin="0,0,10,0" 
                         Padding="15,8"/>
                 
-                <Button Content="Export Configuration" 
+                <Button Content="{DynamicResource SettingsView_ExportConfig}" 
                         Command="{Binding ExportSettingsCommand}"
                         Margin="0,0,10,0" 
                         Padding="15,8"/>
                 
-                <Button Content="Import Configuration" 
+                <Button Content="{DynamicResource SettingsView_ImportConfig}" 
                         Command="{Binding ImportSettingsCommand}"
                         Margin="0,0,20,0" 
                         Padding="15,8"/>
                 
-                <Button Content="Save Settings"
+                <Button Content="{DynamicResource SettingsView_SaveSettings}"
                         Command="{Binding SaveSettingsCommand}"
                         IsEnabled="{Binding CanSaveSettings}"
                         Padding="20,8"/>

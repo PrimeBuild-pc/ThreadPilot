@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "1.3.0"
+    [string]$Version = "1.3.1"
 )
 
 $ErrorActionPreference = "Stop"
@@ -38,18 +38,13 @@ echo [2/4] Removing startup task and startup registry entry...
 schtasks /Delete /TN "ThreadPilot_Startup" /F >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "ThreadPilot" /f >nul 2>&1
 
-echo [3/4] Optional user data cleanup...
-set "REMOVE_DATA=N"
-set /p REMOVE_DATA=Do you want to remove user settings at "%APPDATA%\ThreadPilot"? [y/N]:
-if /I "%REMOVE_DATA%"=="Y" (
-    if exist "%APPDATA%\ThreadPilot" (
-        rd /s /q "%APPDATA%\ThreadPilot"
-        echo User settings removed.
-    ) else (
-        echo No user settings folder found.
-    )
+echo [3/4] Removing ThreadPilot user data for this Windows account...
+rem Full uninstall removes only ThreadPilot-owned per-user AppData. Normal install/update paths never run this script.
+if exist "%APPDATA%\ThreadPilot" (
+    rd /s /q "%APPDATA%\ThreadPilot"
+    echo ThreadPilot user data removed.
 ) else (
-    echo User settings were kept.
+    echo No ThreadPilot user data folder found.
 )
 
 echo [4/4] Scheduling app folder removal...

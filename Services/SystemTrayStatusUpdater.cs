@@ -36,13 +36,16 @@ namespace ThreadPilot.Services
     {
         private readonly IPowerPlanService powerPlanService;
         private readonly Lazy<IPerformanceMonitoringService> performanceService;
+        private readonly ILocalizationService? localizationService;
 
         public SystemTrayStatusUpdater(
             IPowerPlanService powerPlanService,
-            Lazy<IPerformanceMonitoringService> performanceService)
+            Lazy<IPerformanceMonitoringService> performanceService,
+            ILocalizationService? localizationService = null)
         {
             this.powerPlanService = powerPlanService ?? throw new ArgumentNullException(nameof(powerPlanService));
             this.performanceService = performanceService ?? throw new ArgumentNullException(nameof(performanceService));
+            this.localizationService = localizationService;
         }
 
         public bool ShouldRunPerformanceStatusUpdates => AppNavigationOptions.ShowAdvancedDiagnostics;
@@ -110,7 +113,7 @@ namespace ThreadPilot.Services
             PowerPlanModel? activePowerPlan,
             Func<Action, Task> dispatchAsync)
         {
-            var planName = activePowerPlan?.Name ?? "Unknown";
+            var planName = activePowerPlan?.Name ?? this.Localize("SystemTray_Unknown", "Unknown");
 
             if (!this.ShouldRunPerformanceStatusUpdates)
             {
@@ -139,6 +142,19 @@ namespace ThreadPilot.Services
             }
 
             await dispatchAsync(() => systemTrayService.UpdateSystemStatus(planName)).ConfigureAwait(false);
+        }
+
+        private string Localize(string key, string fallback)
+        {
+            if (this.localizationService == null)
+            {
+                return fallback;
+            }
+
+            var localized = this.localizationService.GetString(key);
+            return string.IsNullOrWhiteSpace(localized) || string.Equals(localized, key, StringComparison.Ordinal)
+                ? fallback
+                : localized;
         }
     }
 }
