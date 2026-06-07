@@ -2,6 +2,44 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.4.0 - Safe in-app updater
+
+### Added
+
+- Added safe in-app updater support.
+- Added manual update checks from Settings.
+- Added optional background update checks with a default 7-day interval.
+- Added latest/current version display in Settings.
+- Added update download and install flow with explicit user confirmation.
+- Added updater documentation.
+
+### Security
+
+- Update metadata is fetched only from the official PrimeBuild-pc/ThreadPilot GitHub repository.
+- Prereleases are excluded by default.
+- Installer assets are selected from GitHub HTTPS release assets.
+- SHA256 checksums are verified when SHA256SUMS.txt is available.
+- Checksum mismatches are rejected.
+- Authenticode signature verification is performed on a best-effort basis, rejecting explicitly invalid signatures.
+- Installer launch uses ProcessStartInfo without shell command construction.
+- Concurrent update attempts are prevented.
+
+### User data preservation
+
+- Updates preserve AppData, settings, profiles, CPU masks, rules, custom/imported power plans, and logs.
+- Only updater temporary files are cleaned by the update flow.
+- Full uninstall behavior remains separate.
+
+### Changed
+
+- Project version updated to 1.4.0.
+- Installer, packaging, Chocolatey, and release metadata updated to v1.4.0.
+
+### Verification
+
+- Build passed.
+- Automated tests passed.
+
 ## v1.3.1 - Localization and installer metadata hotfix
 
 ### Fixed
