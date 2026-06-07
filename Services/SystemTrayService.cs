@@ -40,7 +40,10 @@ namespace ThreadPilot.Services
         private ToolStripMenuItem? profilesMenuItem;
         private ToolStripMenuItem? performanceMenuItem;
         private ToolStripMenuItem? systemStatusMenuItem;
+        private ToolStripMenuItem? openDashboardMenuItem;
+        private ToolStripMenuItem? exitMenuItem;
         private ApplicationSettingsModel settings;
+        private readonly ILocalizationService? localizationService;
         private bool isMonitoring = true;
         private bool isWmiAvailable = true;
         private TrayIconState currentIconState = TrayIconState.Normal;
@@ -67,10 +70,15 @@ namespace ThreadPilot.Services
 
         public event EventHandler? DashboardRequested;
 
-        public SystemTrayService(ILogger<SystemTrayService> logger)
+        public SystemTrayService(ILogger<SystemTrayService> logger, ILocalizationService? localizationService = null)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.localizationService = localizationService;
             this.settings = new ApplicationSettingsModel(); // Default settings
+            if (this.localizationService != null)
+            {
+                this.localizationService.LanguageChanged += this.OnLanguageChanged;
+            }
         }
 
         public void Initialize()
@@ -89,7 +97,7 @@ namespace ThreadPilot.Services
                 // Create the notify icon
                 this.notifyIcon = new NotifyIcon
                 {
-                    Text = "ThreadPilot - Process & Power Plan Manager",
+                    Text = this.Localize("MainWindow_Title", "ThreadPilot - Process & Power Plan Manager"),
                     Visible = false,
                 };
 
@@ -121,16 +129,16 @@ namespace ThreadPilot.Services
             this.menuFont = CreatePreferredMenuFont(this.contextMenu.Font.Size);
             this.contextMenu.Font = this.menuFont;
 
-            var openDashboardMenuItem = new ToolStripMenuItem("Open Dashboard")
+            this.openDashboardMenuItem = new ToolStripMenuItem(this.Localize("SystemTray_OpenDashboard", "Open Dashboard"))
             {
                 Font = new Font(this.menuFont, FontStyle.Regular),
             };
-            openDashboardMenuItem.Click += this.OnDashboardClick;
-            this.contextMenu.Items.Add(openDashboardMenuItem);
+            this.openDashboardMenuItem.Click += this.OnDashboardClick;
+            this.contextMenu.Items.Add(this.openDashboardMenuItem);
 
             if (AppNavigationOptions.ShowAdvancedDiagnostics)
             {
-                this.performanceMenuItem = new ToolStripMenuItem("Open Diagnostics")
+                this.performanceMenuItem = new ToolStripMenuItem(this.Localize("SystemTray_OpenDiagnostics", "Open Diagnostics"))
                 {
                     Font = new Font(this.menuFont, FontStyle.Regular),
                 };
@@ -138,14 +146,14 @@ namespace ThreadPilot.Services
                 this.contextMenu.Items.Add(this.performanceMenuItem);
             }
 
-            this.monitoringToggleMenuItem = new ToolStripMenuItem("Pause Automation Monitoring");
+            this.monitoringToggleMenuItem = new ToolStripMenuItem(this.Localize("SystemTray_PauseMonitoring", "Pause Automation Monitoring"));
             this.monitoringToggleMenuItem.Click += this.OnMonitoringToggleClick;
             this.contextMenu.Items.Add(this.monitoringToggleMenuItem);
 
             this.contextMenu.Items.Add(new ToolStripSeparator());
 
             // System status (disabled, for display only)
-            this.systemStatusMenuItem = new ToolStripMenuItem("System Status")
+            this.systemStatusMenuItem = new ToolStripMenuItem(this.Localize("SystemTray_SystemStatus", "System Status"))
             {
                 Enabled = false,
                 Font = new Font(this.menuFont, FontStyle.Regular),
@@ -153,7 +161,7 @@ namespace ThreadPilot.Services
             this.contextMenu.Items.Add(this.systemStatusMenuItem);
 
             // Selected process info (disabled, for display only)
-            this.selectedProcessMenuItem = new ToolStripMenuItem("No process selected")
+            this.selectedProcessMenuItem = new ToolStripMenuItem(this.Localize("SystemTray_NoProcessSelected", "No process selected"))
             {
                 Enabled = false,
                 Font = new Font(this.menuFont, FontStyle.Regular),
@@ -161,7 +169,7 @@ namespace ThreadPilot.Services
             this.contextMenu.Items.Add(this.selectedProcessMenuItem);
 
             // Quick apply command
-            this.quickApplyMenuItem = new ToolStripMenuItem("Apply Pending Settings to Selected Process")
+            this.quickApplyMenuItem = new ToolStripMenuItem(this.Localize("SystemTray_ApplyPendingToSelected", "Apply Pending Settings to Selected Process"))
             {
                 Enabled = false,
             };
@@ -171,17 +179,17 @@ namespace ThreadPilot.Services
             this.contextMenu.Items.Add(new ToolStripSeparator());
 
             // Power Plans submenu
-            this.powerPlansMenuItem = new ToolStripMenuItem("🔋 Power Plans");
+            this.powerPlansMenuItem = new ToolStripMenuItem(this.Localize("SystemTray_PowerPlans", "🔋 Power Plans"));
             this.contextMenu.Items.Add(this.powerPlansMenuItem);
 
             // Profiles submenu
-            this.profilesMenuItem = new ToolStripMenuItem("📋 Profiles");
+            this.profilesMenuItem = new ToolStripMenuItem(this.Localize("SystemTray_Profiles", "📋 Profiles"));
             this.contextMenu.Items.Add(this.profilesMenuItem);
 
             this.contextMenu.Items.Add(new ToolStripSeparator());
 
             // Settings
-            this.settingsMenuItem = new ToolStripMenuItem("Settings");
+            this.settingsMenuItem = new ToolStripMenuItem(this.Localize("SystemTray_Settings", "Settings"));
             this.settingsMenuItem.Click += this.OnSettingsClick;
             this.contextMenu.Items.Add(this.settingsMenuItem);
 
@@ -189,9 +197,9 @@ namespace ThreadPilot.Services
             this.contextMenu.Items.Add(new ToolStripSeparator());
 
             // Exit
-            var exitMenuItem = new ToolStripMenuItem("Exit");
-            exitMenuItem.Click += this.OnExitClick;
-            this.contextMenu.Items.Add(exitMenuItem);
+            this.exitMenuItem = new ToolStripMenuItem(this.Localize("SystemTray_Exit", "Exit"));
+            this.exitMenuItem.Click += this.OnExitClick;
+            this.contextMenu.Items.Add(this.exitMenuItem);
 
             this.ApplyContextMenuTheme();
         }
@@ -239,15 +247,19 @@ namespace ThreadPilot.Services
 
             if (hasSelection && !string.IsNullOrEmpty(selectedProcessName))
             {
-                this.selectedProcessMenuItem.Text = $"Selected: {selectedProcessName}";
+                this.selectedProcessMenuItem.Text = string.Format(
+                    this.Localize("SystemTray_SelectedProcessFormat", "Selected: {0}"),
+                    selectedProcessName);
                 this.quickApplyMenuItem.Enabled = true;
-                this.quickApplyMenuItem.Text = $"Apply Pending Settings to {selectedProcessName}";
+                this.quickApplyMenuItem.Text = string.Format(
+                    this.Localize("SystemTray_ApplyPendingToProcessFormat", "Apply Pending Settings to {0}"),
+                    selectedProcessName);
             }
             else
             {
-                this.selectedProcessMenuItem.Text = "No process selected";
+                this.selectedProcessMenuItem.Text = this.Localize("SystemTray_NoProcessSelected", "No process selected");
                 this.quickApplyMenuItem.Enabled = false;
-                this.quickApplyMenuItem.Text = "Apply Pending Settings to Selected Process";
+                this.quickApplyMenuItem.Text = this.Localize("SystemTray_ApplyPendingToSelected", "Apply Pending Settings to Selected Process");
             }
         }
 
@@ -335,7 +347,9 @@ namespace ThreadPilot.Services
 
             if (this.monitoringToggleMenuItem != null)
             {
-                this.monitoringToggleMenuItem.Text = isMonitoring ? "Pause Automation Monitoring" : "Resume Automation Monitoring";
+                this.monitoringToggleMenuItem.Text = isMonitoring
+                    ? this.Localize("SystemTray_PauseMonitoring", "Pause Automation Monitoring")
+                    : this.Localize("SystemTray_ResumeMonitoring", "Resume Automation Monitoring");
                 this.monitoringToggleMenuItem.Enabled = isWmiAvailable;
             }
 
@@ -345,8 +359,11 @@ namespace ThreadPilot.Services
             this.UpdateTrayIcon(iconState);
 
             // Update tooltip
-            var status = !isWmiAvailable ? "Automation WMI Error" :
-                        isMonitoring ? "Automation Active" : "Automation Disabled";
+            var status = !isWmiAvailable
+                ? this.Localize("SystemTray_StatusWmiError", "Automation WMI Error")
+                : isMonitoring
+                    ? this.Localize("SystemTray_StatusActive", "Automation Active")
+                    : this.Localize("SystemTray_StatusDisabled", "Automation Disabled");
             this.UpdateTooltip($"ThreadPilot - {status}");
         }
 
@@ -460,7 +477,7 @@ namespace ThreadPilot.Services
 
                 if (!profileNames.Any())
                 {
-                    var noProfilesItem = new ToolStripMenuItem("No profiles available")
+                    var noProfilesItem = new ToolStripMenuItem(this.Localize("SystemTray_NoProfilesAvailable", "No profiles available"))
                     {
                         Enabled = false,
                     };
@@ -498,7 +515,11 @@ namespace ThreadPilot.Services
 
             try
             {
-                this.systemStatusMenuItem.Text = $"💻 CPU: {cpuUsage:F1}% | RAM: {memoryUsage:F1}% | {currentPowerPlan}";
+                this.systemStatusMenuItem.Text = string.Format(
+                    this.Localize("SystemTray_CpuRamStatusFormat", "💻 CPU: {0:F1}% | RAM: {1:F1}% | {2}"),
+                    cpuUsage,
+                    memoryUsage,
+                    currentPowerPlan);
                 this.logger.LogDebug("Updated system status in context menu");
             }
             catch (Exception ex)
@@ -516,7 +537,9 @@ namespace ThreadPilot.Services
 
             try
             {
-                this.systemStatusMenuItem.Text = $"Power Plan: {currentPowerPlan}";
+                this.systemStatusMenuItem.Text = string.Format(
+                    this.Localize("SystemTray_PowerPlanFormat", "Power Plan: {0}"),
+                    currentPowerPlan);
                 this.logger.LogDebug("Updated non-performance system status in context menu");
             }
             catch (Exception ex)
@@ -552,6 +575,10 @@ namespace ThreadPilot.Services
 
                 this.menuFont?.Dispose();
                 this.menuFont = null;
+                if (this.localizationService != null)
+                {
+                    this.localizationService.LanguageChanged -= this.OnLanguageChanged;
+                }
 
                 this.disposed = true;
                 this.logger.LogInformation("System tray service disposed");
@@ -584,6 +611,70 @@ namespace ThreadPilot.Services
             }
 
             return null;
+        }
+
+        private void OnLanguageChanged(object? sender, string language)
+        {
+            this.UpdateLocalizedMenuText();
+        }
+
+        private void UpdateLocalizedMenuText()
+        {
+            if (this.notifyIcon != null)
+            {
+                this.notifyIcon.Text = this.Localize("MainWindow_Title", "ThreadPilot - Process & Power Plan Manager");
+            }
+
+            if (this.openDashboardMenuItem != null)
+            {
+                this.openDashboardMenuItem.Text = this.Localize("SystemTray_OpenDashboard", "Open Dashboard");
+            }
+
+            if (this.performanceMenuItem != null)
+            {
+                this.performanceMenuItem.Text = this.Localize("SystemTray_OpenDiagnostics", "Open Diagnostics");
+            }
+
+            if (this.systemStatusMenuItem != null)
+            {
+                this.systemStatusMenuItem.Text = this.Localize("SystemTray_SystemStatus", "System Status");
+            }
+
+            if (this.powerPlansMenuItem != null)
+            {
+                this.powerPlansMenuItem.Text = this.Localize("SystemTray_PowerPlans", "🔋 Power Plans");
+            }
+
+            if (this.profilesMenuItem != null)
+            {
+                this.profilesMenuItem.Text = this.Localize("SystemTray_Profiles", "📋 Profiles");
+            }
+
+            if (this.settingsMenuItem != null)
+            {
+                this.settingsMenuItem.Text = this.Localize("SystemTray_Settings", "Settings");
+            }
+
+            if (this.exitMenuItem != null)
+            {
+                this.exitMenuItem.Text = this.Localize("SystemTray_Exit", "Exit");
+            }
+
+            this.UpdateContextMenu();
+            this.UpdateMonitoringStatus(this.isMonitoring, this.isWmiAvailable);
+        }
+
+        private string Localize(string key, string fallback)
+        {
+            if (this.localizationService == null)
+            {
+                return fallback;
+            }
+
+            var localized = this.localizationService.GetString(key);
+            return string.IsNullOrWhiteSpace(localized) || string.Equals(localized, key, StringComparison.Ordinal)
+                ? fallback
+                : localized;
         }
 
         private Icon? TryLoadEmbeddedIcon()

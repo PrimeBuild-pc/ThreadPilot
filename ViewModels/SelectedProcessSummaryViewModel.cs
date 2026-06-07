@@ -14,6 +14,7 @@ namespace ThreadPilot.ViewModels
         private readonly IProcessMemoryPriorityService? memoryPriorityService;
         private readonly IPersistentProcessRuleStore? persistentRuleStore;
         private readonly IPersistentProcessRuleMatcher? persistentRuleMatcher;
+        private readonly ILocalizationService? localizationService;
         private bool hasSelection;
         private int processId;
         private string processName = string.Empty;
@@ -40,11 +41,14 @@ namespace ThreadPilot.ViewModels
         public SelectedProcessSummaryViewModel(
             IProcessMemoryPriorityService? memoryPriorityService = null,
             IPersistentProcessRuleStore? persistentRuleStore = null,
-            IPersistentProcessRuleMatcher? persistentRuleMatcher = null)
+            IPersistentProcessRuleMatcher? persistentRuleMatcher = null,
+            ILocalizationService? localizationService = null)
         {
             this.memoryPriorityService = memoryPriorityService;
             this.persistentRuleStore = persistentRuleStore;
             this.persistentRuleMatcher = persistentRuleMatcher;
+            this.localizationService = localizationService;
+            this.Clear(version: 0, lastOperationMessage: null, lastOperationIsError: false);
         }
 
         public bool HasSelection
@@ -194,14 +198,14 @@ namespace ThreadPilot.ViewModels
             this.CpuPriority = process.Priority;
             this.ProcessorAffinity = process.ProcessorAffinity;
             this.IsProtectedOrAccessDenied = process.Classification == ProcessClassification.ProtectedOrAccessDenied;
-            this.ProcessTitle = $"Selected process: {this.ProcessName} (PID {this.ProcessId})";
+            this.ProcessTitle = this.L("ProcessSummary_SelectedProcessFormat", "Selected process: {0} (PID {1})", this.ProcessName, this.ProcessId);
             this.CurrentProcessStatusText = this.IsProtectedOrAccessDenied
-                ? "Current process status: protected or access denied"
-                : "Current process status: selected";
-            this.CpuUsageText = $"CPU: {this.CpuUsage:N1}%";
-            this.MemoryUsageText = $"Memory: {FormatMemory(this.MemoryUsage)}";
-            this.CpuPriorityText = $"CPU priority: {this.CpuPriority}";
-            this.AffinityText = $"Affinity: legacy mask 0x{this.ProcessorAffinity:X}";
+                ? this.L("ProcessSummary_StatusProtected", "Current process status: protected or access denied")
+                : this.L("ProcessSummary_StatusSelected", "Current process status: selected");
+            this.CpuUsageText = this.L("ProcessSummary_CpuFormat", "CPU: {0:N1}%", this.CpuUsage);
+            this.MemoryUsageText = this.L("ProcessSummary_MemoryFormat", "Memory: {0}", FormatMemory(this.MemoryUsage));
+            this.CpuPriorityText = this.L("ProcessSummary_CpuPriorityFormat", "CPU priority: {0}", this.CpuPriority);
+            this.AffinityText = this.L("ProcessSummary_AffinityLegacyFormat", "Affinity: legacy mask 0x{0:X}", this.ProcessorAffinity);
             this.UpdateLastOperation(lastOperationMessage, lastOperationIsError);
 
             await this.UpdateMemoryPriorityAsync(process, version);
@@ -242,21 +246,21 @@ namespace ThreadPilot.ViewModels
             this.MemoryPriority = null;
             this.IsProtectedOrAccessDenied = false;
             this.HasThreadPilotRule = false;
-            this.ProcessTitle = "No process selected";
-            this.CurrentProcessStatusText = "No process selected";
-            this.CpuUsageText = "CPU: unavailable";
-            this.MemoryUsageText = "Memory: unavailable";
-            this.CpuPriorityText = "CPU priority: unavailable";
-            this.MemoryPriorityText = "Memory priority unavailable";
-            this.AffinityText = "Affinity: unavailable";
-            this.RuleStatusText = "No saved rule";
+            this.ProcessTitle = this.L("ProcessView_NoProcessSelected", "No process selected");
+            this.CurrentProcessStatusText = this.L("ProcessView_NoProcessSelected", "No process selected");
+            this.CpuUsageText = this.L("ProcessSummary_CpuUnavailable", "CPU: unavailable");
+            this.MemoryUsageText = this.L("ProcessSummary_MemoryUnavailable", "Memory: unavailable");
+            this.CpuPriorityText = this.L("ProcessSummary_CpuPriorityUnavailable", "CPU priority: unavailable");
+            this.MemoryPriorityText = this.L("ProcessSummary_MemoryPriorityUnavailable", "Memory priority unavailable");
+            this.AffinityText = this.L("ProcessSummary_AffinityUnavailable", "Affinity: unavailable");
+            this.RuleStatusText = this.L("ProcessSummary_NoSavedRule", "No saved rule");
             this.UpdateLastOperation(lastOperationMessage, lastOperationIsError);
         }
 
         private async Task UpdateMemoryPriorityAsync(ProcessModel process, int version)
         {
             this.MemoryPriority = null;
-            this.MemoryPriorityText = "Memory priority unavailable";
+            this.MemoryPriorityText = this.L("ProcessSummary_MemoryPriorityUnavailable", "Memory priority unavailable");
 
             if (this.memoryPriorityService == null)
             {
@@ -277,7 +281,7 @@ namespace ThreadPilot.ViewModels
                 }
 
                 this.MemoryPriority = priority.Value;
-                this.MemoryPriorityText = $"Memory priority: {priority.Value}";
+                this.MemoryPriorityText = this.L("ProcessSummary_MemoryPriorityFormat", "Memory priority: {0}", priority.Value);
             }
             catch (Exception)
             {
@@ -287,14 +291,14 @@ namespace ThreadPilot.ViewModels
                 }
 
                 this.MemoryPriority = null;
-                this.MemoryPriorityText = "Memory priority unavailable";
+                this.MemoryPriorityText = this.L("ProcessSummary_MemoryPriorityUnavailable", "Memory priority unavailable");
             }
         }
 
         private async Task UpdateRuleStatusAsync(ProcessModel process, int version)
         {
             this.HasThreadPilotRule = false;
-            this.RuleStatusText = "No saved rule";
+            this.RuleStatusText = this.L("ProcessSummary_NoSavedRule", "No saved rule");
 
             if (this.persistentRuleStore == null || this.persistentRuleMatcher == null)
             {
@@ -316,8 +320,10 @@ namespace ThreadPilot.ViewModels
                 }
 
                 this.HasThreadPilotRule = true;
-                var ruleName = string.IsNullOrWhiteSpace(matchingRule.Name) ? "saved rule" : matchingRule.Name.Trim();
-                this.RuleStatusText = $"Saved rule exists: {ruleName}";
+                var ruleName = string.IsNullOrWhiteSpace(matchingRule.Name)
+                    ? this.L("ProcessSummary_SavedRuleFallback", "saved rule")
+                    : matchingRule.Name.Trim();
+                this.RuleStatusText = this.L("ProcessSummary_SavedRuleExistsFormat", "Saved rule exists: {0}", ruleName);
             }
             catch (Exception)
             {
@@ -327,7 +333,7 @@ namespace ThreadPilot.ViewModels
                 }
 
                 this.HasThreadPilotRule = false;
-                this.RuleStatusText = "No saved rule";
+                this.RuleStatusText = this.L("ProcessSummary_NoSavedRule", "No saved rule");
             }
         }
 
@@ -337,13 +343,23 @@ namespace ThreadPilot.ViewModels
         {
             if (string.IsNullOrWhiteSpace(message))
             {
-                this.LastOperationMessage = "No recent ThreadPilot action";
+                this.LastOperationMessage = this.L("ProcessSummary_NoRecentAction", "No recent ThreadPilot action");
                 this.LastOperationSeverity = "Information";
                 return;
             }
 
             this.LastOperationMessage = message.Trim();
             this.LastOperationSeverity = isError ? "Error" : "Information";
+        }
+
+        private string L(string key, string fallback, params object[] args)
+        {
+            var localized = this.localizationService?.GetString(key);
+            var format = string.IsNullOrWhiteSpace(localized) || string.Equals(localized, key, StringComparison.Ordinal)
+                ? fallback
+                : localized;
+
+            return args.Length == 0 ? format : string.Format(format, args);
         }
     }
 }

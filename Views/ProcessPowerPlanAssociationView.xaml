@@ -21,8 +21,8 @@
 
         <!-- Standardized Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
-            <TextBlock Text="Rules &amp; Automation" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
-            <TextBlock Text="Define per-process rules. Power plans are global; masks and priorities apply to matching processes."
+            <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_Title}" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
+            <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_RulesDescription}"
                        Style="{StaticResource PageSubtitleTextStyle}"/>
         </StackPanel>
 
@@ -62,7 +62,7 @@
             </TabControl.Resources>
 
             <!-- Rules Tab -->
-            <TabItem Header="Rules">
+            <TabItem Header="{DynamicResource ProcessPowerPlanAssociationView_RulesHeader}">
                 <Grid Margin="10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="2*"/>
@@ -71,7 +71,7 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- Rules List -->
-                    <GroupBox Grid.Column="0" Header="Current Rules">
+                    <GroupBox Grid.Column="0" Header="{DynamicResource ProcessPowerPlanAssociationView_CurrentRules}">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*"/>
@@ -87,28 +87,28 @@
                                      HeadersVisibility="Column"
                                      BorderThickness="1">
                                 <DataGrid.Columns>
-                                    <DataGridCheckBoxColumn Header="Enabled" 
+                                    <DataGridCheckBoxColumn Header="{DynamicResource MasksView_Enabled}" 
                                                            Binding="{Binding IsEnabled}" 
                                                            Width="60"/>
-                                    <DataGridTextColumn Header="Executable"
+                                    <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_Executable}"
                                                        Binding="{Binding ExecutableName}"
                                                        Width="150"/>
-                                    <DataGridTextColumn Header="Power Plan"
+                                    <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_PowerPlan}"
                                                        Binding="{Binding PowerPlanName}"
                                                        Width="120"/>
-                                    <DataGridTextColumn Header="CPU Mask"
+                                    <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_CpuMask}"
                                                        Binding="{Binding CoreMaskName}"
                                                        Width="100"/>
-                                    <DataGridTextColumn Header="Priority"
+                                    <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_Priority}"
                                                        Binding="{Binding ProcessPriority}"
                                                        Width="80"/>
-                                     <DataGridTextColumn Header="Rule Priority"
+                                     <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_RulePriority}"
                                                         Binding="{Binding Priority}"
                                                         Width="60"/>
-                                    <DataGridCheckBoxColumn Header="Match by Path"
+                                    <DataGridCheckBoxColumn Header="{DynamicResource ProcessPowerPlanAssociationView_MatchByPath}"
                                                            Binding="{Binding MatchByPath}"
                                                            Width="100"/>
-                                    <DataGridTextColumn Header="Description"
+                                    <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_Description}"
                                                        Binding="{Binding Description}"
                                                        Width="*"/>
                                 </DataGrid.Columns>
@@ -130,11 +130,11 @@
                                     </Style>
                                 </Border.Style>
                                 <StackPanel>
-                                    <TextBlock Text="No automation rules yet"
+                                    <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_NoRules}"
                                                FontWeight="SemiBold"
                                                HorizontalAlignment="Center"
                                                Margin="0,0,0,4"/>
-                                    <TextBlock Text="Create a rule from an executable or running process to automate power plan, CPU mask, and priority behavior."
+                                    <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_EditorSubtitle}"
                                                Foreground="{DynamicResource TextSecondaryBrush}"
                                                TextWrapping="Wrap"
                                                TextAlignment="Center"
@@ -144,43 +144,43 @@
 
                             <StackPanel Grid.Row="1" Orientation="Horizontal" 
                                        HorizontalAlignment="Right" Margin="0,10,0,0">
-                                <Button Content="Update"
+                                <Button Content="{DynamicResource ProcessPowerPlanAssociationView_Update}"
                                        Command="{Binding UpdateAssociationCommand}"
                                        Margin="0,0,5,0" Padding="10,5"
-                                       ToolTip="Update the selected association"/>
-                                <Button Content="Remove"
+                                       ToolTip="{DynamicResource ProcessPowerPlanAssociationView_UpdateRuleTooltip}"/>
+                                <Button Content="{DynamicResource ProcessPowerPlanAssociationView_Remove}"
                                        Command="{Binding RemoveAssociationCommand}"
                                        Padding="10,5"
-                                       ToolTip="Remove the selected association"/>
+                                       ToolTip="{DynamicResource ProcessPowerPlanAssociationView_RemoveTooltip}"/>
                             </StackPanel>
                         </Grid>
                     </GroupBox>
 
                     <!-- Rule Editor -->
-                    <GroupBox Grid.Column="2" Header="Rule Editor">
+                    <GroupBox Grid.Column="2" Header="{DynamicResource ProcessPowerPlanAssociationView_RuleEditor}">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <StackPanel>
                             <!-- Executable Selection Section -->
-                            <TextBlock Text="Executable Match:" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                            <TextBlock Text="Choose an executable. Match by path is more precise; matching by name applies to any process with that executable name."
+                            <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_ExecutableMatch}" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                            <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_ExecutableHelp}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        FontSize="10"
                                        TextWrapping="Wrap"
                                        Margin="0,0,0,8"/>
 
                             <!-- Browse Button -->
-                            <Button Content="Browse for Executable"
+                            <Button Content="{DynamicResource ProcessPowerPlanAssociationView_Browse}"
                                    Command="{Binding BrowseExecutableCommand}"
                                    Padding="10,8" Margin="0,0,0,10"
                                    HorizontalAlignment="Left"
-                                   ToolTip="Click to select an executable file (.exe) from your computer"/>
+                                   ToolTip="{DynamicResource ProcessPowerPlanAssociationView_BrowseTooltip}"/>
 
                             <!-- Selected Executable Display -->
                              <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                     Background="{DynamicResource SurfaceAltBrush}" Padding="8" Margin="0,0,0,10"
                                     Visibility="{Binding HasSelectedExecutable, Converter={StaticResource BoolToVisibilityConverter}}">
                                  <StackPanel>
-                                     <TextBlock Text="Selected Executable:" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                                     <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SelectedExecutable}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,2"/>
                                      <TextBlock Text="{Binding SelectedExecutableDisplayName}"
                                                FontWeight="SemiBold" Margin="0,0,0,2"/>
                                      <TextBlock Text="{Binding SelectedExecutableFullPath}"
@@ -189,20 +189,20 @@
                              </Border>
 
                             <!-- Clear Selection Button -->
-                            <Button Content="Clear Selection"
+                            <Button Content="{DynamicResource ProcessPowerPlanAssociationView_ClearSelection}"
                                    Command="{Binding ClearSelectedExecutableCommand}"
                                    Padding="5,3" Margin="0,0,0,15"
                                    HorizontalAlignment="Left" FontSize="10"
                                    Visibility="{Binding HasSelectedExecutable, Converter={StaticResource BoolToVisibilityConverter}}"
-                                   ToolTip="Clear the selected executable"/>
+                                   ToolTip="{DynamicResource ProcessPowerPlanAssociationView_ClearSelectionTooltip}"/>
 
-                            <CheckBox Content="Match by Path"
+                            <CheckBox Content="{DynamicResource ProcessPowerPlanAssociationView_MatchByPath}"
                                      IsChecked="{Binding MatchByPath}"
                                      Margin="0,0,0,10"
-                                     ToolTip="Match processes by full path instead of just executable name"/>
+                                     ToolTip="{DynamicResource ProcessPowerPlanAssociationView_MatchByPathTooltip}"/>
 
-                             <TextBlock Text="Rule Power Plan (global switch):" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                             <TextBlock Text="When this rule matches, Windows switches the global active power plan."
+                             <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_RulePowerPlan}" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                             <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_RulePowerPlanHelp}"
                                         Foreground="{DynamicResource TextSecondaryBrush}"
                                         FontSize="10"
                                         TextWrapping="Wrap"
@@ -212,8 +212,8 @@
                                      DisplayMemberPath="Name"
                                      Padding="5" Margin="0,0,0,10"/>
 
-                            <TextBlock Text="Rule CPU Mask:" Margin="0,0,0,5"/>
-                            <TextBlock Text="Applied only to matching processes; it does not change the global Windows power plan."
+                            <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_RuleCpuMask}" Margin="0,0,0,5"/>
+                            <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_AppliedOnlyToMatching}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        FontSize="10"
                                        TextWrapping="Wrap"
@@ -222,10 +222,10 @@
                                      SelectedItem="{Binding SelectedCoreMask}"
                                      DisplayMemberPath="Name"
                                      Padding="5" Margin="0,0,0,10"
-                                     ToolTip="Optional: Select a CPU mask to apply when this process starts"/>
+                                     ToolTip="{DynamicResource ProcessPowerPlanAssociationView_RuleCpuMaskHelp}"/>
 
-                            <TextBlock Text="Process Priority:" Margin="0,0,0,5"/>
-                            <TextBlock Text="Applied to each matching process when the automation rule runs."
+                            <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_ProcessPriority}" Margin="0,0,0,5"/>
+                            <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_AppliedToMatching}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        FontSize="10"
                                        TextWrapping="Wrap"
@@ -233,41 +233,41 @@
                             <ComboBox ItemsSource="{Binding AvailablePriorities}"
                                      SelectedItem="{Binding SelectedProcessPriority}"
                                      Padding="5" Margin="0,0,0,10"
-                                     ToolTip="Optional: Select the process priority to apply when this process starts"/>
+                                     ToolTip="{DynamicResource ProcessPowerPlanAssociationView_RulePriorityHelp}"/>
 
-                            <TextBlock Text="Association Priority:" Margin="0,0,0,5"/>
+                            <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_AssociationPriority}" Margin="0,0,0,5"/>
                             <TextBox Text="{Binding Priority}"
                                     Padding="5" Margin="0,0,0,10"
-                                    ToolTip="Higher priority associations take precedence when multiple match"/>
+                                    ToolTip="{DynamicResource ProcessPowerPlanAssociationView_AssociationPriorityHelp}"/>
 
-                            <TextBlock Text="Description:" Margin="0,0,0,5"/>
+                            <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_DescriptionLabel}" Margin="0,0,0,5"/>
                             <TextBox Text="{Binding Description}"
                                     Padding="5" Margin="0,0,0,15"/>
 
-                            <Button Content="Add Rule"
+                            <Button Content="{DynamicResource ProcessPowerPlanAssociationView_AddRule}"
                                     Command="{Binding AddAssociationCommand}"
                                     Padding="10,8"/>
 
-                            <Button Content="Update Selected Rule"
+                            <Button Content="{DynamicResource ProcessPowerPlanAssociationView_UpdateRule}"
                                     Command="{Binding UpdateAssociationCommand}"
                                     Padding="10,8"
                                     Margin="0,8,0,0"/>
 
                             <Separator Margin="0,15,0,15"/>
 
-                            <TextBlock Text="Use Running Process:"
+                            <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_UseRunningProcess}"
                                        FontWeight="SemiBold" Margin="0,0,0,10"/>
 
                             <ComboBox ItemsSource="{Binding RunningProcesses}"
                                      SelectedItem="{Binding SelectedProcess}"
                                      DisplayMemberPath="Name"
                                      Padding="5" Margin="0,0,0,10"
-                                     ToolTip="Select a currently running process to use its executable"/>
+                                     ToolTip="{DynamicResource ProcessPowerPlanAssociationView_UseRunningProcessTooltip}"/>
 
-                            <Button Content="Use Selected Process"
+                            <Button Content="{DynamicResource ProcessPowerPlanAssociationView_UseSelectedProcess}"
                                     Command="{Binding UseSelectedProcessForAssociationCommand}"
                                     Padding="10,5"
-                                    ToolTip="Use the executable from the selected running process"/>
+                                    ToolTip="{DynamicResource ProcessPowerPlanAssociationView_UseSelectedProcessTooltip}"/>
                             </StackPanel>
                         </ScrollViewer>
                     </GroupBox>
@@ -275,29 +275,29 @@
             </TabItem>
 
             <!-- Automation Monitoring Tab -->
-            <TabItem Header="Automation Monitoring">
+            <TabItem Header="{DynamicResource ProcessPowerPlanAssociationView_AutomationMonitoring}">
                 <ScrollViewer Margin="10">
                     <StackPanel>
                         <!-- Service Control -->
-                        <GroupBox Header="Automation Service" Margin="0,0,0,15">
+                        <GroupBox Header="{DynamicResource ProcessPowerPlanAssociationView_AutomationService}" Margin="0,0,0,15">
                             <StackPanel>
-                                <TextBlock Text="Automation monitoring watches process start/stop events and applies configured power plan, CPU mask, and priority rules."
+                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_Subtitle}"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                            TextWrapping="Wrap"
                                            Margin="0,0,0,10"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                    <TextBlock Text="Status: " VerticalAlignment="Center"/>
+                                    <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_Status}" VerticalAlignment="Center"/>
                                     <TextBlock Text="{Binding ServiceStatus}"
                                               Foreground="{Binding IsServiceRunning, Converter={StaticResource BoolToColorConverter}}"
                                               FontWeight="SemiBold" VerticalAlignment="Center"/>
                                 </StackPanel>
 
                                 <StackPanel Orientation="Horizontal">
-                                    <Button Content="Start Automation Monitoring"
+                                    <Button Content="{DynamicResource ProcessPowerPlanAssociationView_StartAutomation}"
                                            Command="{Binding StartMonitoringCommand}"
                                            IsEnabled="{Binding IsServiceRunning, Converter={StaticResource InverseBoolConverter}}"
                                            Padding="15,8" Margin="0,0,10,0"/>
-                                    <Button Content="Stop Automation Monitoring"
+                                    <Button Content="{DynamicResource ProcessPowerPlanAssociationView_StopAutomation}"
                                            Command="{Binding StopMonitoringCommand}"
                                            IsEnabled="{Binding IsServiceRunning}"
                                            Padding="15,8"/>
@@ -306,9 +306,9 @@
                         </GroupBox>
 
                         <!-- Default Power Plan -->
-                         <GroupBox Header="Default Power Plan (fallback when no rule matches)" Margin="0,0,0,15">
+                         <GroupBox Header="{DynamicResource ProcessPowerPlanAssociationView_DefaultPowerPlan}" Margin="0,0,0,15">
                              <StackPanel>
-                                 <TextBlock Text="Power plan to use when no associated processes are running:"
+                                 <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_DefaultPowerPlanHelp}"
                                             Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,10"/>
 
                                 <ComboBox ItemsSource="{Binding AvailablePowerPlans}"
@@ -316,42 +316,42 @@
                                          DisplayMemberPath="Name"
                                          Padding="5" Margin="0,0,0,10"/>
 
-                                <Button Content="Set Default Power Plan"
+                                <Button Content="{DynamicResource ProcessPowerPlanAssociationView_SetDefault}"
                                        Command="{Binding SetDefaultPowerPlanCommand}"
                                        Padding="10,5" HorizontalAlignment="Left"/>
                             </StackPanel>
                         </GroupBox>
 
                         <!-- Automation Monitoring Settings -->
-                        <GroupBox Header="Automation Monitoring Settings" Margin="0,0,0,15">
+                        <GroupBox Header="{DynamicResource ProcessPowerPlanAssociationView_SettingsTitle}" Margin="0,0,0,15">
                             <StackPanel>
-                                <CheckBox Content="Enable Event-Based Automation (WMI)"
+                                <CheckBox Content="{DynamicResource ProcessPowerPlanAssociationView_EnableWmi}"
                                          IsChecked="{Binding IsEventBasedMonitoringEnabled}"
                                          Margin="0,0,0,10"/>
 
-                                <CheckBox Content="Enable Automation Fallback Polling"
+                                <CheckBox Content="{DynamicResource ProcessPowerPlanAssociationView_EnableFallback}"
                                          IsChecked="{Binding IsFallbackPollingEnabled}"
                                          Margin="0,0,0,10"/>
 
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                    <TextBlock Text="Polling Interval (seconds): "
+                                    <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_PollingInterval}"
                                               VerticalAlignment="Center" Margin="0,0,10,0"/>
                                     <TextBox Text="{Binding PollingIntervalSeconds}"
                                             Width="60" Padding="5"/>
                                 </StackPanel>
 
-                                <CheckBox Content="Prevent Duplicate Power Plan Changes"
+                                <CheckBox Content="{DynamicResource ProcessPowerPlanAssociationView_PreventDuplicates}"
                                          IsChecked="{Binding PreventDuplicatePowerPlanChanges}"
                                          Margin="0,0,0,10"/>
 
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-                                    <TextBlock Text="Power Plan Change Delay (ms): "
+                                    <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_ChangeDelay}"
                                               VerticalAlignment="Center" Margin="0,0,10,0"/>
                                     <TextBox Text="{Binding PowerPlanChangeDelayMs}"
                                             Width="80" Padding="5"/>
                                 </StackPanel>
 
-                                <Button Content="Save Configuration"
+                                <Button Content="{DynamicResource ProcessPowerPlanAssociationView_SaveConfig}"
                                        Command="{Binding SaveConfigurationCommand}"
                                        Padding="15,8" HorizontalAlignment="Left"/>
                             </StackPanel>

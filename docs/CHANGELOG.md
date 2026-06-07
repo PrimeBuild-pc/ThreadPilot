@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.3.1 - Localization and installer metadata hotfix
+
+### Fixed
+
+- Completed Simplified Chinese localization coverage for primary WPF views, dialogs, context menus, tooltips, tray menu text, status text, and user-facing service messages.
+- Changed Inno Setup display metadata so installed apps list ThreadPilot as `ThreadPilot` while keeping `1.3.1` in version metadata.
+- Added guarded cleanup for obsolete `ThreadPilot 0.1.0-beta` uninstall registry metadata only when it clearly matches the old ThreadPilot display name and Program Files install path.
+
+### Changed
+
+- Project, package, installer, Chocolatey, Sonar, and app manifest metadata updated to 1.3.1.
+- Full uninstall removes ThreadPilot-owned AppData/settings for the uninstalling user account and removes ThreadPilot startup entries; normal install/update preserves user data.
+
+### Safety
+
+- No automatic in-app updating was added.
+- No elevation, affinity, process control, power plan, or system tweak behavior was changed.
+
 ## v1.3.0 - Localization support
 
 ### Added

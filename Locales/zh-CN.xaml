@@ -30,6 +30,12 @@
     <sys:String x:Key="MainWindow_Recommended">推荐</sys:String>
     <sys:String x:Key="MainWindow_DontShowAgain">不再显示</sys:String>
     <sys:String x:Key="MainWindow_OpenSettings">打开设置</sys:String>
+    <sys:String x:Key="MainWindow_PrimaryNavigation">主导航</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningOverlay">权限提升警告覆盖层</sys:String>
+    <sys:String x:Key="MainWindow_PerformanceIntroductionOverlay">性能诊断介绍覆盖层</sys:String>
+    <sys:String x:Key="MainWindow_StartupMinimizedSuggestion">启动时最小化建议</sys:String>
+    <sys:String x:Key="MainWindow_UnsavedSettingsDialog">未保存设置对话框</sys:String>
+    <sys:String x:Key="MainWindow_LoadingOverlay">应用启动加载覆盖层</sys:String>
     
     <!-- LogViewerView -->
     <sys:String x:Key="LogViewerView_Title">ThreadPilot 活动日志</sys:String>
@@ -94,10 +100,13 @@
     <sys:String x:Key="MasksView_DeleteTooltip">删除选定的掩码</sys:String>
     <sys:String x:Key="MasksView_CpusHeader">CPU 核心</sys:String>
     <sys:String x:Key="MasksView_Cpu">CPU</sys:String>
+    <sys:String x:Key="MasksView_Options">掩码选项</sys:String>
 
     <!-- PerformanceView -->
     <sys:String x:Key="PerformanceView_OptionalDiagnostics">可选性能诊断</sys:String>
     <sys:String x:Key="PerformanceView_DiagnosticsDesc">诊断是可选的，仅用于故障排除。对于游戏内覆盖层和详细的性能图表，请使用专用工具。</sys:String>
+    <sys:String x:Key="PerformanceView_DiagnosticsDesc1">诊断是可选的，仅用于故障排除。</sys:String>
+    <sys:String x:Key="PerformanceView_DiagnosticsDesc2">对于游戏内覆盖层和详细的性能图表，请使用专用工具。</sys:String>
     <sys:String x:Key="PerformanceView_QuickTips">快速提示：</sys:String>
     <sys:String x:Key="PerformanceView_Tip1">1. 仅在需要针对性的故障排除快照时才打开诊断。</sys:String>
     <sys:String x:Key="PerformanceView_Tip2">2. 在创建自动化规则之前，仅将热点查看作为提示。</sys:String>
@@ -128,6 +137,12 @@
     <sys:String x:Key="PerformanceView_RefreshTooltip">刷新当前的仪表板快照</sys:String>
     
     <sys:String x:Key="PerformanceView_GlobalPowerPlan">全局电源计划</sys:String>
+    <sys:String x:Key="PerformanceView_ProcessHotspots">进程热点</sys:String>
+    <sys:String x:Key="PerformanceView_Filter">筛选</sys:String>
+    <sys:String x:Key="PerformanceView_Memory">内存</sys:String>
+    <sys:String x:Key="PerformanceView_Name">名称</sys:String>
+    <sys:String x:Key="PerformanceView_Priority">优先级</sys:String>
+    <sys:String x:Key="PerformanceView_Window">窗口</sys:String>
     <sys:String x:Key="PerformanceView_MemoryUsed">已用内存</sys:String>
     <sys:String x:Key="PerformanceView_CpuPercent">CPU %</sys:String>
     <sys:String x:Key="PerformanceView_MemPercent">内存 %</sys:String>
@@ -180,6 +195,7 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_RuleCpuMask">规则 CPU 掩码:</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_RuleCpuMaskHelp">可选: 选择在该进程启动时要应用的 CPU 掩码</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_RulePriority">规则优先级</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Update">更新</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_RulePriorityHelp">可选: 选择在该进程启动时要应用的进程优先级</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_AssociationPriority">关联优先级:</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_AssociationPriorityHelp">当有多个匹配时，优先级较高的关联优先使用</sys:String>
@@ -206,6 +222,7 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SaveConfig">保存配置</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_NoRules">尚无自动化规则</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Status">状态:</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AutomationMonitoring">自动化监控</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_StartAutomation">启动自动化监控</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_StopAutomation">停止自动化监控</sys:String>
     
@@ -226,6 +243,7 @@
     <sys:String x:Key="ProcessView_Title">系统进程管理</sys:String>
     <sys:String x:Key="ProcessView_Subtitle">搜索、过滤和控制活动的进程配置</sys:String>
     <sys:String x:Key="ProcessView_SearchPlaceholder">按名称搜索进程</sys:String>
+    <sys:String x:Key="ProcessView_SearchAutomationName">进程搜索</sys:String>
     <sys:String x:Key="ProcessView_HideSystem">隐藏 Windows 系统进程</sys:String>
     <sys:String x:Key="ProcessView_HideSystemShort">隐藏系统进程</sys:String>
     <sys:String x:Key="ProcessView_HideLowCpu">隐藏 CPU 使用率极低的进程</sys:String>
@@ -276,6 +294,10 @@
     <sys:String x:Key="ProcessView_RefreshTooltip">刷新进程列表</sys:String>
     <sys:String x:Key="ProcessView_LoadMore">加载更多</sys:String>
     <sys:String x:Key="ProcessView_LoadMoreTooltip">加载更多进程</sys:String>
+    <sys:String x:Key="ProcessView_RefreshAutomationName">刷新进程</sys:String>
+    <sys:String x:Key="ProcessView_LoadMoreAutomationName">加载更多进程</sys:String>
+    <sys:String x:Key="ProcessView_RunningListAutomationName">运行中进程列表</sys:String>
+    <sys:String x:Key="ProcessView_RunningListAutomationHelp">支持排序和选择的虚拟化进程表</sys:String>
     
     <sys:String x:Key="ProcessView_ColProcessName">进程名称</sys:String>
     <sys:String x:Key="ProcessView_ColWindowTitle">窗口标题</sys:String>
@@ -294,6 +316,32 @@
     <sys:String x:Key="ProcessView_ApplyPendingSettings">应用待处理设置</sys:String>
     <sys:String x:Key="ProcessView_ApplyPendingSettingsTooltip">将待处理的关联性和选定的电源计划应用于选定的进程</sys:String>
     <sys:String x:Key="ProcessView_RulesAppliedOnlyWhenConfigured">ThreadPilot 仅在配置后才应用规则和更改。</sys:String>
+    <sys:String x:Key="ProcessView_CurrentProcessStatus">当前进程状态</sys:String>
+    <sys:String x:Key="ProcessView_AdvancedAffinityPicker">高级关联性选择器</sys:String>
+    <sys:String x:Key="ProcessView_RowMaskTooltip">为行上下文菜单关联性操作选择待处理掩码</sys:String>
+    <sys:String x:Key="ProcessView_SelectedPowerPlan">所选电源计划</sys:String>
+    <sys:String x:Key="ProcessView_SaveAsRule">保存为规则</sys:String>
+    <sys:String x:Key="ProcessView_NoVisibleWindowTitle">无可见窗口标题</sys:String>
+    <sys:String x:Key="ProcessView_BatchLabel">批次 </sys:String>
+    <sys:String x:Key="ProcessView_TotalSuffix"> 总计)</sys:String>
+    <sys:String x:Key="ProcessView_PriorityInlineLabel">  优先级 </sys:String>
+    <sys:String x:Key="ProcessSummary_CpuUnavailable">CPU: 不可用</sys:String>
+    <sys:String x:Key="ProcessSummary_MemoryUnavailable">内存: 不可用</sys:String>
+    <sys:String x:Key="ProcessSummary_CpuPriorityUnavailable">CPU 优先级: 不可用</sys:String>
+    <sys:String x:Key="ProcessSummary_MemoryPriorityUnavailable">内存优先级不可用</sys:String>
+    <sys:String x:Key="ProcessSummary_AffinityUnavailable">关联性: 不可用</sys:String>
+    <sys:String x:Key="ProcessSummary_NoSavedRule">无已保存规则</sys:String>
+    <sys:String x:Key="ProcessSummary_NoRecentAction">暂无最近的 ThreadPilot 操作</sys:String>
+    <sys:String x:Key="ProcessSummary_SelectedProcessFormat">选定进程: {0} (PID {1})</sys:String>
+    <sys:String x:Key="ProcessSummary_StatusProtected">当前进程状态: 受保护或访问被拒绝</sys:String>
+    <sys:String x:Key="ProcessSummary_StatusSelected">当前进程状态: 已选择</sys:String>
+    <sys:String x:Key="ProcessSummary_CpuFormat">CPU: {0:N1}%</sys:String>
+    <sys:String x:Key="ProcessSummary_MemoryFormat">内存: {0}</sys:String>
+    <sys:String x:Key="ProcessSummary_CpuPriorityFormat">CPU 优先级: {0}</sys:String>
+    <sys:String x:Key="ProcessSummary_AffinityLegacyFormat">关联性: 旧版掩码 0x{0:X}</sys:String>
+    <sys:String x:Key="ProcessSummary_MemoryPriorityFormat">内存优先级: {0}</sys:String>
+    <sys:String x:Key="ProcessSummary_SavedRuleFallback">已保存规则</sys:String>
+    <sys:String x:Key="ProcessSummary_SavedRuleExistsFormat">存在已保存规则: {0}</sys:String>
     
     <sys:String x:Key="ProcessView_PriorityAboveNormal">高于正常</sys:String>
     <sys:String x:Key="ProcessView_PriorityBelowNormal">低于正常</sys:String>
@@ -395,6 +443,46 @@
     <sys:String x:Key="SettingsView_ImportConfig">导入配置包</sys:String>
     <sys:String x:Key="SettingsView_SaveSettings">保存并应用设置</sys:String>
     <sys:String x:Key="SettingsView_ThreadPilot">ThreadPilot</sys:String>
+    <sys:String x:Key="Settings_StatusThemeChangedFormat">主题已切换为{0}。</sys:String>
+    <sys:String x:Key="Settings_StatusThemeChangeFailedFormat">无法切换主题为{0}。</sys:String>
+    <sys:String x:Key="Settings_StatusLanguageChangedFormat">语言已切换为{0}。</sys:String>
+    <sys:String x:Key="Settings_StatusLanguageChangeFailed">无法切换语言。</sys:String>
+    <sys:String x:Key="Settings_StatusSaving">正在保存设置...</sys:String>
+    <sys:String x:Key="Settings_StatusSavedWarningsFormat">设置已保存但有警告: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusSavedApplied">设置已成功保存并应用。</sys:String>
+    <sys:String x:Key="Settings_StatusErrorSavingFormat">保存设置时出错: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusResetting">正在重置为默认值...</sys:String>
+    <sys:String x:Key="Settings_StatusResetPending">设置已重置为默认值（尚未保存）</sys:String>
+    <sys:String x:Key="Settings_StatusErrorResettingFormat">重置设置时出错: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusExporting">正在导出配置包...</sys:String>
+    <sys:String x:Key="Settings_StatusExportCanceled">已取消导出</sys:String>
+    <sys:String x:Key="Settings_StatusExportedFormat">配置已导出到: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusErrorExportingFormat">导出设置时出错: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusImporting">正在导入配置...</sys:String>
+    <sys:String x:Key="Settings_StatusImportCanceled">已取消导入</sys:String>
+    <sys:String x:Key="Settings_StatusImportedApplied">配置包已导入并应用</sys:String>
+    <sys:String x:Key="Settings_StatusLegacyImported">旧版设置已导入（规则未更改）</sys:String>
+    <sys:String x:Key="Settings_StatusErrorImportingFormat">导入设置时出错: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusTestSent">测试通知已发送</sys:String>
+    <sys:String x:Key="Settings_StatusErrorTestFormat">发送测试通知时出错: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusLoading">正在加载设置...</sys:String>
+    <sys:String x:Key="Settings_StatusLoaded">设置已加载</sys:String>
+    <sys:String x:Key="Settings_StatusErrorLoadingFormat">加载设置时出错: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusSynchronized">设置已同步</sys:String>
+    <sys:String x:Key="Settings_StatusCheckingUpdates">正在检查更新...</sys:String>
+    <sys:String x:Key="Settings_StatusLatestUnknown">无法确定最新版本。</sys:String>
+    <sys:String x:Key="Settings_StatusNewVersionFormat">发现新版本: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusUpToDateFormat">应用已是最新版本。已安装版本: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusUpdateErrorFormat">检查更新时出错: {0}</sys:String>
+    <sys:String x:Key="Settings_StatusModified">设置已被修改</sys:String>
+    <sys:String x:Key="Settings_StatusMatchSaved">设置与已保存的配置一致</sys:String>
+    <sys:String x:Key="Settings_LanguageSimplifiedChinese">简体中文</sys:String>
+    <sys:String x:Key="Settings_LanguageEnglish">英文</sys:String>
+    <sys:String x:Key="Settings_ThemeDark">深色</sys:String>
+    <sys:String x:Key="Settings_ThemeLight">浅色</sys:String>
+    <sys:String x:Key="Settings_DialogExportTitle">导出 ThreadPilot 配置</sys:String>
+    <sys:String x:Key="Settings_DialogImportTitle">导入 ThreadPilot 配置</sys:String>
+    <sys:String x:Key="Settings_WarningAutostartFailed">无法更新 Windows 自启动。将保留之前的自启动状态。</sys:String>
 
     <!-- SettingsWindow -->
     <sys:String x:Key="SettingsWindow_Title">ThreadPilot 设置</sys:String>
@@ -509,7 +597,30 @@
     <sys:String x:Key="Notification_GameBoostDeactivatedFormat">游戏加速模式已关闭，持续时间: {0}</sys:String>
     <sys:String x:Key="Notification_ProcessMonitorErrorTitle">进程监控器错误</sys:String>
     <sys:String x:Key="Notification_AffinityBlockedTitle">关联性应用被阻止</sys:String>
+    <sys:String x:Key="Notification_AffinityAppliedTitle">关联性已应用</sys:String>
+    <sys:String x:Key="Notification_AffinityAdjustedTitle">关联性已调整</sys:String>
+    <sys:String x:Key="Notification_AffinityFailedTitle">关联性应用失败</sys:String>
+    <sys:String x:Key="Notification_AffinityErrorTitle">关联性错误</sys:String>
     <sys:String x:Key="Notification_PriorityBlockedTitle">优先级应用被阻止</sys:String>
+    <sys:String x:Key="Notification_PriorityWarningTitle">优先级警告</sys:String>
+    <sys:String x:Key="Notification_PriorityAppliedTitle">优先级已应用</sys:String>
+    <sys:String x:Key="Notification_PriorityAdjustedTitle">优先级已调整</sys:String>
+    <sys:String x:Key="Notification_PriorityErrorTitle">优先级错误</sys:String>
+    <sys:String x:Key="Notification_KeyboardShortcutTitle">键盘快捷键</sys:String>
+    <sys:String x:Key="Notification_ToggleMonitoringShortcut">切换监控快捷键已触发</sys:String>
+    <sys:String x:Key="Notification_HighPerformanceShortcut">高性能电源计划快捷键已触发</sys:String>
+    <sys:String x:Key="Notification_RefreshProcessListShortcut">刷新进程列表快捷键已触发</sys:String>
+    <sys:String x:Key="Notification_ThreadPilotStartedTitle">ThreadPilot 已启动</sys:String>
+    <sys:String x:Key="Notification_ThreadPilotStartedMessage">进程监控和电源计划管理现已激活</sys:String>
+    <sys:String x:Key="Notification_StartupErrorTitle">启动错误</sys:String>
+    <sys:String x:Key="Notification_ProcessMonitoringStartFailed">无法启动进程监控管理器</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringErrorTitle">自动化监控错误</sys:String>
+    <sys:String x:Key="Notification_SettingsSavedTitle">设置已保存</sys:String>
+    <sys:String x:Key="Notification_SettingsSavedMessage">应用设置已成功保存</sys:String>
+    <sys:String x:Key="Notification_SettingsSavedWarningsTitle">设置已保存但有警告</sys:String>
+    <sys:String x:Key="Notification_SettingsErrorTitle">设置错误</sys:String>
+    <sys:String x:Key="Notification_SettingsSaveFailed">无法保存设置</sys:String>
+    <sys:String x:Key="Notification_TestNotificationMessage">这是一条用于验证您的设置是否正常工作的测试通知。</sys:String>
 
     <!-- Elevation Service -->
     <sys:String x:Key="Elevation_RequestPromptText">ThreadPilot 需要管理员权限来管理进程关联性和电源计划。&#x0a;&#x0a;您想以管理员权限重新启动应用程序吗？</sys:String>

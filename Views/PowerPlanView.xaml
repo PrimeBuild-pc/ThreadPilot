@@ -16,8 +16,8 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
-            <TextBlock Text="Power Plans" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
-            <TextBlock Text="Manage the active Windows power plan and import custom .pow profiles" Style="{StaticResource PageSubtitleTextStyle}"/>
+            <TextBlock Text="{DynamicResource PowerPlanView_Title}" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
+            <TextBlock Text="{DynamicResource PowerPlanView_Subtitle}" Style="{StaticResource PageSubtitleTextStyle}"/>
         </StackPanel>
 
         <Grid Grid.Row="1">
@@ -29,7 +29,7 @@
 
             <!-- System Power Plans -->
             <GroupBox Grid.Column="0"
-                    Header="Windows Power Plans"
+                    Header="{DynamicResource PowerPlanView_WindowsPowerPlans}"
                     Margin="0">
                 <Grid Margin="8">
                     <Grid.RowDefinitions>
@@ -43,21 +43,21 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <TextBlock Grid.Row="0"
-                                   Text="Select the Windows plan to make active."
+                                   Text="{DynamicResource PowerPlanView_SelectActiveTip}"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    TextWrapping="Wrap"
                                    TextTrimming="CharacterEllipsis"
-                                   ToolTip="Select the Windows plan to make active."/>
+                                   ToolTip="{DynamicResource PowerPlanView_SelectActiveTip}"/>
                         <WrapPanel Grid.Row="1" Margin="0,8,0,0">
                             <Button Command="{Binding SetActivePlanCommand}"
-                                    Content="Set as Active Windows Plan"
+                                    Content="{DynamicResource PowerPlanView_SetActive}"
                                     Padding="10,5"
                                     Margin="0,0,8,0"
-                                    ToolTip="Change the active Windows power plan to the selected plan"/>
+                                    ToolTip="{DynamicResource PowerPlanView_SetActiveTooltip}"/>
                             <Button Command="{Binding LoadPowerPlansCommand}"
-                                    Content="Refresh Plans"
+                                    Content="{DynamicResource PowerPlanView_Refresh}"
                                     Padding="10,5"
-                                    ToolTip="Refresh the list of available power plans"/>
+                                    ToolTip="{DynamicResource PowerPlanView_RefreshTooltip}"/>
                         </WrapPanel>
                     </Grid>
 
@@ -73,7 +73,7 @@
                                 <Setter Property="ContextMenu">
                                     <Setter.Value>
                                         <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
-                                            <MenuItem Header="Delete"
+                                            <MenuItem Header="{DynamicResource PowerPlanView_Delete}"
                                                       Command="{Binding DeletePowerPlanCommand}"
                                                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                         </ContextMenu>
@@ -120,7 +120,7 @@
                                                 Padding="8,2"
                                                 VerticalAlignment="Top"
                                                 Visibility="{Binding IsActive, Converter={StaticResource BoolToVisibilityConverter}}">
-                                            <TextBlock Text="Active"
+                                            <TextBlock Text="{DynamicResource PowerPlanView_Active}"
                                                        FontSize="11"
                                                        FontWeight="SemiBold"
                                                        Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
@@ -135,7 +135,7 @@
 
             <!-- Custom Power Plans -->
             <GroupBox Grid.Column="2"
-                    Header="Custom Power Plans"
+                    Header="{DynamicResource PowerPlanView_CustomPowerPlans}"
                     Margin="0">
                 <Grid Margin="8">
                     <Grid.RowDefinitions>
@@ -149,21 +149,21 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <TextBlock Grid.Row="0"
-                                   Text="Local .pow files ready to import into Windows."
+                                   Text="{DynamicResource PowerPlanView_LocalPlansTip}"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    TextWrapping="Wrap"
                                    TextTrimming="CharacterEllipsis"
-                                   ToolTip="Local .pow files ready to import into Windows."/>
+                                   ToolTip="{DynamicResource PowerPlanView_LocalPlansTip}"/>
                         <WrapPanel Grid.Row="1" Margin="0,8,0,0">
                             <Button Command="{Binding ImportCustomPlanCommand}"
-                                    Content="Import Selected .pow"
+                                    Content="{DynamicResource PowerPlanView_ImportSelected}"
                                     Padding="10,5"
                                     Margin="0,0,8,0"
-                                    ToolTip="Import the selected custom .pow file into Windows"/>
+                                    ToolTip="{DynamicResource PowerPlanView_ImportSelectedTooltip}"/>
                             <Button Command="{Binding AddCustomPlanFileCommand}"
-                                    Content="Add .pow File"
+                                    Content="{DynamicResource PowerPlanView_AddFile}"
                                     Padding="10,5"
-                                    ToolTip="Add a new custom power plan file to the custom library"/>
+                                    ToolTip="{DynamicResource PowerPlanView_AddFileTooltip}"/>
                         </WrapPanel>
                     </Grid>
 

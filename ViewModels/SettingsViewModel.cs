@@ -209,13 +209,15 @@ namespace ThreadPilot.ViewModels
                 return;
             }
 
-            var themeName = useDarkTheme ? "Dark" : "Light";
+            var themeName = useDarkTheme
+                ? this.GetLocalizedString("Settings_ThemeDark", "Dark")
+                : this.GetLocalizedString("Settings_ThemeLight", "Light");
             try
             {
                 this.themeService.ApplyTheme(useDarkTheme);
                 this.systemTrayService.ApplyTheme(useDarkTheme);
                 this.appliedThemePreference = useDarkTheme;
-                this.StatusMessage = $"Theme changed to {themeName}.";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusThemeChangedFormat", "Theme changed to {0}.", themeName);
 
                 if (logUserAction)
                 {
@@ -224,7 +226,7 @@ namespace ThreadPilot.ViewModels
             }
             catch (Exception ex)
             {
-                this.StatusMessage = $"Failed to change theme to {themeName}.";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusThemeChangeFailedFormat", "Failed to change theme to {0}.", themeName);
                 this.Logger.LogError(ex, "Failed to apply theme preference {ThemeName}", themeName);
                 _ = this.LogUserActionAsync("ThemeChangeFailed", $"Failed to change theme to {themeName}: {ex.Message}");
             }
@@ -238,9 +240,9 @@ namespace ThreadPilot.ViewModels
                 this.localizationService.ApplyLanguage(normalizedLanguage);
                 this.Settings.Language = normalizedLanguage;
                 var languageName = normalizedLanguage == LocalizationService.SimplifiedChineseLanguage
-                    ? "Simplified Chinese"
-                    : "English";
-                this.StatusMessage = $"Language changed to {languageName}.";
+                    ? this.GetLocalizedString("Settings_LanguageSimplifiedChinese", "Simplified Chinese")
+                    : this.GetLocalizedString("Settings_LanguageEnglish", "English");
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusLanguageChangedFormat", "Language changed to {0}.", languageName);
 
                 if (logUserAction)
                 {
@@ -249,7 +251,7 @@ namespace ThreadPilot.ViewModels
             }
             catch (Exception ex)
             {
-                this.StatusMessage = "Failed to change language.";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusLanguageChangeFailed", "Failed to change language.");
                 this.Logger.LogError(ex, "Failed to apply language preference {Language}", normalizedLanguage);
                 _ = this.LogUserActionAsync("LanguageChangeFailed", $"Failed to change language to {normalizedLanguage}: {ex.Message}");
             }
@@ -273,7 +275,7 @@ namespace ThreadPilot.ViewModels
             try
             {
                 this.IsLoading = true;
-                this.StatusMessage = "Saving settings...";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusSaving", "Saving settings...");
                 var warnings = new List<string>();
 
                 previousDefaultPowerPlanGuid = this.Settings.DefaultPowerPlanId;
@@ -295,7 +297,9 @@ namespace ThreadPilot.ViewModels
 
                     if (!autostartUpdated)
                     {
-                        warnings.Add("Failed to update Windows autostart. Keeping previous autostart state.");
+                        warnings.Add(this.GetLocalizedString(
+                            "Settings_WarningAutostartFailed",
+                            "Failed to update Windows autostart. Keeping previous autostart state."));
                         this.Settings.AutostartWithWindows = currentAutostartState;
                     }
                     else
@@ -322,7 +326,10 @@ namespace ThreadPilot.ViewModels
                 this.SetSavedSettingsSnapshot(this.Settings);
                 if (warnings.Count > 0)
                 {
-                    this.StatusMessage = $"Settings saved with warnings: {string.Join(" ", warnings)}";
+                    this.StatusMessage = this.GetLocalizedString(
+                        "Settings_StatusSavedWarningsFormat",
+                        "Settings saved with warnings: {0}",
+                        string.Join(" ", warnings));
                     await this.notificationService.ShowNotificationAsync(
                         "Settings Saved with Warnings",
                         string.Join(" ", warnings),
@@ -330,7 +337,7 @@ namespace ThreadPilot.ViewModels
                 }
                 else
                 {
-                    this.StatusMessage = "Settings saved and applied successfully.";
+                    this.StatusMessage = this.GetLocalizedString("Settings_StatusSavedApplied", "Settings saved and applied successfully.");
                     await this.notificationService.ShowSuccessNotificationAsync(
                         "Settings Saved",
                         "Application settings have been saved successfully");
@@ -344,7 +351,7 @@ namespace ThreadPilot.ViewModels
                 this.Settings.DefaultPowerPlanId = previousDefaultPowerPlanGuid;
                 this.Settings.DefaultPowerPlanName = previousDefaultPowerPlanName;
 
-                this.StatusMessage = $"Error saving settings: {ex.Message}";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusErrorSavingFormat", "Error saving settings: {0}", ex.Message);
                 this.Logger.LogError(ex, "Error saving settings");
 
                 await this.notificationService.ShowErrorNotificationAsync(
@@ -364,20 +371,20 @@ namespace ThreadPilot.ViewModels
             try
             {
                 this.IsLoading = true;
-                this.StatusMessage = "Resetting to defaults...";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusResetting", "Resetting to defaults...");
 
                 var defaultSettings = new ApplicationSettingsModel();
                 this.Settings.CopyFrom(defaultSettings);
 
                 this.UpdatePendingChangesState();
-                this.StatusMessage = "Settings reset to defaults (not saved yet)";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusResetPending", "Settings reset to defaults (not saved yet)");
 
                 await this.LogUserActionAsync("SettingsChanged", "Settings reset to defaults pending save");
                 this.Logger.LogInformation("Settings reset to defaults");
             }
             catch (Exception ex)
             {
-                this.StatusMessage = $"Error resetting settings: {ex.Message}";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusErrorResettingFormat", "Error resetting settings: {0}", ex.Message);
                 this.Logger.LogError(ex, "Error resetting settings");
                 await this.LogUserActionAsync("SettingsChangeFailed", $"Failed to reset settings: {ex.Message}");
             }
@@ -392,11 +399,11 @@ namespace ThreadPilot.ViewModels
             try
             {
                 this.IsLoading = true;
-                this.StatusMessage = "Exporting configuration bundle...";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusExporting", "Exporting configuration bundle...");
 
                 var saveDialog = new SaveFileDialog
                 {
-                    Title = "Export ThreadPilot Configuration",
+                    Title = this.GetLocalizedString("Settings_DialogExportTitle", "Export ThreadPilot Configuration"),
                     Filter = "ThreadPilot configuration (*.json)|*.json|All files (*.*)|*.*",
                     DefaultExt = ".json",
                     FileName = $"ThreadPilot_Configuration_{DateTime.Now:yyyyMMdd_HHmmss}.json",
@@ -406,7 +413,7 @@ namespace ThreadPilot.ViewModels
 
                 if (saveDialog.ShowDialog() != true)
                 {
-                    this.StatusMessage = "Export canceled";
+                    this.StatusMessage = this.GetLocalizedString("Settings_StatusExportCanceled", "Export canceled");
                     return;
                 }
 
@@ -424,7 +431,7 @@ namespace ThreadPilot.ViewModels
                 var json = JsonSerializer.Serialize(bundle, ImportExportJsonOptions);
                 await AtomicFileWriter.WriteAllTextAsync(saveDialog.FileName, json, Encoding.UTF8);
 
-                this.StatusMessage = $"Configuration exported to: {saveDialog.FileName}";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusExportedFormat", "Configuration exported to: {0}", saveDialog.FileName);
 
                 await this.notificationService.ShowSuccessNotificationAsync(
                     "Configuration Exported",
@@ -435,7 +442,7 @@ namespace ThreadPilot.ViewModels
             }
             catch (Exception ex)
             {
-                this.StatusMessage = $"Error exporting settings: {ex.Message}";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusErrorExportingFormat", "Error exporting settings: {0}", ex.Message);
                 this.Logger.LogError(ex, "Error exporting settings");
 
                 await this.notificationService.ShowErrorNotificationAsync(
@@ -455,11 +462,11 @@ namespace ThreadPilot.ViewModels
             try
             {
                 this.IsLoading = true;
-                this.StatusMessage = "Importing configuration...";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusImporting", "Importing configuration...");
 
                 var openDialog = new OpenFileDialog
                 {
-                    Title = "Import ThreadPilot Configuration",
+                    Title = this.GetLocalizedString("Settings_DialogImportTitle", "Import ThreadPilot Configuration"),
                     Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
                     Multiselect = false,
                     CheckFileExists = true,
@@ -467,7 +474,7 @@ namespace ThreadPilot.ViewModels
 
                 if (openDialog.ShowDialog() != true)
                 {
-                    this.StatusMessage = "Import canceled";
+                    this.StatusMessage = this.GetLocalizedString("Settings_StatusImportCanceled", "Import canceled");
                     return;
                 }
 
@@ -490,7 +497,7 @@ namespace ThreadPilot.ViewModels
                     await this.RefreshSettingsAsync();
                     this.HasUnsavedChanges = false;
 
-                    this.StatusMessage = "Configuration bundle imported and applied";
+                    this.StatusMessage = this.GetLocalizedString("Settings_StatusImportedApplied", "Configuration bundle imported and applied");
                     await this.notificationService.ShowSuccessNotificationAsync(
                         "Configuration Imported",
                         $"Settings and rules imported from {Path.GetFileName(importPath)}");
@@ -505,7 +512,7 @@ namespace ThreadPilot.ViewModels
                 await this.RefreshSettingsAsync();
                 this.HasUnsavedChanges = false;
 
-                this.StatusMessage = "Legacy settings imported (rules unchanged)";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusLegacyImported", "Legacy settings imported (rules unchanged)");
                 await this.notificationService.ShowNotificationAsync(
                     "Legacy Import Completed",
                     $"Imported settings from {Path.GetFileName(importPath)}. Rules were not modified.",
@@ -516,7 +523,7 @@ namespace ThreadPilot.ViewModels
             }
             catch (Exception ex)
             {
-                this.StatusMessage = $"Error importing settings: {ex.Message}";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusErrorImportingFormat", "Error importing settings: {0}", ex.Message);
                 this.Logger.LogError(ex, "Error importing settings");
 
                 await this.notificationService.ShowErrorNotificationAsync(
@@ -540,12 +547,12 @@ namespace ThreadPilot.ViewModels
                     "This is a test notification to verify your settings are working correctly.",
                     NotificationType.Information);
 
-                this.StatusMessage = "Test notification sent";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusTestSent", "Test notification sent");
                 this.Logger.LogInformation("Test notification sent");
             }
             catch (Exception ex)
             {
-                this.StatusMessage = $"Error sending test notification: {ex.Message}";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusErrorTestFormat", "Error sending test notification: {0}", ex.Message);
                 this.Logger.LogError(ex, "Error sending test notification");
             }
         }
@@ -558,7 +565,7 @@ namespace ThreadPilot.ViewModels
             try
             {
                 this.IsLoading = true;
-                this.StatusMessage = "Loading settings...";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusLoading", "Loading settings...");
 
                 await this.settingsService.LoadSettingsAsync();
                 await this.associationService.LoadConfigurationAsync();
@@ -588,13 +595,13 @@ namespace ThreadPilot.ViewModels
                 this.ApplyLanguagePreference(this.Settings.Language, logUserAction: false);
 
                 this.SetSavedSettingsSnapshot(this.Settings);
-                this.StatusMessage = "Settings loaded";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusLoaded", "Settings loaded");
 
                 this.Logger.LogInformation("Settings refreshed");
             }
             catch (Exception ex)
             {
-                this.StatusMessage = $"Error loading settings: {ex.Message}";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusErrorLoadingFormat", "Error loading settings: {0}", ex.Message);
                 this.Logger.LogError(ex, "Error loading settings");
             }
             finally
@@ -628,7 +635,7 @@ namespace ThreadPilot.ViewModels
                     }
                     this.SetSavedSettingsSnapshot(this.Settings);
                     this.ApplyLanguagePreference(this.Settings.Language, logUserAction: false);
-                    this.StatusMessage = "Settings synchronized";
+                    this.StatusMessage = this.GetLocalizedString("Settings_StatusSynchronized", "Settings synchronized");
                 }
                 finally
                 {
@@ -662,14 +669,14 @@ namespace ThreadPilot.ViewModels
             try
             {
                 this.IsLoading = true;
-                this.StatusMessage = "Checking for updates...";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusCheckingUpdates", "Checking for updates...");
 
                 var currentVersion = ParseVersion(this.ApplicationVersion);
                 var (latest, releaseUrl) = await this.gitHubUpdateChecker.GetLatestVersionAsync("PrimeBuild-pc", "ThreadPilot");
 
                 if (latest is null)
                 {
-                    this.StatusMessage = "Unable to determine the latest version.";
+                    this.StatusMessage = this.GetLocalizedString("Settings_StatusLatestUnknown", "Unable to determine the latest version.");
                     await this.notificationService.ShowErrorNotificationAsync(
                         "Update Check",
                         "Unable to retrieve latest release information.");
@@ -678,7 +685,7 @@ namespace ThreadPilot.ViewModels
 
                 if (latest > currentVersion)
                 {
-                    this.StatusMessage = $"New version available: {latest}";
+                    this.StatusMessage = this.GetLocalizedString("Settings_StatusNewVersionFormat", "New version available: {0}", latest);
 
                     var result = System.Windows.MessageBox.Show(
                         $"Update available\nInstalled version: {this.ApplicationVersion}\nNew version: {latest}\n\nDo you want to open the download page?",
@@ -698,7 +705,7 @@ namespace ThreadPilot.ViewModels
                 }
                 else
                 {
-                    this.StatusMessage = $"Application is up to date. Installed version: {this.ApplicationVersion}";
+                    this.StatusMessage = this.GetLocalizedString("Settings_StatusUpToDateFormat", "Application is up to date. Installed version: {0}", this.ApplicationVersion);
                     await this.notificationService.ShowSuccessNotificationAsync(
                         "Application up to date",
                         $"Installed version: {this.ApplicationVersion}");
@@ -706,7 +713,7 @@ namespace ThreadPilot.ViewModels
             }
             catch (Exception ex)
             {
-                this.StatusMessage = $"Error while checking updates: {ex.Message}";
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusUpdateErrorFormat", "Error while checking updates: {0}", ex.Message);
                 this.Logger.LogError(ex, "Error checking for updates");
 
                 await this.notificationService.ShowErrorNotificationAsync(
@@ -740,6 +747,16 @@ namespace ThreadPilot.ViewModels
                 : new Version(0, 0, 0);
         }
 
+        private string GetLocalizedString(string key, string fallback, params object[] args)
+        {
+            var localized = this.localizationService.GetString(key);
+            var format = string.IsNullOrWhiteSpace(localized) || string.Equals(localized, key, StringComparison.Ordinal)
+                ? fallback
+                : localized;
+
+            return args.Length == 0 ? format : string.Format(format, args);
+        }
+
         public async Task<bool> SaveIfDirtyAsync()
         {
             if (!this.HasUnsavedChanges)
@@ -765,8 +782,8 @@ namespace ThreadPilot.ViewModels
         {
             this.HasUnsavedChanges = !this.Settings.HasSameUserSettingsAs(this.savedSettingsSnapshot);
             this.StatusMessage = this.HasUnsavedChanges
-                ? "Settings have been modified"
-                : "Settings match the saved configuration";
+                ? this.GetLocalizedString("Settings_StatusModified", "Settings have been modified")
+                : this.GetLocalizedString("Settings_StatusMatchSaved", "Settings match the saved configuration");
         }
 
         private void SetSavedSettingsSnapshot(ApplicationSettingsModel settingsSnapshot)

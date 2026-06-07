@@ -197,7 +197,8 @@ namespace ThreadPilot.ViewModels
             IPersistentProcessRuleMatcher? persistentRuleMatcher = null,
             IProcessRuleCreationService? processRuleCreationService = null,
             Action<string>? clipboardSetter = null,
-            Action<string>? executableLocationOpener = null)
+            Action<string>? executableLocationOpener = null,
+            ILocalizationService? localizationService = null)
             : base(logger, enhancedLoggingService, activityAuditService)
         {
             this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
@@ -232,7 +233,8 @@ namespace ThreadPilot.ViewModels
             this.SelectedProcessSummary = new SelectedProcessSummaryViewModel(
                 memoryPriorityService,
                 persistentRuleStore,
-                persistentRuleMatcher);
+                persistentRuleMatcher,
+                localizationService);
 
             // Subscribe to topology detection events
             this.cpuTopologyService.TopologyDetected += this.OnTopologyDetected;

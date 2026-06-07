@@ -10,7 +10,7 @@
         mc:Ignorable="d"
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="Mica"
-        Title="ThreadPilot - Process &amp; Power Plan Manager"
+        Title="{DynamicResource MainWindow_Title}"
         Height="864"
         Width="1280"
         WindowStartupLocation="CenterScreen"
@@ -86,7 +86,7 @@
                                IsPaneOpen="False"
                                OpenPaneLength="180"
                                CompactPaneLength="52"
-                               AutomationProperties.Name="Primary navigation">
+                               AutomationProperties.Name="{DynamicResource MainWindow_PrimaryNavigation}">
                 <ui:NavigationView.Resources>
                     <Style TargetType="ui:NavigationViewItem">
                         <Setter Property="Background" Value="Transparent"/>
@@ -118,37 +118,37 @@
                 </ui:NavigationView.Resources>
                 
                 <ui:NavigationView.MenuItems>
-                    <ui:NavigationViewItem x:Name="NavProcess" Content="Process Management" Tag="Process" TargetPageTag="Process" Click="NavMenuItem_Click">
+                    <ui:NavigationViewItem x:Name="NavProcess" Content="{DynamicResource MainWindow_NavProcess}" Tag="Process" TargetPageTag="Process" Click="NavMenuItem_Click">
                         <ui:NavigationViewItem.Icon>
                             <ui:SymbolIcon Symbol="Apps24"/>
                         </ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
-                    <ui:NavigationViewItem x:Name="NavMasks" Content="CPU Masks" Tag="Masks" TargetPageTag="Masks" Click="NavMenuItem_Click">
+                    <ui:NavigationViewItem x:Name="NavMasks" Content="{DynamicResource MainWindow_NavMasks}" Tag="Masks" TargetPageTag="Masks" Click="NavMenuItem_Click">
                         <ui:NavigationViewItem.Icon>
                             <ui:SymbolIcon Symbol="BranchFork24"/>
                         </ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
-                    <ui:NavigationViewItem x:Name="NavPower" Content="Power Plans" Tag="Power" TargetPageTag="Power" Click="NavMenuItem_Click">
+                    <ui:NavigationViewItem x:Name="NavPower" Content="{DynamicResource MainWindow_NavPower}" Tag="Power" TargetPageTag="Power" Click="NavMenuItem_Click">
                         <ui:NavigationViewItem.Icon>
                             <ui:SymbolIcon Symbol="Power24"/>
                         </ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
-                    <ui:NavigationViewItem x:Name="NavRules" Content="Rules" Tag="Rules" TargetPageTag="Rules" Click="NavMenuItem_Click">
+                    <ui:NavigationViewItem x:Name="NavRules" Content="{DynamicResource MainWindow_NavRules}" Tag="Rules" TargetPageTag="Rules" Click="NavMenuItem_Click">
                         <ui:NavigationViewItem.Icon>
                             <ui:SymbolIcon Symbol="TasksApp24"/>
                         </ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
-                    <ui:NavigationViewItem x:Name="NavPerf" Content="Diagnostics" Tag="Performance" TargetPageTag="Performance" Click="NavMenuItem_Click">
+                    <ui:NavigationViewItem x:Name="NavPerf" Content="{DynamicResource MainWindow_NavDiagnostics}" Tag="Performance" TargetPageTag="Performance" Click="NavMenuItem_Click">
                         <ui:NavigationViewItem.Icon>
                             <ui:SymbolIcon Symbol="DataHistogram24"/>
                         </ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
-                    <ui:NavigationViewItem x:Name="NavLogs" Content="ThreadPilot Activity" Tag="Logs" TargetPageTag="Logs" Click="NavMenuItem_Click">
+                    <ui:NavigationViewItem x:Name="NavLogs" Content="{DynamicResource MainWindow_NavActivity}" Tag="Logs" TargetPageTag="Logs" Click="NavMenuItem_Click">
                         <ui:NavigationViewItem.Icon>
                             <ui:SymbolIcon Symbol="DocumentText24"/>
                         </ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
-                    <ui:NavigationViewItem x:Name="NavTweaks" Content="Tweaks" Tag="Tweaks" TargetPageTag="Tweaks" Click="NavMenuItem_Click">
+                    <ui:NavigationViewItem x:Name="NavTweaks" Content="{DynamicResource MainWindow_NavTweaks}" Tag="Tweaks" TargetPageTag="Tweaks" Click="NavMenuItem_Click">
                         <ui:NavigationViewItem.Icon>
                             <ui:SymbolIcon Symbol="Wrench24"/>
                         </ui:NavigationViewItem.Icon>
@@ -156,7 +156,7 @@
                 </ui:NavigationView.MenuItems>
                 
                 <ui:NavigationView.FooterMenuItems>
-                    <ui:NavigationViewItem x:Name="NavSettings" TargetPageTag="Settings" Content="Settings" Tag="Settings" Click="NavMenuItem_Click">
+                    <ui:NavigationViewItem x:Name="NavSettings" TargetPageTag="Settings" Content="{DynamicResource MainWindow_NavSettings}" Tag="Settings" Click="NavMenuItem_Click">
                         <ui:NavigationViewItem.Icon>
                             <ui:SymbolIcon Symbol="Settings24"/>
                         </ui:NavigationViewItem.Icon>
@@ -175,7 +175,7 @@
                           Grid.RowSpan="2"
                           Visibility="Collapsed"
                           Panel.ZIndex="900"
-                          AutomationProperties.Name="Elevation warning overlay">
+                          AutomationProperties.Name="{DynamicResource MainWindow_ElevationWarningOverlay}">
                         <!-- Blurred Backdrop -->
                         <Grid x:Name="ElevationWarningBackdrop"
                               Background="{DynamicResource OverlayBrush}"
@@ -206,7 +206,7 @@
                                                FontSize="28"
                                                VerticalAlignment="Center"
                                                Margin="0,0,12,0"/>
-                                    <TextBlock Text="Administrator Privileges Recommended"
+                                    <TextBlock Text="{DynamicResource MainWindow_ElevationWarningTitle}"
                                                FontSize="22"
                                                FontWeight="SemiBold"
                                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
@@ -214,44 +214,44 @@
                                                TextWrapping="Wrap"/>
                                 </StackPanel>
 
-                                <TextBlock Text="ThreadPilot is running with limited privileges. Some features may not be available."
+                                <TextBlock Text="{DynamicResource MainWindow_ElevationWarningDescription}"
                                            TextWrapping="Wrap"
                                            Margin="0,0,0,12"
                                            FontSize="14"
                                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
 
-                                <TextBlock Text="Administrator access is required for:"
+                                <TextBlock Text="{DynamicResource MainWindow_ElevationWarningRequired}"
                                            FontWeight="SemiBold"
                                            Margin="0,0,0,8"
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
 
                                 <StackPanel Margin="20,0,0,0">
-                                    <TextBlock Text="• Modifying power plan configurations"
+                                    <TextBlock Text="{DynamicResource MainWindow_ElevationWarningPowerPlans}"
                                                TextWrapping="Wrap"
                                                Margin="0,0,0,4"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                                    <TextBlock Text="• Changing process CPU affinity and priority"
+                                    <TextBlock Text="{DynamicResource MainWindow_ElevationWarningAffinity}"
                                                TextWrapping="Wrap"
                                                Margin="0,0,0,4"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                                    <TextBlock Text="• Applying system-level optimizations and tweaks"
+                                    <TextBlock Text="{DynamicResource MainWindow_ElevationWarningTweaks}"
                                                TextWrapping="Wrap"
                                                Margin="0,0,0,4"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                                    <TextBlock Text="• Managing protected processes"
+                                    <TextBlock Text="{DynamicResource MainWindow_ElevationWarningProtected}"
                                                TextWrapping="Wrap"
                                                Margin="0,0,0,16"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                                 </StackPanel>
 
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <Button Content="Continue Without Elevation"
+                                    <Button Content="{DynamicResource MainWindow_ContinueWithoutElevation}"
                                             Click="ElevationWarningDismiss_Click"
                                             Margin="0,0,12,0"
                                             Background="{DynamicResource ControlFillColorDefaultBrush}"
                                             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                             Padding="16,8"/>
-                                    <Button Content="Request Elevation"
+                                    <Button Content="{DynamicResource MainWindow_RequestElevation}"
                                             Command="{Binding RequestElevationCommand}"
                                             Click="ElevationWarningRequestElevation_Click"
                                             Background="{DynamicResource AccentFillColorDefaultBrush}"
@@ -308,7 +308,7 @@
               Panel.ZIndex="950">
             <Grid x:Name="PerformanceIntroOverlay"
                   Visibility="Collapsed"
-                  AutomationProperties.Name="Performance introduction overlay">
+                  AutomationProperties.Name="{DynamicResource MainWindow_PerformanceIntroductionOverlay}">
                 <Border x:Name="PerformanceIntroCard"
                         Background="{DynamicResource CardSurfaceBrush}"
                         BorderBrush="{DynamicResource BorderSubtleBrush}"
@@ -325,40 +325,40 @@
                     </Border.Effect>
                     <StackPanel>
                         <TextBlock x:Name="PerformanceIntroTitle"
-                                   Text="Optional Diagnostics"
+                                   Text="{DynamicResource PerformanceView_OptionalDiagnostics}"
                                    FontSize="24"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                    Margin="0,0,0,10"/>
 
                         <TextBlock x:Name="PerformanceIntroDescription"
-                                   Text="Diagnostics are optional and intended for troubleshooting. For in-game overlays and detailed performance graphs, use dedicated tools."
+                                   Text="{DynamicResource PerformanceView_DiagnosticsDesc}"
                                    TextWrapping="Wrap"
                                    Margin="0,0,0,10"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
 
                         <TextBlock x:Name="PerformanceIntroTipsHeader"
-                                   Text="Quick tips:"
+                                   Text="{DynamicResource PerformanceView_QuickTips}"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                    Margin="0,0,0,6"/>
 
                         <TextBlock x:Name="PerformanceIntroTip1"
-                                   Text="1. Open diagnostics only when you need a focused troubleshooting snapshot."
+                                   Text="{DynamicResource PerformanceView_Tip1}"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Margin="0,0,0,4"/>
                         <TextBlock x:Name="PerformanceIntroTip2"
-                                   Text="2. Review hotspots only as a hint before creating automation rules."
+                                   Text="{DynamicResource PerformanceView_Tip2}"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Margin="0,0,0,4"/>
                         <TextBlock x:Name="PerformanceIntroTip3"
-                                   Text="3. Stop live metrics when you are done troubleshooting."
+                                   Text="{DynamicResource PerformanceView_Tip3}"
                                    TextWrapping="Wrap"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Margin="0,0,0,16"/>
 
                         <Button x:Name="PerformanceIntroContinueButton"
-                                Content="Continue to Diagnostics"
+                                Content="{DynamicResource PerformanceView_Continue}"
                                 Click="PerformanceIntroContinue_Click"
                                 HorizontalAlignment="Right"
                                 Background="{DynamicResource AccentFillColorDefaultBrush}"
@@ -372,7 +372,7 @@
                   Visibility="Collapsed"
                   Panel.ZIndex="955"
                   Background="{DynamicResource OverlayBrush}"
-                  AutomationProperties.Name="Startup minimized suggestion">
+                  AutomationProperties.Name="{DynamicResource MainWindow_StartupMinimizedSuggestion}">
                 <Border Background="{DynamicResource CardSurfaceBrush}"
                         BorderBrush="{DynamicResource BorderSubtleBrush}"
                         BorderThickness="1"
@@ -395,28 +395,28 @@
                                 Padding="8,3"
                                 HorizontalAlignment="Left"
                                 Margin="0,0,0,10">
-                            <TextBlock Text="Recommended"
+                            <TextBlock Text="{DynamicResource MainWindow_Recommended}"
                                        FontSize="{DynamicResource CaptionFontSize}"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource InfoTextBrush}"/>
                         </Border>
-                        <TextBlock Text="Startup minimized"
+                        <TextBlock Text="{DynamicResource MainWindow_StartupMinimizedSuggestionTitle}"
                                    FontSize="20"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                    Margin="0,0,0,8"/>
-                        <TextBlock Text="Enable Startup minimized when you want ThreadPilot to start silently in the tray on future Windows sign-ins."
+                        <TextBlock Text="{DynamicResource MainWindow_StartupMinimizedSuggestionDescription}"
                                    TextWrapping="Wrap"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Margin="0,0,0,16"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Content="Don't show again"
+                            <Button Content="{DynamicResource MainWindow_DontShowAgain}"
                                     Click="StartupSuggestionDontShowAgain_Click"
                                     Background="{DynamicResource ControlFillColorDefaultBrush}"
                                     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                     Padding="14,7"
                                     Margin="0,0,10,0"/>
-                            <Button Content="Open Settings"
+                            <Button Content="{DynamicResource MainWindow_OpenSettings}"
                                     Click="StartupSuggestionOpenSettings_Click"
                                     Background="{DynamicResource AccentFillColorDefaultBrush}"
                                     Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
@@ -430,7 +430,7 @@
                   Visibility="Collapsed"
                   Panel.ZIndex="960"
                   Background="{DynamicResource OverlayBrush}"
-                  AutomationProperties.Name="Unsaved settings dialog">
+                  AutomationProperties.Name="{DynamicResource MainWindow_UnsavedSettingsDialog}">
                 <Border Background="{DynamicResource CardSurfaceBrush}"
                         BorderBrush="{DynamicResource BorderSubtleBrush}"
                         BorderThickness="1"
@@ -445,7 +445,7 @@
                         <DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity="0.18"/>
                     </Border.Effect>
                     <StackPanel>
-                        <TextBlock Text="Unsaved Settings"
+                        <TextBlock Text="{DynamicResource SettingsWindow_UnsavedTitle}"
                                    FontSize="22"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
@@ -455,19 +455,19 @@
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Margin="0,0,0,18"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Content="Cancel"
+                            <Button Content="{DynamicResource SettingsWindow_Cancel}"
                                     Click="UnsavedSettingsCancel_Click"
                                     Background="{DynamicResource ControlFillColorDefaultBrush}"
                                     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                     Padding="16,8"
                                     Margin="0,0,10,0"/>
-                            <Button Content="Discard"
+                            <Button Content="{DynamicResource SettingsWindow_Discard}"
                                     Click="UnsavedSettingsDiscard_Click"
                                     Background="{DynamicResource ControlFillColorDefaultBrush}"
                                     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                     Padding="16,8"
                                     Margin="0,0,10,0"/>
-                            <Button Content="Save"
+                            <Button Content="{DynamicResource SettingsWindow_Save}"
                                     Click="UnsavedSettingsSave_Click"
                                     Background="{DynamicResource AccentFillColorDefaultBrush}"
                                     Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
@@ -481,7 +481,7 @@
             <Grid x:Name="LoadingOverlay"
                   Visibility="Visible"
                   Panel.ZIndex="1000"
-                  AutomationProperties.Name="Application startup loading overlay"
+                  AutomationProperties.Name="{DynamicResource MainWindow_LoadingOverlay}"
                   AutomationProperties.LiveSetting="Polite">
 
             <!-- Loading Popup -->

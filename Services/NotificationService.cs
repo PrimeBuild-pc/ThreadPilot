@@ -436,7 +436,23 @@ namespace ThreadPilot.Services
                 "Game Boost Deactivated" => "Notification_GameBoostDeactivatedTitle",
                 "Process Monitor Error" => "Notification_ProcessMonitorErrorTitle",
                 "Affinity blocked" => "Notification_AffinityBlockedTitle",
+                "Affinity applied" => "Notification_AffinityAppliedTitle",
+                "Affinity adjusted" => "Notification_AffinityAdjustedTitle",
+                "Affinity failed" => "Notification_AffinityFailedTitle",
+                "Affinity error" => "Notification_AffinityErrorTitle",
                 "Priority blocked" => "Notification_PriorityBlockedTitle",
+                "Priority warning" => "Notification_PriorityWarningTitle",
+                "Priority applied" => "Notification_PriorityAppliedTitle",
+                "Priority adjusted" => "Notification_PriorityAdjustedTitle",
+                "Priority error" => "Notification_PriorityErrorTitle",
+                "Keyboard Shortcut" => "Notification_KeyboardShortcutTitle",
+                "ThreadPilot Started" => "Notification_ThreadPilotStartedTitle",
+                "Startup Error" => "Notification_StartupErrorTitle",
+                "Automation Monitoring Error" => "Notification_AutomationMonitoringErrorTitle",
+                "Settings Saved" => "Notification_SettingsSavedTitle",
+                "Settings Saved with Warnings" => "Notification_SettingsSavedWarningsTitle",
+                "Settings Error" => "Notification_SettingsErrorTitle",
+                "Test Notification" => "SettingsView_TestNotification",
                 _ => null,
             };
 
@@ -468,6 +484,28 @@ namespace ThreadPilot.Services
                 if (!string.Equals(format, "Notification_GameBoostDeactivatedFormat", StringComparison.Ordinal))
                 {
                     return string.Format(format, duration);
+                }
+            }
+
+            key = input switch
+            {
+                "Toggle monitoring shortcut activated" => "Notification_ToggleMonitoringShortcut",
+                "High Performance power plan shortcut activated" => "Notification_HighPerformanceShortcut",
+                "Refresh process list shortcut activated" => "Notification_RefreshProcessListShortcut",
+                "Process monitoring and power plan management is now active" => "Notification_ThreadPilotStartedMessage",
+                "Failed to start process monitoring manager" => "Notification_ProcessMonitoringStartFailed",
+                "Application settings have been saved successfully" => "Notification_SettingsSavedMessage",
+                "Failed to save settings" => "Notification_SettingsSaveFailed",
+                "This is a test notification to verify your settings are working correctly." => "Notification_TestNotificationMessage",
+                _ => null,
+            };
+
+            if (key != null)
+            {
+                var localized = this.GetLocalizedString(key);
+                if (!string.Equals(localized, key, StringComparison.Ordinal))
+                {
+                    return localized;
                 }
             }
 

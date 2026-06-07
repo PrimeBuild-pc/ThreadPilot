@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ThreadPilot.Views"
         mc:Ignorable="d"
-        Title="ThreadPilot Settings" 
+        Title="{DynamicResource SettingsWindow_Title}" 
         Height="700" Width="900"
         MinHeight="600" MinWidth="800"
         WindowStartupLocation="CenterOwner"
@@ -25,7 +25,7 @@
               Visibility="Collapsed"
               Background="{DynamicResource OverlayBrush}"
               Panel.ZIndex="10"
-              AutomationProperties.Name="Unsaved settings dialog">
+              AutomationProperties.Name="{DynamicResource MainWindow_UnsavedSettingsDialog}">
             <Border Background="{DynamicResource CardSurfaceBrush}"
                     BorderBrush="{DynamicResource BorderSubtleBrush}"
                     BorderThickness="1"
@@ -39,29 +39,29 @@
                     <DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity="0.18"/>
                 </Border.Effect>
                 <StackPanel>
-                    <TextBlock Text="Unsaved Settings"
+                    <TextBlock Text="{DynamicResource SettingsWindow_UnsavedTitle}"
                                FontSize="22"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                Margin="0,0,0,10"/>
-                    <TextBlock Text="You have unsaved changes. Save before closing, discard the changes, or cancel to keep editing."
+                    <TextBlock Text="{DynamicResource SettingsWindow_UnsavedDescription}"
                                TextWrapping="Wrap"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Margin="0,0,0,18"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="Cancel"
+                        <Button Content="{DynamicResource SettingsWindow_Cancel}"
                                 Click="UnsavedSettingsCancel_Click"
                                 Background="{DynamicResource ControlFillColorDefaultBrush}"
                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                 Padding="16,8"
                                 Margin="0,0,10,0"/>
-                        <Button Content="Discard"
+                        <Button Content="{DynamicResource SettingsWindow_Discard}"
                                 Click="UnsavedSettingsDiscard_Click"
                                 Background="{DynamicResource ControlFillColorDefaultBrush}"
                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                 Padding="16,8"
                                 Margin="0,0,10,0"/>
-                        <Button Content="Save"
+                        <Button Content="{DynamicResource SettingsWindow_Save}"
                                 Click="UnsavedSettingsSave_Click"
                                 Background="{DynamicResource AccentFillColorDefaultBrush}"
                                 Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
