@@ -19,7 +19,6 @@ namespace ThreadPilot.ViewModels
     using System;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
-    using System.Diagnostics;
     using System.IO;
     using System.Linq;
     using System.Reflection;
@@ -48,13 +47,15 @@ namespace ThreadPilot.ViewModels
         private readonly IProcessMonitorManagerService processMonitorManagerService;
         private readonly IThemeService themeService;
         private readonly ISystemTrayService systemTrayService;
-        private readonly GitHubUpdateChecker gitHubUpdateChecker;
+        private readonly IUpdateService updateService;
+        private readonly IApplicationVersionProvider versionProvider;
         private readonly ILocalizationService localizationService;
         private ApplicationSettingsModel savedSettingsSnapshot;
         private bool isSyncingFromService = false;
         private bool? appliedThemePreference;
         private string cachedDefaultPowerPlanGuid = string.Empty;
         private string cachedDefaultPowerPlanName = string.Empty;
+        private UpdateReleaseInfo? availableUpdate;
         private static readonly JsonSerializerOptions ImportExportJsonOptions = new()
         {
             WriteIndented = true,
@@ -96,6 +97,19 @@ namespace ThreadPilot.ViewModels
 
         public ICommand CheckUpdatesCommand { get; }
 
+        public IAsyncRelayCommand DownloadAndInstallUpdateCommand { get; }
+
+        [ObservableProperty]
+        private string latestUpdateVersion = string.Empty;
+
+        [ObservableProperty]
+        private string lastUpdateCheckText = string.Empty;
+
+        [ObservableProperty]
+        private bool isUpdateAvailable = false;
+
+        public bool CanDownloadAndInstallUpdate => this.IsUpdateAvailable && !this.IsLoading;
+
         public SettingsViewModel(
             ILogger<SettingsViewModel> logger,
             IApplicationSettingsService settingsService,
@@ -106,7 +120,8 @@ namespace ThreadPilot.ViewModels
             IProcessMonitorManagerService processMonitorManagerService,
             IThemeService themeService,
             ISystemTrayService systemTrayService,
-            GitHubUpdateChecker gitHubUpdateChecker,
+            IUpdateService updateService,
+            IApplicationVersionProvider versionProvider,
             ILocalizationService localizationService,
             IEnhancedLoggingService? enhancedLoggingService = null,
             IActivityAuditService? activityAuditService = null)
@@ -120,24 +135,18 @@ namespace ThreadPilot.ViewModels
             this.processMonitorManagerService = processMonitorManagerService ?? throw new ArgumentNullException(nameof(processMonitorManagerService));
             this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
             this.systemTrayService = systemTrayService ?? throw new ArgumentNullException(nameof(systemTrayService));
-            this.gitHubUpdateChecker = gitHubUpdateChecker ?? throw new ArgumentNullException(nameof(gitHubUpdateChecker));
+            this.updateService = updateService ?? throw new ArgumentNullException(nameof(updateService));
+            this.versionProvider = versionProvider ?? throw new ArgumentNullException(nameof(versionProvider));
             this.localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
 
-            // Get version and strip the git commit hash (everything after '+')
-            var rawVersion = typeof(App).Assembly
-                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
-                .InformationalVersion
-                ?? typeof(App).Assembly.GetName().Version?.ToString()
-                ?? "0.0.0";
-
-            // Remove commit hash suffix and add 'v' prefix
-            var cleanVersion = rawVersion.Split('+')[0];
-            this.ApplicationVersion = $"v{cleanVersion}";
+            this.ApplicationVersion = this.versionProvider.DisplayVersion;
 
             // Initialize with current settings
             this.settings = (ApplicationSettingsModel)this.settingsService.Settings.Clone();
             this.savedSettingsSnapshot = (ApplicationSettingsModel)this.settings.Clone();
             this.appliedThemePreference = this.settings.UseDarkTheme;
+            this.LatestUpdateVersion = this.GetLocalizedString("Settings_UpdateNotChecked", "Not checked");
+            this.UpdateLastCheckedText();
 
             // Initialize commands
             this.SaveSettingsCommand = new AsyncRelayCommand(this.SaveSettingsAsync);
@@ -147,6 +156,9 @@ namespace ThreadPilot.ViewModels
             this.TestNotificationCommand = new AsyncRelayCommand(this.TestNotificationAsync);
             this.RefreshPowerPlansCommand = new AsyncRelayCommand(this.RefreshPowerPlansAsync);
             this.CheckUpdatesCommand = new AsyncRelayCommand(this.CheckUpdatesAsync);
+            this.DownloadAndInstallUpdateCommand = new AsyncRelayCommand(
+                this.DownloadAndInstallUpdateAsync,
+                () => this.CanDownloadAndInstallUpdate);
 
             // Subscribe to property changes to track unsaved changes
             this.Settings.PropertyChanged += this.OnSettingsPropertyChanged;
@@ -265,6 +277,14 @@ namespace ThreadPilot.ViewModels
         partial void OnIsLoadingChanged(bool value)
         {
             OnPropertyChanged(nameof(CanSaveSettings));
+            OnPropertyChanged(nameof(CanDownloadAndInstallUpdate));
+            this.DownloadAndInstallUpdateCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnIsUpdateAvailableChanged(bool value)
+        {
+            OnPropertyChanged(nameof(CanDownloadAndInstallUpdate));
+            this.DownloadAndInstallUpdateCommand.NotifyCanExecuteChanged();
         }
 
         private async Task SaveSettingsAsync()
@@ -671,40 +691,34 @@ namespace ThreadPilot.ViewModels
                 this.IsLoading = true;
                 this.StatusMessage = this.GetLocalizedString("Settings_StatusCheckingUpdates", "Checking for updates...");
 
-                var currentVersion = ParseVersion(this.ApplicationVersion);
-                var (latest, releaseUrl) = await this.gitHubUpdateChecker.GetLatestVersionAsync("PrimeBuild-pc", "ThreadPilot");
+                var result = await this.updateService.CheckForUpdatesAsync(new UpdateCheckRequest(UpdateCheckTrigger.Manual));
+                this.UpdateLastCheckedText();
 
-                if (latest is null)
+                if (result.Status == UpdateCheckStatus.Failed)
                 {
                     this.StatusMessage = this.GetLocalizedString("Settings_StatusLatestUnknown", "Unable to determine the latest version.");
                     await this.notificationService.ShowErrorNotificationAsync(
                         "Update Check",
-                        "Unable to retrieve latest release information.");
+                        result.Message);
                     return;
                 }
 
-                if (latest > currentVersion)
+                if (result.IsUpdateAvailable && result.Release != null)
                 {
-                    this.StatusMessage = this.GetLocalizedString("Settings_StatusNewVersionFormat", "New version available: {0}", latest);
-
-                    var result = System.Windows.MessageBox.Show(
-                        $"Update available\nInstalled version: {this.ApplicationVersion}\nNew version: {latest}\n\nDo you want to open the download page?",
+                    this.availableUpdate = result.Release;
+                    this.LatestUpdateVersion = $"v{result.Release.Version}";
+                    this.IsUpdateAvailable = true;
+                    this.StatusMessage = this.GetLocalizedString("Settings_StatusNewVersionFormat", "New version available: {0}", result.Release.Version);
+                    await this.notificationService.ShowNotificationAsync(
                         "Update available",
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Information);
-
-                    if (result == MessageBoxResult.Yes)
-                    {
-                        var url = releaseUrl ?? "https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest";
-                        Process.Start(new ProcessStartInfo
-                        {
-                            FileName = url,
-                            UseShellExecute = true,
-                        });
-                    }
+                        $"ThreadPilot {result.Release.Version} is available.",
+                        NotificationType.Information);
                 }
                 else
                 {
+                    this.availableUpdate = null;
+                    this.LatestUpdateVersion = result.Release != null ? $"v{result.Release.Version}" : this.GetLocalizedString("Settings_UpdateLatestUnknown", "Unknown");
+                    this.IsUpdateAvailable = false;
                     this.StatusMessage = this.GetLocalizedString("Settings_StatusUpToDateFormat", "Application is up to date. Installed version: {0}", this.ApplicationVersion);
                     await this.notificationService.ShowSuccessNotificationAsync(
                         "Application up to date",
@@ -727,24 +741,73 @@ namespace ThreadPilot.ViewModels
             }
         }
 
-        private static Version ParseVersion(string versionString)
+        private async Task DownloadAndInstallUpdateAsync()
         {
-            if (string.IsNullOrWhiteSpace(versionString))
+            if (this.availableUpdate == null)
             {
-                return new Version(0, 0, 0);
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusLatestUnknown", "Unable to determine the latest version.");
+                return;
             }
 
-            var sanitized = versionString.Trim();
-            if (sanitized.StartsWith("v", StringComparison.OrdinalIgnoreCase))
+            var message = this.GetLocalizedString(
+                "Settings_UpdateConfirmMessageFormat",
+                "ThreadPilot will download and verify version {0}, then ask Windows for permission to run the installer. Continue?",
+                this.availableUpdate.Version);
+            var confirmation = System.Windows.MessageBox.Show(
+                message,
+                this.GetLocalizedString("Settings_UpdateConfirmTitle", "Install ThreadPilot update"),
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Information);
+
+            if (confirmation != MessageBoxResult.Yes)
             {
-                sanitized = sanitized[1..];
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusUpdateCanceled", "Update canceled.");
+                return;
             }
 
-            sanitized = sanitized.Split('-', '+')[0];
+            try
+            {
+                this.IsLoading = true;
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusDownloadingUpdate", "Downloading and verifying update...");
 
-            return Version.TryParse(sanitized, out var parsed)
-                ? parsed
-                : new Version(0, 0, 0);
+                var result = await this.updateService.DownloadAndInstallAsync(this.availableUpdate);
+                if (result.Status == UpdateInstallStatus.Started)
+                {
+                    this.StatusMessage = this.GetLocalizedString("Settings_StatusUpdateInstallerStarted", "Update installer started.");
+                    await this.notificationService.ShowNotificationAsync(
+                        "Update installer started",
+                        "ThreadPilot will close while the installer runs.",
+                        NotificationType.Information);
+                }
+                else
+                {
+                    this.StatusMessage = this.GetLocalizedString("Settings_StatusUpdateInstallFailedFormat", "Update install failed: {0}", result.Message);
+                    await this.notificationService.ShowErrorNotificationAsync(
+                        "Update install failed",
+                        result.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusUpdateInstallFailedFormat", "Update install failed: {0}", ex.Message);
+                this.Logger.LogError(ex, "Error downloading or installing update");
+                await this.notificationService.ShowErrorNotificationAsync(
+                    "Update install failed",
+                    "Unable to download or start the update installer",
+                    ex);
+            }
+            finally
+            {
+                this.IsLoading = false;
+            }
+        }
+
+        private void UpdateLastCheckedText()
+        {
+            var lastCheck = this.settingsService.Settings.LastUpdateCheckUtc;
+            this.LastUpdateCheckText = lastCheck.HasValue
+                ? lastCheck.Value.LocalDateTime.ToString("g", System.Globalization.CultureInfo.CurrentCulture)
+                : this.GetLocalizedString("Settings_UpdateLastCheckedNever", "Never");
         }
 
         private string GetLocalizedString(string key, string fallback, params object[] args)

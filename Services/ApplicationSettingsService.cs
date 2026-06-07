@@ -257,6 +257,16 @@ namespace ThreadPilot.Services
             }
 
             this.settings.Language = LocalizationService.NormalizeLanguage(this.settings.Language);
+
+            if (this.settings.UpdateCheckIntervalDays < 1)
+            {
+                this.settings.UpdateCheckIntervalDays = 1;
+            }
+
+            if (this.settings.UpdateCheckIntervalDays > 365)
+            {
+                this.settings.UpdateCheckIntervalDays = 365;
+            }
         }
 
         public async Task ExportSettingsAsync(string filePath)

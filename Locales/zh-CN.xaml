@@ -436,6 +436,12 @@
     <sys:String x:Key="SettingsView_Translator">翻译人员：Ylimhs</sys:String>
     <sys:String x:Key="SettingsView_License">软件授权: AGPLv3</sys:String>
     <sys:String x:Key="SettingsView_CheckUpdates">检查新版本</sys:String>
+    <sys:String x:Key="SettingsView_DownloadInstallUpdate">下载并安装更新</sys:String>
+    <sys:String x:Key="SettingsView_EnableAutomaticUpdateChecks">启动时自动检查更新</sys:String>
+    <sys:String x:Key="SettingsView_UpdateIntervalDays">检查间隔（天）:</sys:String>
+    <sys:String x:Key="SettingsView_IncludePrereleaseUpdates">包含预发布版本</sys:String>
+    <sys:String x:Key="SettingsView_LatestVersion">最新版本:</sys:String>
+    <sys:String x:Key="SettingsView_LastUpdateCheck">上次检查:</sys:String>
     <sys:String x:Key="SettingsView_UpdatesDescription">按需通过官方 GitHub Releases API 检索最新稳定版本。</sys:String>
     
     <sys:String x:Key="SettingsView_ResetDefaults">重置为默认值</sys:String>
@@ -474,6 +480,15 @@
     <sys:String x:Key="Settings_StatusNewVersionFormat">发现新版本: {0}</sys:String>
     <sys:String x:Key="Settings_StatusUpToDateFormat">应用已是最新版本。已安装版本: {0}</sys:String>
     <sys:String x:Key="Settings_StatusUpdateErrorFormat">检查更新时出错: {0}</sys:String>
+    <sys:String x:Key="Settings_UpdateLatestUnknown">未知</sys:String>
+    <sys:String x:Key="Settings_UpdateNotChecked">尚未检查</sys:String>
+    <sys:String x:Key="Settings_UpdateLastCheckedNever">从未检查</sys:String>
+    <sys:String x:Key="Settings_UpdateConfirmTitle">安装 ThreadPilot 更新</sys:String>
+    <sys:String x:Key="Settings_UpdateConfirmMessageFormat">ThreadPilot 将下载并验证版本 {0}，然后请求 Windows 权限运行安装程序。是否继续？</sys:String>
+    <sys:String x:Key="Settings_StatusUpdateCanceled">更新已取消。</sys:String>
+    <sys:String x:Key="Settings_StatusDownloadingUpdate">正在下载并验证更新...</sys:String>
+    <sys:String x:Key="Settings_StatusUpdateInstallerStarted">更新安装程序已启动。</sys:String>
+    <sys:String x:Key="Settings_StatusUpdateInstallFailedFormat">更新安装失败: {0}</sys:String>
     <sys:String x:Key="Settings_StatusModified">设置已被修改</sys:String>
     <sys:String x:Key="Settings_StatusMatchSaved">设置与已保存的配置一致</sys:String>
     <sys:String x:Key="Settings_LanguageSimplifiedChinese">简体中文</sys:String>

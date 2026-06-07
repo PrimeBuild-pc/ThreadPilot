@@ -6,7 +6,6 @@ namespace ThreadPilot.Core.Tests
     using Moq;
     using ThreadPilot.Models;
     using ThreadPilot.Services;
-    using ThreadPilot.Services.Abstractions;
     using ThreadPilot.ViewModels;
 
     public sealed class SettingsViewModelThemeTests
@@ -201,6 +200,10 @@ namespace ThreadPilot.Core.Tests
 
             public Mock<ILocalizationService> Localization { get; } = new(MockBehavior.Loose);
 
+            public Mock<IUpdateService> Updates { get; } = new(MockBehavior.Loose);
+
+            public Mock<IApplicationVersionProvider> VersionProvider { get; } = new(MockBehavior.Loose);
+
             public Mock<IEnhancedLoggingService> Logging { get; } = new(MockBehavior.Loose);
 
             public ActivityAuditService Audit { get; } = new(NullLogger<ActivityAuditService>.Instance);
@@ -228,6 +231,8 @@ namespace ThreadPilot.Core.Tests
                 this.Associations
                     .Setup(service => service.GetDefaultPowerPlanAsync())
                     .ReturnsAsync((string.Empty, string.Empty));
+                this.VersionProvider.SetupGet(service => service.DisplayVersion).Returns("v1.3.1");
+                this.VersionProvider.SetupGet(service => service.CurrentVersion).Returns(new SemanticVersion(1, 3, 1));
             }
 
             public SettingsViewModel CreateViewModel() =>
@@ -241,7 +246,8 @@ namespace ThreadPilot.Core.Tests
                     this.ProcessMonitorManager.Object,
                     this.Theme.Object,
                     this.Tray.Object,
-                    new GitHubUpdateChecker(new Mock<IGitHubReleaseClient>().Object),
+                    this.Updates.Object,
+                    this.VersionProvider.Object,
                     this.Localization.Object,
                     this.Logging.Object,
                     this.Audit);

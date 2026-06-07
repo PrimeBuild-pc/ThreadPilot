@@ -254,7 +254,8 @@ namespace ThreadPilot.Core.Tests
             Assert.Contains("QueueStartupUpdateCheck();", source, StringComparison.Ordinal);
             Assert.Contains("Interlocked.Exchange(ref this.startupUpdateCheckStarted, 1)", updateCheckSection, StringComparison.Ordinal);
             Assert.Contains("TaskSafety.FireAndForget(this.CheckForUpdatesAtStartupAsync()", updateCheckSection, StringComparison.Ordinal);
-            Assert.Contains("GetLatestVersionAsync(\"PrimeBuild-pc\", \"ThreadPilot\")", updateCheckSection, StringComparison.Ordinal);
+            Assert.Contains("GetRequiredService<IUpdateService>()", updateCheckSection, StringComparison.Ordinal);
+            Assert.Contains("CheckForUpdatesAsync(new UpdateCheckRequest(UpdateCheckTrigger.Startup))", updateCheckSection, StringComparison.Ordinal);
             Assert.Contains("Startup update check ignored failure", updateCheckSection, StringComparison.Ordinal);
             Assert.DoesNotContain("System.Windows.MessageBox.Show", updateCheckSection, StringComparison.Ordinal);
         }
