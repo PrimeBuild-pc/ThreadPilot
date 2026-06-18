@@ -1,0 +1,17 @@
+VERIFICATION
+
+Verification is intended to assist the Chocolatey moderators and community
+in verifying that this package's contents are trustworthy.
+
+ThreadPilot release:
+https://github.com/PrimeBuild-pc/ThreadPilot/releases/tag/v1.4.0
+
+Installer:
+https://github.com/PrimeBuild-pc/ThreadPilot/releases/download/v1.4.0/ThreadPilot_v1.4.0_Setup.exe
+
+Download the installer, then calculate its SHA256 checksum with PowerShell:
+
+Get-FileHash .\ThreadPilot_v1.4.0_Setup.exe -Algorithm SHA256
+
+Expected SHA256:
+3280bb39258d6bc9d16537f07f0ed1017f9d67b675c62c8b86d53c9d8a4a1ad5

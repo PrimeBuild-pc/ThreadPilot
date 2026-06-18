@@ -9,6 +9,7 @@
 [![Release](https://img.shields.io/github/v/release/PrimeBuild-pc/ThreadPilot?sort=semver)](https://github.com/PrimeBuild-pc/ThreadPilot/releases)
 [![Downloads](https://img.shields.io/github/downloads/PrimeBuild-pc/ThreadPilot/latest/total?label=latest%20downloads&logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest)
 [![winget](https://img.shields.io/winget/v/PrimeBuild.ThreadPilot?label=winget)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/p/PrimeBuild/ThreadPilot)
+[![Chocolatey](https://img.shields.io/chocolatey/v/threadpilot?label=chocolatey)](https://community.chocolatey.org/packages/threadpilot)
 [![Windows](https://img.shields.io/badge/Windows-11-blue?logo=windows)](https://www.microsoft.com/windows)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE)
@@ -62,6 +63,20 @@ To refresh your local WinGet source first:
 ```cmd
 winget source update
 winget search ThreadPilot
+```
+
+### Install with Chocolatey
+
+Install ThreadPilot from Chocolatey Community:
+
+```powershell
+choco install threadpilot
+```
+
+Upgrade an existing installation:
+
+```powershell
+choco upgrade threadpilot
 ```
 
 ### Download from GitHub Releases
