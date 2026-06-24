@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Services
 {
     using System;
@@ -21,65 +5,29 @@ namespace ThreadPilot.Services
     using System.Threading.Tasks;
     using ThreadPilot.Models;
 
-    /// <summary>
-    /// Service for real-time performance monitoring.
-    /// </summary>
     public interface IPerformanceMonitoringService
     {
-        /// <summary>
-        /// Get current system performance metrics.
-        /// </summary>
         Task<SystemPerformanceMetrics> GetSystemMetricsAsync(bool lightweight = false);
 
-        /// <summary>
-        /// Get per-core CPU usage.
-        /// </summary>
         Task<List<CpuCoreUsage>> GetCpuCoreUsageAsync();
 
-        /// <summary>
-        /// Get memory usage information.
-        /// </summary>
         Task<MemoryUsageInfo> GetMemoryUsageAsync();
 
-        /// <summary>
-        /// Get top CPU consuming processes.
-        /// </summary>
         Task<List<ProcessPerformanceInfo>> GetTopCpuProcessesAsync(int count = 10);
 
-        /// <summary>
-        /// Get top memory consuming processes.
-        /// </summary>
         Task<List<ProcessPerformanceInfo>> GetTopMemoryProcessesAsync(int count = 10);
 
-        /// <summary>
-        /// Start real-time monitoring.
-        /// </summary>
         Task StartMonitoringAsync();
 
-        /// <summary>
-        /// Stop real-time monitoring.
-        /// </summary>
         Task StopMonitoringAsync();
 
-        /// <summary>
-        /// Event raised when performance metrics are updated
-        /// </summary>
         event EventHandler<PerformanceMetricsUpdatedEventArgs>? MetricsUpdated;
 
-        /// <summary>
-        /// Get historical performance data.
-        /// </summary>
         Task<List<SystemPerformanceMetrics>> GetHistoricalDataAsync(TimeSpan duration);
 
-        /// <summary>
-        /// Clear historical performance data.
-        /// </summary>
         Task ClearHistoricalDataAsync();
     }
 
-    /// <summary>
-    /// System performance metrics.
-    /// </summary>
     public class SystemPerformanceMetrics
     {
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
@@ -137,9 +85,6 @@ namespace ThreadPilot.Services
         public double NetworkUsage { get; set; }
     }
 
-    /// <summary>
-    /// CPU core usage information.
-    /// </summary>
     public class CpuCoreUsage
     {
         public int CoreId { get; set; }
@@ -159,9 +104,6 @@ namespace ThreadPilot.Services
         public double Temperature { get; set; }
     }
 
-    /// <summary>
-    /// Memory usage information.
-    /// </summary>
     public class MemoryUsageInfo
     {
         public long TotalPhysicalMemory { get; set; }
@@ -187,9 +129,6 @@ namespace ThreadPilot.Services
         public double PageFileUsagePercentage { get; set; }
     }
 
-    /// <summary>
-    /// Process performance information.
-    /// </summary>
     public class ProcessPerformanceInfo
     {
         public int ProcessId { get; set; }
@@ -221,9 +160,6 @@ namespace ThreadPilot.Services
         public IntPtr ProcessorAffinity { get; set; }
     }
 
-    /// <summary>
-    /// Event args for performance metrics updates.
-    /// </summary>
     public class PerformanceMetricsUpdatedEventArgs : EventArgs
     {
         public SystemPerformanceMetrics Metrics { get; }

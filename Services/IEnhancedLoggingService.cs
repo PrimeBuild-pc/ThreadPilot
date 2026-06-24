@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Services
 {
     using System;
@@ -21,110 +5,47 @@ namespace ThreadPilot.Services
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
 
-    /// <summary>
-    /// Enhanced logging service interface for persistent, structured logging.
-    /// </summary>
     public interface IEnhancedLoggingService
     {
-        /// <summary>
-        /// Gets the current log file path.
-        /// </summary>
         string CurrentLogFilePath { get; }
 
-        /// <summary>
-        /// Gets the log directory path.
-        /// </summary>
         string LogDirectoryPath { get; }
 
-        /// <summary>
-        /// Gets a value indicating whether gets whether debug logging is enabled.
-        /// </summary>
         bool IsDebugLoggingEnabled { get; }
 
-        /// <summary>
-        /// Event raised when a critical error occurs
-        /// </summary>
         event EventHandler<CriticalErrorEventArgs>? CriticalErrorOccurred;
 
-        /// <summary>
-        /// Initialize the logging service.
-        /// </summary>
         Task InitializeAsync();
 
-        /// <summary>
-        /// Log a power plan change event.
-        /// </summary>
         Task LogPowerPlanChangeAsync(string fromPlan, string toPlan, string reason, string? processName = null);
 
-        /// <summary>
-        /// Log a process monitoring event.
-        /// </summary>
         Task LogProcessMonitoringEventAsync(string eventType, string processName, int processId, string details);
 
-        /// <summary>
-        /// Log a user action.
-        /// </summary>
         Task LogUserActionAsync(string action, string details, string? context = null);
 
-        /// <summary>
-        /// Log a system event.
-        /// </summary>
         Task LogSystemEventAsync(string eventType, string message, LogLevel level = LogLevel.Information);
 
-        /// <summary>
-        /// Log an error with structured data.
-        /// </summary>
         Task LogErrorAsync(Exception exception, string context, Dictionary<string, object>? additionalData = null);
 
-        /// <summary>
-        /// Log application startup/shutdown events.
-        /// </summary>
         Task LogApplicationLifecycleEventAsync(string eventType, string details);
 
-        /// <summary>
-        /// Get recent log entries.
-        /// </summary>
         Task<List<LogEntry>> GetRecentLogEntriesAsync(int count = 100);
 
-        /// <summary>
-        /// Begin a correlated operation scope for better debugging.
-        /// </summary>
         IDisposable BeginScope(string operationName, object? parameters = null);
 
-        /// <summary>
-        /// Get the current correlation ID.
-        /// </summary>
         string? GetCurrentCorrelationId();
 
-        /// <summary>
-        /// Get log entries for a specific date range.
-        /// </summary>
         Task<List<LogEntry>> GetLogEntriesAsync(DateTime fromDate, DateTime toDate);
 
-        /// <summary>
-        /// Clean up old log files based on retention policy.
-        /// </summary>
         Task CleanupOldLogsAsync();
 
-        /// <summary>
-        /// Get log file statistics.
-        /// </summary>
         Task<LogFileStatistics> GetLogStatisticsAsync();
 
-        /// <summary>
-        /// Export logs to a file.
-        /// </summary>
         Task<string> ExportLogsAsync(DateTime fromDate, DateTime toDate, string? exportPath = null);
 
-        /// <summary>
-        /// Update logging configuration.
-        /// </summary>
         Task UpdateConfigurationAsync(bool enableDebugLogging, int maxFileSizeMb, int retentionDays);
     }
 
-    /// <summary>
-    /// Event args for critical errors.
-    /// </summary>
     public class CriticalErrorEventArgs : EventArgs
     {
         public Exception Exception { get; }
@@ -144,9 +65,6 @@ namespace ThreadPilot.Services
         }
     }
 
-    /// <summary>
-    /// Represents a log entry.
-    /// </summary>
     public class LogEntry
     {
         public DateTime Timestamp { get; set; }
@@ -164,9 +82,6 @@ namespace ThreadPilot.Services
         public string? CorrelationId { get; set; }
     }
 
-    /// <summary>
-    /// Log file statistics.
-    /// </summary>
     public class LogFileStatistics
     {
         public long CurrentFileSizeBytes { get; set; }

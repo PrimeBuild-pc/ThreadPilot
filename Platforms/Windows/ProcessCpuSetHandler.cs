@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Platforms.Windows
 {
     using System;
@@ -25,10 +9,6 @@ namespace ThreadPilot.Platforms.Windows
     using ThreadPilot.Models;
     using ThreadPilot.Services;
 
-    /// <summary>
-    /// Handles CPU Set operations for a specific process using Windows APIs
-    /// Based on CPUSetSetter's ProcessHandlerWindows implementation.
-    /// </summary>
     public class ProcessCpuSetHandler : IProcessCpuSetHandler
     {
         private static CpuSetMapping staticCpuSetMapping = CpuSetMapping.Empty;
@@ -368,9 +348,6 @@ namespace ThreadPilot.Platforms.Windows
                 isAccessDenied: accessDenied);
         }
 
-        /// <summary>
-        /// Gets the CPU Set ID of each logical processor keyed by processor group and group-relative logical processor number.
-        /// </summary>
         private static CpuSetMapping GetCpuSetMapping(IProcessCpuSetNativeApi nativeApi)
         {
             uint bufferLength = 0;

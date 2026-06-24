@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 #if DEBUG
 using ThreadPilot.Tests;
 #endif
@@ -376,9 +360,6 @@ namespace ThreadPilot
         private static extern bool AllocConsole();
 #endif
 
-        /// <summary>
-        /// Shows a message to the user about elevation requirements.
-        /// </summary>
         private void ShowElevationRequiredMessage()
         {
             // Don't show the message during autostart to avoid interrupting the user
@@ -398,9 +379,6 @@ namespace ThreadPilot
                 MessageBoxImage.Warning);
         }
 
-        /// <summary>
-        /// Handles unhandled exceptions in the application domain.
-        /// </summary>
         private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
             var exception = e.ExceptionObject as Exception ?? new InvalidOperationException("Unhandled non-Exception object was raised.");
@@ -411,9 +389,6 @@ namespace ThreadPilot
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
-        /// <summary>
-        /// Handles unhandled exceptions on the UI thread.
-        /// </summary>
         private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
             this.ReportUnhandledException(e.Exception, "Application.DispatcherUnhandledException", LogLevel.Error);
@@ -449,9 +424,6 @@ namespace ThreadPilot
             Interlocked.Exchange(ref this.uiExceptionDialogOpen, 0);
         }
 
-        /// <summary>
-        /// Handles unobserved task exceptions from fire-and-forget tasks that escaped local handlers.
-        /// </summary>
         private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
         {
             var exception = e.Exception.Flatten();

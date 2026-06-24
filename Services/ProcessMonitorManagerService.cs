@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Services
 {
     using System;
@@ -26,9 +10,6 @@ namespace ThreadPilot.Services
     using Microsoft.Extensions.Logging;
     using ThreadPilot.Models;
 
-    /// <summary>
-    /// Main orchestration service that coordinates process monitoring and power plan management.
-    /// </summary>
     public class ProcessMonitorManagerService : IProcessMonitorManagerService
     {
         private readonly IProcessMonitorService processMonitorService;
@@ -680,10 +661,6 @@ namespace ThreadPilot.Services
             this.logger.LogDebug("ProcessMonitorManagerService settings updated");
         }
 
-        /// <summary>
-        /// Applies CPU affinity mask and process priority from association when a process starts
-        /// Based on CPUSetSetter's ProgramRule.SetMask pattern.
-        /// </summary>
         private async Task ApplyCoreMaskAndPriorityAsync(ProcessModel process, ProcessPowerPlanAssociation association)
         {
             try

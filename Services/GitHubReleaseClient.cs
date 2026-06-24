@@ -6,9 +6,6 @@ namespace ThreadPilot.Services
     using System.Threading.Tasks;
     using ThreadPilot.Services.Abstractions;
 
-    /// <summary>
-    /// HTTP client wrapper for GitHub release metadata.
-    /// </summary>
     public sealed class GitHubReleaseClient : IGitHubReleaseClient
     {
         private readonly HttpClient httpClient;

@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Services
 {
     using System.Net.Http;
@@ -24,14 +8,8 @@ namespace ThreadPilot.Services
     using ThreadPilot.Services.Abstractions;
     using ThreadPilot.ViewModels;
 
-    /// <summary>
-    /// Centralized service configuration for dependency injection.
-    /// </summary>
     public static class ServiceConfiguration
     {
-        /// <summary>
-        /// Configure all application services.
-        /// </summary>
         public static IServiceCollection ConfigureApplicationServices(this IServiceCollection services)
         {
             // Configure service infrastructure
@@ -52,17 +30,10 @@ namespace ThreadPilot.Services
             return services;
         }
 
-        /// <summary>
-        /// Configure service infrastructure (logging, factories, etc.)
-        /// </summary>
         private static IServiceCollection ConfigureServiceInfrastructure(this IServiceCollection services)
         {
             // Logging infrastructure
-            services.AddLogging(builder =>
-            {
-                builder.AddConsole();
-                builder.SetMinimumLevel(LogLevel.Information);
-            });
+            services.AddLogging(builder => builder.SetMinimumLevel(LogLevel.Information));
 
             // Enhanced logging service
             services.AddSingleton<IEnhancedLoggingService, EnhancedLoggingService>();
@@ -89,25 +60,9 @@ namespace ThreadPilot.Services
             services.AddSingleton<IApplicationShutdownService, WpfApplicationShutdownService>();
             services.AddSingleton<IUpdateService, UpdateService>();
 
-            // Memory caching for performance - PERFORMANCE IMPROVEMENT
-            services.AddMemoryCache();
-
-            // Service lifecycle management - PERFORMANCE IMPROVEMENT
-            services.AddSingleton<IServiceHealthMonitor, ServiceHealthMonitor>();
-            services.AddSingleton<IServiceDisposalCoordinator, ServiceDisposalCoordinator>();
-
-            // Error recovery and retry policies - RELIABILITY IMPROVEMENT
-            services.AddSingleton<IRetryPolicyService, RetryPolicyService>();
-
-            // Service factory for advanced service management
-            services.AddSingleton<IServiceFactory, ServiceFactory>();
-
             return services;
         }
 
-        /// <summary>
-        /// Configure core system services that interact directly with the OS.
-        /// </summary>
         private static IServiceCollection ConfigureCoreSystemServices(this IServiceCollection services)
         {
             // Core system interaction services
@@ -148,9 +103,6 @@ namespace ThreadPilot.Services
             return services;
         }
 
-        /// <summary>
-        /// Configure process monitoring and management services.
-        /// </summary>
         private static IServiceCollection ConfigureProcessManagementServices(this IServiceCollection services)
         {
             // Process monitoring services
@@ -167,9 +119,6 @@ namespace ThreadPilot.Services
             return services;
         }
 
-        /// <summary>
-        /// Configure application-level services (settings, notifications, etc.)
-        /// </summary>
         private static IServiceCollection ConfigureApplicationLevelServices(this IServiceCollection services)
         {
             // Application configuration and settings
@@ -203,14 +152,8 @@ namespace ThreadPilot.Services
             return services;
         }
 
-        /// <summary>
-        /// Configure presentation layer (ViewModels and Views).
-        /// </summary>
         private static IServiceCollection ConfigurePresentationLayer(this IServiceCollection services)
         {
-            // ViewModel factory for centralized ViewModel management
-            services.AddViewModelFactory();
-
             // ViewModels - ProcessViewModel as Singleton to share state across views, others as Transient
             services.AddSingleton<ProcessViewModel>();
             services.AddSingleton<MasksViewModel>();
@@ -221,7 +164,6 @@ namespace ThreadPilot.Services
             services.AddTransient<PerformanceViewModel>();
             services.AddTransient(sp => new Lazy<PerformanceViewModel>(
                 () => sp.GetRequiredService<PerformanceViewModel>()));
-            services.AddTransient<IDiagnosticsViewModelProvider, DiagnosticsViewModelProvider>();
             services.AddTransient<LogViewerViewModel>();
             services.AddTransient<SystemTweaksViewModel>();
 
@@ -231,9 +173,6 @@ namespace ThreadPilot.Services
             return services;
         }
 
-        /// <summary>
-        /// Validate service configuration.
-        /// </summary>
         public static void ValidateServiceConfiguration(IServiceProvider serviceProvider)
         {
             var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();

@@ -1,58 +1,21 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Models.Core
 {
     using System;
     using System.ComponentModel;
 
-    /// <summary>
-    /// Base interface for all domain models.
-    /// </summary>
     public interface IModel : INotifyPropertyChanged
     {
-        /// <summary>
-        /// Gets unique identifier for the model instance.
-        /// </summary>
         string Id { get; }
 
-        /// <summary>
-        /// Gets timestamp when the model was created.
-        /// </summary>
         DateTime CreatedAt { get; }
 
-        /// <summary>
-        /// Gets timestamp when the model was last updated.
-        /// </summary>
         DateTime UpdatedAt { get; }
 
-        /// <summary>
-        /// Validate the model state.
-        /// </summary>
         ValidationResult Validate();
 
-        /// <summary>
-        /// Create a copy of the model.
-        /// </summary>
         IModel Clone();
     }
 
-    /// <summary>
-    /// Validation result for model validation.
-    /// </summary>
     public class ValidationResult
     {
         public bool IsValid { get; }
@@ -70,9 +33,6 @@ namespace ThreadPilot.Models.Core
         public static ValidationResult Failure(params string[] errors) => new(false, errors);
     }
 
-    /// <summary>
-    /// Base implementation for domain models.
-    /// </summary>
     public abstract class BaseModel : IModel
     {
         public string Id { get; protected set; }

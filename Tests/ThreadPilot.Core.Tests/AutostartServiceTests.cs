@@ -7,14 +7,8 @@ namespace ThreadPilot.Core.Tests
     using Moq;
     using ThreadPilot.Services;
 
-    /// <summary>
-    /// Unit tests for non-registry behavior in <see cref="AutostartService"/>.
-    /// </summary>
     public sealed class AutostartServiceTests
     {
-        /// <summary>
-        /// Ensures autostart arguments include both autostart and start-minimized flags when requested.
-        /// </summary>
         [Fact]
         public void GetAutostartArguments_IncludesStartMinimized_WhenRequested()
         {
@@ -26,9 +20,6 @@ namespace ThreadPilot.Core.Tests
             Assert.Contains("--autostart", args, StringComparison.Ordinal);
         }
 
-        /// <summary>
-        /// Ensures start-minimized is omitted when not requested.
-        /// </summary>
         [Fact]
         public void GetAutostartArguments_OmitsStartMinimized_WhenNotRequested()
         {

@@ -5,14 +5,8 @@ namespace ThreadPilot.Core.Tests
 {
     using ThreadPilot.Services;
 
-    /// <summary>
-    /// Unit tests for <see cref="TaskSafety"/>.
-    /// </summary>
     public sealed class TaskSafetyTests
     {
-        /// <summary>
-        /// Ensures faulted tasks are observed and routed to the provided callback.
-        /// </summary>
         [Fact]
         public async Task FireAndForget_InvokesErrorCallback_ForFaultedTask()
         {
@@ -28,9 +22,6 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal("boom", observed.Message);
         }
 
-        /// <summary>
-        /// Ensures cancellation does not trigger the error callback.
-        /// </summary>
         [Fact]
         public async Task FireAndForget_DoesNotInvokeErrorCallback_ForCanceledTask()
         {

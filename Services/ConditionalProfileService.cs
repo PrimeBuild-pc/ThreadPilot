@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Services
 {
     using System;
@@ -27,14 +11,10 @@ namespace ThreadPilot.Services
     using Microsoft.Extensions.Logging;
     using ThreadPilot.Models;
 
-    /// <summary>
-    /// Implementation of conditional process profile service.
-    /// </summary>
     public class ConditionalProfileService : IConditionalProfileService, IDisposable
     {
         private readonly ILogger<ConditionalProfileService> logger;
         private readonly IProcessService processService;
-        private readonly IRetryPolicyService retryPolicy;
         private readonly List<ConditionalProcessProfile> profiles = new();
         private readonly System.Threading.Timer monitoringTimer;
         private readonly SemaphoreSlim profileLock = new(1, 1);
@@ -53,12 +33,10 @@ namespace ThreadPilot.Services
 
         public ConditionalProfileService(
             ILogger<ConditionalProfileService> logger,
-            IProcessService processService,
-            IRetryPolicyService retryPolicy)
+            IProcessService processService)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
-            this.retryPolicy = retryPolicy ?? throw new ArgumentNullException(nameof(retryPolicy));
 
             // Set up monitoring timer (check every 10 seconds)
             this.monitoringTimer = new System.Threading.Timer(this.MonitoringCallback, null, Timeout.Infinite, Timeout.Infinite);
@@ -252,31 +230,26 @@ namespace ThreadPilot.Services
 
         public async Task<SystemState> GetSystemStateAsync()
         {
-            return await this.retryPolicy.ExecuteAsync(
-                async () =>
+            var systemState = new SystemState
             {
-                var systemState = new SystemState
-                {
-                    CurrentTime = DateTime.Now,
-                    CpuUsage = await this.GetCpuUsageAsync().ConfigureAwait(false),
-                    MemoryUsage = await this.GetMemoryUsageAsync().ConfigureAwait(false),
-                    ProcessCount = await this.GetProcessCountAsync().ConfigureAwait(false),
-                    IsOnBattery = this.GetBatteryStatus(),
-                    BatteryLevel = this.GetBatteryLevel(),
-                    IsUserIdle = this.GetUserIdleStatus(),
-                    UserIdleTime = this.GetUserIdleTime(),
-                    NetworkActivity = await this.GetNetworkActivityAsync().ConfigureAwait(false),
-                };
+                CurrentTime = DateTime.Now,
+                CpuUsage = await this.GetCpuUsageAsync().ConfigureAwait(false),
+                MemoryUsage = await this.GetMemoryUsageAsync().ConfigureAwait(false),
+                ProcessCount = await this.GetProcessCountAsync().ConfigureAwait(false),
+                IsOnBattery = this.GetBatteryStatus(),
+                BatteryLevel = this.GetBatteryLevel(),
+                IsUserIdle = this.GetUserIdleStatus(),
+                UserIdleTime = this.GetUserIdleTime(),
+                NetworkActivity = await this.GetNetworkActivityAsync().ConfigureAwait(false),
+            };
 
-                // Check if system state changed significantly
-                if (this.HasSystemStateChangedSignificantly(systemState, this.lastSystemState))
-                {
-                    this.SystemStateChanged?.Invoke(this, systemState);
-                    this.lastSystemState = systemState;
-                }
+            if (this.HasSystemStateChangedSignificantly(systemState, this.lastSystemState))
+            {
+                this.SystemStateChanged?.Invoke(this, systemState);
+                this.lastSystemState = systemState;
+            }
 
-                return systemState;
-            }, this.retryPolicy.CreateProcessOperationPolicy()).ConfigureAwait(false);
+            return systemState;
         }
 
         public async Task StartMonitoringAsync()

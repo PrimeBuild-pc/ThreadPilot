@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Services
 {
     using System;
@@ -24,21 +8,16 @@ namespace ThreadPilot.Services
     using System.Runtime.InteropServices;
     using System.Threading;
     using System.Threading.Tasks;
-    using Microsoft.Extensions.Caching.Memory;
     using Microsoft.Extensions.Logging;
     using ThreadPilot.Models;
 
-    /// <summary>
-    /// Service for detecting CPU topology using WMI and Windows APIs.
-    /// </summary>
     public class CpuTopologyService : ICpuTopologyService
     {
         private readonly ILogger<CpuTopologyService> logger;
-        private readonly IMemoryCache cache;
         private readonly SemaphoreSlim detectSemaphore = new(1, 1);
         private CpuTopologyModel? currentTopology;
+        private DateTime topologyCachedAtUtc = DateTime.MinValue;
 
-        private const string TOPOLOGYCACHEKEY = "cpu_topology";
         private static readonly TimeSpan CACHEDURATION = TimeSpan.FromHours(1);
         private const int ERRORINSUFFICIENTBUFFER = 122;
 
@@ -93,36 +72,27 @@ namespace ThreadPilot.Services
             IntPtr buffer,
             ref int returnedLength);
 
-        public CpuTopologyService(ILogger<CpuTopologyService> logger, IMemoryCache? cache = null)
+        public CpuTopologyService(ILogger<CpuTopologyService> logger)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            this.cache = cache ?? new MemoryCache(new MemoryCacheOptions
-            {
-                SizeLimit = 10,
-                CompactionPercentage = 0.1,
-            });
         }
 
         public async Task<CpuTopologyModel> DetectTopologyAsync()
         {
-            // PERFORMANCE IMPROVEMENT: Check cache first to avoid expensive WMI calls
-            if (this.cache.TryGetValue(TOPOLOGYCACHEKEY, out CpuTopologyModel? cachedTopology) && cachedTopology != null)
+            if (this.currentTopology != null && DateTime.UtcNow - this.topologyCachedAtUtc < CACHEDURATION)
             {
                 this.logger.LogInformation("CPU topology retrieved from cache");
-                this.currentTopology = cachedTopology;
-                return cachedTopology;
+                return this.currentTopology;
             }
 
             await this.detectSemaphore.WaitAsync();
 
             try
             {
-                // Re-check cache after entering the critical section
-                if (this.cache.TryGetValue(TOPOLOGYCACHEKEY, out cachedTopology) && cachedTopology != null)
+                if (this.currentTopology != null && DateTime.UtcNow - this.topologyCachedAtUtc < CACHEDURATION)
                 {
                     this.logger.LogInformation("CPU topology retrieved from cache after synchronization");
-                    this.currentTopology = cachedTopology;
-                    return cachedTopology;
+                    return this.currentTopology;
                 }
 
                 this.logger.LogInformation("Starting CPU topology detection (cache miss)");
@@ -144,13 +114,7 @@ namespace ThreadPilot.Services
                 this.currentTopology = topology;
                 topology.TopologyDetectionSuccessful = true;
 
-                // PERFORMANCE IMPROVEMENT: Cache the topology to avoid expensive WMI calls
-                this.cache.Set(
-                    TOPOLOGYCACHEKEY,
-                    topology,
-                    new MemoryCacheEntryOptions()
-                        .SetAbsoluteExpiration(CACHEDURATION)
-                        .SetSize(1));
+                this.topologyCachedAtUtc = DateTime.UtcNow;
 
                 this.logger.LogInformation(
                     "CPU topology detection completed successfully and cached. " +
@@ -863,7 +827,8 @@ namespace ThreadPilot.Services
 
         public async Task RefreshTopologyAsync()
         {
-            this.cache.Remove(TOPOLOGYCACHEKEY);
+            this.currentTopology = null;
+            this.topologyCachedAtUtc = DateTime.MinValue;
             await this.DetectTopologyAsync();
         }
     }

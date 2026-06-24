@@ -11,9 +11,6 @@ namespace ThreadPilot.Core.Tests
     using ThreadPilot.Models;
     using ThreadPilot.Services;
 
-    /// <summary>
-    /// Unit tests for orchestration logic in <see cref="ProcessMonitorManagerService"/>.
-    /// </summary>
     public sealed class ProcessMonitorManagerServiceTests
     {
         [Fact]

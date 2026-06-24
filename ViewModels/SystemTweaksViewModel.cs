@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.ViewModels
 {
     using System;
@@ -25,9 +9,6 @@ namespace ThreadPilot.ViewModels
     using Microsoft.Extensions.Logging;
     using ThreadPilot.Services;
 
-    /// <summary>
-    /// ViewModel for the System Tweaks tab.
-    /// </summary>
     public partial class SystemTweaksViewModel : BaseViewModel
     {
         private readonly ISystemTweaksService systemTweaksService;
@@ -336,9 +317,6 @@ namespace ThreadPilot.ViewModels
         }
     }
 
-    /// <summary>
-    /// Represents a system tweak item in the UI.
-    /// </summary>
     public partial class SystemTweakItem : ObservableObject
     {
         [ObservableProperty]

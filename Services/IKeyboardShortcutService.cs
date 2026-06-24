@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Services
 {
     using System;
@@ -21,65 +5,29 @@ namespace ThreadPilot.Services
     using System.Threading.Tasks;
     using System.Windows.Input;
 
-    /// <summary>
-    /// Service for managing global keyboard shortcuts.
-    /// </summary>
     public interface IKeyboardShortcutService
     {
-        /// <summary>
-        /// Event raised when a registered shortcut is activated
-        /// </summary>
         event EventHandler<ShortcutActivatedEventArgs>? ShortcutActivated;
 
-        /// <summary>
-        /// Register a global keyboard shortcut.
-        /// </summary>
         Task<bool> RegisterShortcutAsync(string actionName, Key key, ModifierKeys modifiers);
 
-        /// <summary>
-        /// Unregister a keyboard shortcut.
-        /// </summary>
         Task<bool> UnregisterShortcutAsync(string actionName);
 
-        /// <summary>
-        /// Update an existing shortcut with new key combination.
-        /// </summary>
         Task<bool> UpdateShortcutAsync(string actionName, Key key, ModifierKeys modifiers);
 
-        /// <summary>
-        /// Get all registered shortcuts.
-        /// </summary>
         Task<Dictionary<string, KeyboardShortcut>> GetRegisteredShortcutsAsync();
 
-        /// <summary>
-        /// Check if a key combination is already registered.
-        /// </summary>
         Task<bool> IsShortcutRegisteredAsync(Key key, ModifierKeys modifiers);
 
-        /// <summary>
-        /// Load shortcuts from settings.
-        /// </summary>
         Task LoadShortcutsFromSettingsAsync();
 
-        /// <summary>
-        /// Save shortcuts to settings.
-        /// </summary>
         Task SaveShortcutsToSettingsAsync();
 
-        /// <summary>
-        /// Clear all registered shortcuts.
-        /// </summary>
         Task ClearAllShortcutsAsync();
 
-        /// <summary>
-        /// Get the default shortcuts for the application.
-        /// </summary>
         Dictionary<string, KeyboardShortcut> GetDefaultShortcuts();
     }
 
-    /// <summary>
-    /// Represents a keyboard shortcut.
-    /// </summary>
     public class KeyboardShortcut
     {
         public string ActionName { get; set; } = string.Empty;
@@ -124,9 +72,6 @@ namespace ThreadPilot.Services
         }
     }
 
-    /// <summary>
-    /// Event args for shortcut activation.
-    /// </summary>
     public class ShortcutActivatedEventArgs : EventArgs
     {
         public string ActionName { get; }
@@ -143,9 +88,6 @@ namespace ThreadPilot.Services
         }
     }
 
-    /// <summary>
-    /// Predefined shortcut actions.
-    /// </summary>
     public static class ShortcutActions
     {
         public const string QuickApply = "QuickApply";

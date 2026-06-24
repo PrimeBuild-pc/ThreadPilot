@@ -7,14 +7,8 @@ namespace ThreadPilot.Core.Tests
     using ThreadPilot.Models;
     using ThreadPilot.Services;
 
-    /// <summary>
-    /// Unit tests for security guard behavior in <see cref="ProcessService"/>.
-    /// </summary>
     public sealed class ProcessServiceSecurityTests
     {
-        /// <summary>
-        /// Ensures protected process priority updates are blocked before mutation.
-        /// </summary>
         [Fact]
         public async Task SetProcessPriority_ThrowsUnauthorized_ForProtectedProcess()
         {
@@ -35,9 +29,6 @@ namespace ThreadPilot.Core.Tests
             security.VerifyAll();
         }
 
-        /// <summary>
-        /// Ensures protected process affinity updates are blocked before mutation.
-        /// </summary>
         [Fact]
         public async Task SetProcessorAffinity_ThrowsUnauthorized_ForProtectedProcess()
         {

@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.ViewModels
 {
     using System;
@@ -1103,9 +1087,6 @@ namespace ThreadPilot.ViewModels
             return null;
         }
 
-        /// <summary>
-        /// Called when a CoreMask is selected from the ComboBox.
-        /// </summary>
         partial void OnSelectedCoreMaskChanged(CoreMask? oldValue, CoreMask? newValue)
         {
             if (newValue == null)
@@ -2201,9 +2182,6 @@ namespace ThreadPilot.ViewModels
             });
         }
 
-        /// <summary>
-        /// Toggles the idle server functionality for the selected process.
-        /// </summary>
         private async Task ToggleIdleServerAsync(bool disable)
         {
             if (this.SelectedProcess == null)
@@ -2245,9 +2223,6 @@ namespace ThreadPilot.ViewModels
             }
         }
 
-        /// <summary>
-        /// Toggles registry-based priority enforcement for the selected process.
-        /// </summary>
         private async Task ToggleRegistryPriorityAsync(bool enable)
         {
             if (this.SelectedProcess == null)
@@ -2309,10 +2284,6 @@ namespace ThreadPilot.ViewModels
             }
         }
 
-        /// <summary>
-        /// Saves the current process settings (affinity mask, priority, power plan) as an association
-        /// Based on CPUSetSetter's SetMask pattern.
-        /// </summary>
         [RelayCommand]
         private void OpenRulesTab()
         {

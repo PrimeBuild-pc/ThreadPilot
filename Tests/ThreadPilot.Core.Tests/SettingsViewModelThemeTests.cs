@@ -108,15 +108,15 @@ namespace ThreadPilot.Core.Tests
                 .Setup(service => service.GetString(It.IsAny<string>()))
                 .Returns<string>(key => key switch
                 {
-                    "Settings_LanguageSimplifiedChinese" => "简体中文",
-                    "Settings_StatusLanguageChangedFormat" => "语言已切换为{0}。",
+                    "Settings_LanguageSimplifiedChinese" => "ç®€ä½“ä¸­æ–‡",
+                    "Settings_StatusLanguageChangedFormat" => "è¯­è¨€å·²åˆ‡æ¢ä¸º{0}ã€‚",
                     _ => key,
                 });
             var viewModel = harness.CreateViewModel();
 
             viewModel.Settings.Language = "zh-CN";
 
-            Assert.Equal("语言已切换为简体中文。", viewModel.StatusMessage);
+            Assert.Equal("è¯­è¨€å·²åˆ‡æ¢ä¸ºç®€ä½“ä¸­æ–‡ã€‚", viewModel.StatusMessage);
         }
 
         [Fact]

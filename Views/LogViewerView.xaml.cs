@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 using System;
 using System.Globalization;
 using System.Windows;
@@ -24,9 +8,6 @@ using ThreadPilot.ViewModels;
 
 namespace ThreadPilot.Views
 {
-    /// <summary>
-    /// Interaction logic for LogViewerView.xaml.
-    /// </summary>
     public partial class LogViewerView : System.Windows.Controls.UserControl
     {
         public LogViewerView()
@@ -52,9 +33,6 @@ namespace ThreadPilot.Views
         }
     }
 
-    /// <summary>
-    /// Converter to convert bytes to megabytes for display.
-    /// </summary>
     public class BytesToMegabytesConverter : IValueConverter
     {
         public static readonly BytesToMegabytesConverter Instance = new();
@@ -74,9 +52,6 @@ namespace ThreadPilot.Views
         }
     }
 
-    /// <summary>
-    /// Converter to invert boolean values.
-    /// </summary>
     public class InverseBooleanConverter : IValueConverter
     {
         public static readonly InverseBooleanConverter Instance = new();
@@ -100,9 +75,6 @@ namespace ThreadPilot.Views
         }
     }
 
-    /// <summary>
-    /// Converter to invert boolean values for visibility.
-    /// </summary>
     public class InverseBooleanToVisibilityConverter : IValueConverter
     {
         public static readonly InverseBooleanToVisibilityConverter Instance = new();

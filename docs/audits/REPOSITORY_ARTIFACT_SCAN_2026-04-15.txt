@@ -1,1 +1,0 @@
-No AI/temp artifact directories found for configured patterns.

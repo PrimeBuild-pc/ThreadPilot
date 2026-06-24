@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Services
 {
     using System;
@@ -24,9 +8,6 @@ namespace ThreadPilot.Services
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
 
-    /// <summary>
-    /// Manages log file operations including rotation, cleanup, and concurrent access.
-    /// </summary>
     public class LogFileManager : IDisposable
     {
         private readonly ILogger<LogFileManager> logger;
@@ -56,9 +37,6 @@ namespace ThreadPilot.Services
             this.CurrentLogFilePath = Path.Combine(this.logDirectory, "ThreadPilot.log");
         }
 
-        /// <summary>
-        /// Initialize the log file manager.
-        /// </summary>
         public async Task InitializeAsync()
         {
             await this.fileLock.WaitAsync();
@@ -81,9 +59,6 @@ namespace ThreadPilot.Services
             }
         }
 
-        /// <summary>
-        /// Write log entries to the current log file with automatic rotation.
-        /// </summary>
         public async Task WriteLogEntriesAsync(IEnumerable<string> logLines)
         {
             await this.fileLock.WaitAsync();
@@ -101,17 +76,11 @@ namespace ThreadPilot.Services
             }
         }
 
-        /// <summary>
-        /// Write a single log entry.
-        /// </summary>
         public async Task WriteLogEntryAsync(string logLine)
         {
             await this.WriteLogEntriesAsync(new[] { logLine });
         }
 
-        /// <summary>
-        /// Read log entries from all log files within date range.
-        /// </summary>
         public async Task<List<string>> ReadLogEntriesAsync(DateTime fromDate, DateTime toDate, int maxEntries = 1000)
         {
             await this.fileLock.WaitAsync();
@@ -138,9 +107,6 @@ namespace ThreadPilot.Services
             }
         }
 
-        /// <summary>
-        /// Get log file statistics.
-        /// </summary>
         public async Task<LogFileStatistics> GetStatisticsAsync()
         {
             await this.fileLock.WaitAsync();
@@ -183,9 +149,6 @@ namespace ThreadPilot.Services
             }
         }
 
-        /// <summary>
-        /// Clean up old log files based on retention policy.
-        /// </summary>
         public async Task CleanupOldLogsAsync()
         {
             await this.fileLock.WaitAsync();
@@ -253,9 +216,6 @@ namespace ThreadPilot.Services
             }
         }
 
-        /// <summary>
-        /// Export logs to a specified file.
-        /// </summary>
         public async Task<string> ExportLogsAsync(DateTime fromDate, DateTime toDate, string? exportPath = null)
         {
             exportPath ??= Path.Combine(
@@ -279,9 +239,6 @@ namespace ThreadPilot.Services
             return exportPath;
         }
 
-        /// <summary>
-        /// Update configuration.
-        /// </summary>
         public void UpdateConfiguration(int maxFileSizeMb, int retentionDays, int maxLogFiles = 50)
         {
             this.configLock.EnterWriteLock();

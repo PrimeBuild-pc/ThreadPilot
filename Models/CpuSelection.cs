@@ -1,33 +1,11 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Models
 {
     using System;
     using System.Collections.Generic;
     using System.Linq;
 
-    /// <summary>
-    /// Identifies a logical processor without relying on a legacy 64-bit affinity mask.
-    /// </summary>
     public readonly record struct ProcessorRef(ushort Group, byte LogicalProcessorNumber, int GlobalIndex);
 
-    /// <summary>
-    /// Stable signature used to determine whether a persisted CPU selection was created for the current topology.
-    /// </summary>
     public sealed record CpuTopologySignature
     {
         public string CpuBrand { get; init; } = "Unknown";
@@ -47,9 +25,6 @@ namespace ThreadPilot.Models
         public string Source { get; init; } = "Unknown";
     }
 
-    /// <summary>
-    /// Metadata that explains how a CPU selection was built and whether it can be represented by legacy APIs.
-    /// </summary>
     public sealed record CpuSelectionMetadata
     {
         public CpuTopologySignature? TopologySignature { get; init; }
@@ -67,10 +42,6 @@ namespace ThreadPilot.Models
         public string SelectionReason { get; init; } = string.Empty;
     }
 
-    /// <summary>
-    /// Lightweight topology snapshot used by the CpuSelection migration layer.
-    /// Runtime topology detection will populate this in a later phase.
-    /// </summary>
     public sealed class CpuTopologySnapshot
     {
         private readonly IReadOnlyDictionary<ProcessorRef, uint> cpuSetIdsByProcessor;
@@ -235,9 +206,6 @@ namespace ThreadPilot.Models
         }
     }
 
-    /// <summary>
-    /// Group-aware CPU selection model used by new persistence and migration code.
-    /// </summary>
     public sealed record CpuSelection
     {
         public List<uint> CpuSetIds { get; init; } = new();

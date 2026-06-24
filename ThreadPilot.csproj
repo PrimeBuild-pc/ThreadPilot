@@ -24,10 +24,8 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
     <PackageReference Include="System.Drawing.Common" Version="9.0.7" />
     <PackageReference Include="System.Management" Version="8.0.0" />
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="9.0.7" />
@@ -63,13 +61,6 @@
     <None Remove="CPUSetSetter-main\**\*.*" />
     <EmbeddedResource Remove="Tests\ThreadPilot.Core.Tests\**\*.*" />
     <None Remove="Tests\ThreadPilot.Core.Tests\**\*.*" />
-    <!-- Remove optional Game Boost feature from build -->
-    <Compile Remove="Services\GameBoostService.cs" />
-    <Compile Remove="Services\IGameBoostService.cs" />
-    <Compile Remove="Services\GameDetectionService.cs" />
-    <Compile Remove="Services\IGameDetectionService.cs" />
-    <!-- Remove Game Boost-specific integration test from build -->
-    <Compile Remove="Tests\GameBoostIntegrationTest.cs" />
   </ItemGroup>
 
   <Import Project="Directory.Publish.props" Condition="Exists('Directory.Publish.props')" />

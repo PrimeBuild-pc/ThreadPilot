@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Models
 {
     using System;
@@ -24,9 +8,6 @@ namespace ThreadPilot.Models
     using ThreadPilot.Models.Core;
     using ThreadPilot.Services;
 
-    /// <summary>
-    /// Model for application settings including notifications and tray preferences.
-    /// </summary>
     public partial class ApplicationSettingsModel : ObservableObject, IModel
     {
         private static readonly JsonSerializerOptions UserSettingsComparisonJsonOptions = new()
@@ -138,10 +119,6 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private bool restoreDefaultPowerPlanOnExit = true;
 
-        /// <summary>
-        /// When true, all applied CPU masks are cleared when exiting the application
-        /// (processes return to using all cores).
-        /// </summary>
         [ObservableProperty]
         private bool clearMasksOnClose = true;
 
@@ -210,15 +187,9 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private int logRetentionDays = 7;
 
-        /// <summary>
-        /// Keyboard shortcuts configuration.
-        /// </summary>
         [ObservableProperty]
         private List<KeyboardShortcut> keyboardShortcuts = new();
 
-        /// <summary>
-        /// Copies settings from another instance.
-        /// </summary>
         public void CopyFrom(ApplicationSettingsModel other)
         {
             if (other == null)
@@ -352,9 +323,6 @@ namespace ThreadPilot.Models
         }
     }
 
-    /// <summary>
-    /// Notification level profile options.
-    /// </summary>
     public enum NotificationLevelProfile
     {
         All,
@@ -362,9 +330,6 @@ namespace ThreadPilot.Models
         Silent,
     }
 
-    /// <summary>
-    /// Notification position options.
-    /// </summary>
     public enum NotificationPosition
     {
         TopLeft,
@@ -374,9 +339,6 @@ namespace ThreadPilot.Models
         Center,
     }
 
-    /// <summary>
-    /// Notification sound options.
-    /// </summary>
     public enum NotificationSound
     {
         None,
@@ -387,9 +349,6 @@ namespace ThreadPilot.Models
         Custom,
     }
 
-    /// <summary>
-    /// Tray icon style options.
-    /// </summary>
     public enum TrayIconStyle
     {
         Default,

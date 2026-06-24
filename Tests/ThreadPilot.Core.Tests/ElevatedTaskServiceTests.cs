@@ -8,9 +8,6 @@ namespace ThreadPilot.Core.Tests
     using ThreadPilot.Services;
     using ThreadPilot.Services.Abstractions;
 
-    /// <summary>
-    /// Unit tests for scheduled task orchestration in <see cref="ElevatedTaskService"/>.
-    /// </summary>
     public sealed class ElevatedTaskServiceTests
     {
         [Fact]

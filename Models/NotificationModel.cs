@@ -1,27 +1,8 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Models
 {
     using System;
     using CommunityToolkit.Mvvm.ComponentModel;
 
-    /// <summary>
-    /// Model representing a notification.
-    /// </summary>
     public partial class NotificationModel : ObservableObject
     {
         [ObservableProperty]
@@ -66,18 +47,10 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private string? sourceService;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="NotificationModel"/> class.
-        /// Creates a new notification.
-        /// </summary>
         public NotificationModel()
         {
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="NotificationModel"/> class.
-        /// Creates a new notification with basic information.
-        /// </summary>
         public NotificationModel(string title, string message, NotificationType type = NotificationType.Information)
         {
             this.Title = title;
@@ -85,10 +58,6 @@ namespace ThreadPilot.Models
             this.Type = type;
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="NotificationModel"/> class.
-        /// Creates a new notification with full information.
-        /// </summary>
         public NotificationModel(string title, string message, NotificationType type, int durationMs, bool isPersistent = false)
         {
             this.Title = title;
@@ -98,17 +67,11 @@ namespace ThreadPilot.Models
             this.IsPersistent = isPersistent;
         }
 
-        /// <summary>
-        /// Marks the notification as read.
-        /// </summary>
         public void MarkAsRead()
         {
             this.IsRead = true;
         }
 
-        /// <summary>
-        /// Gets the display text for the notification type.
-        /// </summary>
         public string TypeDisplayText => this.Type switch
         {
             NotificationType.Information => "Info",
@@ -121,20 +84,11 @@ namespace ThreadPilot.Models
             _ => "Unknown",
         };
 
-        /// <summary>
-        /// Gets the formatted timestamp.
-        /// </summary>
         public string FormattedTimestamp => this.Timestamp.ToString("HH:mm:ss");
 
-        /// <summary>
-        /// Gets the formatted date and time.
-        /// </summary>
         public string FormattedDateTime => this.Timestamp.ToString("yyyy-MM-dd HH:mm:ss");
     }
 
-    /// <summary>
-    /// Types of notifications.
-    /// </summary>
     public enum NotificationType
     {
         Information,
@@ -146,9 +100,6 @@ namespace ThreadPilot.Models
         CpuAffinity,
     }
 
-    /// <summary>
-    /// Notification priority levels.
-    /// </summary>
     public enum NotificationPriority
     {
         Low,

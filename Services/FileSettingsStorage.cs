@@ -6,9 +6,6 @@ namespace ThreadPilot.Services
     using System.Threading.Tasks;
     using ThreadPilot.Services.Abstractions;
 
-    /// <summary>
-    /// Default filesystem-backed settings storage.
-    /// </summary>
     public sealed class FileSettingsStorage : ISettingsStorage
     {
         public void Copy(string sourcePath, string destinationPath, bool overwrite)
