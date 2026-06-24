@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Services
 {
     using System;
@@ -26,10 +10,6 @@ namespace ThreadPilot.Services
     using Microsoft.Extensions.Logging.Abstractions;
     using ThreadPilot.Models;
 
-    /// <summary>
-    /// Builds <see cref="CpuTopologySnapshot"/> instances from Windows CPU Sets and processor relationship APIs.
-    /// This provider is introduced for CPU topology v2 and is not wired into runtime affinity application yet.
-    /// </summary>
     public sealed class WindowsCpuTopologyProvider : ICpuTopologyProvider
     {
         private const int ErrorInsufficientBuffer = 122;

@@ -10,12 +10,8 @@ namespace ThreadPilot.Services
     using System.Threading.Tasks;
     using ThreadPilot.Services.Abstractions;
 
-    /// <summary>
-    /// Production implementation of <see cref="IProcessRunner"/> backed by <see cref="Process"/>.
-    /// </summary>
     public sealed class SystemProcessRunner : IProcessRunner
     {
-        /// <inheritdoc/>
         public async Task<ProcessRunResult> RunAsync(string fileName, IReadOnlyList<string> arguments, TimeSpan timeout)
         {
             if (!File.Exists(fileName))

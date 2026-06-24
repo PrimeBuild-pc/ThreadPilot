@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Tests
 {
     using System;
@@ -24,9 +8,6 @@ namespace ThreadPilot.Tests
     using ThreadPilot.Models;
     using ThreadPilot.Services;
 
-    /// <summary>
-    /// Test class to validate the improved process selection and real-time data sync functionality.
-    /// </summary>
     public class ProcessSelectionTest
     {
         private readonly ProcessService processService;
@@ -37,14 +18,11 @@ namespace ThreadPilot.Tests
             this.processService = new ProcessService();
 
             // Create a simple logger for the CPU topology service
-            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+            var loggerFactory = LoggerFactory.Create(builder => { });
             var logger = loggerFactory.CreateLogger<CpuTopologyService>();
             this.cpuTopologyService = new CpuTopologyService(logger);
         }
 
-        /// <summary>
-        /// Test that process information is correctly refreshed and reflects actual OS state.
-        /// </summary>
         public async Task<bool> TestProcessInfoRefresh()
         {
             try
@@ -77,9 +55,6 @@ namespace ThreadPilot.Tests
             }
         }
 
-        /// <summary>
-        /// Test that process termination is properly detected.
-        /// </summary>
         public async Task<bool> TestProcessTerminationDetection()
         {
             try
@@ -121,9 +96,6 @@ namespace ThreadPilot.Tests
             }
         }
 
-        /// <summary>
-        /// Test active applications filtering.
-        /// </summary>
         public async Task<bool> TestActiveApplicationsFiltering()
         {
             try
@@ -163,9 +135,6 @@ namespace ThreadPilot.Tests
             }
         }
 
-        /// <summary>
-        /// Test CPU affinity mask conversion and core selection.
-        /// </summary>
         public async Task<bool> TestCpuAffinityMaskConversion()
         {
             try
@@ -222,9 +191,6 @@ namespace ThreadPilot.Tests
             }
         }
 
-        /// <summary>
-        /// Test hyperthreading/SMT status detection and display.
-        /// </summary>
         public async Task<bool> TestHyperThreadingStatusDetection()
         {
             try
@@ -287,9 +253,6 @@ namespace ThreadPilot.Tests
             }
         }
 
-        /// <summary>
-        /// Run all tests.
-        /// </summary>
         public async Task<bool> RunAllTests()
         {
             Console.WriteLine("=== Process Selection and Real-time Data Sync Tests ===");

@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Services
 {
     using System;
@@ -25,9 +9,6 @@ namespace ThreadPilot.Services
     using Microsoft.Extensions.Logging;
     using ThreadPilot.Models;
 
-    /// <summary>
-    /// Service for managing notifications with balloon tips and toast support.
-    /// </summary>
     public class NotificationService : INotificationService, IDisposable
     {
         private const int NotificationDisplayDurationMs = 2000;

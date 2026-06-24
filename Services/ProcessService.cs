@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Services
 {
     using System;
@@ -506,9 +490,6 @@ namespace ThreadPilot.Services
             return await this.cpuSelectionAffinityApplier.ApplyAsync(process, selection).ConfigureAwait(false);
         }
 
-        /// <summary>
-        /// Attempts to set process affinity using CPU Sets (Windows 10+ feature).
-        /// </summary>
         private bool TrySetAffinityViaCpuSets(ProcessModel process, long affinityMask)
         {
             try
@@ -901,9 +882,6 @@ namespace ThreadPilot.Services
             }
         }
 
-        /// <summary>
-        /// Cleanup resources associated with a process.
-        /// </summary>
         private void CleanupProcessResources(int processId)
         {
             // Remove CPU samples
@@ -924,26 +902,17 @@ namespace ThreadPilot.Services
             }
         }
 
-        /// <summary>
-        /// Enables or disables the use of Windows CPU Sets for affinity management.
-        /// </summary>
         public void SetUseCpuSets(bool useCpuSets)
         {
             this.useCpuSets = useCpuSets;
             this.logger?.LogInformation("CPU Sets usage {Status}", useCpuSets ? "enabled" : "disabled");
         }
 
-        /// <summary>
-        /// Gets whether CPU Sets are currently enabled for affinity management.
-        /// </summary>
         public bool GetUseCpuSets()
         {
             return this.useCpuSets;
         }
 
-        /// <summary>
-        /// Clears the CPU Set for a process (allows it to run on all cores).
-        /// </summary>
         public async Task<bool> ClearProcessCpuSetAsync(ProcessModel process)
         {
             return await Task.Run(() =>
@@ -1242,18 +1211,12 @@ namespace ThreadPilot.Services
                 ex => this.logger?.LogDebug(ex, "Security audit logging failed for {Operation} on {ProcessName}", operation, processName));
         }
 
-        /// <summary>
-        /// Registers that a mask has been applied to a process (for tracking cleanup on exit).
-        /// </summary>
         public void TrackAppliedMask(int processId, string maskId)
         {
             this.appliedMasks[processId] = maskId;
             this.logger?.LogDebug("Tracking mask {MaskId} applied to process {ProcessId}", maskId, processId);
         }
 
-        /// <summary>
-        /// Registers that a priority has been changed for a process (for tracking cleanup on exit).
-        /// </summary>
         public void TrackPriorityChange(int processId, ProcessPriorityClass originalPriority)
         {
             // Only track if not already tracked (keep the original priority)
@@ -1264,9 +1227,6 @@ namespace ThreadPilot.Services
             }
         }
 
-        /// <summary>
-        /// Unregisters tracking when a process exits.
-        /// </summary>
         public void UntrackProcess(int processId)
         {
             this.appliedMasks.TryRemove(processId, out _);
@@ -1275,10 +1235,6 @@ namespace ThreadPilot.Services
             this.logger?.LogDebug("Untracked process {ProcessId}", processId);
         }
 
-        /// <summary>
-        /// Clears all applied CPU masks/affinities from all tracked processes
-        /// Processes return to using all cores (used on application exit).
-        /// </summary>
         public Task ClearAllAppliedMasksAsync()
         {
             this.logger?.LogInformation("Clearing all applied CPU masks from {Count} tracked processes", this.appliedMasks.Count);
@@ -1346,9 +1302,6 @@ namespace ThreadPilot.Services
             return Task.CompletedTask;
         }
 
-        /// <summary>
-        /// Resets all modified process priorities to Normal (or their original priority).
-        /// </summary>
         public Task ResetAllProcessPrioritiesAsync()
         {
             this.logger?.LogInformation("Resetting priorities for {Count} tracked processes", this.originalPriorities.Count);
@@ -1402,9 +1355,6 @@ namespace ThreadPilot.Services
             return Task.CompletedTask;
         }
 
-        /// <summary>
-        /// Gets an affinity mask with all cores enabled.
-        /// </summary>
         private long GetAllCoresAffinityMask()
         {
             int coreCount = Environment.ProcessorCount;
@@ -1443,9 +1393,6 @@ namespace ThreadPilot.Services
         }
     }
 
-    /// <summary>
-    /// Native methods for Windows API calls.
-    /// </summary>
     internal static class NativeMethods
     {
         [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto, SetLastError = true)]

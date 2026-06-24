@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Services
 {
     using System;
@@ -24,9 +8,6 @@ namespace ThreadPilot.Services
     using ThreadPilot.Models;
     using MediaSolidColorBrush = System.Windows.Media.SolidColorBrush;
 
-    /// <summary>
-    /// Service for managing system tray icon and context menu.
-    /// </summary>
     public class SystemTrayService : ISystemTrayService
     {
         private readonly ILogger<SystemTrayService> logger;
@@ -179,11 +160,11 @@ namespace ThreadPilot.Services
             this.contextMenu.Items.Add(new ToolStripSeparator());
 
             // Power Plans submenu
-            this.powerPlansMenuItem = new ToolStripMenuItem(this.Localize("SystemTray_PowerPlans", "🔋 Power Plans"));
+            this.powerPlansMenuItem = new ToolStripMenuItem(this.Localize("SystemTray_PowerPlans", "ðŸ”‹ Power Plans"));
             this.contextMenu.Items.Add(this.powerPlansMenuItem);
 
             // Profiles submenu
-            this.profilesMenuItem = new ToolStripMenuItem(this.Localize("SystemTray_Profiles", "📋 Profiles"));
+            this.profilesMenuItem = new ToolStripMenuItem(this.Localize("SystemTray_Profiles", "ðŸ“‹ Profiles"));
             this.contextMenu.Items.Add(this.profilesMenuItem);
 
             this.contextMenu.Items.Add(new ToolStripSeparator());
@@ -516,7 +497,7 @@ namespace ThreadPilot.Services
             try
             {
                 this.systemStatusMenuItem.Text = string.Format(
-                    this.Localize("SystemTray_CpuRamStatusFormat", "💻 CPU: {0:F1}% | RAM: {1:F1}% | {2}"),
+                    this.Localize("SystemTray_CpuRamStatusFormat", "ðŸ’» CPU: {0:F1}% | RAM: {1:F1}% | {2}"),
                     cpuUsage,
                     memoryUsage,
                     currentPowerPlan);
@@ -642,12 +623,12 @@ namespace ThreadPilot.Services
 
             if (this.powerPlansMenuItem != null)
             {
-                this.powerPlansMenuItem.Text = this.Localize("SystemTray_PowerPlans", "🔋 Power Plans");
+                this.powerPlansMenuItem.Text = this.Localize("SystemTray_PowerPlans", "ðŸ”‹ Power Plans");
             }
 
             if (this.profilesMenuItem != null)
             {
-                this.profilesMenuItem.Text = this.Localize("SystemTray_Profiles", "📋 Profiles");
+                this.profilesMenuItem.Text = this.Localize("SystemTray_Profiles", "ðŸ“‹ Profiles");
             }
 
             if (this.settingsMenuItem != null)

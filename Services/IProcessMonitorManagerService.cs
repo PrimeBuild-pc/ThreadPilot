@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Services
 {
     using System;
@@ -21,75 +5,33 @@ namespace ThreadPilot.Services
     using System.Threading.Tasks;
     using ThreadPilot.Models;
 
-    /// <summary>
-    /// Main orchestration service for process monitoring and power plan management.
-    /// </summary>
     public interface IProcessMonitorManagerService : IDisposable
     {
-        /// <summary>
-        /// Event fired when a process-triggered power plan change occurs
-        /// </summary>
         event EventHandler<ProcessPowerPlanChangeEventArgs>? ProcessPowerPlanChanged;
 
-        /// <summary>
-        /// Event fired when the service status changes
-        /// </summary>
         event EventHandler<ServiceStatusEventArgs>? ServiceStatusChanged;
 
-        /// <summary>
-        /// Gets a value indicating whether gets whether the service is currently running.
-        /// </summary>
         bool IsRunning { get; }
 
-        /// <summary>
-        /// Gets the current service status.
-        /// </summary>
         string Status { get; }
 
-        /// <summary>
-        /// Gets currently running associated processes.
-        /// </summary>
         IEnumerable<ProcessModel> RunningAssociatedProcesses { get; }
 
-        /// <summary>
-        /// Starts the process monitoring and power plan management service.
-        /// </summary>
         Task StartAsync();
 
-        /// <summary>
-        /// Stops the service.
-        /// </summary>
         Task StopAsync();
 
-        /// <summary>
-        /// Manually triggers a power plan evaluation for all running processes.
-        /// </summary>
         Task EvaluateCurrentProcessesAsync();
 
-        /// <summary>
-        /// Forces a return to the default power plan.
-        /// </summary>
         Task ForceDefaultPowerPlanAsync();
 
-        /// <summary>
-        /// Gets the current active power plan information.
-        /// </summary>
         Task<PowerPlanModel?> GetCurrentActivePowerPlanAsync();
 
-        /// <summary>
-        /// Refreshes the configuration from the association service.
-        /// </summary>
         Task RefreshConfigurationAsync();
 
-        /// <summary>
-        /// Updates the service settings (polling intervals, etc.)
-        /// </summary>
         void UpdateSettings();
     }
 
-    /// <summary>
-    /// Event arguments for process-triggered power plan changes.
-    /// </summary>
     public class ProcessPowerPlanChangeEventArgs : EventArgs
     {
         public ProcessModel Process { get; }
@@ -120,9 +62,6 @@ namespace ThreadPilot.Services
         }
     }
 
-    /// <summary>
-    /// Event arguments for service status changes.
-    /// </summary>
     public class ServiceStatusEventArgs : EventArgs
     {
         public bool IsRunning { get; }

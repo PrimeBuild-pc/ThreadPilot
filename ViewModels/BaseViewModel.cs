@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.ViewModels
 {
     using System;
@@ -23,9 +7,6 @@ namespace ThreadPilot.ViewModels
     using Microsoft.Extensions.Logging;
     using ThreadPilot.Services;
 
-    /// <summary>
-    /// Base ViewModel with common functionality for all ViewModels.
-    /// </summary>
     public abstract partial class BaseViewModel : ObservableObject, IDisposable
     {
         protected readonly ILogger Logger;
@@ -62,17 +43,11 @@ namespace ThreadPilot.ViewModels
             this.ActivityAuditService = activityAuditService;
         }
 
-        /// <summary>
-        /// Set status message and busy state.
-        /// </summary>
         protected void SetStatus(string message, bool isBusyState = true)
         {
             this.SetStatus(message, isBusyState, preserveUntilReplaced: false);
         }
 
-        /// <summary>
-        /// Set a critical status that should not be cleared by immediate cleanup paths.
-        /// </summary>
         protected void SetCriticalStatus(string message)
         {
             this.SetStatus(message, isBusyState: false, preserveUntilReplaced: true);
@@ -93,9 +68,6 @@ namespace ThreadPilot.ViewModels
             }
         }
 
-        /// <summary>
-        /// Clear status and busy state.
-        /// </summary>
         protected void ClearStatus()
         {
             if (this.preserveStatusUntilReplaced)
@@ -110,9 +82,6 @@ namespace ThreadPilot.ViewModels
             this.IsBusy = false;
         }
 
-        /// <summary>
-        /// Set error message and clear busy state.
-        /// </summary>
         protected void SetError(string message, Exception? exception = null)
         {
             this.ErrorMessage = message;
@@ -129,18 +98,12 @@ namespace ThreadPilot.ViewModels
             }
         }
 
-        /// <summary>
-        /// Clear error state.
-        /// </summary>
         protected void ClearError()
         {
             this.ErrorMessage = string.Empty;
             this.HasError = false;
         }
 
-        /// <summary>
-        /// Execute an async operation with error handling and status updates.
-        /// </summary>
         protected async Task ExecuteAsync(Func<Task> operation, string? statusMessage = null, string? successMessage = null)
         {
             try
@@ -179,9 +142,6 @@ namespace ThreadPilot.ViewModels
             }
         }
 
-        /// <summary>
-        /// Execute an async operation with return value and error handling.
-        /// </summary>
         protected async Task<T?> ExecuteAsync<T>(Func<Task<T>> operation, string? statusMessage = null, string? successMessage = null)
         {
             try
@@ -227,9 +187,6 @@ namespace ThreadPilot.ViewModels
             }
         }
 
-        /// <summary>
-        /// Log user action for audit purposes.
-        /// </summary>
         protected async Task LogUserActionAsync(string action, string details, string? context = null)
         {
             try
@@ -250,18 +207,12 @@ namespace ThreadPilot.ViewModels
             }
         }
 
-        /// <summary>
-        /// Initialize the ViewModel - override in derived classes.
-        /// </summary>
         public virtual async Task InitializeAsync()
         {
             // Base implementation does nothing
             await Task.CompletedTask;
         }
 
-        /// <summary>
-        /// Cleanup resources - override in derived classes.
-        /// </summary>
         protected virtual void OnDispose()
         {
             this.CancelStatusLifetime();

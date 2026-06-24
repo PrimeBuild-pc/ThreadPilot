@@ -7,14 +7,8 @@ namespace ThreadPilot.Core.Tests
     using Moq;
     using ThreadPilot.Services;
 
-    /// <summary>
-    /// Unit tests for <see cref="SecurityService"/> validation behavior.
-    /// </summary>
     public sealed class SecurityServiceTests
     {
-        /// <summary>
-        /// Ensures protected processes cannot be modified.
-        /// </summary>
         [Theory]
         [InlineData("lsass")]
         [InlineData("lsass.exe")]
@@ -29,9 +23,6 @@ namespace ThreadPilot.Core.Tests
             Assert.False(allowed);
         }
 
-        /// <summary>
-        /// Ensures known-safe process operations remain allowed.
-        /// </summary>
         [Fact]
         public void ValidateProcessOperation_ReturnsTrue_ForAllowedOperationOnRegularProcess()
         {
@@ -42,9 +33,6 @@ namespace ThreadPilot.Core.Tests
             Assert.True(allowed);
         }
 
-        /// <summary>
-        /// Ensures invalid process operations are rejected.
-        /// </summary>
         [Fact]
         public void ValidateProcessOperation_ReturnsFalse_ForInvalidOperation()
         {
@@ -55,9 +43,6 @@ namespace ThreadPilot.Core.Tests
             Assert.False(allowed);
         }
 
-        /// <summary>
-        /// Ensures elevated operation validation tolerates log-control characters.
-        /// </summary>
         [Fact]
         public void ValidateElevatedOperation_ReturnsTrue_ForKnownOperation_WithControlCharacters()
         {

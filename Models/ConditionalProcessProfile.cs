@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Models
 {
     using System;
@@ -21,9 +5,6 @@ namespace ThreadPilot.Models
     using System.Linq;
     using CommunityToolkit.Mvvm.ComponentModel;
 
-    /// <summary>
-    /// Condition types for profile triggers.
-    /// </summary>
     public enum ProfileConditionType
     {
         SystemLoad,
@@ -38,9 +19,6 @@ namespace ThreadPilot.Models
         Custom,
     }
 
-    /// <summary>
-    /// Comparison operators for conditions.
-    /// </summary>
     public enum ComparisonOperator
     {
         Equals,
@@ -55,9 +33,6 @@ namespace ThreadPilot.Models
         NotBetween,
     }
 
-    /// <summary>
-    /// Logical operators for combining conditions.
-    /// </summary>
     public enum LogicalOperator
     {
         And,
@@ -65,9 +40,6 @@ namespace ThreadPilot.Models
         Not,
     }
 
-    /// <summary>
-    /// System state information for condition evaluation.
-    /// </summary>
     public class SystemState
     {
         public double CpuUsage { get; set; }
@@ -93,9 +65,6 @@ namespace ThreadPilot.Models
         public Dictionary<string, object> CustomProperties { get; set; } = new();
     }
 
-    /// <summary>
-    /// Individual condition for profile evaluation.
-    /// </summary>
     public partial class ProfileCondition : ObservableObject
     {
         [ObservableProperty]
@@ -119,9 +88,6 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private string description = string.Empty;
 
-        /// <summary>
-        /// Evaluate this condition against the current system state.
-        /// </summary>
         public bool Evaluate(ProcessModel process, SystemState systemState)
         {
             if (!this.IsEnabled)
@@ -186,9 +152,6 @@ namespace ThreadPilot.Models
         }
     }
 
-    /// <summary>
-    /// Group of conditions with logical operators.
-    /// </summary>
     public partial class ConditionGroup : ObservableObject
     {
         [ObservableProperty]
@@ -206,9 +169,6 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private bool isEnabled = true;
 
-        /// <summary>
-        /// Evaluate this condition group.
-        /// </summary>
         public bool Evaluate(ProcessModel process, SystemState systemState)
         {
             if (!this.IsEnabled)
@@ -235,9 +195,6 @@ namespace ThreadPilot.Models
         }
     }
 
-    /// <summary>
-    /// Extended ProfileModel with conditional triggers.
-    /// </summary>
     public partial class ConditionalProcessProfile : ProfileModel
     {
         [ObservableProperty]
@@ -264,9 +221,6 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private string lastEvaluationReason = string.Empty;
 
-        /// <summary>
-        /// Check if this profile should be applied based on conditions.
-        /// </summary>
         public bool ShouldApply(ProcessModel process, SystemState systemState)
         {
             if (!this.IsAutoApplyEnabled)
@@ -305,17 +259,11 @@ namespace ThreadPilot.Models
             }
         }
 
-        /// <summary>
-        /// Check if enough time has passed since last application.
-        /// </summary>
         public bool CanApplyNow()
         {
             return DateTime.UtcNow - this.LastApplied >= this.AutoApplyDelay;
         }
 
-        /// <summary>
-        /// Mark this profile as applied.
-        /// </summary>
         public void MarkAsApplied()
         {
             this.LastApplied = DateTime.UtcNow;

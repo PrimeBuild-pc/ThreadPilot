@@ -8,9 +8,6 @@ namespace ThreadPilot.Core.Tests
     using ThreadPilot.Services;
     using ThreadPilot.Services.Abstractions;
 
-    /// <summary>
-    /// Unit tests for deterministic behavior in <see cref="PowerPlanService"/>.
-    /// </summary>
     public sealed class PowerPlanServiceTests
     {
         [Fact]

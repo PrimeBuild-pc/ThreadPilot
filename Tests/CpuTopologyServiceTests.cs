@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Tests
 {
     using System;
@@ -22,14 +6,8 @@ namespace ThreadPilot.Tests
     using ThreadPilot.Models;
     using ThreadPilot.Services;
 
-    /// <summary>
-    /// Simple test class for CPU topology detection.
-    /// </summary>
     public static class CpuTopologyServiceTests
     {
-        /// <summary>
-        /// Test CPU topology detection.
-        /// </summary>
         public static async Task TestCpuTopologyDetection()
         {
             Console.WriteLine("=== CPU Topology Detection Test ===");
@@ -37,7 +15,7 @@ namespace ThreadPilot.Tests
             try
             {
                 // Create logger
-                using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+                using var loggerFactory = LoggerFactory.Create(builder => { });
                 var logger = loggerFactory.CreateLogger<CpuTopologyService>();
 
                 // Create service

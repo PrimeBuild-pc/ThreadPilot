@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Converters
 {
     using System;
@@ -23,9 +7,6 @@ namespace ThreadPilot.Converters
     using System.Windows.Media;
     using ThreadPilot.Models;
 
-    /// <summary>
-    /// Converter for CPU core type to color.
-    /// </summary>
     public class CoreTypeToColorConverter : IMultiValueConverter
     {
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
@@ -70,9 +51,6 @@ namespace ThreadPilot.Converters
         }
     }
 
-    /// <summary>
-    /// Converter for boolean to color (success/failure indication).
-    /// </summary>
     public class BoolToColorConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -102,9 +80,6 @@ namespace ThreadPilot.Converters
         }
     }
 
-    /// <summary>
-    /// Converter for boolean to visibility.
-    /// </summary>
     public class BoolToVisibilityConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -122,9 +97,6 @@ namespace ThreadPilot.Converters
         }
     }
 
-    /// <summary>
-    /// Converter for affinity mask to readable string.
-    /// </summary>
     public class AffinityMaskConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -171,9 +143,6 @@ namespace ThreadPilot.Converters
         }
     }
 
-    /// <summary>
-    /// Converter for bytes to megabytes.
-    /// </summary>
     public class BytesToMbConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -191,9 +160,6 @@ namespace ThreadPilot.Converters
         }
     }
 
-    /// <summary>
-    /// Converter for string to visibility (empty/null = collapsed).
-    /// </summary>
     public class StringToVisibilityConverter : IValueConverter
     {
         public static readonly StringToVisibilityConverter Instance = new();

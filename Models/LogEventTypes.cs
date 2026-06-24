@@ -1,29 +1,7 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Models
 {
-    /// <summary>
-    /// Defines structured log event types and categories for consistent logging.
-    /// </summary>
     public static class LogEventTypes
     {
-        /// <summary>
-        /// Power plan related events.
-        /// </summary>
         public static class PowerPlan
         {
             public const string Changed = "PowerPlanChanged";
@@ -34,9 +12,6 @@ namespace ThreadPilot.Models
             public const string EnumerationFailed = "PowerPlanEnumerationFailed";
         }
 
-        /// <summary>
-        /// Process monitoring events.
-        /// </summary>
         public static class ProcessMonitoring
         {
             public const string Started = "ProcessStarted";
@@ -51,9 +26,6 @@ namespace ThreadPilot.Models
             public const string AssociationTriggered = "AssociationTriggered";
         }
 
-        /// <summary>
-        /// User action events.
-        /// </summary>
         public static class UserActions
         {
             public const string SettingsChanged = "SettingsChanged";
@@ -69,9 +41,6 @@ namespace ThreadPilot.Models
             public const string LogsCleared = "LogsCleared";
         }
 
-        /// <summary>
-        /// System events.
-        /// </summary>
         public static class System
         {
             public const string ApplicationStarted = "ApplicationStarted";
@@ -87,9 +56,6 @@ namespace ThreadPilot.Models
             public const string ErrorRecovered = "ErrorRecovered";
         }
 
-        /// <summary>
-        /// Error categories.
-        /// </summary>
         public static class Errors
         {
             public const string ServiceFailure = "ServiceFailure";
@@ -102,9 +68,6 @@ namespace ThreadPilot.Models
             public const string ValidationError = "ValidationError";
         }
 
-        /// <summary>
-        /// Performance events.
-        /// </summary>
         public static class Performance
         {
             public const string HighMemoryUsage = "HighMemoryUsage";
@@ -116,9 +79,6 @@ namespace ThreadPilot.Models
         }
     }
 
-    /// <summary>
-    /// Log categories for organizing log entries.
-    /// </summary>
     public static class LogCategories
     {
         public const string PowerPlan = "PowerPlan";
@@ -132,9 +92,6 @@ namespace ThreadPilot.Models
         public const string Lifecycle = "Lifecycle";
     }
 
-    /// <summary>
-    /// Common log properties for structured logging.
-    /// </summary>
     public static class LogProperties
     {
         public const string ProcessName = "ProcessName";
@@ -155,9 +112,6 @@ namespace ThreadPilot.Models
         public const string Environment = "Environment";
     }
 
-    /// <summary>
-    /// Helper class for creating structured log data.
-    /// </summary>
     public static class LogDataBuilder
     {
         public static Dictionary<string, object> CreateProcessData(string processName, int processId)

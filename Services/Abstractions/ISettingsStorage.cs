@@ -2,9 +2,6 @@ namespace ThreadPilot.Services.Abstractions
 {
     using System.Threading.Tasks;
 
-    /// <summary>
-    /// Provides a seam for reading and writing persisted settings.
-    /// </summary>
     public interface ISettingsStorage
     {
         bool Exists(string path);

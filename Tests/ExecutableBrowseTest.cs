@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Tests
 {
     using System;
@@ -23,9 +7,6 @@ namespace ThreadPilot.Tests
     using ThreadPilot.Services;
     using ThreadPilot.ViewModels;
 
-    /// <summary>
-    /// Test class to validate the new executable browse functionality.
-    /// </summary>
     public class ExecutableBrowseTest
     {
         public ExecutableBrowseTest()
@@ -33,9 +14,6 @@ namespace ThreadPilot.Tests
             // Simple test class without complex dependencies
         }
 
-        /// <summary>
-        /// Test the executable validation logic (static test).
-        /// </summary>
         public bool TestExecutableValidation()
         {
             try
@@ -81,9 +59,6 @@ namespace ThreadPilot.Tests
             }
         }
 
-        /// <summary>
-        /// Test path extraction functionality.
-        /// </summary>
         public bool TestPathExtraction()
         {
             try
@@ -108,9 +83,6 @@ namespace ThreadPilot.Tests
             }
         }
 
-        /// <summary>
-        /// Test file dialog filter validation.
-        /// </summary>
         public bool TestFileDialogFilter()
         {
             try
@@ -139,9 +111,6 @@ namespace ThreadPilot.Tests
             }
         }
 
-        /// <summary>
-        /// Run all tests.
-        /// </summary>
         public bool RunAllTests()
         {
             Console.WriteLine("=== Executable Browse Functionality Tests ===");

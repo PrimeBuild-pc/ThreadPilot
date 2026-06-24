@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Models
 {
     using System;
@@ -22,10 +6,6 @@ namespace ThreadPilot.Models
     using System.Linq;
     using CommunityToolkit.Mvvm.ComponentModel;
 
-    /// <summary>
-    /// Represents a reusable CPU core affinity mask
-    /// Based on CPUSetSetter's LogicalProcessorMask.
-    /// </summary>
     public partial class CoreMask : ObservableObject
     {
         [ObservableProperty]
@@ -37,9 +17,6 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private string description = string.Empty;
 
-        /// <summary>
-        /// Gets or sets array of boolean values, one per logical core.
-        /// </summary>
         public ObservableCollection<bool> BoolMask { get; set; } = new();
 
         public int ProfileSchemaVersion { get; set; } = CpuAffinityProfileSchemaVersions.Legacy;
@@ -60,21 +37,10 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private DateTime updatedAt = DateTime.UtcNow;
 
-        /// <summary>
-        /// Gets a value indicating whether special mask that allows all cores (no restrictions).
-        /// </summary>
         public bool IsNoMask => this.BoolMask.All(b => b);
 
-        /// <summary>
-        /// Gets the count of selected cores.
-        /// </summary>
         public int SelectedCoreCount => this.BoolMask.Count(b => b);
 
-        /// <summary>
-        /// Converts the boolean mask to a legacy 64-bit processor affinity value.
-        /// This is only safe for single processor-group selections below CPU 64;
-        /// topology-aware apply paths must prefer <see cref="CpuSelection"/>.
-        /// </summary>
         public long ToProcessorAffinity()
         {
             long affinity = 0;
@@ -88,9 +54,6 @@ namespace ThreadPilot.Models
             return affinity;
         }
 
-        /// <summary>
-        /// Creates a CoreMask from a processor affinity value.
-        /// </summary>
         public static CoreMask FromProcessorAffinity(long affinity, int coreCount, string name = "Custom")
         {
             var mask = new CoreMask { Name = name };
@@ -101,9 +64,6 @@ namespace ThreadPilot.Models
             return mask;
         }
 
-        /// <summary>
-        /// Creates a mask with all cores enabled.
-        /// </summary>
         public static CoreMask CreateAllCoresMask(int coreCount)
         {
             var mask = new CoreMask
@@ -121,9 +81,6 @@ namespace ThreadPilot.Models
             return mask;
         }
 
-        /// <summary>
-        /// Creates a mask with no cores (empty mask, for deletion purposes).
-        /// </summary>
         public static CoreMask CreateNoMask()
         {
             return new CoreMask

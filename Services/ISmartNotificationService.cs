@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Services
 {
     using System;
@@ -21,9 +5,6 @@ namespace ThreadPilot.Services
     using System.Threading.Tasks;
     using ThreadPilot.Models;
 
-    /// <summary>
-    /// Notification categories for throttling.
-    /// </summary>
     public enum NotificationCategory
     {
         System,
@@ -36,9 +17,6 @@ namespace ThreadPilot.Services
         UserAction,
     }
 
-    /// <summary>
-    /// Smart notification with metadata.
-    /// </summary>
     public class SmartNotification
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
@@ -68,9 +46,6 @@ namespace ThreadPilot.Services
         public int MaxRetries { get; set; } = 3;
     }
 
-    /// <summary>
-    /// Notification throttling configuration.
-    /// </summary>
     public class NotificationThrottleConfig
     {
         public NotificationCategory Category { get; set; }
@@ -86,9 +61,6 @@ namespace ThreadPilot.Services
         public TimeSpan DeduplicationWindow { get; set; } = TimeSpan.FromMinutes(5);
     }
 
-    /// <summary>
-    /// User notification preferences.
-    /// </summary>
     public class NotificationPreferences
     {
         public bool IsEnabled { get; set; } = true;
@@ -112,9 +84,6 @@ namespace ThreadPilot.Services
         public int DefaultDisplayDuration { get; set; } = 5000; // milliseconds
     }
 
-    /// <summary>
-    /// Event arguments for smart notification events.
-    /// </summary>
     public class SmartNotificationEventArgs : EventArgs
     {
         public SmartNotification Notification { get; set; } = new();
@@ -124,101 +93,44 @@ namespace ThreadPilot.Services
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     }
 
-    /// <summary>
-    /// Smart notification service with throttling and priority queuing.
-    /// </summary>
     public interface ISmartNotificationService
     {
-        /// <summary>
-        /// Initialize the smart notification service.
-        /// </summary>
         Task InitializeAsync();
 
-        /// <summary>
-        /// Send a smart notification.
-        /// </summary>
         Task<bool> SendNotificationAsync(SmartNotification notification);
 
-        /// <summary>
-        /// Send a simple notification.
-        /// </summary>
         Task<bool> SendNotificationAsync(string title, string message,
             NotificationPriority priority = NotificationPriority.Normal,
             NotificationCategory category = NotificationCategory.Information);
 
-        /// <summary>
-        /// Schedule a notification for later delivery.
-        /// </summary>
         Task<bool> ScheduleNotificationAsync(SmartNotification notification, DateTime deliveryTime);
 
-        /// <summary>
-        /// Cancel a scheduled notification.
-        /// </summary>
         Task<bool> CancelNotificationAsync(string notificationId);
 
-        /// <summary>
-        /// Get pending notifications.
-        /// </summary>
         Task<List<SmartNotification>> GetPendingNotificationsAsync();
 
-        /// <summary>
-        /// Get notification history.
-        /// </summary>
         Task<List<SmartNotification>> GetNotificationHistoryAsync(TimeSpan? period = null);
 
-        /// <summary>
-        /// Clear notification history.
-        /// </summary>
         Task ClearHistoryAsync();
 
-        /// <summary>
-        /// Update user preferences.
-        /// </summary>
         Task UpdatePreferencesAsync(NotificationPreferences preferences);
 
-        /// <summary>
-        /// Get current user preferences.
-        /// </summary>
         Task<NotificationPreferences> GetPreferencesAsync();
 
-        /// <summary>
-        /// Enable/disable Do Not Disturb mode.
-        /// </summary>
         Task SetDoNotDisturbAsync(bool enabled, TimeSpan? duration = null);
 
-        /// <summary>
-        /// Check if Do Not Disturb is currently active.
-        /// </summary>
         bool IsDoNotDisturbActive();
 
-        /// <summary>
-        /// Get notification statistics.
-        /// </summary>
         Task<Dictionary<string, object>> GetStatisticsAsync();
 
-        /// <summary>
-        /// Test notification delivery.
-        /// </summary>
         Task<bool> TestNotificationAsync();
 
-        /// <summary>
-        /// Event raised when a notification is sent
-        /// </summary>
         event EventHandler<SmartNotificationEventArgs>? NotificationSent;
 
-        /// <summary>
-        /// Event raised when a notification is throttled
-        /// </summary>
         event EventHandler<SmartNotificationEventArgs>? NotificationThrottled;
 
-        /// <summary>
-        /// Event raised when a notification is deduplicated
-        /// </summary>
         event EventHandler<SmartNotificationEventArgs>? NotificationDeduplicated;
 
-        /// <summary>
-        /// Event raised when Do Not Disturb mode changes
-        /// </summary>
         event EventHandler<bool>? DoNotDisturbChanged;
     }
 }

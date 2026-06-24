@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Models
 {
     using System;
@@ -21,9 +5,6 @@ namespace ThreadPilot.Models
     using System.Linq;
     using CommunityToolkit.Mvvm.ComponentModel;
 
-    /// <summary>
-    /// Represents a logical CPU core with topology information.
-    /// </summary>
     public partial class CpuCoreModel : ObservableObject
     {
         public int LogicalCoreId { get; set; }
@@ -52,15 +33,9 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private bool isSelected = false;
 
-        /// <summary>
-        /// Gets the affinity mask bit for this logical core.
-        /// </summary>
         public long AffinityMask => 1L << this.LogicalCoreId;
     }
 
-    /// <summary>
-    /// Types of CPU cores.
-    /// </summary>
     public enum CpuCoreType
     {
         Unknown,
@@ -74,9 +49,6 @@ namespace ThreadPilot.Models
         Zen4,             // AMD Zen4 cores
     }
 
-    /// <summary>
-    /// Represents CPU topology information.
-    /// </summary>
     public class CpuTopologyModel
     {
         public List<CpuCoreModel> LogicalCores { get; set; } = new();
@@ -109,78 +81,42 @@ namespace ThreadPilot.Models
 
         public bool TopologyDetectionSuccessful { get; set; } = false;
 
-        /// <summary>
-        /// Gets all CCDs (Core Complex Dies) available.
-        /// </summary>
         public IEnumerable<int> AvailableCcds => this.LogicalCores
             .Where(c => c.CcdId.HasValue)
             .Select(c => c.CcdId!.Value)
             .Distinct()
             .OrderBy(id => id);
 
-        /// <summary>
-        /// Gets all performance cores (Intel P-cores).
-        /// </summary>
         public IEnumerable<CpuCoreModel> PerformanceCores => this.LogicalCores
             .Where(c => c.CoreType == CpuCoreType.PerformanceCore);
 
-        /// <summary>
-        /// Gets all efficiency cores (Intel E-cores).
-        /// </summary>
         public IEnumerable<CpuCoreModel> EfficiencyCores => this.LogicalCores
             .Where(c => c.CoreType == CpuCoreType.EfficiencyCore);
 
-        /// <summary>
-        /// Gets all physical cores (one logical core per physical core, excluding HT siblings).
-        /// </summary>
         public IEnumerable<CpuCoreModel> PhysicalCores => this.LogicalCores
             .GroupBy(c => c.PhysicalCoreId)
             .Select(g => g.OrderBy(c => c.LogicalCoreId).First());
 
-        /// <summary>
-        /// Gets cores by CCD ID.
-        /// </summary>
         public IEnumerable<CpuCoreModel> GetCoresByCcd(int ccdId) => this.LogicalCores
             .Where(c => c.CcdId == ccdId);
 
-        /// <summary>
-        /// Gets cores by socket ID.
-        /// </summary>
         public IEnumerable<CpuCoreModel> GetCoresBySocket(int socketId) => this.LogicalCores
             .Where(c => c.SocketId == socketId);
 
-        /// <summary>
-        /// Calculates affinity mask for selected cores.
-        /// </summary>
         public long CalculateAffinityMask(IEnumerable<CpuCoreModel> cores)
         {
             return cores.Aggregate(0L, (mask, core) => mask | core.AffinityMask);
         }
 
-        /// <summary>
-        /// Gets affinity mask for all physical cores (excluding HT siblings).
-        /// </summary>
         public long GetPhysicalCoresAffinityMask() => this.CalculateAffinityMask(this.PhysicalCores);
 
-        /// <summary>
-        /// Gets affinity mask for performance cores.
-        /// </summary>
         public long GetPerformanceCoresAffinityMask() => this.CalculateAffinityMask(this.PerformanceCores);
 
-        /// <summary>
-        /// Gets affinity mask for efficiency cores.
-        /// </summary>
         public long GetEfficiencyCoresAffinityMask() => this.CalculateAffinityMask(this.EfficiencyCores);
 
-        /// <summary>
-        /// Gets affinity mask for a specific CCD.
-        /// </summary>
         public long GetCcdAffinityMask(int ccdId) => this.CalculateAffinityMask(this.GetCoresByCcd(ccdId));
     }
 
-    /// <summary>
-    /// Quick selection preset for CPU affinity.
-    /// </summary>
     public class CpuAffinityPreset
     {
         public string Name { get; set; } = string.Empty;

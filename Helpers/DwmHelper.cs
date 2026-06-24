@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Helpers
 {
     using System;
@@ -21,9 +5,6 @@ namespace ThreadPilot.Helpers
     using System.Windows;
     using System.Windows.Interop;
 
-    /// <summary>
-    /// Desktop Window Manager helper methods.
-    /// </summary>
     public static class DwmHelper
     {
         private const int DwmUseImmersiveDarkMode = 20;
@@ -32,9 +13,6 @@ namespace ThreadPilot.Helpers
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int dwAttribute, ref int pvAttribute, int cbAttribute);
 
-        /// <summary>
-        /// Applies dark/light title-bar styling through DWM attributes.
-        /// </summary>
         public static void ApplyWindowCaptionTheme(Window window, bool useDarkTheme)
         {
             ArgumentNullException.ThrowIfNull(window);

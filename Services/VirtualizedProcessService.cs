@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Services
 {
     using System;
@@ -23,19 +7,13 @@ namespace ThreadPilot.Services
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using Microsoft.Extensions.Caching.Memory;
     using Microsoft.Extensions.Logging;
     using ThreadPilot.Models;
 
-    /// <summary>
-    /// Implementation of virtualized process service with batch loading and caching.
-    /// </summary>
     public class VirtualizedProcessService : IVirtualizedProcessService, IDisposable
     {
         private readonly IProcessService processService;
-        private readonly IMemoryCache cache;
         private readonly ILogger<VirtualizedProcessService> logger;
-        private readonly IRetryPolicyService retryPolicy;
         private readonly SemaphoreSlim loadingSemaphore = new(1, 1);
         private readonly ConcurrentDictionary<int, ProcessBatchResult> batchCache = new();
         private readonly System.Threading.Timer backgroundPreloadTimer;
@@ -52,14 +30,10 @@ namespace ThreadPilot.Services
 
         public VirtualizedProcessService(
             IProcessService processService,
-            IMemoryCache cache,
-            ILogger<VirtualizedProcessService> logger,
-            IRetryPolicyService retryPolicy)
+            ILogger<VirtualizedProcessService> logger)
         {
             this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
-            this.cache = cache ?? throw new ArgumentNullException(nameof(cache));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            this.retryPolicy = retryPolicy ?? throw new ArgumentNullException(nameof(retryPolicy));
 
             // Set up background preloading timer
             this.backgroundPreloadTimer = new System.Threading.Timer(this.BackgroundPreloadCallback, null, Timeout.Infinite, Timeout.Infinite);
@@ -95,46 +69,43 @@ namespace ThreadPilot.Services
                 return cachedBatch;
             }
 
-            return await this.retryPolicy.ExecuteAsync(
-                async () =>
+            var stopwatch = Stopwatch.StartNew();
+
+            await this.EnsureProcessesLoadedAsync(activeApplicationsOnly);
+
+            var filteredProcesses = activeApplicationsOnly
+                ? this.allProcesses?.Where(p => p.HasVisibleWindow).ToList() ?? new List<ProcessModel>()
+                : this.allProcesses ?? new List<ProcessModel>();
+
+            var totalCount = filteredProcesses.Count;
+            var totalBatches = (int)Math.Ceiling((double)totalCount / this.Configuration.BatchSize);
+
+            var startIndex = batchIndex * this.Configuration.BatchSize;
+            var batchProcesses = filteredProcesses
+                .Skip(startIndex)
+                .Take(this.Configuration.BatchSize)
+                .ToList();
+
+            var result = new ProcessBatchResult
             {
-                var stopwatch = Stopwatch.StartNew();
+                Processes = batchProcesses,
+                BatchIndex = batchIndex,
+                TotalBatches = totalBatches,
+                TotalProcessCount = totalCount,
+                HasMoreBatches = batchIndex < totalBatches - 1,
+                LoadTime = stopwatch.Elapsed,
+            };
 
-                await this.EnsureProcessesLoadedAsync(activeApplicationsOnly);
+            // Cache the result
+            this.batchCache.TryAdd(cacheKey.GetHashCode(), result);
 
-                var filteredProcesses = activeApplicationsOnly
-                    ? this.allProcesses?.Where(p => p.HasVisibleWindow).ToList() ?? new List<ProcessModel>()
-                    : this.allProcesses ?? new List<ProcessModel>();
+            this.logger.LogDebug(
+                "Loaded batch {BatchIndex}/{TotalBatches} with {ProcessCount} processes in {LoadTime}ms",
+                batchIndex, totalBatches, batchProcesses.Count, stopwatch.ElapsedMilliseconds);
 
-                var totalCount = filteredProcesses.Count;
-                var totalBatches = (int)Math.Ceiling((double)totalCount / this.Configuration.BatchSize);
+            return result;
+    }
 
-                var startIndex = batchIndex * this.Configuration.BatchSize;
-                var batchProcesses = filteredProcesses
-                    .Skip(startIndex)
-                    .Take(this.Configuration.BatchSize)
-                    .ToList();
-
-                var result = new ProcessBatchResult
-                {
-                    Processes = batchProcesses,
-                    BatchIndex = batchIndex,
-                    TotalBatches = totalBatches,
-                    TotalProcessCount = totalCount,
-                    HasMoreBatches = batchIndex < totalBatches - 1,
-                    LoadTime = stopwatch.Elapsed,
-                };
-
-                // Cache the result
-                this.batchCache.TryAdd(cacheKey.GetHashCode(), result);
-
-                this.logger.LogDebug(
-                    "Loaded batch {BatchIndex}/{TotalBatches} with {ProcessCount} processes in {LoadTime}ms",
-                    batchIndex, totalBatches, batchProcesses.Count, stopwatch.ElapsedMilliseconds);
-
-                return result;
-            }, this.retryPolicy.CreateProcessOperationPolicy());
-        }
 
         public async Task<List<ProcessBatchResult>> LoadProcessBatchesAsync(int startBatchIndex, int batchCount, bool activeApplicationsOnly = false)
         {

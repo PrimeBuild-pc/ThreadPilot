@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Services
 {
     using System;
@@ -30,10 +14,6 @@ namespace ThreadPilot.Services
     using Microsoft.Extensions.Logging;
     using ThreadPilot.Models;
 
-    /// <summary>
-    /// Service for managing CPU core affinity masks
-    /// Based on CPUSetSetter's AppConfig and LogicalProcessorMask system.
-    /// </summary>
     public class CoreMaskService : ICoreMaskService
     {
         private static readonly JsonSerializerOptions JsonOptions = new()
@@ -60,9 +40,6 @@ namespace ThreadPilot.Services
 
         public CoreMask? DefaultMask => this.AvailableMasks.FirstOrDefault(m => m.IsDefault);
 
-        /// <summary>
-        /// The "All Cores" baseline mask - cannot be deleted.
-        /// </summary>
         private const string ALLCORESMASKNAME = "All Cores";
         private const string NOCORE0MASKNAME = "No Core 0";
 
@@ -523,18 +500,12 @@ namespace ThreadPilot.Services
             return this.AvailableMasks.FirstOrDefault(m => m.Name == ALLCORESMASKNAME);
         }
 
-        /// <summary>
-        /// Registers that a mask is being applied to a process.
-        /// </summary>
         public void RegisterMaskApplication(int processId, string maskId)
         {
             this.activeProcessMasks[processId] = maskId;
             this.logger.LogDebug("Registered mask {MaskId} for process {ProcessId}", maskId, processId);
         }
 
-        /// <summary>
-        /// Unregisters a mask application when a process exits or mask is removed.
-        /// </summary>
         public void UnregisterMaskApplication(int processId)
         {
             if (this.activeProcessMasks.Remove(processId))
@@ -543,9 +514,6 @@ namespace ThreadPilot.Services
             }
         }
 
-        /// <summary>
-        /// Gets all processes that have a specific mask applied.
-        /// </summary>
         public IEnumerable<int> GetProcessesWithMask(string maskId)
         {
             return this.activeProcessMasks.Where(x => x.Value == maskId).Select(x => x.Key);
@@ -752,10 +720,6 @@ namespace ThreadPilot.Services
             return true;
         }
 
-        /// <summary>
-        /// Creates AMD CCD masks with Cache/Freq differentiation (X3D support)
-        /// Based on CPU Set Setter's GetDefaultLogicalProcessorMasks.
-        /// </summary>
         private async Task CreateAmdCcdMasksAsync(
             CpuTopologyModel topology,
             List<(string name, List<bool> boolMask, string description)> defaultMasks,
@@ -811,10 +775,6 @@ namespace ThreadPilot.Services
             }
         }
 
-        /// <summary>
-        /// Strips SMT/HT threads from a bool mask, keeping only physical cores (T0)
-        /// Based on CPU Set Setter's StripSMT method.
-        /// </summary>
         private List<bool> StripSMT(List<bool> boolMask, CpuTopologyModel? topology, out bool hasStripped)
         {
             var result = new List<bool>(boolMask.Count);
@@ -876,9 +836,6 @@ namespace ThreadPilot.Services
             return result;
         }
 
-        /// <summary>
-        /// Gets the efficiency class of a core (for Intel Hybrid detection).
-        /// </summary>
         private int GetEfficiencyClass(CpuCoreModel? core)
         {
             if (core == null)
@@ -894,9 +851,6 @@ namespace ThreadPilot.Services
             };
         }
 
-        /// <summary>
-        /// Creates a CoreMask from a bool list.
-        /// </summary>
         private CoreMask CreateCoreMaskFromBoolList(string name, List<bool> boolMask, string description)
         {
             var mask = new CoreMask

@@ -1,28 +1,9 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Models
 {
     using System;
     using System.Collections.Generic;
     using CommunityToolkit.Mvvm.ComponentModel;
 
-    /// <summary>
-    /// Configuration model for process monitoring and power plan associations.
-    /// </summary>
     public partial class ProcessMonitorConfiguration : ObservableObject
     {
         [ObservableProperty]
@@ -63,9 +44,6 @@ namespace ThreadPilot.Models
             this.Associations = new List<ProcessPowerPlanAssociation>();
         }
 
-        /// <summary>
-        /// Gets all enabled associations sorted by priority (descending).
-        /// </summary>
         public IEnumerable<ProcessPowerPlanAssociation> GetEnabledAssociations()
         {
             return this.Associations
@@ -74,27 +52,18 @@ namespace ThreadPilot.Models
                 .ThenBy(a => a.ExecutableName);
         }
 
-        /// <summary>
-        /// Finds the best matching association for a process.
-        /// </summary>
         public ProcessPowerPlanAssociation? FindMatchingAssociation(ProcessModel process)
         {
             return this.GetEnabledAssociations()
                 .FirstOrDefault(a => a.MatchesProcess(process));
         }
 
-        /// <summary>
-        /// Finds association by executable name.
-        /// </summary>
         public ProcessPowerPlanAssociation? FindAssociationByExecutable(string executableName)
         {
             return this.Associations
                 .FirstOrDefault(a => a.MatchesExecutable(executableName));
         }
 
-        /// <summary>
-        /// Adds or updates an association.
-        /// </summary>
         public void AddOrUpdateAssociation(ProcessPowerPlanAssociation association)
         {
             var existing = this.Associations.FirstOrDefault(a => a.Id == association.Id);
@@ -110,9 +79,6 @@ namespace ThreadPilot.Models
             this.LastSavedDate = DateTime.Now;
         }
 
-        /// <summary>
-        /// Removes an association.
-        /// </summary>
         public bool RemoveAssociation(string associationId)
         {
             var association = this.Associations.FirstOrDefault(a => a.Id == associationId);
@@ -125,9 +91,6 @@ namespace ThreadPilot.Models
             return false;
         }
 
-        /// <summary>
-        /// Validates the configuration.
-        /// </summary>
         public List<string> Validate()
         {
             var errors = new List<string>();

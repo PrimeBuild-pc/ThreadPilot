@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot
 {
     using System;
@@ -42,7 +26,7 @@ namespace ThreadPilot
 
         private readonly ProcessViewModel processViewModel;
         private readonly PowerPlanViewModel powerPlanViewModel;
-        private readonly IDiagnosticsViewModelProvider diagnosticsViewModelProvider;
+        private readonly Lazy<PerformanceViewModel> performanceViewModelFactory;
         private readonly ProcessPowerPlanAssociationViewModel associationViewModel;
         private readonly LogViewerViewModel logViewerViewModel;
         private readonly ISystemTrayService systemTrayService;
@@ -89,7 +73,7 @@ namespace ThreadPilot
         public MainWindow(
             ProcessViewModel processViewModel,
             PowerPlanViewModel powerPlanViewModel,
-            IDiagnosticsViewModelProvider diagnosticsViewModelProvider,
+            Lazy<PerformanceViewModel> performanceViewModelFactory,
             ProcessPowerPlanAssociationViewModel associationViewModel,
             LogViewerViewModel logViewerViewModel,
             ISystemTrayService systemTrayService,
@@ -124,7 +108,7 @@ namespace ThreadPilot
 
                 this.processViewModel = processViewModel;
                 this.powerPlanViewModel = powerPlanViewModel;
-                this.diagnosticsViewModelProvider = diagnosticsViewModelProvider;
+                this.performanceViewModelFactory = performanceViewModelFactory;
                 this.associationViewModel = associationViewModel;
                 this.logViewerViewModel = logViewerViewModel;
                 this.systemTrayService = systemTrayService;
@@ -208,7 +192,7 @@ namespace ThreadPilot
                 return this.performanceViewModel;
             }
 
-            this.performanceViewModel = this.diagnosticsViewModelProvider.GetOrCreate();
+            this.performanceViewModel = this.performanceViewModelFactory.Value;
             this.PerformanceViewControl.DataContext = this.performanceViewModel;
             return this.performanceViewModel;
         }

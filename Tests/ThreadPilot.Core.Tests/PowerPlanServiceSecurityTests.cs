@@ -7,14 +7,8 @@ namespace ThreadPilot.Core.Tests
     using Moq;
     using ThreadPilot.Services;
 
-    /// <summary>
-    /// Unit tests for security-focused validation behavior in <see cref="PowerPlanService"/>.
-    /// </summary>
     public sealed class PowerPlanServiceSecurityTests
     {
-        /// <summary>
-        /// Ensures relative import paths are rejected.
-        /// </summary>
         [Fact]
         public async Task ImportCustomPowerPlan_ReturnsFalse_ForRelativePath()
         {
@@ -25,9 +19,6 @@ namespace ThreadPilot.Core.Tests
             Assert.False(result);
         }
 
-        /// <summary>
-        /// Ensures non-.pow files are rejected.
-        /// </summary>
         [Fact]
         public async Task ImportCustomPowerPlan_ReturnsFalse_ForInvalidExtension()
         {
@@ -49,9 +40,6 @@ namespace ThreadPilot.Core.Tests
             }
         }
 
-        /// <summary>
-        /// Ensures invalid GUID values are rejected before invoking powercfg.
-        /// </summary>
         [Theory]
         [InlineData("")]
         [InlineData("invalid-guid")]

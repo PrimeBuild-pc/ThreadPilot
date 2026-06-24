@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.ViewModels
 {
     using System;
@@ -30,9 +14,6 @@ namespace ThreadPilot.ViewModels
     using MessageBoxImage = System.Windows.MessageBoxImage;
     using MessageBoxResult = System.Windows.MessageBoxResult;
 
-    /// <summary>
-    /// Wrapper for individual core bit in the mask, similar to CPUSetSetter's MaskBitViewModel.
-    /// </summary>
     public partial class CoreBitViewModel : ObservableObject
     {
         private readonly ObservableCollection<bool> boolMask;
@@ -60,13 +41,6 @@ namespace ThreadPilot.ViewModels
         }
     }
 
-    /// <summary>
-    /// ViewModel for managing CPU core affinity masks.
-    /// This ViewModel manages CPU mask presets for editing and storage only.
-    /// It does not apply affinity to any process. Per-process affinity application
-    /// is handled by ProcessViewModel through ProcessAffinityApplyCoordinator.
-    /// Based on CPUSetSetter's MasksTabViewModel.
-    /// </summary>
     public partial class MasksViewModel : ObservableObject
     {
         private readonly ICoreMaskService coreMaskService;
@@ -87,10 +61,6 @@ namespace ThreadPilot.ViewModels
         [ObservableProperty]
         private ObservableCollection<CoreBitViewModel> coreBits = new();
 
-        /// <summary>
-        /// Gets a value indicating whether can delete if: mask selected, not "All Cores" baseline, not actively applied to processes
-        /// Note: The actual validation happens in DeleteMask command with proper async checks.
-        /// </summary>
         public bool CanDeleteMask => this.SelectedCoreMask != null && this.SelectedCoreMask.Name != "All Cores";
 
         public bool CanDuplicateMask => this.SelectedCoreMask != null;

@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Models
 {
     using System;
@@ -22,9 +6,6 @@ namespace ThreadPilot.Models
     using CommunityToolkit.Mvvm.ComponentModel;
     using ThreadPilot.Models.Core;
 
-    /// <summary>
-    /// Represents an association between an executable and a power plan.
-    /// </summary>
     public partial class ProcessPowerPlanAssociation : ObservableObject, IModel
     {
         [ObservableProperty]
@@ -42,21 +23,12 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private string powerPlanName = string.Empty;
 
-        /// <summary>
-        /// Core mask ID to apply to this process (optional).
-        /// </summary>
         [ObservableProperty]
         private string? coreMaskId = null;
 
-        /// <summary>
-        /// Core mask name for display (optional).
-        /// </summary>
         [ObservableProperty]
         private string? coreMaskName = null;
 
-        /// <summary>
-        /// Process priority to apply (optional).
-        /// </summary>
         [ObservableProperty]
         private string? processPriority = null;
 
@@ -74,16 +46,9 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private string description = string.Empty;
 
-        /// <summary>
-        /// Whether to match by exact executable name or path.
-        /// </summary>
         [ObservableProperty]
         private bool matchByPath = false;
 
-        /// <summary>
-        /// Priority for this association (higher number = higher priority)
-        /// Used when multiple associations could match the same process.
-        /// </summary>
         [ObservableProperty]
         private int priority = 0;
 
@@ -98,9 +63,6 @@ namespace ThreadPilot.Models
             this.PowerPlanName = powerPlanName;
         }
 
-        /// <summary>
-        /// Checks if this association matches the given process.
-        /// </summary>
         public bool MatchesProcess(ProcessModel process)
         {
             if (!this.IsEnabled)
@@ -120,9 +82,6 @@ namespace ThreadPilot.Models
             }
         }
 
-        /// <summary>
-        /// Checks if this association matches the given executable name.
-        /// </summary>
         public bool MatchesExecutable(string executableName)
         {
             if (!this.IsEnabled)

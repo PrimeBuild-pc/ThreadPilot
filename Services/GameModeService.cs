@@ -1,19 +1,3 @@
-/*
- * ThreadPilot - Advanced Windows Process and Power Plan Manager
- * Copyright (C) 2025 Prime Build
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, version 3 only.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
 namespace ThreadPilot.Services
 {
     using System;
@@ -21,11 +5,6 @@ namespace ThreadPilot.Services
     using Microsoft.Extensions.Logging;
     using Microsoft.Win32;
 
-    /// <summary>
-    /// Service for managing Windows Game Mode settings
-    /// Windows Game Mode can interfere with CPU Sets and affinity, particularly on AMD systems
-    /// Reference: CPU Set Setter warning system.
-    /// </summary>
     public class GameModeService : IGameModeService
     {
         private readonly ILogger<GameModeService> logger;
@@ -37,7 +16,6 @@ namespace ThreadPilot.Services
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        /// <inheritdoc/>
         public async Task<bool> IsGameModeEnabledAsync()
         {
             await Task.CompletedTask; // Make async for consistency
@@ -69,7 +47,6 @@ namespace ThreadPilot.Services
             }
         }
 
-        /// <inheritdoc/>
         public async Task<bool> SetGameModeAsync(bool enabled)
         {
             await Task.CompletedTask; // Make async for consistency
@@ -99,7 +76,6 @@ namespace ThreadPilot.Services
             }
         }
 
-        /// <inheritdoc/>
         public async Task<bool> DisableGameModeForAffinityAsync()
         {
             try
