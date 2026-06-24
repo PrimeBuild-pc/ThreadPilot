@@ -170,11 +170,10 @@ Build release artifacts with the project script:
 - [`docs/CODE_OF_CONDUCT.md`](docs/CODE_OF_CONDUCT.md)
 - [`docs/RELEASE_SIGNING.md`](docs/RELEASE_SIGNING.md)
 - [`docs/release/PACKAGING.md`](docs/release/PACKAGING.md)
-- [`docs/reference/ARCHITECTURE_GUIDE.md`](docs/reference/ARCHITECTURE_GUIDE.md)
-- [`docs/reference/DEVELOPER_GUIDE.md`](docs/reference/DEVELOPER_GUIDE.md)
-- [`docs/reference/API_REFERENCE.md`](docs/reference/API_REFERENCE.md)
-- [`docs/reference/PROJECT_STRUCTURE.md`](docs/reference/PROJECT_STRUCTURE.md)
-- [`docs/reference/UI_STYLE_GUIDE.md`](docs/reference/UI_STYLE_GUIDE.md)
+- [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)
+- [`docs/QUALITY_GATES.md`](docs/QUALITY_GATES.md)
+- [`docs/adr/`](docs/adr/)
+- [`docs/releases/`](docs/releases/)
 
 ## 🗺️ Roadmap
 

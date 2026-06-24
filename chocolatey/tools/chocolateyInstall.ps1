@@ -2,9 +2,9 @@ $ErrorActionPreference = 'Stop'
 
 $packageName = 'threadpilot'
 $toolsDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-# Installer URL and checksum for ThreadPilot v1.4.0
-$url64 = 'https://github.com/PrimeBuild-pc/ThreadPilot/releases/download/v1.4.0/ThreadPilot_v1.4.0_Setup.exe'
-$checksum64 = '3280bb39258d6bc9d16537f07f0ed1017f9d67b675c62c8b86d53c9d8a4a1ad5'
+# Installer URL and checksum for ThreadPilot v1.4.1
+$url64 = 'https://github.com/PrimeBuild-pc/ThreadPilot/releases/download/v1.4.1/ThreadPilot_v1.4.1_Setup.exe'
+$checksum64 = '0f635e1d5eb1447f618edd749bc0d31d733e60f09f669a5122b2f37d8a9e3f62'
 
 $packageArgs = @{
     packageName    = $packageName
