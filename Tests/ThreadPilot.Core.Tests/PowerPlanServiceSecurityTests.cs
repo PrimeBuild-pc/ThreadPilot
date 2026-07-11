@@ -40,6 +40,32 @@ namespace ThreadPilot.Core.Tests
             }
         }
 
+        [Fact]
+        public async Task ImportCustomPowerPlan_ReturnsFalse_ForEmptyFile()
+        {
+            var service = CreateService();
+            var filePath = Path.Combine(Path.GetTempPath(), $"threadpilot-empty-{Guid.NewGuid():N}.pow");
+            await File.WriteAllBytesAsync(filePath, []);
+
+            try
+            {
+                Assert.False(await service.ImportCustomPowerPlan(filePath));
+            }
+            finally
+            {
+                File.Delete(filePath);
+            }
+        }
+
+        [Fact]
+        public async Task ImportCustomPowerPlan_ReturnsFalse_ForMissingFile()
+        {
+            var service = CreateService();
+            var filePath = Path.Combine(Path.GetTempPath(), $"threadpilot-missing-{Guid.NewGuid():N}.pow");
+
+            Assert.False(await service.ImportCustomPowerPlan(filePath));
+        }
+
         [Theory]
         [InlineData("")]
         [InlineData("invalid-guid")]
