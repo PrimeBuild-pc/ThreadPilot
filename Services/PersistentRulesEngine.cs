@@ -23,6 +23,8 @@ namespace ThreadPilot.Services
         private const string MemoryPriorityApplyFailedErrorCode = "MemoryPriorityApplyFailed";
         private const string NoActionsErrorCode = "PersistentRuleNoActions";
         private const string PriorityApplyFailedErrorCode = "PriorityApplyFailed";
+        private const string PriorityNotObservedErrorCode = "PriorityNotObserved";
+        private const string PriorityVerificationUnavailableErrorCode = "PriorityVerificationUnavailable";
         private const string RealtimePriorityBlockedErrorCode = "RealtimePriorityBlocked";
 
         private readonly IPersistentProcessRuleStore ruleStore;
@@ -128,8 +130,10 @@ namespace ThreadPilot.Services
                     cancellationToken.ThrowIfCancellationRequested();
                     try
                     {
-                        await this.processService.SetProcessPriority(process, rule.Priority.Value).ConfigureAwait(false);
-                        result = result with { PriorityApplied = true };
+                        var requestedPriority = rule.Priority.Value;
+                        await this.processService.SetProcessPriority(process, requestedPriority, ProcessPriorityWriteSource.PersistentRuleInitialApply).ConfigureAwait(false);
+                        result = await this.VerifyPriorityAsync(result, process, requestedPriority).ConfigureAwait(false);
+                        success = success && result.PriorityVerified;
                     }
                     catch (Exception ex)
                     {
@@ -200,6 +204,89 @@ namespace ThreadPilot.Services
                 IsAntiCheatLikely = result.IsAntiCheatLikely || memoryPriorityResult.IsAntiCheatLikely,
                 IsProcessExited = result.IsProcessExited || memoryPriorityResult.IsProcessExited,
             };
+        }
+
+        private async Task<PersistentRuleApplyResult> VerifyPriorityAsync(
+            PersistentRuleApplyResult result,
+            ProcessModel process,
+            ProcessPriorityClass requestedPriority)
+        {
+            try
+            {
+                await this.processService.RefreshProcessInfo(process).ConfigureAwait(false);
+                var observedPriority = process.Priority;
+                if (observedPriority == requestedPriority)
+                {
+                    return result with
+                    {
+                        PriorityApplied = true,
+                        RequestedPriority = requestedPriority,
+                        ObservedPriority = observedPriority,
+                        PriorityVerified = true,
+                        PriorityVerificationPhase = "immediate",
+                    };
+                }
+
+                this.logger.LogWarning(
+                    "Persistent rule priority requested but not observed for rule {RuleId} on process {ProcessName} (PID: {ProcessId}). Requested: {RequestedPriority}; observed: {ObservedPriority}; phase: immediate",
+                    result.RuleId,
+                    result.ProcessName,
+                    result.ProcessId,
+                    requestedPriority,
+                    observedPriority);
+
+                return result with
+                {
+                    Success = false,
+                    PriorityApplied = true,
+                    RequestedPriority = requestedPriority,
+                    ObservedPriority = observedPriority,
+                    PriorityVerificationPhase = "immediate",
+                    ErrorCode = PriorityNotObservedErrorCode,
+                    UserMessage = "ThreadPilot requested the saved priority, but the process reported a different priority.",
+                    TechnicalMessage = $"Requested priority {requestedPriority}; observed {observedPriority} during immediate verification.",
+                };
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogWarning(
+                    ex,
+                    "Persistent rule priority verification unavailable for rule {RuleId} on process {ProcessName} (PID: {ProcessId}). Requested: {RequestedPriority}; phase: immediate",
+                    result.RuleId,
+                    result.ProcessName,
+                    result.ProcessId,
+                    requestedPriority);
+
+                var isProcessExited = AffinityApplyExceptionClassifier.IsProcessExited(ex);
+                var isAccessDenied = AffinityApplyExceptionClassifier.IsAccessDenied(ex);
+                var isAntiCheatLikely = AffinityApplyExceptionClassifier.IsAntiCheatLikely(ex);
+                return result with
+                {
+                    Success = false,
+                    PriorityApplied = true,
+                    RequestedPriority = requestedPriority,
+                    PriorityVerificationUnavailable = true,
+                    PriorityVerificationPhase = "immediate",
+                    ErrorCode = isProcessExited
+                        ? AffinityApplyErrorCodes.ProcessExited
+                        : isAntiCheatLikely
+                            ? AffinityApplyErrorCodes.AntiCheatOrProtectedProcessLikely
+                            : isAccessDenied
+                                ? AffinityApplyErrorCodes.AccessDenied
+                                : PriorityVerificationUnavailableErrorCode,
+                    UserMessage = isProcessExited
+                        ? ProcessOperationUserMessages.ProcessExited
+                        : isAntiCheatLikely
+                            ? ProcessOperationUserMessages.PersistentRulesProtectedProcessWarning
+                            : isAccessDenied
+                                ? ProcessOperationUserMessages.AccessDenied
+                                : "ThreadPilot requested the saved priority, but could not verify the process priority.",
+                    TechnicalMessage = ex.Message,
+                    IsAccessDenied = result.IsAccessDenied || isAccessDenied,
+                    IsAntiCheatLikely = result.IsAntiCheatLikely || isAntiCheatLikely,
+                    IsProcessExited = result.IsProcessExited || isProcessExited,
+                };
+            }
         }
 
         private Task<AffinityApplyResult> ApplyAffinityAsync(PersistentProcessRule rule, ProcessModel process)

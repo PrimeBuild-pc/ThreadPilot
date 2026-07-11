@@ -34,15 +34,19 @@ namespace ThreadPilot.Services
         public async Task<IReadOnlyList<PersistentProcessRule>> LoadAsync()
         {
             var filePath = this.filePathProvider();
+            this.logger?.LogDebug("Loading persistent process rules from {FilePath}", filePath);
             if (!File.Exists(filePath))
             {
+                this.logger?.LogDebug("Persistent process rules file does not exist at {FilePath}", filePath);
                 return [];
             }
 
             try
             {
                 var json = await File.ReadAllTextAsync(filePath).ConfigureAwait(false);
-                return JsonSerializer.Deserialize<List<PersistentProcessRule>>(json, JsonOptions) ?? [];
+                var rules = JsonSerializer.Deserialize<List<PersistentProcessRule>>(json, JsonOptions) ?? [];
+                this.logger?.LogDebug("Loaded {RuleCount} persistent process rules from {FilePath}", rules.Count, filePath);
+                return rules;
             }
             catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
             {
@@ -56,14 +60,18 @@ namespace ThreadPilot.Services
             ArgumentNullException.ThrowIfNull(rules);
 
             var filePath = this.filePathProvider();
-            var directory = Path.GetDirectoryName(filePath);
-            if (!string.IsNullOrWhiteSpace(directory))
+            this.logger?.LogDebug("Saving {RuleCount} persistent process rules to {FilePath}", rules.Count, filePath);
+            try
             {
-                Directory.CreateDirectory(directory);
+                var json = JsonSerializer.Serialize(rules, JsonOptions);
+                await AtomicFileWriter.WriteAllTextAsync(filePath, json).ConfigureAwait(false);
+                this.logger?.LogDebug("Saved {RuleCount} persistent process rules to {FilePath}", rules.Count, filePath);
             }
-
-            var json = JsonSerializer.Serialize(rules, JsonOptions);
-            await File.WriteAllTextAsync(filePath, json).ConfigureAwait(false);
+            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+            {
+                this.logger?.LogError(ex, "Could not save {RuleCount} persistent process rules to {FilePath}", rules.Count, filePath);
+                throw;
+            }
         }
     }
 }

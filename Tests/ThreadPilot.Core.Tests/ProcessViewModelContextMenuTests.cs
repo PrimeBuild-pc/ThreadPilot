@@ -25,7 +25,7 @@ namespace ThreadPilot.Core.Tests
             await viewModel.SetContextHighPriorityCommand.ExecuteAsync(process);
 
             processService.Verify(
-                service => service.SetProcessPriority(process, ProcessPriorityClass.High),
+                service => service.SetProcessPriority(process, ProcessPriorityClass.High, ProcessPriorityWriteSource.ManualUiAction),
                 Times.Once);
             enhancedLoggingService.Verify(
                 service => service.LogUserActionAsync(

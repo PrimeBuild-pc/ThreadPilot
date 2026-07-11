@@ -565,7 +565,10 @@ namespace ThreadPilot.Services
             }).ConfigureAwait(false);
         }
 
-        public async Task SetProcessPriority(ProcessModel process, ProcessPriorityClass priority)
+        public Task SetProcessPriority(ProcessModel process, ProcessPriorityClass priority) =>
+            this.SetProcessPriority(process, priority, ProcessPriorityWriteSource.UnknownInternal);
+
+        public async Task SetProcessPriority(ProcessModel process, ProcessPriorityClass priority, ProcessPriorityWriteSource source)
         {
             ArgumentNullException.ThrowIfNull(process);
             if (ProcessPriorityGuardrails.IsBlocked(priority))
@@ -599,6 +602,14 @@ namespace ThreadPilot.Services
 
                     targetProcess.PriorityClass = priority;
                     process.Priority = targetProcess.PriorityClass;
+                    this.logger?.LogInformation(
+                        "Set process priority for {ProcessName} (PID: {ProcessId}). Source: {Source}; requested: {RequestedPriority}; observed: {ObservedPriority}; path: {ExecutablePath}",
+                        process.Name,
+                        process.ProcessId,
+                        source,
+                        priority,
+                        process.Priority,
+                        process.ExecutablePath);
                     this.AuditProcessOperation("SetProcessPriority", process.Name, success: true);
                 }
                 catch (Win32Exception ex) when (ex.NativeErrorCode == 5)
@@ -707,7 +718,7 @@ namespace ThreadPilot.Services
         private Task SetLoadProcessProfilePriorityAsync(ProcessModel process, ProcessPriorityClass priority) =>
             this.loadProcessProfilePrioritySetter != null
                 ? this.loadProcessProfilePrioritySetter(process, priority)
-                : this.SetProcessPriority(process, priority);
+                : this.SetProcessPriority(process, priority, ProcessPriorityWriteSource.ProcessProfileLoad);
 
         private Task<AffinityApplyResult> SetLoadProcessProfileCpuSelectionAsync(ProcessModel process, CpuSelection selection) =>
             this.loadProcessProfileCpuSelectionSetter != null
@@ -1336,9 +1347,14 @@ namespace ThreadPilot.Services
                     if (this.originalPriorities.TryGetValue(processId, out var originalPriority))
                     {
                         process.PriorityClass = originalPriority;
-                        this.logger?.LogDebug(
-                            "Reset priority for process {ProcessName} (PID: {ProcessId}) to {Priority}",
-                            process.ProcessName, processId, originalPriority);
+                        this.logger?.LogInformation(
+                            "Set process priority for {ProcessName} (PID: {ProcessId}). Source: {Source}; requested: {RequestedPriority}; observed: {ObservedPriority}; path: {ExecutablePath}",
+                            process.ProcessName,
+                            processId,
+                            ProcessPriorityWriteSource.CleanupOrRestore,
+                            originalPriority,
+                            process.PriorityClass,
+                            string.Empty);
                     }
 
                     this.originalPriorities.TryRemove(processId, out _);

@@ -53,6 +53,16 @@ namespace ThreadPilot.Models
 
         public bool PriorityApplied { get; init; }
 
+        public ProcessPriorityClass? RequestedPriority { get; init; }
+
+        public ProcessPriorityClass? ObservedPriority { get; init; }
+
+        public bool PriorityVerified { get; init; }
+
+        public bool PriorityVerificationUnavailable { get; init; }
+
+        public string? PriorityVerificationPhase { get; init; }
+
         public bool MemoryPriorityApplied { get; init; }
 
         public string? ErrorCode { get; init; }

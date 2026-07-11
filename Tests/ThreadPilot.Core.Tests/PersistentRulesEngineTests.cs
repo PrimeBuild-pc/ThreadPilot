@@ -48,7 +48,7 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public async Task ApplyMatchingRulesAsync_WithPriority_AppliesPriority()
+        public async Task ApplyPriority_ObservedPriorityMatchesRequested_ReturnsVerifiedSuccess()
         {
             var rule = CreateRule(priority: ProcessPriorityClass.High, applyPriority: true);
             var affinity = CreateAffinityService();
@@ -57,12 +57,65 @@ namespace ThreadPilot.Core.Tests
             var engine = CreateEngine([rule], affinity.Object, processService.Object, memoryPriorityService.Object);
             var process = CreateProcess();
 
-            var results = await engine.ApplyMatchingRulesAsync(process);
+            var result = Assert.Single(await engine.ApplyMatchingRulesAsync(process));
 
-            Assert.Single(results);
-            Assert.True(results[0].Success);
-            Assert.True(results[0].PriorityApplied);
+            Assert.True(result.Success);
+            Assert.True(result.PriorityApplied);
+            Assert.True(result.PriorityVerified);
+            Assert.False(result.PriorityVerificationUnavailable);
+            Assert.Equal(ProcessPriorityClass.High, result.RequestedPriority);
+            Assert.Equal(ProcessPriorityClass.High, result.ObservedPriority);
+            Assert.Equal("immediate", result.PriorityVerificationPhase);
             processService.Verify(s => s.SetProcessPriority(process, ProcessPriorityClass.High), Times.Once);
+            processService.Verify(s => s.RefreshProcessInfo(process), Times.Once);
+        }
+
+        [Fact]
+        public async Task ApplyPriority_SetterReturnsWithoutException_ObservedPriorityIsNormal_ReturnsNotObserved()
+        {
+            var rule = CreateRule(priority: ProcessPriorityClass.High, applyPriority: true);
+            var affinity = CreateAffinityService();
+            var processService = CreateProcessService();
+            processService
+                .Setup(s => s.RefreshProcessInfo(It.IsAny<ProcessModel>()))
+                .Returns<ProcessModel>(process =>
+                {
+                    process.Priority = ProcessPriorityClass.Normal;
+                    return Task.CompletedTask;
+                });
+            var engine = CreateEngine([rule], affinity.Object, processService.Object, CreateMemoryPriorityService().Object);
+            var process = CreateProcess();
+
+            var result = Assert.Single(await engine.ApplyMatchingRulesAsync(process));
+
+            Assert.False(result.Success);
+            Assert.True(result.PriorityApplied);
+            Assert.False(result.PriorityVerified);
+            Assert.Equal(ProcessPriorityClass.High, result.RequestedPriority);
+            Assert.Equal(ProcessPriorityClass.Normal, result.ObservedPriority);
+            Assert.Equal("PriorityNotObserved", result.ErrorCode);
+        }
+
+        [Fact]
+        public async Task ApplyPriority_ProcessExitedDuringVerification_ReturnsVerificationUnavailableOrProcessExited()
+        {
+            var rule = CreateRule(priority: ProcessPriorityClass.High, applyPriority: true);
+            var affinity = CreateAffinityService();
+            var processService = CreateProcessService();
+            processService
+                .Setup(s => s.RefreshProcessInfo(It.IsAny<ProcessModel>()))
+                .ThrowsAsync(new InvalidOperationException("Process has exited"));
+            var engine = CreateEngine([rule], affinity.Object, processService.Object, CreateMemoryPriorityService().Object);
+
+            var result = Assert.Single(await engine.ApplyMatchingRulesAsync(CreateProcess()));
+
+            Assert.False(result.Success);
+            Assert.True(result.PriorityApplied);
+            Assert.False(result.PriorityVerified);
+            Assert.True(result.PriorityVerificationUnavailable);
+            Assert.True(result.IsProcessExited);
+            Assert.Equal(AffinityApplyErrorCodes.ProcessExited, result.ErrorCode);
+            Assert.Equal(ProcessPriorityClass.High, result.RequestedPriority);
         }
 
         [Fact]
@@ -381,6 +434,19 @@ namespace ThreadPilot.Core.Tests
             processService.Verify(s => s.SetProcessPriority(It.IsAny<ProcessModel>(), ProcessPriorityClass.High), Times.Once);
         }
 
+        [Fact]
+        public async Task PriorityWriteSource_IsRecordedForPersistentRule()
+        {
+            var rule = CreateRule(priority: ProcessPriorityClass.High, applyPriority: true);
+            var processService = CreateProcessService();
+            var engine = CreateEngine([rule], CreateAffinityService().Object, processService.Object, CreateMemoryPriorityService().Object);
+            var process = CreateProcess();
+
+            await engine.ApplyMatchingRulesAsync(process);
+
+            processService.Verify(s => s.SetProcessPriority(process, ProcessPriorityClass.High, ProcessPriorityWriteSource.PersistentRuleInitialApply), Times.Once);
+        }
+
         private static PersistentRulesEngine CreateEngine(
             IReadOnlyList<PersistentProcessRule> rules,
             IAffinityApplyService affinityApplyService,
@@ -412,6 +478,17 @@ namespace ThreadPilot.Core.Tests
             var mock = new Mock<IProcessService>(MockBehavior.Strict);
             mock
                 .Setup(s => s.SetProcessPriority(It.IsAny<ProcessModel>(), It.IsAny<ProcessPriorityClass>()))
+                .Returns<ProcessModel, ProcessPriorityClass>((process, priority) =>
+                {
+                    process.Priority = priority;
+                    return Task.CompletedTask;
+                });
+            mock
+                .Setup(s => s.SetProcessPriority(It.IsAny<ProcessModel>(), It.IsAny<ProcessPriorityClass>(), It.IsAny<ProcessPriorityWriteSource>()))
+                .Returns<ProcessModel, ProcessPriorityClass, ProcessPriorityWriteSource>((process, priority, _) =>
+                    mock.Object.SetProcessPriority(process, priority));
+            mock
+                .Setup(s => s.RefreshProcessInfo(It.IsAny<ProcessModel>()))
                 .Returns(Task.CompletedTask);
             return mock;
         }
