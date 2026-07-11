@@ -4,6 +4,7 @@
 namespace ThreadPilot.Core.Tests
 {
     using System.Collections.ObjectModel;
+    using System.Diagnostics;
     using System.Threading;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Logging.Abstractions;
@@ -86,6 +87,70 @@ namespace ThreadPilot.Core.Tests
             notificationService.Verify(
                 x => x.ShowPowerPlanChangeNotificationAsync("Balanced", "plan-high-name", "game-high"),
                 Times.Once);
+        }
+
+        [Fact]
+        public async Task PersistentRuleAndAssociation_OrderIsObservable()
+        {
+            var process = new ProcessModel { ProcessId = 10, Name = "game", Priority = ProcessPriorityClass.Normal };
+            var processMonitor = new FakeProcessMonitorService();
+            var configuration = new ProcessMonitorConfiguration
+            {
+                PowerPlanChangeDelayMs = 0,
+                Associations =
+                {
+                    new ProcessPowerPlanAssociation("game", "plan-game", "Game")
+                    {
+                        ProcessPriority = ProcessPriorityClass.Normal.ToString(),
+                    },
+                },
+            };
+            var autoApply = CreateAutoApplyService();
+            autoApply
+                .Setup(x => x.ApplyForProcessStartAsync(process, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() =>
+                {
+                    process.Priority = ProcessPriorityClass.High;
+                    return
+                    [
+                        new PersistentRuleAutoApplyResult
+                        {
+                            Success = true,
+                            RuleId = "persistent-high",
+                            ProcessId = process.ProcessId,
+                            ProcessName = process.Name,
+                            RequestedPriority = ProcessPriorityClass.High,
+                            ObservedPriority = ProcessPriorityClass.High,
+                            PriorityVerified = true,
+                        },
+                    ];
+                });
+            var processService = CreateProcessService();
+            processService.Setup(x => x.TrackPriorityChange(process.ProcessId, ProcessPriorityClass.High));
+            processService
+                .Setup(x => x.SetProcessPriority(process, ProcessPriorityClass.Normal, ProcessPriorityWriteSource.PowerPlanAssociation))
+                .Returns(() =>
+                {
+                    process.Priority = ProcessPriorityClass.Normal;
+                    return Task.CompletedTask;
+                });
+            var manager = CreateService(
+                processMonitor,
+                CreateAssociationService(configuration),
+                CreatePowerPlanService(),
+                CreateNotificationService(),
+                processService,
+                CreateCoreMaskService(),
+                CreateAffinityApplyService(),
+                autoApply);
+
+            await manager.StartAsync();
+            processMonitor.RaiseProcessStarted(process);
+            await Task.Delay(50);
+
+            Assert.Equal(ProcessPriorityClass.Normal, process.Priority);
+            autoApply.Verify(x => x.ApplyForProcessStartAsync(process, It.IsAny<CancellationToken>()), Times.Once);
+            processService.Verify(x => x.SetProcessPriority(process, ProcessPriorityClass.Normal, ProcessPriorityWriteSource.PowerPlanAssociation), Times.Once);
         }
 
         [Fact]

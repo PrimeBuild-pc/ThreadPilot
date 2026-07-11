@@ -205,7 +205,8 @@ namespace ThreadPilot.Services
 
         private static ActivityAuditSeverity ResolveSeverity(string action, string details)
         {
-            if (ContainsAny(action, "Blocked", "Denied") || ContainsAny(details, "blocked", "denied", "anti-cheat", "protected"))
+            if (ContainsAny(action, "Blocked", "Denied", "NotObserved", "Unavailable", "Reverted") ||
+                ContainsAny(details, "blocked", "denied", "anti-cheat", "protected", "not observed", "reverted"))
             {
                 return ActivityAuditSeverity.Warning;
             }

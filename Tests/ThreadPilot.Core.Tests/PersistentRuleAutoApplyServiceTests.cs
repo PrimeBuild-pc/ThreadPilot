@@ -36,6 +36,59 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task ApplyForProcessStartAsync_WithVerifiedPriority_LogsVerifiedSuccessAndSchedulesDelayedVerification()
+        {
+            var process = CreateProcess();
+            var rule = CreateRule();
+            var verified = CreateSuccess(rule, process) with
+            {
+                PriorityApplied = true,
+                RequestedPriority = ProcessPriorityClass.High,
+                ObservedPriority = ProcessPriorityClass.High,
+                PriorityVerified = true,
+                PriorityVerificationPhase = "immediate",
+            };
+            var engine = CreateEngine(rule, verified);
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var verifier = new Mock<IPersistentRulePriorityVerificationService>(MockBehavior.Strict);
+            verifier.Setup(x => x.ScheduleDelayedVerification(
+                It.Is<PersistentRuleAutoApplyResult>(r => r.PriorityVerified),
+                process,
+                "ProcessStarted"));
+            var service = CreateService([rule], engine.Object, audit: audit, priorityVerifier: verifier.Object);
+
+            await service.ApplyForProcessStartAsync(process);
+
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.Contains("priority verified", entry.Message, StringComparison.OrdinalIgnoreCase);
+            verifier.VerifyAll();
+        }
+
+        [Fact]
+        public async Task ApplyForProcessStartAsync_WithPriorityNotObserved_DoesNotLogAutoAppliedSuccess()
+        {
+            var process = CreateProcess();
+            var rule = CreateRule();
+            var notObserved = CreateSuccess(rule, process) with
+            {
+                Success = false,
+                PriorityApplied = true,
+                RequestedPriority = ProcessPriorityClass.High,
+                ObservedPriority = ProcessPriorityClass.Normal,
+                UserMessage = "ThreadPilot requested the saved priority, but the process reported a different priority.",
+            };
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var service = CreateService([rule], CreateEngine(rule, notObserved).Object, audit: audit);
+
+            await service.ApplyForProcessStartAsync(process);
+
+            var entry = Assert.Single(await audit.GetEntriesAsync());
+            Assert.DoesNotContain("Auto-applied saved rule", entry.Message);
+            Assert.Contains("observed Normal instead of High", entry.Message);
+            Assert.Equal(ActivityAuditSeverity.Warning, entry.Severity);
+        }
+
+        [Fact]
         public async Task ApplyForProcessStartAsync_WhenRuleIsDisabled_DoesNotCallRulesEngine()
         {
             var process = CreateProcess();
@@ -386,7 +439,8 @@ namespace ThreadPilot.Core.Tests
             IPersistentRulesEngine engine,
             ApplicationSettingsModel? settings = null,
             Func<DateTimeOffset>? nowProvider = null,
-            IActivityAuditService? audit = null) =>
+            IActivityAuditService? audit = null,
+            IPersistentRulePriorityVerificationService? priorityVerifier = null) =>
             new(
                 new FakePersistentProcessRuleStore(rules),
                 new PersistentProcessRuleMatcher(),
@@ -395,7 +449,8 @@ namespace ThreadPilot.Core.Tests
                 NullLogger<PersistentRuleAutoApplyService>.Instance,
                 nowProvider ?? (() => DateTimeOffset.UtcNow),
                 TimeSpan.FromSeconds(30),
-                audit);
+                audit,
+                priorityVerifier);
 
         private static Mock<IPersistentRulesEngine> CreateEngine(
             PersistentProcessRule rule,

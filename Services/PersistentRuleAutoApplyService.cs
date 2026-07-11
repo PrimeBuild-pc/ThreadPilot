@@ -42,6 +42,16 @@ namespace ThreadPilot.Services
 
         public bool IsProcessExited { get; init; }
 
+        public System.Diagnostics.ProcessPriorityClass? RequestedPriority { get; init; }
+
+        public System.Diagnostics.ProcessPriorityClass? ObservedPriority { get; init; }
+
+        public bool PriorityVerified { get; init; }
+
+        public bool PriorityVerificationUnavailable { get; init; }
+
+        public string? PriorityVerificationPhase { get; init; }
+
         public static PersistentRuleAutoApplyResult FromApplyResult(PersistentRuleApplyResult result) =>
             new()
             {
@@ -57,6 +67,11 @@ namespace ThreadPilot.Services
                 IsAccessDenied = result.IsAccessDenied,
                 IsAntiCheatLikely = result.IsAntiCheatLikely,
                 IsProcessExited = result.IsProcessExited,
+                RequestedPriority = result.RequestedPriority,
+                ObservedPriority = result.ObservedPriority,
+                PriorityVerified = result.PriorityVerified,
+                PriorityVerificationUnavailable = result.PriorityVerificationUnavailable,
+                PriorityVerificationPhase = result.PriorityVerificationPhase,
             };
     }
 
@@ -70,6 +85,7 @@ namespace ThreadPilot.Services
         private readonly IApplicationSettingsService settingsService;
         private readonly ILogger<PersistentRuleAutoApplyService> logger;
         private readonly IActivityAuditService? activityAuditService;
+        private readonly IPersistentRulePriorityVerificationService? priorityVerificationService;
         private readonly Func<DateTimeOffset> nowProvider;
         private readonly TimeSpan cooldown;
         private readonly ConcurrentDictionary<RuleAttemptKey, DateTimeOffset> recentAttempts = new();
@@ -80,8 +96,9 @@ namespace ThreadPilot.Services
             IPersistentRulesEngine rulesEngine,
             IApplicationSettingsService settingsService,
             ILogger<PersistentRuleAutoApplyService> logger,
-            IActivityAuditService? activityAuditService = null)
-            : this(ruleStore, matcher, rulesEngine, settingsService, logger, () => DateTimeOffset.UtcNow, DefaultCooldown, activityAuditService)
+            IActivityAuditService? activityAuditService = null,
+            IPersistentRulePriorityVerificationService? priorityVerificationService = null)
+            : this(ruleStore, matcher, rulesEngine, settingsService, logger, () => DateTimeOffset.UtcNow, DefaultCooldown, activityAuditService, priorityVerificationService)
         {
         }
 
@@ -93,7 +110,8 @@ namespace ThreadPilot.Services
             ILogger<PersistentRuleAutoApplyService> logger,
             Func<DateTimeOffset> nowProvider,
             TimeSpan cooldown,
-            IActivityAuditService? activityAuditService = null)
+            IActivityAuditService? activityAuditService = null,
+            IPersistentRulePriorityVerificationService? priorityVerificationService = null)
         {
             this.ruleStore = ruleStore ?? throw new ArgumentNullException(nameof(ruleStore));
             this.matcher = matcher ?? throw new ArgumentNullException(nameof(matcher));
@@ -103,6 +121,7 @@ namespace ThreadPilot.Services
             this.nowProvider = nowProvider ?? throw new ArgumentNullException(nameof(nowProvider));
             this.cooldown = cooldown <= TimeSpan.Zero ? DefaultCooldown : cooldown;
             this.activityAuditService = activityAuditService;
+            this.priorityVerificationService = priorityVerificationService;
         }
 
         public async Task<IReadOnlyList<PersistentRuleAutoApplyResult>> ApplyForDiscoveredProcessesAsync(
@@ -133,7 +152,7 @@ namespace ThreadPilot.Services
             foreach (var process in snapshot)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                results.AddRange(await this.ApplyForProcessAsync(process, rules, cancellationToken).ConfigureAwait(false));
+                results.AddRange(await this.ApplyForProcessAsync(process, rules, "DiscoveredSnapshot", cancellationToken).ConfigureAwait(false));
             }
 
             return results;
@@ -151,7 +170,7 @@ namespace ThreadPilot.Services
             }
 
             var rules = await this.ruleStore.LoadAsync().ConfigureAwait(false);
-            return await this.ApplyForProcessAsync(process, rules, cancellationToken).ConfigureAwait(false);
+            return await this.ApplyForProcessAsync(process, rules, "ProcessStarted", cancellationToken).ConfigureAwait(false);
         }
 
         public void MarkProcessExited(int processId)
@@ -160,11 +179,14 @@ namespace ThreadPilot.Services
             {
                 this.recentAttempts.TryRemove(key, out _);
             }
+
+            this.priorityVerificationService?.MarkProcessExited(processId);
         }
 
         private async Task<IReadOnlyList<PersistentRuleAutoApplyResult>> ApplyForProcessAsync(
             ProcessModel process,
             IReadOnlyList<PersistentProcessRule> rules,
+            string source,
             CancellationToken cancellationToken)
         {
             var now = this.nowProvider();
@@ -191,7 +213,7 @@ namespace ThreadPilot.Services
             }
 
             var selectedSignatures = selectedRules
-                .Select(GetRuleSignature)
+                .Select(PersistentRuleRuntimeKeys.GetRuleSignature)
                 .ToHashSet(StringComparer.Ordinal);
 
             try
@@ -201,14 +223,15 @@ namespace ThreadPilot.Services
                 var applyResults = await this.rulesEngine
                     .ApplyMatchingRulesAsync(
                         process,
-                        rule => selectedSignatures.Contains(GetRuleSignature(rule)),
+                        rule => selectedSignatures.Contains(PersistentRuleRuntimeKeys.GetRuleSignature(rule)),
                         cancellationToken)
                     .ConfigureAwait(false);
 
                 var results = applyResults.Select(PersistentRuleAutoApplyResult.FromApplyResult).ToList();
                 foreach (var result in results)
                 {
-                    await this.LogResultAsync(result).ConfigureAwait(false);
+                    await this.LogResultAsync(result, process, source).ConfigureAwait(false);
+                    this.priorityVerificationService?.ScheduleDelayedVerification(result, process, source);
                 }
 
                 return results;
@@ -237,7 +260,7 @@ namespace ThreadPilot.Services
 
         private bool TryRecordAttempt(int processId, PersistentProcessRule rule, DateTimeOffset now)
         {
-            var key = new RuleAttemptKey(processId, GetRuleSignature(rule));
+            var key = new RuleAttemptKey(processId, PersistentRuleRuntimeKeys.GetRuleSignature(rule));
             if (this.recentAttempts.TryGetValue(key, out var lastAttempt) &&
                 now - lastAttempt < this.cooldown)
             {
@@ -256,16 +279,22 @@ namespace ThreadPilot.Services
             }
         }
 
-        private async Task LogResultAsync(PersistentRuleAutoApplyResult result)
+        private async Task LogResultAsync(PersistentRuleAutoApplyResult result, ProcessModel process, string source)
         {
             if (result.Success)
             {
                 this.logger.LogInformation(
-                    "Applied saved persistent rule {RuleId} to process {ProcessName} (PID: {ProcessId})",
+                    "Applied saved persistent rule {RuleId} to process {ProcessName} (PID: {ProcessId}). Source: {Source}; path: {ExecutablePath}; requested priority: {RequestedPriority}; observed priority: {ObservedPriority}; priority verified: {PriorityVerified}; phase: {Phase}",
                     result.RuleId,
                     result.ProcessName,
-                    result.ProcessId);
-                await this.LogActivityResultAsync(result).ConfigureAwait(false);
+                    result.ProcessId,
+                    source,
+                    process.ExecutablePath,
+                    result.RequestedPriority,
+                    result.ObservedPriority,
+                    result.PriorityVerified,
+                    result.PriorityVerificationPhase);
+                await this.LogActivityResultAsync(result, process, source).ConfigureAwait(false);
                 return;
             }
 
@@ -274,27 +303,28 @@ namespace ThreadPilot.Services
                 : LogLevel.Warning;
             this.logger.Log(
                 logLevel,
-                "Persistent rule {RuleId} was not applied to process {ProcessName} (PID: {ProcessId}): {Message}",
+                "Persistent rule {RuleId} was not fully applied to process {ProcessName} (PID: {ProcessId}): {Message}. Source: {Source}; path: {ExecutablePath}; requested priority: {RequestedPriority}; observed priority: {ObservedPriority}; phase: {Phase}",
                 result.RuleId,
                 result.ProcessName,
                 result.ProcessId,
-                result.UserMessage);
-            await this.LogActivityResultAsync(result).ConfigureAwait(false);
+                result.UserMessage,
+                source,
+                process.ExecutablePath,
+                result.RequestedPriority,
+                result.ObservedPriority,
+                result.PriorityVerificationPhase);
+            await this.LogActivityResultAsync(result, process, source).ConfigureAwait(false);
         }
 
-        private async Task LogActivityResultAsync(PersistentRuleAutoApplyResult result)
+        private async Task LogActivityResultAsync(PersistentRuleAutoApplyResult result, ProcessModel process, string source)
         {
             if (this.activityAuditService == null)
             {
                 return;
             }
 
-            var action = result.Success
-                ? "PersistentRuleAutoApplied"
-                : "PersistentRuleAutoApplyFailed";
-            var message = result.Success
-                ? $"Auto-applied saved rule for {result.ProcessName}."
-                : $"Failed to auto-apply saved rule for {result.ProcessName}: {result.UserMessage}";
+            var action = ResolveActivityAction(result);
+            var message = ResolveActivityMessage(result);
 
             try
             {
@@ -302,7 +332,7 @@ namespace ThreadPilot.Services
                     .LogUserActionAsync(
                         action,
                         message,
-                        $"Rule: {result.RuleId}, PID: {result.ProcessId}")
+                        $"Rule: {result.RuleId}, PID: {result.ProcessId}, Source: {source}, Path: {process.ExecutablePath}, RequestedPriority: {result.RequestedPriority?.ToString() ?? "none"}, ObservedPriority: {result.ObservedPriority?.ToString() ?? "unavailable"}, Phase: {result.PriorityVerificationPhase ?? "none"}")
                     .ConfigureAwait(false);
             }
             catch (Exception ex)
@@ -311,17 +341,60 @@ namespace ThreadPilot.Services
             }
         }
 
+        private static string ResolveActivityAction(PersistentRuleAutoApplyResult result)
+        {
+            if (result.PriorityVerified)
+            {
+                return "PersistentRulePriorityVerified";
+            }
+
+            if (result.RequestedPriority.HasValue && result.ObservedPriority.HasValue)
+            {
+                return "PersistentRulePriorityNotObserved";
+            }
+
+            if (result.RequestedPriority.HasValue && result.PriorityVerificationUnavailable)
+            {
+                return "PersistentRulePriorityVerificationUnavailable";
+            }
+
+            if (result.RequestedPriority.HasValue && !result.Success)
+            {
+                return "PersistentRulePriorityApplyFailed";
+            }
+
+            return result.Success
+                ? "PersistentRuleAutoApplied"
+                : "PersistentRuleAutoApplyFailed";
+        }
+
+        private static string ResolveActivityMessage(PersistentRuleAutoApplyResult result)
+        {
+            if (result.PriorityVerified)
+            {
+                return $"Saved rule priority verified immediately for {result.ProcessName} as {result.ObservedPriority}.";
+            }
+
+            if (result.RequestedPriority.HasValue && result.ObservedPriority.HasValue)
+            {
+                return $"Saved rule priority requested for {result.ProcessName}, but observed {result.ObservedPriority} instead of {result.RequestedPriority}.";
+            }
+
+            if (result.RequestedPriority.HasValue && result.PriorityVerificationUnavailable)
+            {
+                return $"Saved rule priority requested for {result.ProcessName}, but verification was unavailable: {result.UserMessage}";
+            }
+
+            return result.Success
+                ? $"Auto-applied saved rule for {result.ProcessName}."
+                : $"Failed to auto-apply saved rule for {result.ProcessName}: {result.UserMessage}";
+        }
+
         private bool IsEnabled() =>
             this.settingsService.Settings.ApplyPersistentRulesOnProcessStart;
 
         private static bool IsProcessEligible(ProcessModel process) =>
             process.ProcessId > 0 && !string.IsNullOrWhiteSpace(process.Name);
-
-        private static string GetRuleSignature(PersistentProcessRule rule) =>
-            string.Join(
-                "|",
-                string.IsNullOrWhiteSpace(rule.Id) ? rule.Name : rule.Id,
-                rule.UpdatedAt.ToUniversalTime().Ticks);
 
         private readonly record struct RuleAttemptKey(int ProcessId, string RuleSignature);
     }

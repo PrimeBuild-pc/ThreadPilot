@@ -321,8 +321,95 @@ namespace ThreadPilot.Core.Tests
             Assert.Empty(store.SavedRules);
         }
 
+        [Fact]
+        public async Task CreateRule_SaveThenReload_PreservesAllPersistedFields()
+        {
+            var filePath = CreateTemporaryFilePath();
+            var store = new PersistentProcessRuleJsonStore(() => filePath);
+            var service = CreateService(store);
+            var selection = CreateCpuSelection();
+
+            try
+            {
+                var result = await service.SaveRuleAsync(
+                    CreateProcess(name: "PersistenceProbe.exe", path: @"C:\Probe\PersistenceProbe.exe"),
+                    new ProcessRuleCreationPayload
+                    {
+                        CpuSelection = selection,
+                        Priority = ProcessPriorityClass.High,
+                        MemoryPriority = ProcessMemoryPriority.BelowNormal,
+                    });
+
+                Assert.True(result.Success);
+                var loaded = await new PersistentProcessRuleJsonStore(() => filePath).LoadAsync();
+                var rule = Assert.Single(loaded);
+                Assert.Equal(result.Rule!.Id, rule.Id);
+                Assert.Equal("PersistenceProbe.exe rule", rule.Name);
+                Assert.True(rule.IsEnabled);
+                Assert.Equal("PersistenceProbe.exe", rule.ProcessName);
+                Assert.Equal(@"C:\Probe\PersistenceProbe.exe", rule.ExecutablePath);
+                Assert.NotNull(rule.CpuSelection);
+                Assert.Equal(selection.GlobalLogicalProcessorIndexes, rule.CpuSelection.GlobalLogicalProcessorIndexes);
+                Assert.Null(rule.LegacyAffinityMask);
+                Assert.Equal(ProcessPriorityClass.High, rule.Priority);
+                Assert.Equal(ProcessMemoryPriority.BelowNormal, rule.MemoryPriority);
+                Assert.True(rule.ApplyAffinityOnStart);
+                Assert.True(rule.ApplyPriorityOnStart);
+                Assert.True(rule.ApplyMemoryPriorityOnStart);
+                Assert.Equal(result.Rule.CreatedAt, rule.CreatedAt);
+                Assert.Equal(result.Rule.UpdatedAt, rule.UpdatedAt);
+                Assert.Equal("Created from Process tab action.", rule.Description);
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(filePath);
+            }
+        }
+
+        [Fact]
+        public async Task UpdateRule_SaveThenReload_PreservesUpdatedValues()
+        {
+            var filePath = CreateTemporaryFilePath();
+            var store = new PersistentProcessRuleJsonStore(() => filePath);
+            var service = CreateService(store);
+            var process = CreateProcess(name: "PersistenceProbe.exe", path: @"C:\Probe\PersistenceProbe.exe");
+
+            try
+            {
+                var created = await service.SaveRuleAsync(
+                    process,
+                    new ProcessRuleCreationPayload { Priority = ProcessPriorityClass.AboveNormal });
+                var updated = await service.SaveRuleAsync(
+                    process,
+                    new ProcessRuleCreationPayload
+                    {
+                        LegacyAffinityMask = 0x3,
+                        Priority = ProcessPriorityClass.High,
+                        MemoryPriority = ProcessMemoryPriority.Low,
+                    });
+
+                Assert.True(created.Success);
+                Assert.True(updated.Success);
+                Assert.True(updated.Updated);
+                var loaded = await new PersistentProcessRuleJsonStore(() => filePath).LoadAsync();
+                var rule = Assert.Single(loaded);
+                Assert.Equal(created.Rule!.Id, rule.Id);
+                Assert.Equal(created.Rule.CreatedAt, rule.CreatedAt);
+                Assert.Equal(0x3, rule.LegacyAffinityMask);
+                Assert.Equal(ProcessPriorityClass.High, rule.Priority);
+                Assert.Equal(ProcessMemoryPriority.Low, rule.MemoryPriority);
+                Assert.True(rule.ApplyAffinityOnStart);
+                Assert.True(rule.ApplyPriorityOnStart);
+                Assert.True(rule.ApplyMemoryPriorityOnStart);
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(filePath);
+            }
+        }
+
         private static ProcessRuleCreationService CreateService(
-            CapturingRuleStore store,
+            IPersistentProcessRuleStore store,
             ICpuTopologyProvider? topologyProvider = null) =>
             new(
                 store,
@@ -350,6 +437,18 @@ namespace ThreadPilot.Core.Tests
                 Priority = priority,
                 ProcessorAffinity = affinity,
             };
+
+        private static string CreateTemporaryFilePath() =>
+            Path.Combine(Path.GetTempPath(), $"threadpilot-rule-service-{Guid.NewGuid():N}", "rules.json");
+
+        private static void DeleteTemporaryDirectory(string filePath)
+        {
+            var directory = Path.GetDirectoryName(filePath);
+            if (directory != null && Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
 
         private sealed class CapturingRuleStore(IReadOnlyList<PersistentProcessRule>? initialRules = null)
             : IPersistentProcessRuleStore

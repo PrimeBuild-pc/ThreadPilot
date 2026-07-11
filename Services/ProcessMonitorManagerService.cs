@@ -765,7 +765,7 @@ namespace ThreadPilot.Services
                                 this.processService.TrackPriorityChange(process.ProcessId, currentPriority);
                             }
 
-                            await this.processService.SetProcessPriority(process, priority);
+                            await this.processService.SetProcessPriority(process, priority, ProcessPriorityWriteSource.PowerPlanAssociation);
 
                             this.logger.LogInformation(
                                 "Applied priority '{Priority}' to process {ProcessName} (PID: {ProcessId})",

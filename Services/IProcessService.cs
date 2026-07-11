@@ -16,6 +16,8 @@ namespace ThreadPilot.Services
 
         Task SetProcessPriority(ProcessModel process, ProcessPriorityClass priority);
 
+        Task SetProcessPriority(ProcessModel process, ProcessPriorityClass priority, ProcessPriorityWriteSource source);
+
         Task<bool> SaveProcessProfile(string profileName, ProcessModel process);
 
         Task<bool> LoadProcessProfile(string profileName, ProcessModel process);

@@ -1372,7 +1372,7 @@ namespace ThreadPilot.ViewModels
                 });
 
                 // Apply the priority change
-                await this.processService.SetProcessPriority(selectedProcess, priority);
+                await this.processService.SetProcessPriority(selectedProcess, priority, ProcessPriorityWriteSource.ManualUiAction);
 
                 // Immediately refresh the process to get the actual system state
                 await this.processService.RefreshProcessInfo(selectedProcess);
@@ -1671,7 +1671,7 @@ namespace ThreadPilot.ViewModels
 
             try
             {
-                await this.processService.SetProcessPriority(process, priority);
+                await this.processService.SetProcessPriority(process, priority, ProcessPriorityWriteSource.ManualUiAction);
                 await this.processService.RefreshProcessInfo(process);
 
                 var warning = ProcessPriorityGuardrails.GetWarning(priority);
