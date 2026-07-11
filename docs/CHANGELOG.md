@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.4.2 - Persistent CPU-priority rule verification and retry
+
+### Fixed
+
+- Persistent CPU-priority rules now verify the applied priority.
+- ThreadPilot detects when a process resets its CPU priority shortly after startup.
+- A single bounded retry is performed when a verified priority is reverted.
+- Retry state is cleared when the process exits.
+- Improved activity logging distinguishes initial apply, reversion, retry, verification, and final failure.
+- Added attribution for internal CPU-priority writes.
+- Fixed misleading success reporting when the requested priority did not remain applied.
+- Fixes #32.
+
 ## v1.4.0 - Safe in-app updater
 
 ### Added
