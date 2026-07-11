@@ -32,6 +32,25 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task GetActivePowerPlan_PreservesParenthesesInDisplayName()
+        {
+            const string guid = "381b4222-f694-41f0-9685-ff5bb260df2e";
+            var runner = new RecordingProcessRunner
+            {
+                ResultFactory = _ => new ProcessRunResult(
+                    0,
+                    $"Power Scheme GUID: {guid}  (Ultimate Performance (AMD)) *",
+                    string.Empty),
+            };
+            var service = CreateService(runner);
+
+            var result = await service.GetActivePowerPlan();
+
+            Assert.NotNull(result);
+            Assert.Equal("Ultimate Performance (AMD)", result.Name);
+        }
+
+        [Fact]
         public async Task SetActivePowerPlanByGuidAsync_SkipsChange_WhenAlreadyActive()
         {
             const string guid = "381b4222-f694-41f0-9685-ff5bb260df2e";

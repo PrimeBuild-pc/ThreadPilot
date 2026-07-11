@@ -16,7 +16,7 @@ namespace ThreadPilot.Services
         private static readonly Lazy<string> powerPlansPath = new(GetPowerPlansPath);
         private static readonly string powerCfgExecutablePath = Path.Combine(Environment.SystemDirectory, "powercfg.exe");
         private static readonly TimeSpan powerCfgTimeout = TimeSpan.FromSeconds(20);
-        private static readonly Regex powerSchemeRegex = new(@"Power Scheme GUID: (.*?)  \((.*?)\)", RegexOptions.Multiline | RegexOptions.Compiled);
+        private static readonly Regex powerSchemeRegex = new(@"^Power Scheme GUID: (.*?)  \((.*)\)(?:\s+\*)?$", RegexOptions.Multiline | RegexOptions.Compiled);
         private static readonly Regex pathTraversalRegex = new(@"(^|[\\/])\.\.([\\/]|$)", RegexOptions.Compiled);
 
         private static string PowerPlansPath => powerPlansPath.Value;
@@ -517,6 +517,12 @@ namespace ThreadPilot.Services
             }
 
             var fileInfo = new FileInfo(normalizedPath);
+            if (fileInfo.Length == 0)
+            {
+                error = "Power plan file is empty.";
+                return false;
+            }
+
             if (fileInfo.Length > 10 * 1024 * 1024)
             {
                 error = "Power plan file size exceeds 10 MB limit.";
