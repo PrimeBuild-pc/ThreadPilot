@@ -11,6 +11,19 @@ namespace ThreadPilot.Core.Tests
     public sealed class SettingsViewModelThemeTests
     {
         [Fact]
+        public async Task Constructor_DefersPowerPlanLoadingUntilInitializeAsync()
+        {
+            var harness = new Harness();
+            var viewModel = harness.CreateViewModel();
+
+            harness.PowerPlans.Verify(service => service.GetPowerPlansAsync(), Times.Never);
+
+            await viewModel.InitializeAsync();
+
+            harness.PowerPlans.Verify(service => service.GetPowerPlansAsync(), Times.Once);
+        }
+
+        [Fact]
         public async Task ChangingTheme_AppliesThemeAndLogsVisibleActivityEntry()
         {
             var harness = new Harness();
