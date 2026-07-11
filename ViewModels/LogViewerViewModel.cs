@@ -18,6 +18,7 @@ namespace ThreadPilot.ViewModels
         private readonly IEnhancedLoggingService loggingService;
         private readonly IApplicationSettingsService settingsService;
         private readonly ILogger<LogViewerViewModel> logger;
+        private bool isActive;
 
         [ObservableProperty]
         private ObservableCollection<LogEntryDisplayModel> logEntries = new();
@@ -132,6 +133,7 @@ namespace ThreadPilot.ViewModels
 
         public Task SetActiveAsync(bool active)
         {
+            this.isActive = active;
             return active ? this.InitializeAsync() : Task.CompletedTask;
         }
 
@@ -355,7 +357,7 @@ namespace ThreadPilot.ViewModels
 
         private void OnActivityEntryAdded(object? sender, ActivityAuditEntry entry)
         {
-            if (!this.ShouldDisplay(entry))
+            if (!this.isActive || !this.ShouldDisplay(entry))
             {
                 return;
             }
@@ -395,19 +397,18 @@ namespace ThreadPilot.ViewModels
                 Details = entry.Details,
             };
 
-        partial void OnSearchTextChanged(string value)
-        {
-            _ = InvokeOnUiAsync(async () => await this.RefreshLogsAsync());
-        }
+        partial void OnSearchTextChanged(string value) => this.RefreshIfActive();
 
-        partial void OnSelectedCategoryChanged(string value)
-        {
-            _ = InvokeOnUiAsync(async () => await this.RefreshLogsAsync());
-        }
+        partial void OnSelectedCategoryChanged(string value) => this.RefreshIfActive();
 
-        partial void OnSelectedLogLevelChanged(LogLevel value)
+        partial void OnSelectedLogLevelChanged(LogLevel value) => this.RefreshIfActive();
+
+        private void RefreshIfActive()
         {
-            _ = InvokeOnUiAsync(async () => await this.RefreshLogsAsync());
+            if (this.isActive)
+            {
+                _ = InvokeOnUiAsync(async () => await this.RefreshLogsAsync());
+            }
         }
 
         private static Task InvokeOnUiAsync(Action action)

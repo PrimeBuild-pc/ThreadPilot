@@ -19,6 +19,7 @@ namespace ThreadPilot.Services
         private readonly System.Threading.Timer flushTimer;
         private readonly string logDirectory;
         private string currentLogFilePath;
+        private int flushScheduled;
         private bool isInitialized;
         private bool disposed;
 
@@ -43,8 +44,7 @@ namespace ThreadPilot.Services
             this.logDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ThreadPilot", "Logs");
             this.currentLogFilePath = this.GetCurrentLogFilePath();
 
-            // Create flush timer (flush every 5 seconds)
-            this.flushTimer = new System.Threading.Timer(this.FlushLogs, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+            this.flushTimer = new System.Threading.Timer(this.FlushLogs, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
         }
 
         public async Task InitializeAsync()
@@ -228,15 +228,22 @@ namespace ThreadPilot.Services
 
             this.logQueue.Enqueue(logEntry);
 
-            // Force immediate flush for errors and critical events
+            // Force immediate flush for errors and critical events.
             if (level >= LogLevel.Error)
             {
+                this.flushTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+                Interlocked.Exchange(ref this.flushScheduled, 0);
                 await this.FlushLogsAsync();
+            }
+            else if (Interlocked.Exchange(ref this.flushScheduled, 1) == 0)
+            {
+                this.flushTimer.Change(TimeSpan.FromSeconds(5), Timeout.InfiniteTimeSpan);
             }
         }
 
         private void FlushLogs(object? state)
         {
+            Interlocked.Exchange(ref this.flushScheduled, 0);
             TaskSafety.FireAndForget(this.FlushLogsAsync(), ex =>
             {
                 this.logger.LogWarning(ex, "Periodic log flush failed");
