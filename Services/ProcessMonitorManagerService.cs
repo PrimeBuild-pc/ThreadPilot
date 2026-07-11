@@ -432,12 +432,11 @@ namespace ThreadPilot.Services
             try
             {
                 this.persistentRuleAutoApplyService.MarkProcessExited(e.Process.ProcessId);
+                this.coreMaskService.UnregisterMaskApplication(e.Process.ProcessId);
+                this.processService.UntrackProcess(e.Process.ProcessId);
 
                 if (this.runningAssociatedProcesses.TryRemove(e.Process.ProcessId, out _))
                 {
-                    this.coreMaskService.UnregisterMaskApplication(e.Process.ProcessId);
-                    this.processService.UntrackProcess(e.Process.ProcessId);
-
                     // Check if there are any other associated processes still running
                     var remainingProcesses = this.runningAssociatedProcesses.Values.ToList();
                     await this.DeterminePowerPlanAsync(remainingProcesses);
