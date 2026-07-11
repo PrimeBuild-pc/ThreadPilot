@@ -20,6 +20,7 @@ namespace ThreadPilot.Services
 
         private readonly ConcurrentDictionary<int, CpuSample> cpuSamples = new();
         private readonly ConcurrentDictionary<int, IProcessCpuSetHandler> cpuSetHandlers = new();
+        private readonly ConcurrentDictionary<int, ProcessMetadata> processMetadata = new();
         private readonly ILogger<ProcessService>? logger;
         private readonly ISecurityService? securityService;
         private readonly IForegroundProcessService? foregroundProcessService;
@@ -131,6 +132,8 @@ namespace ThreadPilot.Services
 
             return models.OrderBy(process => process.Name).ToList();
         }
+
+        private sealed record ProcessMetadata(DateTime StartTimeUtc, string ExecutablePath);
 
         private sealed class CpuSample
         {
@@ -276,8 +279,18 @@ namespace ThreadPilot.Services
                 }
             }
 
+            DateTime? startTimeUtc = null;
             if (!terminated)
             {
+                try
+                {
+                    startTimeUtc = process.StartTime.ToUniversalTime();
+                }
+                catch (Exception ex) when (IsPassiveProcessAccessException(ex) || IsTerminatedProcessException(ex))
+                {
+                    // Start time is used only to validate static metadata against PID reuse.
+                }
+
                 try
                 {
                     model.MemoryUsage = process.PrivateMemorySize64;
@@ -358,25 +371,38 @@ namespace ThreadPilot.Services
 
                 if (!terminated)
                 {
-                    try
+                    if (startTimeUtc.HasValue &&
+                        this.processMetadata.TryGetValue(model.ProcessId, out var cachedMetadata) &&
+                        cachedMetadata.StartTimeUtc == startTimeUtc.Value)
                     {
-                        model.ExecutablePath = process.MainModule?.FileName ?? string.Empty;
+                        model.ExecutablePath = cachedMetadata.ExecutablePath;
                     }
-                    catch (Exception ex) when (IsAccessDeniedException(ex))
+                    else
                     {
-                        accessDenied = true;
-                        model.ExecutablePath = string.Empty;
-                        this.LogPassiveProcessReadFailure(model.ProcessId, PassiveProcessErrorKind.AccessDenied, ex);
-                    }
-                    catch (Exception ex) when (IsPassiveProcessAccessException(ex))
-                    {
-                        accessDenied = true;
-                        model.ExecutablePath = string.Empty;
-                        this.LogPassiveProcessReadFailure(model.ProcessId, PassiveProcessErrorKind.AccessDenied, ex);
-                    }
-                    catch (Exception ex) when (IsTerminatedProcessException(ex))
-                    {
-                        terminated = true;
+                        try
+                        {
+                            model.ExecutablePath = process.MainModule?.FileName ?? string.Empty;
+                            if (startTimeUtc.HasValue && !string.IsNullOrWhiteSpace(model.ExecutablePath))
+                            {
+                                this.processMetadata[model.ProcessId] = new ProcessMetadata(startTimeUtc.Value, model.ExecutablePath);
+                            }
+                        }
+                        catch (Exception ex) when (IsAccessDeniedException(ex))
+                        {
+                            accessDenied = true;
+                            model.ExecutablePath = string.Empty;
+                            this.LogPassiveProcessReadFailure(model.ProcessId, PassiveProcessErrorKind.AccessDenied, ex);
+                        }
+                        catch (Exception ex) when (IsPassiveProcessAccessException(ex))
+                        {
+                            accessDenied = true;
+                            model.ExecutablePath = string.Empty;
+                            this.LogPassiveProcessReadFailure(model.ProcessId, PassiveProcessErrorKind.AccessDenied, ex);
+                        }
+                        catch (Exception ex) when (IsTerminatedProcessException(ex))
+                        {
+                            terminated = true;
+                        }
                     }
                 }
             }
@@ -911,8 +937,9 @@ namespace ThreadPilot.Services
 
         private void CleanupProcessResources(int processId)
         {
-            // Remove CPU samples
+            // Remove process-scoped samples and static metadata.
             this.cpuSamples.TryRemove(processId, out _);
+            this.processMetadata.TryRemove(processId, out _);
 
             // Dispose and remove CPU Set handler
             if (this.cpuSetHandlers.TryRemove(processId, out var handler))

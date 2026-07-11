@@ -368,6 +368,33 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void CreateProcessModel_CachesStaticMetadataUntilProcessIsUntracked()
+        {
+            var profilesDirectory = CreateTemporaryDirectory();
+            var service = CreateService(profilesDirectory);
+            using var currentProcess = Process.GetCurrentProcess();
+
+            try
+            {
+                var first = service.CreateProcessModel(currentProcess);
+                var second = service.CreateProcessModel(currentProcess);
+                var metadata = (System.Collections.IEnumerable)typeof(ProcessService)
+                    .GetField("processMetadata", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                    .GetValue(service)!;
+
+                Assert.Equal(first.ExecutablePath, second.ExecutablePath);
+                Assert.Single(metadata.Cast<object>());
+
+                service.UntrackProcess(currentProcess.Id);
+                Assert.Empty(metadata.Cast<object>());
+            }
+            finally
+            {
+                DeleteDirectory(profilesDirectory);
+            }
+        }
+
+        [Fact]
         public void TrackPriorityChange_PreservesOriginalPriority()
         {
             var service = CreateService(CreateTemporaryDirectory());
