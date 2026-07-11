@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.4.3 - Expanded bundled power-plan catalog
+
+### Added
+
+- Added 30 new bundled Windows power plans.
+- Added structural, discovery, duplicate, packaging, and invalid-file tests for bundled power plans.
+
+### Changed
+
+- Updated four existing bundled power plans and removed one redundant duplicate asset.
+- Fixed parsing of power-plan display names containing parentheses.
+- Confirmed automatic inclusion in build, publish, installer, and portable ZIP output.
+
 ## v1.4.2 - Persistent CPU-priority rule verification and retry
 
 ### Fixed
