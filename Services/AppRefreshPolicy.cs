@@ -4,6 +4,7 @@ namespace ThreadPilot.Services
     {
         ForegroundProcessView,
         ForegroundDiagnosticsView,
+        ForegroundPowerPlanView,
         ForegroundOtherTab,
         Minimized,
         TrayHidden,
@@ -33,13 +34,20 @@ namespace ThreadPilot.Services
                     ImmediateProcessRefresh: true,
                     VirtualizedPreloadEnabled: true,
                     PerformanceUiMonitoringEnabled: false,
-                    PowerPlanUiRefreshEnabled: true,
+                    PowerPlanUiRefreshEnabled: false,
                     BackgroundAutomationEnabled: true),
                 AppActivityState.ForegroundDiagnosticsView => new AppRefreshDecision(
                     ProcessUiRefreshEnabled: false,
                     ImmediateProcessRefresh: false,
                     VirtualizedPreloadEnabled: false,
                     PerformanceUiMonitoringEnabled: true,
+                    PowerPlanUiRefreshEnabled: false,
+                    BackgroundAutomationEnabled: true),
+                AppActivityState.ForegroundPowerPlanView => new AppRefreshDecision(
+                    ProcessUiRefreshEnabled: false,
+                    ImmediateProcessRefresh: false,
+                    VirtualizedPreloadEnabled: false,
+                    PerformanceUiMonitoringEnabled: false,
                     PowerPlanUiRefreshEnabled: true,
                     BackgroundAutomationEnabled: true),
                 AppActivityState.ForegroundOtherTab => new AppRefreshDecision(
@@ -47,7 +55,7 @@ namespace ThreadPilot.Services
                     ImmediateProcessRefresh: false,
                     VirtualizedPreloadEnabled: false,
                     PerformanceUiMonitoringEnabled: false,
-                    PowerPlanUiRefreshEnabled: true,
+                    PowerPlanUiRefreshEnabled: false,
                     BackgroundAutomationEnabled: true),
                 AppActivityState.Minimized or AppActivityState.TrayHidden => new AppRefreshDecision(
                     ProcessUiRefreshEnabled: false,

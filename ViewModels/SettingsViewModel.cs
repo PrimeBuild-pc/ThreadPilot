@@ -147,17 +147,13 @@ namespace ThreadPilot.ViewModels
             // Keep viewmodel in sync with persisted settings
             this.settingsService.SettingsChanged += this.OnSettingsServiceSettingsChanged;
 
-            var dispatcher = System.Windows.Application.Current?.Dispatcher;
-            if (dispatcher != null)
-            {
-                // Ensure we load the latest persisted settings on startup.
-                _ = dispatcher.InvokeAsync(async () => await this.RefreshSettingsAsync());
-
-                // Initialize data - marshal to UI thread to prevent cross-thread access exceptions.
-                _ = dispatcher.InvokeAsync(async () => await this.RefreshPowerPlansAsync());
-            }
-
             this.Logger.LogInformation("Settings ViewModel initialized");
+        }
+
+        public override async Task InitializeAsync()
+        {
+            await this.RefreshSettingsAsync();
+            await this.RefreshPowerPlansAsync();
         }
 
         private void OnSettingsPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)

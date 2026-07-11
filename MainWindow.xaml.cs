@@ -64,6 +64,7 @@ namespace ThreadPilot
         private readonly bool skipProcessMonitoringDuringStartup = false;
         private bool isPerformingShutdown = false;
         private readonly NavigationBehavior navigationBehavior = new();
+        private readonly HashSet<string> initializedSections = new(StringComparer.Ordinal);
         private bool isPerformanceIntroVisible = false;
         private double previousAppContentOpacity = 1;
         private TaskCompletionSource<MessageBoxResult>? unsavedSettingsDialogCompletionSource;

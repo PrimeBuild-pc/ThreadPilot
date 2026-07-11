@@ -402,33 +402,12 @@ namespace ThreadPilot
                     this.LogDebug($"ProcessViewModel fallback (LoadProcesses only) completed after exception, process count: {this.processViewModel.Processes?.Count ?? 0}, filtered count: {this.processViewModel.FilteredProcesses?.Count ?? 0}");
                 }
 
-                this.LogDebug("About to load PowerPlanViewModel...");
-                var powerPlanTask = this.powerPlanViewModel.LoadPowerPlans();
-                var powerPlanResult = await Task.WhenAny(powerPlanTask, Task.Delay(5000)); // 5 second timeout
-                if (powerPlanResult != powerPlanTask)
-                {
-                    throw new TimeoutException("PowerPlanViewModel.LoadPowerPlans() timed out after 5 seconds");
-                }
-                await powerPlanTask; // Ensure we get any exceptions
-                this.LogDebug("PowerPlanViewModel loaded successfully");
-
-                this.LogDebug("Skipping optional diagnostics initialization until the diagnostics page is opened.");
-
-                this.LogDebug("About to load SystemTweaksViewModel...");
-                var systemTweaksTask = this.systemTweaksViewModel.LoadCommand.ExecuteAsync(null);
-                var systemTweaksResult = await Task.WhenAny(systemTweaksTask, Task.Delay(5000)); // 5 second timeout
-                if (systemTweaksResult != systemTweaksTask)
-                {
-                    throw new TimeoutException("SystemTweaksViewModel.LoadCommand.ExecuteAsync() timed out after 5 seconds");
-                }
-                await systemTweaksTask; // Ensure we get any exceptions
-                this.LogDebug("SystemTweaksViewModel loaded successfully");
+                this.LogDebug("Skipping inactive view initialization until each page is opened.");
 
                 // Initialize keyboard shortcuts after window is loaded
                 this.Loaded += this.OnWindowLoaded;
                 this.LogDebug("Keyboard shortcuts event handler attached");
 
-                // The association view model loads its data automatically in its constructor
                 this.LogDebug("=== LoadViewModelsAsync completed successfully ===");
             }
             catch (Exception ex)
@@ -1385,8 +1364,13 @@ namespace ThreadPilot
                 return AppActivityState.ForegroundProcessView;
             }
 
-            return this.PerformanceViewControl.Visibility == Visibility.Visible
-                ? AppActivityState.ForegroundDiagnosticsView
+            if (this.PerformanceViewControl.Visibility == Visibility.Visible)
+            {
+                return AppActivityState.ForegroundDiagnosticsView;
+            }
+
+            return this.PowerPlanViewControl.Visibility == Visibility.Visible
+                ? AppActivityState.ForegroundPowerPlanView
                 : AppActivityState.ForegroundOtherTab;
         }
 
@@ -1419,7 +1403,7 @@ namespace ThreadPilot
 
             if (decision.PowerPlanUiRefreshEnabled)
             {
-                this.powerPlanViewModel.ResumeAutoRefresh(refreshImmediately: state != AppActivityState.ForegroundOtherTab);
+                this.powerPlanViewModel.ResumeAutoRefresh();
             }
             else
             {
@@ -1887,10 +1871,40 @@ namespace ThreadPilot
             {
                 "Process" => AppActivityState.ForegroundProcessView,
                 "Performance" => AppActivityState.ForegroundDiagnosticsView,
+                "Power" => AppActivityState.ForegroundPowerPlanView,
                 _ => AppActivityState.ForegroundOtherTab,
             };
 
             this.ApplyAppRefreshPolicy(activityState);
+        }
+
+        private async Task InitializeSectionAsync(string tag)
+        {
+            if (!this.initializedSections.Add(tag))
+            {
+                return;
+            }
+
+            try
+            {
+                switch (tag)
+                {
+                    case "Rules":
+                        await this.associationViewModel.InitializeAsync();
+                        break;
+                    case "Tweaks":
+                        await this.systemTweaksViewModel.LoadAsync();
+                        break;
+                    case "Settings":
+                        await this.settingsViewModel.InitializeAsync();
+                        break;
+                }
+            }
+            catch
+            {
+                this.initializedSections.Remove(tag);
+                throw;
+            }
         }
 
         private void NavMenuItem_Click(object sender, RoutedEventArgs e)
@@ -1942,7 +1956,18 @@ namespace ThreadPilot
                     this.GetPerformanceViewModel();
                 }
 
+                if (!string.Equals(tag, "Logs", StringComparison.Ordinal))
+                {
+                    await this.logViewerViewModel.SetActiveAsync(false);
+                }
+
+                await this.InitializeSectionAsync(tag);
                 this.ApplySectionVisibility(tag);
+
+                if (string.Equals(tag, "Logs", StringComparison.Ordinal))
+                {
+                    await this.logViewerViewModel.SetActiveAsync(true);
+                }
 
                 if (string.Equals(tag, "Performance", StringComparison.Ordinal))
                 {

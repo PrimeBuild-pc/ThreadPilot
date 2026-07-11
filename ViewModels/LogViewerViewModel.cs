@@ -130,6 +130,11 @@ namespace ThreadPilot.ViewModels
             }
         }
 
+        public Task SetActiveAsync(bool active)
+        {
+            return active ? this.InitializeAsync() : Task.CompletedTask;
+        }
+
         public async Task InitializeAsync()
         {
             try
@@ -392,19 +397,16 @@ namespace ThreadPilot.ViewModels
 
         partial void OnSearchTextChanged(string value)
         {
-            // Trigger refresh when search text changes - marshal to UI thread to prevent cross-thread access exceptions
             _ = InvokeOnUiAsync(async () => await this.RefreshLogsAsync());
         }
 
         partial void OnSelectedCategoryChanged(string value)
         {
-            // Trigger refresh when category changes - marshal to UI thread to prevent cross-thread access exceptions
             _ = InvokeOnUiAsync(async () => await this.RefreshLogsAsync());
         }
 
         partial void OnSelectedLogLevelChanged(LogLevel value)
         {
-            // Trigger refresh when log level changes - marshal to UI thread to prevent cross-thread access exceptions
             _ = InvokeOnUiAsync(async () => await this.RefreshLogsAsync());
         }
 

@@ -172,10 +172,14 @@ namespace ThreadPilot.Services
 
         public async Task<IEnumerable<ProcessModel>> GetRunningProcessesAsync()
         {
+            if (this.isMonitoring)
+            {
+                return this.runningProcesses.Values.ToArray();
+            }
+
             try
             {
-                var processes = await this.processService.GetProcessesAsync().ConfigureAwait(false);
-                return processes;
+                return await this.processService.GetProcessesAsync().ConfigureAwait(false);
             }
             catch (Exception)
             {
@@ -200,7 +204,7 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var processes = await this.GetRunningProcessesAsync().ConfigureAwait(false);
+                var processes = await this.processService.GetProcessesAsync().ConfigureAwait(false);
                 this.runningProcesses.Clear();
 
                 foreach (var process in processes)
@@ -461,7 +465,7 @@ namespace ThreadPilot.Services
                     return;
                 }
 
-                var currentProcesses = await this.GetRunningProcessesAsync().ConfigureAwait(false);
+                var currentProcesses = await this.processService.GetProcessesAsync().ConfigureAwait(false);
                 var detectedChanges = 0;
 
                 this.pollBuffer.Clear();
