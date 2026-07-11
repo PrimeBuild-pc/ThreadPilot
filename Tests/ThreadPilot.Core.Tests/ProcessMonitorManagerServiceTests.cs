@@ -682,6 +682,66 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task ProcessStarted_WithoutRelevantAssociation_DoesNotEnrichOrPersistEventLog()
+        {
+            var processMonitor = new FakeProcessMonitorService();
+            var configuration = new ProcessMonitorConfiguration();
+            var processService = CreateProcessService();
+            var enhancedLogger = CreateEnhancedLogger();
+            var manager = CreateService(
+                processMonitor,
+                CreateAssociationService(configuration),
+                CreatePowerPlanService(),
+                CreateNotificationService(),
+                processService,
+                CreateCoreMaskService(),
+                CreateAffinityApplyService(),
+                enhancedLogger: enhancedLogger);
+
+            await manager.StartAsync();
+            enhancedLogger.Invocations.Clear();
+            processMonitor.RaiseProcessStarted(new ProcessModel { ProcessId = 42, Name = "irrelevant" });
+            await Task.Delay(100);
+
+            processService.Verify(
+                service => service.RefreshProcessInfo(It.IsAny<ProcessModel>()),
+                Times.Never);
+            enhancedLogger.Verify(
+                logger => logger.LogProcessMonitoringEventAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<int>(),
+                    It.IsAny<string>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task ProcessStopped_AlwaysClearsPidCaches()
+        {
+            var processMonitor = new FakeProcessMonitorService();
+            var processService = CreateProcessService();
+            var coreMaskService = CreateCoreMaskService();
+            var autoApplyService = CreateAutoApplyService();
+            var manager = CreateService(
+                processMonitor,
+                CreateAssociationService(new ProcessMonitorConfiguration()),
+                CreatePowerPlanService(),
+                CreateNotificationService(),
+                processService,
+                coreMaskService,
+                CreateAffinityApplyService(),
+                autoApplyService);
+
+            await manager.StartAsync();
+            processMonitor.RaiseProcessStopped(new ProcessModel { ProcessId = 73, Name = "short-lived" });
+            await Task.Delay(100);
+
+            autoApplyService.Verify(service => service.MarkProcessExited(73), Times.Once);
+            coreMaskService.Verify(service => service.UnregisterMaskApplication(73), Times.Once);
+            processService.Verify(service => service.UntrackProcess(73), Times.Once);
+        }
+
+        [Fact]
         public async Task Dispose_CompletesOnBlockingSynchronizationContext()
         {
             var processMonitor = new FakeProcessMonitorService
@@ -862,11 +922,7 @@ namespace ThreadPilot.Core.Tests
         {
             public event EventHandler<ProcessEventArgs>? ProcessStarted;
 
-            public event EventHandler<ProcessEventArgs>? ProcessStopped
-            {
-                add { }
-                remove { }
-            }
+            public event EventHandler<ProcessEventArgs>? ProcessStopped;
 
             public event EventHandler<MonitoringStatusEventArgs>? MonitoringStatusChanged
             {
@@ -916,6 +972,9 @@ namespace ThreadPilot.Core.Tests
 
             public void RaiseProcessStarted(ProcessModel process) =>
                 this.ProcessStarted?.Invoke(this, new ProcessEventArgs(process));
+
+            public void RaiseProcessStopped(ProcessModel process) =>
+                this.ProcessStopped?.Invoke(this, new ProcessEventArgs(process));
 
             public void Dispose()
             {
