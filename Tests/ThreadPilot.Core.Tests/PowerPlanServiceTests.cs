@@ -51,6 +51,30 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task GetPowerPlansAsync_ParsesActiveMarkerWithOnePowerCfgCall()
+        {
+            const string activeGuid = "381b4222-f694-41f0-9685-ff5bb260df2e";
+            const string otherGuid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+            var runner = new RecordingProcessRunner
+            {
+                ResultFactory = _ => new ProcessRunResult(
+                    0,
+                    $"Power Scheme GUID: {activeGuid}  (Balanced) *{Environment.NewLine}" +
+                    $"Power Scheme GUID: {otherGuid}  (Ultimate Performance (AMD))",
+                    string.Empty),
+            };
+            var service = CreateService(runner);
+
+            var plans = await service.GetPowerPlansAsync();
+
+            Assert.Equal(2, plans.Count);
+            Assert.True(plans.Single(plan => plan.Guid == activeGuid).IsActive);
+            Assert.False(plans.Single(plan => plan.Guid == otherGuid).IsActive);
+            Assert.Equal("Ultimate Performance (AMD)", plans.Single(plan => plan.Guid == otherGuid).Name);
+            Assert.Equal(new[] { "/list" }, Assert.Single(runner.Invocations).Arguments);
+        }
+
+        [Fact]
         public async Task SetActivePowerPlanByGuidAsync_SkipsChange_WhenAlreadyActive()
         {
             const string guid = "381b4222-f694-41f0-9685-ff5bb260df2e";

@@ -71,7 +71,7 @@ namespace ThreadPilot.Services
         private async Task<PowerPlanModel?> UpdatePowerPlanMenuAsync(ISystemTrayService systemTrayService)
         {
             var powerPlans = await this.powerPlanService.GetPowerPlansAsync().ConfigureAwait(false);
-            var activePowerPlan = await this.powerPlanService.GetActivePowerPlan().ConfigureAwait(false);
+            var activePowerPlan = powerPlans.FirstOrDefault(plan => plan.IsActive);
             systemTrayService.UpdatePowerPlans(powerPlans, activePowerPlan);
             return activePowerPlan;
         }
