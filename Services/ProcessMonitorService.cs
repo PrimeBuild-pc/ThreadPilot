@@ -3,7 +3,6 @@ namespace ThreadPilot.Services
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.IO;
     using System.Linq;
     using System.Management;
@@ -371,11 +370,11 @@ namespace ThreadPilot.Services
             });
         }
 
-        private async Task HandleProcessStartedAsync(EventArrivedEventArgs e)
+        private Task HandleProcessStartedAsync(EventArrivedEventArgs e)
         {
             if (!this.isMonitoring || this.IsDisposed)
             {
-                return;
+                return Task.CompletedTask;
             }
 
             try
@@ -383,11 +382,14 @@ namespace ThreadPilot.Services
                 var processId = Convert.ToInt32(e.NewEvent["ProcessID"]);
                 var processName = e.NewEvent["ProcessName"]?.ToString() ?? string.Empty;
 
-                // Get detailed process information
-                var process = await this.CreateProcessModelFromId(processId, processName).ConfigureAwait(false)
-                    ?? (!string.IsNullOrWhiteSpace(processName)
-                        ? new ProcessModel { ProcessId = processId, Name = NormalizeProcessName(processName) }
-                        : null);
+                var process = !string.IsNullOrWhiteSpace(processName)
+                    ? new ProcessModel
+                    {
+                        ProcessId = processId,
+                        Name = NormalizeProcessName(processName),
+                        Classification = ProcessClassification.Unknown,
+                    }
+                    : null;
 
                 if (process != null)
                 {
@@ -399,6 +401,8 @@ namespace ThreadPilot.Services
             {
                 this.OnMonitoringStatusChanged($"Error handling process start event: {ex.Message}", ex);
             }
+
+            return Task.CompletedTask;
         }
 
         private void OnProcessStopped(object sender, EventArrivedEventArgs e)
@@ -578,36 +582,6 @@ namespace ThreadPilot.Services
             finally
             {
                 Interlocked.Exchange(ref this.isWmiRecoveryInProgress, 0);
-            }
-        }
-
-        private async Task<ProcessModel?> CreateProcessModelFromId(int processId, string processName)
-        {
-            try
-            {
-                using var process = Process.GetProcessById(processId);
-                var normalizedName = !string.IsNullOrWhiteSpace(processName)
-                    ? NormalizeProcessName(processName)
-                    : NormalizeProcessName(process.ProcessName);
-
-                return new ProcessModel
-                {
-                    ProcessId = process.Id,
-                    Name = normalizedName,
-                    CpuUsage = 0,
-                    MemoryUsage = process.PrivateMemorySize64,
-                    Priority = process.PriorityClass,
-                    ProcessorAffinity = (long)process.ProcessorAffinity,
-                    MainWindowHandle = process.MainWindowHandle,
-                    MainWindowTitle = process.MainWindowTitle ?? string.Empty,
-                    HasVisibleWindow = process.MainWindowHandle != IntPtr.Zero && !string.IsNullOrWhiteSpace(process.MainWindowTitle),
-                    ExecutablePath = process.MainModule?.FileName ?? string.Empty,
-                };
-            }
-            catch (Exception ex)
-            {
-                this.logger?.LogDebug(ex, "Process {ProcessId} terminated before access", processId);
-                return null;
             }
         }
 

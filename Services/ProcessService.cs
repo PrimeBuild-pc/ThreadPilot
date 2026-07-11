@@ -771,6 +771,11 @@ namespace ThreadPilot.Services
                     process.MainWindowHandle = p.MainWindowHandle;
                     process.MainWindowTitle = p.MainWindowTitle ?? string.Empty;
                     process.HasVisibleWindow = process.MainWindowHandle != IntPtr.Zero && !string.IsNullOrWhiteSpace(process.MainWindowTitle);
+                    if (string.IsNullOrWhiteSpace(process.ExecutablePath))
+                    {
+                        process.ExecutablePath = p.MainModule?.FileName ?? string.Empty;
+                    }
+
                     this.ApplyProcessClassification(
                         process,
                         this.foregroundProcessService?.TryGetForegroundProcessId(),
