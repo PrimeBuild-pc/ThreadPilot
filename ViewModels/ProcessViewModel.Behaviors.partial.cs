@@ -116,7 +116,7 @@ namespace ThreadPilot.ViewModels
             try
             {
                 var plans = await this.powerPlanService.GetPowerPlansAsync();
-                var activePlan = await this.powerPlanService.GetActivePowerPlan();
+                var activePlan = plans.FirstOrDefault(plan => plan.IsActive);
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {

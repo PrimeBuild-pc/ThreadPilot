@@ -5,9 +5,10 @@ namespace ThreadPilot.Core.Tests
     public sealed class AppRefreshPolicyTests
     {
         [Theory]
-        [InlineData(AppActivityState.ForegroundProcessView, true, true, true, false, true, true)]
-        [InlineData(AppActivityState.ForegroundDiagnosticsView, false, false, false, true, true, true)]
-        [InlineData(AppActivityState.ForegroundOtherTab, false, false, false, false, true, true)]
+        [InlineData(AppActivityState.ForegroundProcessView, true, true, true, false, false, true)]
+        [InlineData(AppActivityState.ForegroundDiagnosticsView, false, false, false, true, false, true)]
+        [InlineData(AppActivityState.ForegroundPowerPlanView, false, false, false, false, true, true)]
+        [InlineData(AppActivityState.ForegroundOtherTab, false, false, false, false, false, true)]
         [InlineData(AppActivityState.Minimized, false, false, false, false, false, true)]
         [InlineData(AppActivityState.TrayHidden, false, false, false, false, false, true)]
         public void Evaluate_ReturnsExpectedRefreshDecision(

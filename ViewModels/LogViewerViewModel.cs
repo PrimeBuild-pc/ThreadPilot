@@ -18,6 +18,7 @@ namespace ThreadPilot.ViewModels
         private readonly IEnhancedLoggingService loggingService;
         private readonly IApplicationSettingsService settingsService;
         private readonly ILogger<LogViewerViewModel> logger;
+        private bool isActive;
 
         [ObservableProperty]
         private ObservableCollection<LogEntryDisplayModel> logEntries = new();
@@ -128,6 +129,12 @@ namespace ThreadPilot.ViewModels
             {
                 this.StartAutoRefresh();
             }
+        }
+
+        public Task SetActiveAsync(bool active)
+        {
+            this.isActive = active;
+            return active ? this.InitializeAsync() : Task.CompletedTask;
         }
 
         public async Task InitializeAsync()
@@ -350,7 +357,7 @@ namespace ThreadPilot.ViewModels
 
         private void OnActivityEntryAdded(object? sender, ActivityAuditEntry entry)
         {
-            if (!this.ShouldDisplay(entry))
+            if (!this.isActive || !this.ShouldDisplay(entry))
             {
                 return;
             }
@@ -390,22 +397,18 @@ namespace ThreadPilot.ViewModels
                 Details = entry.Details,
             };
 
-        partial void OnSearchTextChanged(string value)
-        {
-            // Trigger refresh when search text changes - marshal to UI thread to prevent cross-thread access exceptions
-            _ = InvokeOnUiAsync(async () => await this.RefreshLogsAsync());
-        }
+        partial void OnSearchTextChanged(string value) => this.RefreshIfActive();
 
-        partial void OnSelectedCategoryChanged(string value)
-        {
-            // Trigger refresh when category changes - marshal to UI thread to prevent cross-thread access exceptions
-            _ = InvokeOnUiAsync(async () => await this.RefreshLogsAsync());
-        }
+        partial void OnSelectedCategoryChanged(string value) => this.RefreshIfActive();
 
-        partial void OnSelectedLogLevelChanged(LogLevel value)
+        partial void OnSelectedLogLevelChanged(LogLevel value) => this.RefreshIfActive();
+
+        private void RefreshIfActive()
         {
-            // Trigger refresh when log level changes - marshal to UI thread to prevent cross-thread access exceptions
-            _ = InvokeOnUiAsync(async () => await this.RefreshLogsAsync());
+            if (this.isActive)
+            {
+                _ = InvokeOnUiAsync(async () => await this.RefreshLogsAsync());
+            }
         }
 
         private static Task InvokeOnUiAsync(Action action)

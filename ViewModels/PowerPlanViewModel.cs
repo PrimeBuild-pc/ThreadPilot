@@ -291,17 +291,11 @@ namespace ThreadPilot.ViewModels
         private async Task RefreshPowerPlansCoreAsync(bool reportStatus)
         {
             var currentPlans = await this.powerPlanService.GetPowerPlansAsync();
-            var currentActive = await this.powerPlanService.GetActivePowerPlan();
             var customPlans = await this.powerPlanService.GetCustomPowerPlansAsync();
 
             this.PowerPlans = new ObservableCollection<PowerPlanModel>(currentPlans);
             this.CustomPowerPlans = new ObservableCollection<PowerPlanModel>(customPlans);
-            this.ActivePowerPlan = currentActive;
-
-            foreach (var plan in this.PowerPlans)
-            {
-                plan.IsActive = string.Equals(plan.Guid, currentActive?.Guid, StringComparison.OrdinalIgnoreCase);
-            }
+            this.ActivePowerPlan = this.PowerPlans.FirstOrDefault(plan => plan.IsActive);
 
             if (this.SelectedPowerPlan != null)
             {

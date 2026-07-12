@@ -27,6 +27,26 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task ActivityEntryAdded_UpdatesOnlyWhileViewerIsActive()
+        {
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var viewModel = CreateViewModel(audit);
+
+            await audit.LogInfoAsync("Process", "Hidden entry");
+            Assert.Empty(viewModel.LogEntries);
+
+            await viewModel.SetActiveAsync(true);
+            await audit.LogInfoAsync("Process", "Visible entry");
+
+            Assert.Equal(2, viewModel.LogEntries.Count);
+            Assert.Equal("Visible entry", viewModel.LogEntries[0].Message);
+
+            await viewModel.SetActiveAsync(false);
+            await audit.LogInfoAsync("Process", "Another hidden entry");
+            Assert.Equal(2, viewModel.LogEntries.Count);
+        }
+
+        [Fact]
         public async Task ClearLogsCommand_ClearsOnlyVisibleActivityDisplayWithoutAddingNoise()
         {
             var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);

@@ -35,12 +35,12 @@ namespace ThreadPilot.Services
         private int fallbackPollingIntervalMs = 5000; // Default 5 seconds
         private int currentFallbackPollingIntervalMs = 5000;
         private int idlePollingMultiplier = 1;
-        private readonly int wmiRetryDelayMs = 10000; // 10 seconds
         private const int MaxIdlePollingMultiplier = 6;
         private bool enableWmiMonitoring = true;
         private bool enableFallbackPolling = true;
         private int isFallbackPollingInProgress;
         private int isWmiRecoveryInProgress;
+        private int wmiRecoveryFailureCount;
         private DateTime lastWmiRetryAttemptUtc = DateTime.MinValue;
 
         public event EventHandler<ProcessEventArgs>? ProcessStarted;
@@ -106,6 +106,8 @@ namespace ThreadPilot.Services
 
             if (!wmiStarted && this.enableFallbackPolling)
             {
+                this.lastWmiRetryAttemptUtc = DateTime.UtcNow;
+                this.wmiRecoveryFailureCount = 0;
                 // Fall back to polling if WMI is not available
                 this.StartFallbackPolling();
             }
@@ -172,10 +174,14 @@ namespace ThreadPilot.Services
 
         public async Task<IEnumerable<ProcessModel>> GetRunningProcessesAsync()
         {
+            if (this.isMonitoring)
+            {
+                return this.runningProcesses.Values.ToArray();
+            }
+
             try
             {
-                var processes = await this.processService.GetProcessesAsync().ConfigureAwait(false);
-                return processes;
+                return await this.processService.GetProcessesAsync().ConfigureAwait(false);
             }
             catch (Exception)
             {
@@ -200,7 +206,7 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var processes = await this.GetRunningProcessesAsync().ConfigureAwait(false);
+                var processes = await this.processService.GetProcessesAsync().ConfigureAwait(false);
                 this.runningProcesses.Clear();
 
                 foreach (var process in processes)
@@ -256,6 +262,8 @@ namespace ThreadPilot.Services
                 }).ConfigureAwait(false);
 
                 this.isWmiAvailable = true;
+                this.wmiRecoveryFailureCount = 0;
+                this.lastWmiRetryAttemptUtc = DateTime.MinValue;
 
                 // Prefer WMI when available to reduce polling overhead
                 if (this.isFallbackPollingActive)
@@ -314,6 +322,8 @@ namespace ThreadPilot.Services
             }
 
             this.isWmiAvailable = false;
+            this.wmiRecoveryFailureCount = 0;
+            this.lastWmiRetryAttemptUtc = DateTime.UtcNow;
             this.OnMonitoringStatusChanged($"WMI watcher stopped ({e.Status})");
 
             if (this.enableFallbackPolling && !this.isFallbackPollingActive)
@@ -461,7 +471,7 @@ namespace ThreadPilot.Services
                     return;
                 }
 
-                var currentProcesses = await this.GetRunningProcessesAsync().ConfigureAwait(false);
+                var currentProcesses = await this.processService.GetProcessesAsync().ConfigureAwait(false);
                 var detectedChanges = 0;
 
                 this.pollBuffer.Clear();
@@ -559,7 +569,7 @@ namespace ThreadPilot.Services
             }
 
             var now = DateTime.UtcNow;
-            if ((now - this.lastWmiRetryAttemptUtc).TotalMilliseconds < this.wmiRetryDelayMs)
+            if (now - this.lastWmiRetryAttemptUtc < GetWmiRetryDelay(this.wmiRecoveryFailureCount))
             {
                 return;
             }
@@ -576,7 +586,12 @@ namespace ThreadPilot.Services
                 var recovered = await this.TryStartWmiMonitoringAsync().ConfigureAwait(false);
                 if (recovered)
                 {
+                    this.wmiRecoveryFailureCount = 0;
                     this.OnMonitoringStatusChanged("WMI monitoring recovered successfully");
+                }
+                else
+                {
+                    this.wmiRecoveryFailureCount++;
                 }
             }
             finally
@@ -584,6 +599,15 @@ namespace ThreadPilot.Services
                 Interlocked.Exchange(ref this.isWmiRecoveryInProgress, 0);
             }
         }
+
+        internal static TimeSpan GetWmiRetryDelay(int failureCount) =>
+            failureCount switch
+            {
+                <= 0 => TimeSpan.FromSeconds(10),
+                1 => TimeSpan.FromSeconds(30),
+                2 => TimeSpan.FromMinutes(1),
+                _ => TimeSpan.FromMinutes(5),
+            };
 
         private void OnMonitoringStatusChanged(string? message = null, Exception? error = null)
         {
@@ -606,6 +630,8 @@ namespace ThreadPilot.Services
             var previousFallbackEnabled = this.enableFallbackPolling;
 
             this.UpdateMonitoringSettings();
+            this.wmiRecoveryFailureCount = 0;
+            this.lastWmiRetryAttemptUtc = DateTime.MinValue;
 
             if (!this.isMonitoring)
             {

@@ -47,7 +47,7 @@ namespace ThreadPilot.Core.Tests
 
             public Harness()
             {
-                var activePlan = new PowerPlanModel { Guid = "balanced", Name = "Balanced" };
+                var activePlan = new PowerPlanModel { Guid = "balanced", Name = "Balanced", IsActive = true };
                 this.PowerPlan
                     .Setup(x => x.GetPowerPlansAsync())
                     .ReturnsAsync(new ObservableCollection<PowerPlanModel> { activePlan });

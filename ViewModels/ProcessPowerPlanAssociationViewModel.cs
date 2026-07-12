@@ -21,6 +21,7 @@ namespace ThreadPilot.ViewModels
         private readonly IProcessService processService;
         private readonly IProcessMonitorManagerService monitorManagerService;
         private readonly ICoreMaskService coreMaskService;
+        private bool isInitialized;
 
         [ObservableProperty]
         private ObservableCollection<ProcessPowerPlanAssociation> associations = new();
@@ -132,13 +133,16 @@ namespace ThreadPilot.ViewModels
             this.associationService.ConfigurationChanged += this.OnConfigurationChanged;
             this.monitorManagerService.ServiceStatusChanged += this.OnServiceStatusChanged;
             this.monitorManagerService.ProcessPowerPlanChanged += this.OnProcessPowerPlanChanged;
-
-            // Initialize
-            _ = this.InitializeAsync();
         }
 
         public override async Task InitializeAsync()
         {
+            if (this.isInitialized)
+            {
+                return;
+            }
+
+            this.isInitialized = true;
             await this.LoadDataAsync();
             this.UpdateServiceStatus();
         }
@@ -480,8 +484,10 @@ namespace ThreadPilot.ViewModels
 
         private void OnConfigurationChanged(object? sender, ConfigurationChangedEventArgs e)
         {
-            // Reload data when configuration changes - marshal to UI thread to prevent cross-thread access exceptions
-            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () => await this.LoadDataAsync());
+            if (this.isInitialized)
+            {
+                _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () => await this.LoadDataAsync());
+            }
         }
 
         private void OnServiceStatusChanged(object? sender, ServiceStatusEventArgs e)
