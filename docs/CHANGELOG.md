@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.4.4 - Runtime efficiency
+
+### Performance
+
+- Reduced background idle CPU by approximately 80-100% in measured tray scenarios.
+- Reduced CPU overhead during short-lived process churn by approximately 8%.
+- Reduced hidden working-set memory by approximately 4-5% and peak handle usage by approximately 12-13%.
+- Reduced external command launches during visible startup by approximately 85% (27 to 4 in the measured scenario).
+- Deferred inactive views, reused process snapshots and static metadata, and removed redundant `powercfg` calls.
+- Suspended hidden Log Viewer updates, made log flushing event-driven, and added bounded WMI recovery backoff.
+
+### Fixed
+
+- Persistent rules are cached without weakening process-start matching or CPU-priority verification and retry behavior.
+- Process handles and PID-scoped runtime state are consistently cleaned up.
+
 ## v1.4.3 - Expanded bundled power-plan catalog
 
 ### Added
