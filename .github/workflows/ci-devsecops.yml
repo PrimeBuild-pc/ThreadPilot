@@ -55,8 +55,8 @@ jobs:
           [xml]$coverage = Get-Content $coveragePath
           $lineRate = [double]$coverage.coverage.'line-rate' * 100
           $branchRate = [double]$coverage.coverage.'branch-rate' * 100
-          # Temporary floor until the service-hardening coverage tasks land.
-          $minimumLineRate = 1.5
+          # Keep the gate slightly below measured main coverage so meaningful tests can raise it deliberately.
+          $minimumLineRate = 35.0
 
           $summary = @(
             "## Coverage Gate",
