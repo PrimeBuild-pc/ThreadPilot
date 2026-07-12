@@ -348,6 +348,26 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task GetProcessesByNameAsync_ReturnsMaterializedModels()
+        {
+            var profilesDirectory = CreateTemporaryDirectory();
+            var service = CreateService(profilesDirectory);
+            using var currentProcess = Process.GetCurrentProcess();
+
+            try
+            {
+                var results = await service.GetProcessesByNameAsync(currentProcess.ProcessName);
+
+                var models = Assert.IsType<List<ProcessModel>>(results);
+                Assert.Contains(models, process => process.ProcessId == currentProcess.Id);
+            }
+            finally
+            {
+                DeleteDirectory(profilesDirectory);
+            }
+        }
+
+        [Fact]
         public void TrackPriorityChange_PreservesOriginalPriority()
         {
             var service = CreateService(CreateTemporaryDirectory());

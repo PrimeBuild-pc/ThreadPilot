@@ -4,6 +4,7 @@
 namespace ThreadPilot.Services
 {
     using System.Collections.Concurrent;
+    using System.IO;
     using Microsoft.Extensions.Logging;
     using ThreadPilot.Models;
 
@@ -86,6 +87,7 @@ namespace ThreadPilot.Services
         private readonly ILogger<PersistentRuleAutoApplyService> logger;
         private readonly IActivityAuditService? activityAuditService;
         private readonly IPersistentRulePriorityVerificationService? priorityVerificationService;
+        private readonly IProcessService? processService;
         private readonly Func<DateTimeOffset> nowProvider;
         private readonly TimeSpan cooldown;
         private readonly ConcurrentDictionary<RuleAttemptKey, DateTimeOffset> recentAttempts = new();
@@ -97,8 +99,9 @@ namespace ThreadPilot.Services
             IApplicationSettingsService settingsService,
             ILogger<PersistentRuleAutoApplyService> logger,
             IActivityAuditService? activityAuditService = null,
-            IPersistentRulePriorityVerificationService? priorityVerificationService = null)
-            : this(ruleStore, matcher, rulesEngine, settingsService, logger, () => DateTimeOffset.UtcNow, DefaultCooldown, activityAuditService, priorityVerificationService)
+            IPersistentRulePriorityVerificationService? priorityVerificationService = null,
+            IProcessService? processService = null)
+            : this(ruleStore, matcher, rulesEngine, settingsService, logger, () => DateTimeOffset.UtcNow, DefaultCooldown, activityAuditService, priorityVerificationService, processService)
         {
         }
 
@@ -111,7 +114,8 @@ namespace ThreadPilot.Services
             Func<DateTimeOffset> nowProvider,
             TimeSpan cooldown,
             IActivityAuditService? activityAuditService = null,
-            IPersistentRulePriorityVerificationService? priorityVerificationService = null)
+            IPersistentRulePriorityVerificationService? priorityVerificationService = null,
+            IProcessService? processService = null)
         {
             this.ruleStore = ruleStore ?? throw new ArgumentNullException(nameof(ruleStore));
             this.matcher = matcher ?? throw new ArgumentNullException(nameof(matcher));
@@ -122,6 +126,7 @@ namespace ThreadPilot.Services
             this.cooldown = cooldown <= TimeSpan.Zero ? DefaultCooldown : cooldown;
             this.activityAuditService = activityAuditService;
             this.priorityVerificationService = priorityVerificationService;
+            this.processService = processService;
         }
 
         public async Task<IReadOnlyList<PersistentRuleAutoApplyResult>> ApplyForDiscoveredProcessesAsync(
@@ -190,8 +195,35 @@ namespace ThreadPilot.Services
             CancellationToken cancellationToken)
         {
             var now = this.nowProvider();
-            var candidates = rules
-                .Where(rule => rule.IsEnabled && this.matcher.IsMatch(rule, process))
+            var potentialRules = rules
+                .Where(rule => rule.IsEnabled && IsPotentialNameMatch(rule, process.Name))
+                .ToList();
+
+            if (potentialRules.Count == 0)
+            {
+                return Array.Empty<PersistentRuleAutoApplyResult>();
+            }
+
+            if (this.processService != null &&
+                string.IsNullOrWhiteSpace(process.ExecutablePath) &&
+                potentialRules.Any(rule => !string.IsNullOrWhiteSpace(rule.ExecutablePath)))
+            {
+                try
+                {
+                    await this.processService.RefreshProcessInfo(process).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    this.logger.LogDebug(
+                        ex,
+                        "Could not enrich process {ProcessName} (PID: {ProcessId}) for path-based persistent rule matching",
+                        process.Name,
+                        process.ProcessId);
+                }
+            }
+
+            var candidates = potentialRules
+                .Where(rule => this.matcher.IsMatch(rule, process))
                 .ToList();
 
             if (candidates.Count == 0)
@@ -392,6 +424,18 @@ namespace ThreadPilot.Services
 
         private bool IsEnabled() =>
             this.settingsService.Settings.ApplyPersistentRulesOnProcessStart;
+
+        private static bool IsPotentialNameMatch(PersistentProcessRule rule, string processName)
+        {
+            var candidateName = !string.IsNullOrWhiteSpace(rule.ProcessName)
+                ? rule.ProcessName
+                : Path.GetFileNameWithoutExtension(rule.ExecutablePath);
+            return !string.IsNullOrWhiteSpace(candidateName) &&
+                string.Equals(
+                    Path.GetFileNameWithoutExtension(candidateName.Trim()),
+                    Path.GetFileNameWithoutExtension(processName.Trim()),
+                    StringComparison.OrdinalIgnoreCase);
+        }
 
         private static bool IsProcessEligible(ProcessModel process) =>
             process.ProcessId > 0 && !string.IsNullOrWhiteSpace(process.Name);

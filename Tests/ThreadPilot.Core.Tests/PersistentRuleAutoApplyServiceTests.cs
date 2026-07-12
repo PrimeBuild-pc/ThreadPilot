@@ -127,6 +127,50 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task ApplyForProcessStartAsync_WhenNameCannotMatch_DoesNotEnrichProcess()
+        {
+            var process = CreateProcess("editor.exe");
+            process.ExecutablePath = string.Empty;
+            var rule = CreateRule(processName: "game.exe") with { ExecutablePath = @"C:\Games\Game.exe" };
+            var engine = CreateEngine(rule, CreateSuccess(rule, process));
+            var processService = new Mock<IProcessService>(MockBehavior.Strict);
+            var service = CreateService([rule], engine.Object, processService: processService.Object);
+
+            var results = await service.ApplyForProcessStartAsync(process);
+
+            Assert.Empty(results);
+            processService.Verify(
+                service => service.RefreshProcessInfo(It.IsAny<ProcessModel>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task ApplyForProcessStartAsync_WhenPathRuleNameMatches_EnrichesBeforeMatching()
+        {
+            var process = CreateProcess();
+            process.ExecutablePath = string.Empty;
+            var rule = CreateRule() with { ExecutablePath = @"C:\Games\Game.exe" };
+            var engine = CreateEngine(rule, CreateSuccess(rule, process));
+            var processService = new Mock<IProcessService>(MockBehavior.Strict);
+            processService
+                .Setup(service => service.RefreshProcessInfo(process))
+                .Callback(() => process.ExecutablePath = @"C:\Games\Game.exe")
+                .Returns(Task.CompletedTask);
+            var service = CreateService([rule], engine.Object, processService: processService.Object);
+
+            var results = await service.ApplyForProcessStartAsync(process);
+
+            Assert.Single(results);
+            processService.Verify(service => service.RefreshProcessInfo(process), Times.Once);
+            engine.Verify(
+                service => service.ApplyMatchingRulesAsync(
+                    process,
+                    It.IsAny<Predicate<PersistentProcessRule>?>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+
+        [Fact]
         public async Task ApplyForProcessStartAsync_DoesNotReapplySameRuleDuringCooldown()
         {
             var now = DateTimeOffset.UtcNow;
@@ -440,7 +484,8 @@ namespace ThreadPilot.Core.Tests
             ApplicationSettingsModel? settings = null,
             Func<DateTimeOffset>? nowProvider = null,
             IActivityAuditService? audit = null,
-            IPersistentRulePriorityVerificationService? priorityVerifier = null) =>
+            IPersistentRulePriorityVerificationService? priorityVerifier = null,
+            IProcessService? processService = null) =>
             new(
                 new FakePersistentProcessRuleStore(rules),
                 new PersistentProcessRuleMatcher(),
@@ -450,7 +495,8 @@ namespace ThreadPilot.Core.Tests
                 nowProvider ?? (() => DateTimeOffset.UtcNow),
                 TimeSpan.FromSeconds(30),
                 audit,
-                priorityVerifier);
+                priorityVerifier,
+                processService);
 
         private static Mock<IPersistentRulesEngine> CreateEngine(
             PersistentProcessRule rule,

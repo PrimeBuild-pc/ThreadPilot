@@ -346,13 +346,34 @@ namespace ThreadPilot.Services
 
             try
             {
-                await this.enhancedLogger.LogProcessMonitoringEventAsync(
-                    LogEventTypes.ProcessMonitoring.Started,
-                    e.Process.Name, e.Process.ProcessId, "Process started and detected by monitoring");
+                this.logger.LogDebug(
+                    "Process started: {ProcessName} (PID: {ProcessId})",
+                    e.Process.Name,
+                    e.Process.ProcessId);
 
                 await this.ApplyPersistentRulesForProcessStartAsync(e.Process);
 
-                var association = this.configuration.FindMatchingAssociation(e.Process);
+                var associationCandidates = this.configuration
+                    .GetEnabledAssociations()
+                    .Where(association => association.MatchesExecutable(e.Process.Name))
+                    .ToList();
+                if (associationCandidates.Count > 0)
+                {
+                    try
+                    {
+                        await this.processService.RefreshProcessInfo(e.Process);
+                    }
+                    catch (Exception ex)
+                    {
+                        this.logger.LogDebug(
+                            ex,
+                            "Could not enrich process {ProcessName} (PID: {ProcessId}) for association matching",
+                            e.Process.Name,
+                            e.Process.ProcessId);
+                    }
+                }
+
+                var association = associationCandidates.FirstOrDefault(candidate => candidate.MatchesProcess(e.Process));
                 if (association != null)
                 {
                     this.runningAssociatedProcesses[e.Process.ProcessId] = e.Process;
@@ -411,12 +432,11 @@ namespace ThreadPilot.Services
             try
             {
                 this.persistentRuleAutoApplyService.MarkProcessExited(e.Process.ProcessId);
+                this.coreMaskService.UnregisterMaskApplication(e.Process.ProcessId);
+                this.processService.UntrackProcess(e.Process.ProcessId);
 
                 if (this.runningAssociatedProcesses.TryRemove(e.Process.ProcessId, out _))
                 {
-                    this.coreMaskService.UnregisterMaskApplication(e.Process.ProcessId);
-                    this.processService.UntrackProcess(e.Process.ProcessId);
-
                     // Check if there are any other associated processes still running
                     var remainingProcesses = this.runningAssociatedProcesses.Values.ToList();
                     await this.DeterminePowerPlanAsync(remainingProcesses);

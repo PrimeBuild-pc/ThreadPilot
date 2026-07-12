@@ -110,15 +110,26 @@ namespace ThreadPilot.Services
         public async Task<ObservableCollection<ProcessModel>> GetProcessesAsync()
         {
             return await Task.Run(() =>
-            {
-                var foregroundProcessId = this.foregroundProcessService?.TryGetForegroundProcessId();
-                var processes = Process.GetProcesses()
-                    .Select(process => this.TryCreateProcessModel(process, foregroundProcessId))
-                    .OfType<ProcessModel>()
-                    .OrderBy(p => p.Name);
+                new ObservableCollection<ProcessModel>(this.EnumerateProcessModels())).ConfigureAwait(false);
+        }
 
-                return new ObservableCollection<ProcessModel>(processes);
-            }).ConfigureAwait(false);
+        private List<ProcessModel> EnumerateProcessModels(Func<ProcessModel, bool>? filter = null)
+        {
+            var foregroundProcessId = this.foregroundProcessService?.TryGetForegroundProcessId();
+            var models = new List<ProcessModel>();
+            foreach (var process in Process.GetProcesses())
+            {
+                using (process)
+                {
+                    var model = this.TryCreateProcessModel(process, foregroundProcessId);
+                    if (model != null && (filter == null || filter(model)))
+                    {
+                        models.Add(model);
+                    }
+                }
+            }
+
+            return models.OrderBy(process => process.Name).ToList();
         }
 
         private sealed class CpuSample
@@ -771,6 +782,11 @@ namespace ThreadPilot.Services
                     process.MainWindowHandle = p.MainWindowHandle;
                     process.MainWindowTitle = p.MainWindowTitle ?? string.Empty;
                     process.HasVisibleWindow = process.MainWindowHandle != IntPtr.Zero && !string.IsNullOrWhiteSpace(process.MainWindowTitle);
+                    if (string.IsNullOrWhiteSpace(process.ExecutablePath))
+                    {
+                        process.ExecutablePath = p.MainModule?.FileName ?? string.Empty;
+                    }
+
                     this.ApplyProcessClassification(
                         process,
                         this.foregroundProcessService?.TryGetForegroundProcessId(),
@@ -983,7 +999,7 @@ namespace ThreadPilot.Services
             {
                 try
                 {
-                    var process = Process.GetProcessById(processId);
+                    using var process = Process.GetProcessById(processId);
                     return this.CreateProcessModel(process);
                 }
                 catch
@@ -995,20 +1011,29 @@ namespace ThreadPilot.Services
 
         public async Task<IEnumerable<ProcessModel>> GetProcessesByNameAsync(string executableName)
         {
-            return await Task.Run(() =>
+            return await Task.Run<IEnumerable<ProcessModel>>(() =>
             {
                 try
                 {
                     var foregroundProcessId = this.foregroundProcessService?.TryGetForegroundProcessId();
-                    var processes = Process.GetProcessesByName(executableName)
-                        .Select(process => this.TryCreateProcessModel(process, foregroundProcessId))
-                        .OfType<ProcessModel>();
+                    var models = new List<ProcessModel>();
+                    foreach (var process in Process.GetProcessesByName(executableName))
+                    {
+                        using (process)
+                        {
+                            var model = this.TryCreateProcessModel(process, foregroundProcessId);
+                            if (model != null)
+                            {
+                                models.Add(model);
+                            }
+                        }
+                    }
 
-                    return processes;
+                    return models;
                 }
                 catch
                 {
-                    return Enumerable.Empty<ProcessModel>();
+                    return Array.Empty<ProcessModel>();
                 }
             }).ConfigureAwait(false);
         }
@@ -1021,32 +1046,15 @@ namespace ThreadPilot.Services
 
         public async Task<IEnumerable<ProcessModel>> GetProcessesWithPathsAsync()
         {
-            return await Task.Run(() =>
-            {
-                var foregroundProcessId = this.foregroundProcessService?.TryGetForegroundProcessId();
-                var processes = Process.GetProcesses()
-                    .Select(process => this.TryCreateProcessModel(process, foregroundProcessId))
-                    .OfType<ProcessModel>()
-                    .Where(p => !string.IsNullOrEmpty(p.ExecutablePath))
-                    .OrderBy(p => p.Name);
-
-                return processes;
-            }).ConfigureAwait(false);
+            return await Task.Run<IEnumerable<ProcessModel>>(() =>
+                this.EnumerateProcessModels(process => !string.IsNullOrEmpty(process.ExecutablePath))).ConfigureAwait(false);
         }
 
         public async Task<ObservableCollection<ProcessModel>> GetActiveApplicationsAsync()
         {
             return await Task.Run(() =>
-            {
-                var foregroundProcessId = this.foregroundProcessService?.TryGetForegroundProcessId();
-                var processes = Process.GetProcesses()
-                    .Select(process => this.TryCreateProcessModel(process, foregroundProcessId))
-                    .OfType<ProcessModel>()
-                    .Where(p => p.HasVisibleWindow)
-                    .OrderBy(p => p.Name);
-
-                return new ObservableCollection<ProcessModel>(processes);
-            }).ConfigureAwait(false);
+                new ObservableCollection<ProcessModel>(
+                    this.EnumerateProcessModels(process => process.HasVisibleWindow))).ConfigureAwait(false);
         }
 
         public async Task<bool> IsProcessStillRunning(ProcessModel process)
@@ -1055,8 +1063,8 @@ namespace ThreadPilot.Services
             {
                 try
                 {
-                    var p = Process.GetProcessById(process.ProcessId);
-                    return !p.HasExited;
+                    using var targetProcess = Process.GetProcessById(process.ProcessId);
+                    return !targetProcess.HasExited;
                 }
                 catch (ArgumentException)
                 {

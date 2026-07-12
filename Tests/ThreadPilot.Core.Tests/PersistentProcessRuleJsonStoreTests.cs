@@ -137,6 +137,74 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task LoadAsync_AfterFirstRead_ReturnsCachedSnapshot()
+        {
+            var filePath = CreateTemporaryFilePath();
+            var store = new PersistentProcessRuleJsonStore(() => filePath);
+
+            try
+            {
+                await store.SaveAsync([CreateRule("cached", "Cached.exe", ProcessPriorityClass.High)]);
+                var first = await store.LoadAsync();
+                await new PersistentProcessRuleJsonStore(() => filePath)
+                    .SaveAsync([CreateRule("external", "External.exe", ProcessPriorityClass.Normal)]);
+
+                var second = await store.LoadAsync();
+
+                Assert.Same(first, second);
+                Assert.Equal("cached", Assert.Single(second).Id);
+            }
+            finally
+            {
+                DeleteFile(filePath);
+            }
+        }
+
+        [Fact]
+        public async Task SaveAsync_AfterCachedLoad_UpdatesSnapshot()
+        {
+            var filePath = CreateTemporaryFilePath();
+            var store = new PersistentProcessRuleJsonStore(() => filePath);
+
+            try
+            {
+                await store.SaveAsync([CreateRule("first", "First.exe", ProcessPriorityClass.High)]);
+                _ = await store.LoadAsync();
+                await store.SaveAsync([CreateRule("second", "Second.exe", ProcessPriorityClass.AboveNormal)]);
+
+                Assert.Equal("second", Assert.Single(await store.LoadAsync()).Id);
+                Assert.Equal("second", Assert.Single(await new PersistentProcessRuleJsonStore(() => filePath).LoadAsync()).Id);
+            }
+            finally
+            {
+                DeleteFile(filePath);
+            }
+        }
+
+        [Fact]
+        public async Task ConcurrentSaves_LeaveOneCompleteSnapshot()
+        {
+            var filePath = CreateTemporaryFilePath();
+            var store = new PersistentProcessRuleJsonStore(() => filePath);
+            var expectedIds = Enumerable.Range(0, 8).Select(index => $"rule-{index}").ToHashSet();
+
+            try
+            {
+                await Task.WhenAll(expectedIds.Select(id =>
+                    store.SaveAsync([CreateRule(id, $"{id}.exe", ProcessPriorityClass.High)])));
+
+                var cached = Assert.Single(await store.LoadAsync());
+                var persisted = Assert.Single(await new PersistentProcessRuleJsonStore(() => filePath).LoadAsync());
+                Assert.Contains(cached.Id, expectedIds);
+                Assert.Equal(cached.Id, persisted.Id);
+            }
+            finally
+            {
+                DeleteFile(filePath);
+            }
+        }
+
+        [Fact]
         public async Task LoadAsync_WithCorruptJson_ReturnsEmptyList()
         {
             var filePath = CreateTemporaryFilePath();
