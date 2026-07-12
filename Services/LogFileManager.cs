@@ -109,12 +109,11 @@ namespace ThreadPilot.Services
 
         public async Task<LogFileStatistics> GetStatisticsAsync()
         {
+            var stats = new LogFileStatistics();
             await this.fileLock.WaitAsync();
             try
             {
-                var stats = new LogFileStatistics();
                 var logFiles = this.GetLogFiles();
-
                 stats.TotalLogFiles = logFiles.Count;
 
                 foreach (var logFile in logFiles)
@@ -137,16 +136,14 @@ namespace ThreadPilot.Services
                         stats.NewestLogDate = fileInfo.CreationTime;
                     }
                 }
-
-                // Count log levels by reading recent entries
-                await this.CountLogLevelsAsync(stats);
-
-                return stats;
             }
             finally
             {
                 this.fileLock.Release();
             }
+
+            await this.CountLogLevelsAsync(stats);
+            return stats;
         }
 
         public async Task CleanupOldLogsAsync()
