@@ -1,19 +1,38 @@
-## ThreadPilot v1.4.3
+## ThreadPilot v1.4.4
 
-Patch release expanding and validating ThreadPilot's bundled Windows power-plan catalog.
+Patch release focused on reducing ThreadPilot's foreground and background runtime overhead while preserving process automation and persistent CPU-priority verification.
 
-### Added
+### Measured improvements
 
-- Added 30 new bundled Windows power plans: 0 Synez Public Power, arsenha low latency, arsenha low latency (Intel Thread Director fix), AutoOS, BEYOND PERFORMANCE AMD+INTEL, Bitsum Highest Performance, cactusOS, FPSHEAVEN2026, GALA's ultimate performance (AMD), Gavot Performance, GTweaks Power Plan V3, imribiy2026, IrisFixed, JokrOS Power Plan, Jackpot2026, Kizzimo's Extreme Low Latency, KSOS11, melody LowestLatency, Microsoft High performance, Microsoft Ultimate Performance, Mitstas IDLE ENABLED, n1kobg GPU Booster Power Plan, Prodazin Power Plan, Reticle v2, RevisionPowerPlanV2.8, RIP Tweaks Power Plan, Rosca Tweaks v2, Velo's Power Plan, VTRL Optimized, and XNRL Pro Plan.
-- Added structural, discovery, duplicate, packaging, and invalid-file tests for bundled power plans.
+Compared with the official v1.4.3 build on the same system and using the same Release profile:
 
-### Changed
+- **Approximately 80-100% lower background idle CPU** in measured tray scenarios, reaching 0% in the final idle sample.
+- **Approximately 8% lower CPU overhead during process churn** with 80 short-lived processes.
+- **Approximately 4-5% lower hidden working-set memory**.
+- **Approximately 12-13% lower peak handle usage** while hidden.
+- **Approximately 85% fewer external command launches during visible startup**, reduced from 27 to 4.
 
-- Updated four existing bundled plans: IIIEXOIII LOW LATENCY, LLG parking/E-core fix, Slower, and xilly.
-- Removed a redundant duplicate Sazinho power-plan file.
-- Power-plan display-name parsing now preserves names containing parentheses.
+Results vary by hardware, Windows configuration, active page, and workload. The Process page remains intentionally more active while visible because it refreshes live process information.
+
+### Runtime changes
+
+- Cached persistent-rule snapshots in memory and pre-matched process starts before expensive enrichment.
+- Disposed process handles consistently and cleared PID-scoped caches on process exit.
+- Deferred initialization of inactive Power Plans, Rules, Settings, Tweaks, and Logs pages.
+- Reused the process monitor's initial snapshot and PID/start-time-validated static process metadata.
+- Parsed the active plan from a single `powercfg /list` call and limited periodic power-plan refresh to the visible Power Plans page.
+- Suspended Log Viewer collection updates while hidden and changed log flushing to one-shot scheduling.
+- Added WMI recovery backoff while preserving fallback polling reliability.
+
+### Compatibility and safety
+
+- Persistent rules, process start/stop tracking, and lazy diagnostics remain covered by regression tests.
+- CPU-priority verification and the bounded retry introduced for issue #32 are unchanged.
+- No default ThreadPilot affinity limit was enabled.
 
 ### Validation
 
-- Every changed `.pow` file was imported successfully with `powercfg` using a temporary GUID and then removed; the active Windows power plan remained unchanged.
-- Bundled assets are discovered automatically and copied to build, publish, portable ZIP, and installer output through the existing project and release workflow.
+- Release build completed with zero warnings and zero errors.
+- All 581 automated tests passed before release preparation.
+- CI and CodeQL passed for both performance pull requests.
+- NuGet dependency audit found no known vulnerable packages.

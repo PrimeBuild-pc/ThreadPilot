@@ -35,6 +35,8 @@ docs/superpowers/plans/
 /VALIDATION_NOTES*.md
 /PR*_VALIDATION*.md
 /CHOCOLATEY_MODERATOR_NOTICE*.md
+/IMPROVE_APP_PERFORMANCE_PLAN.md
+/PERFORMANCE_*.md
 
 # Test and coverage
 [Tt]est[Rr]esult*/

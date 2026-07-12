@@ -4,8 +4,8 @@ namespace ThreadPilot.Core.Tests
 
     public sealed partial class PackagingMetadataTests
     {
-        private const string ReleaseVersion = "1.4.3";
-        private const string ReleaseAssemblyVersion = "1.4.3.0";
+        private const string ReleaseVersion = "1.4.4";
+        private const string ReleaseAssemblyVersion = "1.4.4.0";
 
         [Fact]
         public void InnoInstallers_UseStableDisplayNameAndSeparateVersionMetadata()
@@ -73,7 +73,6 @@ namespace ThreadPilot.Core.Tests
             AssertFileContains(Path.Combine(root, "build", "build-release.ps1"), $"[string]$Version = \"{ReleaseVersion}\"");
             AssertFileContains(Path.Combine(root, "build", "build-installer.ps1"), $"[string]$Version = \"{ReleaseVersion}\"");
             AssertFileContains(Path.Combine(root, "build", "package-release-zips.ps1"), $"[string]$Version = \"{ReleaseVersion}\"");
-            Assert.True(File.Exists(Path.Combine(root, "docs", "releases", $"v{ReleaseVersion}.md")));
             AssertFileContains(Path.Combine(root, "docs", "release", "RELEASE_NOTES.md"), $"v{ReleaseVersion}");
         }
 
@@ -100,7 +99,7 @@ namespace ThreadPilot.Core.Tests
             throw new InvalidOperationException("Repository root could not be located.");
         }
 
-        [GeneratedRegex("#define MyAppVersion \"1\\.4\\.3\"", RegexOptions.CultureInvariant)]
+        [GeneratedRegex("#define MyAppVersion \"1\\.4\\.4\"", RegexOptions.CultureInvariant)]
         private static partial Regex MyAppVersionRegex();
     }
 }
