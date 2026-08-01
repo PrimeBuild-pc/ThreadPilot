@@ -27,10 +27,6 @@ namespace ThreadPilot.Services
 
         Task<bool> SetPowerThrottlingAsync(bool enabled);
 
-        Task<TweakStatus> GetHpetStatusAsync();
-
-        Task<bool> SetHpetAsync(bool enabled);
-
         Task<TweakStatus> GetHighSchedulingCategoryStatusAsync();
 
         Task<bool> SetHighSchedulingCategoryAsync(bool enabled);
@@ -38,8 +34,6 @@ namespace ThreadPilot.Services
         Task<TweakStatus> GetMenuShowDelayStatusAsync();
 
         Task<bool> SetMenuShowDelayAsync(bool enabled);
-
-        Task RefreshAllStatusesAsync();
     }
 
     public class TweakStatus
@@ -49,8 +43,6 @@ namespace ThreadPilot.Services
         public bool IsAvailable { get; set; }
 
         public string? ErrorMessage { get; set; }
-
-        public string? Description { get; set; }
     }
 
     public class TweakStatusChangedEventArgs : EventArgs
@@ -76,7 +68,6 @@ namespace ThreadPilot.Services
         SysMain,
         Prefetch,
         PowerThrottling,
-        Hpet,
         HighSchedulingCategory,
         MenuShowDelay,
     }

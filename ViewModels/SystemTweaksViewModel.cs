@@ -2,6 +2,7 @@ namespace ThreadPilot.ViewModels
 {
     using System;
     using System.Collections.ObjectModel;
+    using System.Globalization;
     using System.Linq;
     using System.Threading.Tasks;
     using CommunityToolkit.Mvvm.ComponentModel;
@@ -13,6 +14,7 @@ namespace ThreadPilot.ViewModels
     {
         private readonly ISystemTweaksService systemTweaksService;
         private readonly INotificationService notificationService;
+        private readonly ILocalizationService localizationService;
 
         [ObservableProperty]
         private ObservableCollection<SystemTweakItem> tweakItems = new();
@@ -26,6 +28,7 @@ namespace ThreadPilot.ViewModels
         public SystemTweaksViewModel(
             ISystemTweaksService systemTweaksService,
             INotificationService notificationService,
+            ILocalizationService localizationService,
             ILogger<SystemTweaksViewModel> logger,
             IEnhancedLoggingService? enhancedLoggingService = null,
             IActivityAuditService? activityAuditService = null)
@@ -33,100 +36,29 @@ namespace ThreadPilot.ViewModels
         {
             this.systemTweaksService = systemTweaksService;
             this.notificationService = notificationService;
+            this.localizationService = localizationService;
 
-            // Subscribe to tweak status changes
             this.systemTweaksService.TweakStatusChanged += this.OnTweakStatusChanged;
+            this.localizationService.LanguageChanged += this.OnLanguageChanged;
 
             this.InitializeTweakItems();
         }
 
         private void InitializeTweakItems()
         {
-            this.TweakItems = new ObservableCollection<SystemTweakItem>
-            {
-                new SystemTweakItem
+            this.TweakItems = new ObservableCollection<SystemTweakItem>(
+                Enum.GetValues<SystemTweak>().Select(type => new SystemTweakItem
                 {
-                    Name = "Core Parking",
-                    Description = "Controls CPU core parking for power management",
-                    TweakType = SystemTweak.CoreParking,
-                    IsEnabled = false,
-                    IsAvailable = true,
+                    TweakType = type,
                     ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(this.ToggleTweakAsync),
-                },
-                new SystemTweakItem
-                {
-                    Name = "C-States",
-                    Description = "Controls CPU C-States for power management",
-                    TweakType = SystemTweak.CStates,
-                    IsEnabled = false,
-                    IsAvailable = true,
-                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(this.ToggleTweakAsync),
-                },
-                new SystemTweakItem
-                {
-                    Name = "SysMain Service",
-                    Description = "Windows Superfetch/SysMain service for memory management",
-                    TweakType = SystemTweak.SysMain,
-                    IsEnabled = false,
-                    IsAvailable = true,
-                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(this.ToggleTweakAsync),
-                },
-                new SystemTweakItem
-                {
-                    Name = "Prefetch",
-                    Description = "Windows Prefetch feature for faster application loading",
-                    TweakType = SystemTweak.Prefetch,
-                    IsEnabled = false,
-                    IsAvailable = true,
-                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(this.ToggleTweakAsync),
-                },
-                new SystemTweakItem
-                {
-                    Name = "Power Throttling",
-                    Description = "Windows Power Throttling for energy efficiency",
-                    TweakType = SystemTweak.PowerThrottling,
-                    IsEnabled = false,
-                    IsAvailable = true,
-                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(this.ToggleTweakAsync),
-                },
-                new SystemTweakItem
-                {
-                    Name = "HPET",
-                    Description = "High Precision Event Timer for system timing",
-                    TweakType = SystemTweak.Hpet,
-                    IsEnabled = false,
-                    IsAvailable = true,
-                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(this.ToggleTweakAsync),
-                },
-                new SystemTweakItem
-                {
-                    Name = "High Scheduling Category",
-                    Description = "High scheduling priority for gaming applications",
-                    TweakType = SystemTweak.HighSchedulingCategory,
-                    IsEnabled = false,
-                    IsAvailable = true,
-                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(this.ToggleTweakAsync),
-                },
-                new SystemTweakItem
-                {
-                    Name = "Menu Show Delay",
-                    Description = "Delay before showing context menus",
-                    TweakType = SystemTweak.MenuShowDelay,
-                    IsEnabled = false,
-                    IsAvailable = true,
-                    ToggleCommand = new AsyncRelayCommand<SystemTweakItem>(this.ToggleTweakAsync)
-                },
-            };
+                }));
+            this.ApplyLocalizedTweakText();
         }
 
         [RelayCommand]
         public async Task LoadAsync()
         {
-            await this.ExecuteAsync(
-                async () =>
-            {
-                await this.RefreshAllTweaksAsync();
-            }, "Loading system tweaks...", "System tweaks loaded successfully");
+            await this.RefreshAllTweaksAsync();
         }
 
         [RelayCommand]
@@ -134,39 +66,33 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await InvokeOnUiAsync(() =>
                 {
                     this.IsRefreshing = true;
-                    this.RefreshStatusText = "Refreshing system tweaks...";
+                    this.RefreshStatusText = this.Localize("SystemTweaks_StatusRefreshing", "Refreshing system tweaks...");
                 });
 
-                await this.systemTweaksService.RefreshAllStatusesAsync();
+                await Task.WhenAll(this.TweakItems.Select(this.UpdateTweakItemStatusAsync));
 
-                // Update each tweak item with current status
-                foreach (var item in this.TweakItems)
+                await InvokeOnUiAsync(() =>
                 {
-                    await this.UpdateTweakItemStatusAsync(item);
-                }
-
-                // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
-                {
-                    this.RefreshStatusText = $"Last refreshed: {DateTime.Now:HH:mm:ss}";
+                    this.RefreshStatusText = this.Localize(
+                        "SystemTweaks_StatusLastRefreshedFormat",
+                        "Last refreshed: {0}",
+                        DateTime.Now.ToString("T"));
                 });
             }
             catch (Exception ex)
             {
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await InvokeOnUiAsync(() =>
                 {
-                    this.SetError("Failed to refresh system tweaks", ex);
-                    this.RefreshStatusText = "Refresh failed";
+                    this.SetError(this.Localize("SystemTweaks_StatusRefreshFailed", "Failed to refresh system tweaks"), ex);
+                    this.RefreshStatusText = this.Localize("SystemTweaks_StatusRefreshFailedShort", "Refresh failed");
                 });
             }
             finally
             {
-                // Marshal UI updates to the UI thread to prevent cross-thread access exceptions
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await InvokeOnUiAsync(() =>
                 {
                     this.IsRefreshing = false;
                 });
@@ -184,7 +110,6 @@ namespace ThreadPilot.ViewModels
                     SystemTweak.SysMain => await this.systemTweaksService.GetSysMainStatusAsync(),
                     SystemTweak.Prefetch => await this.systemTweaksService.GetPrefetchStatusAsync(),
                     SystemTweak.PowerThrottling => await this.systemTweaksService.GetPowerThrottlingStatusAsync(),
-                    SystemTweak.Hpet => await this.systemTweaksService.GetHpetStatusAsync(),
                     SystemTweak.HighSchedulingCategory => await this.systemTweaksService.GetHighSchedulingCategoryStatusAsync(),
                     SystemTweak.MenuShowDelay => await this.systemTweaksService.GetMenuShowDelayStatusAsync(),
                     _ => new TweakStatus { IsAvailable = false, ErrorMessage = "Unknown tweak type" },
@@ -193,10 +118,6 @@ namespace ThreadPilot.ViewModels
                 item.IsEnabled = status.IsEnabled;
                 item.IsAvailable = status.IsAvailable;
                 item.ErrorMessage = status.ErrorMessage;
-                if (!string.IsNullOrEmpty(status.Description))
-                {
-                    item.Description = status.Description;
-                }
             }
             catch (Exception ex)
             {
@@ -217,7 +138,7 @@ namespace ThreadPilot.ViewModels
             {
                 await InvokeOnUiAsync(() =>
                 {
-                    this.SetStatus($"Toggling {item.Name}...");
+                    this.SetStatus(this.Localize("SystemTweaks_StatusTogglingFormat", "Toggling {0}...", item.Name));
                 });
 
                 var newState = !item.IsEnabled;
@@ -228,7 +149,6 @@ namespace ThreadPilot.ViewModels
                     SystemTweak.SysMain => await this.systemTweaksService.SetSysMainAsync(newState),
                     SystemTweak.Prefetch => await this.systemTweaksService.SetPrefetchAsync(newState),
                     SystemTweak.PowerThrottling => await this.systemTweaksService.SetPowerThrottlingAsync(newState),
-                    SystemTweak.Hpet => await this.systemTweaksService.SetHpetAsync(newState),
                     SystemTweak.HighSchedulingCategory => await this.systemTweaksService.SetHighSchedulingCategoryAsync(newState),
                     SystemTweak.MenuShowDelay => await this.systemTweaksService.SetMenuShowDelayAsync(newState),
                     _ => false,
@@ -239,12 +159,18 @@ namespace ThreadPilot.ViewModels
                     await this.UpdateTweakItemStatusAsync(item);
                     await InvokeOnUiAsync(() =>
                     {
-                        this.SetStatus($"{item.Name} {(newState ? "enabled" : "disabled")} successfully");
+                        this.SetStatus(this.Localize(
+                            newState ? "SystemTweaks_StatusEnabledFormat" : "SystemTweaks_StatusDisabledFormat",
+                            newState ? "{0} enabled successfully" : "{0} disabled successfully",
+                            item.Name));
                     });
 
                     await this.notificationService.ShowSuccessNotificationAsync(
-                        "System Tweak Updated",
-                        $"{item.Name} has been {(newState ? "enabled" : "disabled")}");
+                        this.Localize("SystemTweaks_NotifyUpdatedTitle", "System Tweak Updated"),
+                        this.Localize(
+                            newState ? "SystemTweaks_NotifyEnabledFormat" : "SystemTweaks_NotifyDisabledFormat",
+                            newState ? "{0} has been enabled" : "{0} has been disabled",
+                            item.Name));
                     await this.LogUserActionAsync(
                         "SystemTweakApplied",
                         $"{item.Name} {(newState ? "enabled" : "disabled")}",
@@ -254,12 +180,15 @@ namespace ThreadPilot.ViewModels
                 {
                     await InvokeOnUiAsync(() =>
                     {
-                        this.SetError($"Failed to toggle {item.Name}", null);
+                        this.SetError(this.Localize("SystemTweaks_StatusToggleFailedFormat", "Failed to toggle {0}", item.Name), null);
                     });
 
                     await this.notificationService.ShowErrorNotificationAsync(
-                        "System Tweak Failed",
-                        $"Failed to {(newState ? "enable" : "disable")} {item.Name}");
+                        this.Localize("SystemTweaks_NotifyFailedTitle", "System Tweak Failed"),
+                        this.Localize(
+                            newState ? "SystemTweaks_StatusEnableFailedFormat" : "SystemTweaks_StatusDisableFailedFormat",
+                            newState ? "Failed to enable {0}" : "Failed to disable {0}",
+                            item.Name));
                     await this.LogUserActionAsync(
                         "SystemTweakFailed",
                         $"Failed to {(newState ? "enable" : "disable")} {item.Name}",
@@ -270,7 +199,7 @@ namespace ThreadPilot.ViewModels
             {
                 await InvokeOnUiAsync(() =>
                 {
-                    this.SetError($"Error toggling {item.Name}", ex);
+                    this.SetError(this.Localize("SystemTweaks_StatusErrorTogglingFormat", "Error toggling {0}", item.Name), ex);
                 });
                 this.Logger.LogError(ex, "Error toggling tweak {TweakName}", item.Name);
                 await this.LogUserActionAsync(
@@ -291,6 +220,42 @@ namespace ThreadPilot.ViewModels
 
             return dispatcher.InvokeAsync(action).Task;
         }
+
+        private void ApplyLocalizedTweakText()
+        {
+            foreach (var item in this.TweakItems)
+            {
+                var text = item.TweakType switch
+                {
+                    SystemTweak.CoreParking => ("SystemTweak_CoreParking_Name", "Core Parking", "SystemTweak_CoreParking_Desc", "Controls CPU core parking for power management"),
+                    SystemTweak.CStates => ("SystemTweak_CStates_Name", "C-States", "SystemTweak_CStates_Desc", "Controls CPU C-States for power management"),
+                    SystemTweak.SysMain => ("SystemTweak_SysMain_Name", "SysMain Service", "SystemTweak_SysMain_Desc", "Windows SysMain service for memory management"),
+                    SystemTweak.Prefetch => ("SystemTweak_Prefetch_Name", "Prefetch", "SystemTweak_Prefetch_Desc", "Windows Prefetch for faster application loading"),
+                    SystemTweak.PowerThrottling => ("SystemTweak_PowerThrottling_Name", "Power Throttling", "SystemTweak_PowerThrottling_Desc", "Turns off Windows Power Throttling for sustained performance"),
+                    SystemTweak.HighSchedulingCategory => ("SystemTweak_HighSchedulingCategory_Name", "High Scheduling Category", "SystemTweak_HighSchedulingCategory_Desc", "Uses the high MMCSS scheduling category for games"),
+                    SystemTweak.MenuShowDelay => ("SystemTweak_MenuShowDelay_Name", "Menu Show Delay", "SystemTweak_MenuShowDelay_Desc", "Delay before showing context menus"),
+                    _ => throw new ArgumentOutOfRangeException(nameof(item.TweakType), item.TweakType, null),
+                };
+
+                item.Name = this.Localize(text.Item1, text.Item2);
+                item.Description = this.Localize(text.Item3, text.Item4);
+            }
+
+            this.RefreshStatusText = this.Localize("SystemTweaks_StatusReady", "Ready");
+        }
+
+        private string Localize(string key, string fallback, params object[] arguments)
+        {
+            var localized = this.localizationService.GetString(key);
+            var format = string.IsNullOrWhiteSpace(localized) || string.Equals(localized, key, StringComparison.Ordinal)
+                ? fallback
+                : localized;
+            return arguments.Length == 0
+                ? format
+                : string.Format(CultureInfo.CurrentCulture, format, arguments);
+        }
+
+        private void OnLanguageChanged(object? sender, string language) => this.ApplyLocalizedTweakText();
 
         private void OnTweakStatusChanged(object? sender, TweakStatusChangedEventArgs e)
         {
@@ -313,6 +278,7 @@ namespace ThreadPilot.ViewModels
         protected override void OnDispose()
         {
             this.systemTweaksService.TweakStatusChanged -= this.OnTweakStatusChanged;
+            this.localizationService.LanguageChanged -= this.OnLanguageChanged;
             base.OnDispose();
         }
     }

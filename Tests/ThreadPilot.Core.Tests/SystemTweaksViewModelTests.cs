@@ -7,13 +7,39 @@ namespace ThreadPilot.Core.Tests
 
     public sealed class SystemTweaksViewModelTests
     {
+        [Fact]
+        public async Task LoadAsync_QueriesEverySupportedTweakExactlyOnce()
+        {
+            var harness = new Harness();
+            var status = new TweakStatus { IsEnabled = true, IsAvailable = true };
+            harness.Tweaks.Setup(service => service.GetCoreParkingStatusAsync()).ReturnsAsync(status);
+            harness.Tweaks.Setup(service => service.GetCStatesStatusAsync()).ReturnsAsync(status);
+            harness.Tweaks.Setup(service => service.GetSysMainStatusAsync()).ReturnsAsync(status);
+            harness.Tweaks.Setup(service => service.GetPrefetchStatusAsync()).ReturnsAsync(status);
+            harness.Tweaks.Setup(service => service.GetPowerThrottlingStatusAsync()).ReturnsAsync(status);
+            harness.Tweaks.Setup(service => service.GetHighSchedulingCategoryStatusAsync()).ReturnsAsync(status);
+            harness.Tweaks.Setup(service => service.GetMenuShowDelayStatusAsync()).ReturnsAsync(status);
+            var viewModel = harness.CreateViewModel();
+
+            await viewModel.LoadAsync();
+
+            Assert.Equal(Enum.GetValues<SystemTweak>().Length, viewModel.TweakItems.Count);
+            Assert.All(viewModel.TweakItems, item => Assert.True(item.IsEnabled));
+            harness.Tweaks.Verify(service => service.GetCoreParkingStatusAsync(), Times.Once);
+            harness.Tweaks.Verify(service => service.GetCStatesStatusAsync(), Times.Once);
+            harness.Tweaks.Verify(service => service.GetSysMainStatusAsync(), Times.Once);
+            harness.Tweaks.Verify(service => service.GetPrefetchStatusAsync(), Times.Once);
+            harness.Tweaks.Verify(service => service.GetPowerThrottlingStatusAsync(), Times.Once);
+            harness.Tweaks.Verify(service => service.GetHighSchedulingCategoryStatusAsync(), Times.Once);
+            harness.Tweaks.Verify(service => service.GetMenuShowDelayStatusAsync(), Times.Once);
+        }
+
         [Theory]
         [InlineData(SystemTweak.CoreParking, "Core Parking")]
         [InlineData(SystemTweak.CStates, "C-States")]
         [InlineData(SystemTweak.SysMain, "SysMain Service")]
         [InlineData(SystemTweak.Prefetch, "Prefetch")]
         [InlineData(SystemTweak.PowerThrottling, "Power Throttling")]
-        [InlineData(SystemTweak.Hpet, "HPET")]
         [InlineData(SystemTweak.HighSchedulingCategory, "High Scheduling Category")]
         [InlineData(SystemTweak.MenuShowDelay, "Menu Show Delay")]
         public async Task ToggleTweakCommand_CallsExpectedServiceAndLogsSuccess(SystemTweak tweakType, string name)
@@ -75,6 +101,8 @@ namespace ThreadPilot.Core.Tests
 
             public Mock<IEnhancedLoggingService> Logging { get; } = new(MockBehavior.Loose);
 
+            public Mock<ILocalizationService> Localization { get; } = new(MockBehavior.Loose);
+
             public ActivityAuditService Audit { get; } = new(NullLogger<ActivityAuditService>.Instance);
 
             public void SetupTweak(SystemTweak tweakType, bool setResult)
@@ -100,10 +128,6 @@ namespace ThreadPilot.Core.Tests
                     case SystemTweak.PowerThrottling:
                         this.Tweaks.Setup(service => service.SetPowerThrottlingAsync(true)).ReturnsAsync(setResult);
                         this.Tweaks.Setup(service => service.GetPowerThrottlingStatusAsync()).ReturnsAsync(CreateEnabledStatus());
-                        break;
-                    case SystemTweak.Hpet:
-                        this.Tweaks.Setup(service => service.SetHpetAsync(true)).ReturnsAsync(setResult);
-                        this.Tweaks.Setup(service => service.GetHpetStatusAsync()).ReturnsAsync(CreateEnabledStatus());
                         break;
                     case SystemTweak.HighSchedulingCategory:
                         this.Tweaks.Setup(service => service.SetHighSchedulingCategoryAsync(true)).ReturnsAsync(setResult);
@@ -137,9 +161,6 @@ namespace ThreadPilot.Core.Tests
                     case SystemTweak.PowerThrottling:
                         this.Tweaks.Verify(service => service.SetPowerThrottlingAsync(true), Times.Once);
                         break;
-                    case SystemTweak.Hpet:
-                        this.Tweaks.Verify(service => service.SetHpetAsync(true), Times.Once);
-                        break;
                     case SystemTweak.HighSchedulingCategory:
                         this.Tweaks.Verify(service => service.SetHighSchedulingCategoryAsync(true), Times.Once);
                         break;
@@ -155,6 +176,7 @@ namespace ThreadPilot.Core.Tests
                 new(
                     this.Tweaks.Object,
                     this.Notifications.Object,
+                    this.Localization.Object,
                     NullLogger<SystemTweaksViewModel>.Instance,
                     this.Logging.Object,
                     this.Audit);

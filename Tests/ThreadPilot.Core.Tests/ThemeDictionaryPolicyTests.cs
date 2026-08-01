@@ -90,13 +90,14 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public void DarkTheme_MaskListSelectionUsesSubtleTintWithoutAccentForeground()
+        public void DarkTheme_SelectionUsesNeutralWindowsElevenSurface()
         {
             var themeText = File.ReadAllText(GetRepositoryFilePath("Themes/FluentDark.xaml"));
 
             Assert.Contains("x:Key=\"MaskSelectedListBackgroundBrush\"", themeText, StringComparison.Ordinal);
-            Assert.Contains("Opacity=\"0.05\"", themeText, StringComparison.Ordinal);
+            Assert.Contains("Color=\"#FF2D2D2D\"", themeText, StringComparison.Ordinal);
             Assert.Contains("x:Key=\"MaskSelectedBorderBrush\"", themeText, StringComparison.Ordinal);
+            Assert.Contains("x:Key=\"SoftSelectionBackgroundBrush\" Color=\"#FF2D2D2D\"", themeText, StringComparison.Ordinal);
             Assert.DoesNotContain(
                 "x:Key=\"MaskSelectedListBackgroundBrush\" Color=\"{StaticResource AccentFillColorDefault}\"",
                 themeText,

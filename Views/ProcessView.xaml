@@ -372,7 +372,7 @@
                                     </Trigger>
                                     <Trigger Property="IsSelected" Value="True">
                                         <Setter Property="Background" Value="{DynamicResource SoftSelectionBackgroundBrush}"/>
-                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource SoftSelectionBorderBrush}"/>
                                         <Setter Property="FontWeight" Value="SemiBold"/>
                                     </Trigger>
                                     <MultiTrigger>
@@ -380,7 +380,7 @@
                                             <Condition Property="IsSelected" Value="True"/>
                                             <Condition Property="IsKeyboardFocusWithin" Value="True"/>
                                         </MultiTrigger.Conditions>
-                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentAltBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource SoftSelectionBorderBrush}"/>
                                     </MultiTrigger>
                                 </Style.Triggers>
                             </Style>

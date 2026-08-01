@@ -45,14 +45,16 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public void ActivePowerPlanTemplate_ContainsActiveBadgeAndAccentBorder()
+        public void ActivePowerPlanTemplate_ContainsNeutralActiveBadgeAndBorder()
         {
             var document = XDocument.Load(PowerPlanViewPath, LoadOptions.PreserveWhitespace);
             var serialized = document.ToString(SaveOptions.DisableFormatting);
 
             Assert.Contains("PowerPlanView_Active", serialized, StringComparison.Ordinal);
             Assert.Contains("IsActive", serialized, StringComparison.Ordinal);
-            Assert.Contains("Accent", serialized, StringComparison.Ordinal);
+            Assert.Contains("SoftSelectionBorderBrush", serialized, StringComparison.Ordinal);
+            Assert.Contains("StatusPillBackgroundBrush", serialized, StringComparison.Ordinal);
+            Assert.DoesNotContain("BorderThickness=\"4,1,1,1\"", serialized, StringComparison.Ordinal);
         }
     }
 }

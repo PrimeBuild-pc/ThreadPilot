@@ -65,14 +65,15 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public void ProcessGridRowStyle_HighlightsSelectedRowsWithAccentTheme()
+        public void ProcessGridRowStyle_HighlightsSelectedRowsWithNeutralTheme()
         {
             var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);
             var serialized = document.ToString(SaveOptions.DisableFormatting);
 
             Assert.Contains("IsSelected", serialized, StringComparison.Ordinal);
-            Assert.Contains("Accent", serialized, StringComparison.Ordinal);
-            Assert.Contains("BorderThickness", serialized, StringComparison.Ordinal);
+            Assert.Contains("SoftSelectionBackgroundBrush", serialized, StringComparison.Ordinal);
+            Assert.Contains("SoftSelectionBorderBrush", serialized, StringComparison.Ordinal);
+            Assert.DoesNotContain("Property=\"BorderBrush\" Value=\"{DynamicResource AccentBrush}\"", serialized, StringComparison.Ordinal);
         }
 
         [Fact]
@@ -204,7 +205,7 @@ namespace ThreadPilot.Core.Tests
 
             Assert.Contains("MaskSelectedBackgroundBrush", serialized, StringComparison.Ordinal);
             Assert.Contains("MaskSelectedBorderBrush", serialized, StringComparison.Ordinal);
-            Assert.Contains("BorderThickness\" Value=\"2\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("BorderThickness\" Value=\"1\"", serialized, StringComparison.Ordinal);
             Assert.DoesNotContain("SoftSelectionBackgroundBrush", serialized, StringComparison.Ordinal);
         }
 
@@ -223,7 +224,7 @@ namespace ThreadPilot.Core.Tests
             Assert.Contains("ItemContainerStyle=\"{StaticResource MaskListItemStyle}\"", serialized, StringComparison.Ordinal);
             Assert.Contains("MaskSelectedListBackgroundBrush", serialized, StringComparison.Ordinal);
             Assert.Contains("MaskSelectedBorderBrush", serialized, StringComparison.Ordinal);
-            Assert.Contains("BorderThickness\" Value=\"2\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("BorderThickness\" Value=\"1\"", serialized, StringComparison.Ordinal);
             Assert.Contains("Foreground\" Value=\"{DynamicResource TextFillColorPrimaryBrush}\"", serialized, StringComparison.Ordinal);
             Assert.DoesNotContain("TextOnAccentFillColorPrimaryBrush", serialized, StringComparison.Ordinal);
             Assert.DoesNotContain("AccentFillColorDefaultBrush", serialized, StringComparison.Ordinal);
@@ -248,16 +249,17 @@ namespace ThreadPilot.Core.Tests
             var mainWindowBehaviorPath = Path.Combine(GetRepositoryRoot(), "MainWindow.Behaviors.partial.cs");
             var source = File.ReadAllText(mainWindowBehaviorPath);
             var updateCheckSection = source[
-                source.IndexOf("private void QueueStartupUpdateCheck()", StringComparison.Ordinal)..
-                source.IndexOf("private void UpdateLoadingStatus", StringComparison.Ordinal)];
+                source.IndexOf("private void QueueStartupUpdateCheck()", StringComparison.Ordinal)..source.IndexOf("private void UpdateLoadingStatus", StringComparison.Ordinal)];
 
             Assert.Contains("QueueStartupUpdateCheck();", source, StringComparison.Ordinal);
             Assert.Contains("Interlocked.Exchange(ref this.startupUpdateCheckStarted, 1)", updateCheckSection, StringComparison.Ordinal);
             Assert.Contains("TaskSafety.FireAndForget(this.CheckForUpdatesAtStartupAsync()", updateCheckSection, StringComparison.Ordinal);
             Assert.Contains("GetRequiredService<IUpdateService>()", updateCheckSection, StringComparison.Ordinal);
             Assert.Contains("CheckForUpdatesAsync(new UpdateCheckRequest(UpdateCheckTrigger.Startup))", updateCheckSection, StringComparison.Ordinal);
+            Assert.Contains("MessageBox.Show", updateCheckSection, StringComparison.Ordinal);
+            Assert.Contains("MessageBoxButton.YesNo", updateCheckSection, StringComparison.Ordinal);
+            Assert.Contains("DownloadAndInstallAsync(result.Release)", updateCheckSection, StringComparison.Ordinal);
             Assert.Contains("Startup update check ignored failure", updateCheckSection, StringComparison.Ordinal);
-            Assert.DoesNotContain("System.Windows.MessageBox.Show", updateCheckSection, StringComparison.Ordinal);
         }
 
         [Fact]

@@ -273,16 +273,6 @@ namespace ThreadPilot.Services
             this.settings.Language = LocalizationService.ResolveLanguagePreference(
                 this.settings.Language,
                 this.systemUiCultureProvider());
-
-            if (this.settings.UpdateCheckIntervalDays < 1)
-            {
-                this.settings.UpdateCheckIntervalDays = 1;
-            }
-
-            if (this.settings.UpdateCheckIntervalDays > 365)
-            {
-                this.settings.UpdateCheckIntervalDays = 365;
-            }
         }
 
         public async Task ExportSettingsAsync(string filePath)

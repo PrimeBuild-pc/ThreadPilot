@@ -489,7 +489,7 @@
     <sys:String x:Key="Settings_UpdateNotChecked">尚未检查</sys:String>
     <sys:String x:Key="Settings_UpdateLastCheckedNever">从未检查</sys:String>
     <sys:String x:Key="Settings_UpdateConfirmTitle">安装 ThreadPilot 更新</sys:String>
-    <sys:String x:Key="Settings_UpdateConfirmMessageFormat">ThreadPilot 将下载并验证版本 {0}，然后请求 Windows 权限运行安装程序。是否继续？</sys:String>
+    <sys:String x:Key="Settings_UpdateConfirmMessageFormat">ThreadPilot 将下载、验证并安装版本 {0}，然后自动重启。是否继续？</sys:String>
     <sys:String x:Key="Settings_StatusUpdateCanceled">更新已取消。</sys:String>
     <sys:String x:Key="Settings_StatusDownloadingUpdate">正在下载并验证更新...</sys:String>
     <sys:String x:Key="Settings_StatusUpdateInstallerStarted">更新安装程序已启动。</sys:String>
@@ -530,8 +530,6 @@
     <sys:String x:Key="SystemTweak_CoreParking_Desc">控制 CPU 核心休眠以进行电源管理</sys:String>
     <sys:String x:Key="SystemTweak_CStates_Name">C-States 状态</sys:String>
     <sys:String x:Key="SystemTweak_CStates_Desc">控制 CPU C-States 以进行节能电源管理</sys:String>
-    <sys:String x:Key="SystemTweak_Hpet_Name">HPET 定时器</sys:String>
-    <sys:String x:Key="SystemTweak_Hpet_Desc">高精度事件计时器，用于系统精准定时</sys:String>
     <sys:String x:Key="SystemTweak_SysMain_Name">SysMain 服务</sys:String>
     <sys:String x:Key="SystemTweak_SysMain_Desc">Windows Superfetch/SysMain 服务，用于内存管理</sys:String>
     <sys:String x:Key="SystemTweak_Prefetch_Name">预取 (Prefetch)</sys:String>

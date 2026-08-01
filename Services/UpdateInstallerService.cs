@@ -12,6 +12,16 @@ namespace ThreadPilot.Services
 
     public sealed class UpdateInstallerService : IUpdateInstallerService
     {
+        private static readonly string[] InstallerArguments =
+        {
+            "/VERYSILENT",
+            "/SUPPRESSMSGBOXES",
+            "/NORESTART",
+            "/CLOSEAPPLICATIONS",
+            "/RESTARTAPPLICATIONS",
+            "/THREADPILOTUPDATE=1",
+        };
+
         private readonly IUpdateTempDirectoryProvider tempDirectoryProvider;
         private readonly IUpdateProcessLauncher processLauncher;
 
@@ -36,7 +46,7 @@ namespace ThreadPilot.Services
                 throw new InvalidOperationException("Update installer path is not trusted.");
             }
 
-            return this.processLauncher.LaunchElevatedAsync(installerPath, Array.Empty<string>(), cancellationToken);
+            return this.processLauncher.LaunchElevatedAsync(installerPath, InstallerArguments, cancellationToken);
         }
     }
 

@@ -730,7 +730,7 @@ namespace ThreadPilot.ViewModels
 
             var message = this.GetLocalizedString(
                 "Settings_UpdateConfirmMessageFormat",
-                "ThreadPilot will download and verify version {0}, then ask Windows for permission to run the installer. Continue?",
+                "ThreadPilot will download, verify and install version {0}, then restart automatically. Continue?",
                 this.availableUpdate.Version);
             var confirmation = System.Windows.MessageBox.Show(
                 message,

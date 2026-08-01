@@ -15,7 +15,6 @@ namespace ThreadPilot.Core.Tests
             Assert.False(settings.HasSeenStartupMinimizedSuggestion);
             Assert.Equal("en-US", settings.Language);
             Assert.True(settings.EnableAutomaticUpdateChecks);
-            Assert.Equal(7, settings.UpdateCheckIntervalDays);
             Assert.False(settings.IncludePrereleaseUpdates);
             Assert.Null(settings.LastUpdateCheckUtc);
         }

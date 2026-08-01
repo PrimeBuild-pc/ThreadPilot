@@ -98,13 +98,10 @@
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Background" Value="{DynamicResource QuietRowBackgroundBrush}"/>
-                                <Setter Property="BorderThickness" Value="1"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
                             </Trigger>
                             <Trigger Property="IsActive" Value="True">
                                 <Setter Property="Background" Value="{DynamicResource SoftSelectionBackgroundBrush}"/>
-                                <Setter Property="BorderThickness" Value="3,0,0,0"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+                                <Setter Property="BorderThickness" Value="0"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
