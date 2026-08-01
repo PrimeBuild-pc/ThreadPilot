@@ -63,8 +63,8 @@
                                 Margin="0,0,10,0"/>
                         <Button Content="{DynamicResource SettingsWindow_Save}"
                                 Click="UnsavedSettingsSave_Click"
-                                Background="{DynamicResource AccentFillColorDefaultBrush}"
-                                Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                Background="{DynamicResource ControlFillColorTertiaryBrush}"
+                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                 Padding="16,8"/>
                     </StackPanel>
                 </StackPanel>

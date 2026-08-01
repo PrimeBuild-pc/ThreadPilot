@@ -1,13 +1,26 @@
 namespace ThreadPilot.Core.Tests
 {
+    using System.Globalization;
     using System.Reflection;
     using System.Text.RegularExpressions;
     using System.Windows;
+    using System.Xml.Linq;
     using Microsoft.Extensions.Logging.Abstractions;
     using ThreadPilot.Services;
 
     public sealed partial class LocalizationServiceTests
     {
+        private static readonly string[] LocaleCodes =
+        [
+            "en-US",
+            "zh-CN",
+            "it-IT",
+            "fr-FR",
+            "de-DE",
+            "es-ES",
+            "ru-RU",
+        ];
+
         [Fact]
         public void Constructor_DefaultsToEnglish()
         {
@@ -16,14 +29,52 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal("en-US", service.CurrentLanguage);
         }
 
-        [Fact]
-        public void ApplyLanguage_AppliesChinese_WhenSupported()
+        [Theory]
+        [InlineData("en-US")]
+        [InlineData("zh-CN")]
+        [InlineData("it-IT")]
+        [InlineData("fr-FR")]
+        [InlineData("de-DE")]
+        [InlineData("es-ES")]
+        [InlineData("ru-RU")]
+        public void ApplyLanguage_AppliesLanguage_WhenSupported(string language)
         {
             var service = CreateService();
 
-            service.ApplyLanguage("zh-CN");
+            service.ApplyLanguage(language);
 
-            Assert.Equal("zh-CN", service.CurrentLanguage);
+            Assert.Equal(language, service.CurrentLanguage);
+        }
+
+        [Theory]
+        [InlineData("EN-us", "en-US")]
+        [InlineData("ZH-cn", "zh-CN")]
+        [InlineData("IT-it", "it-IT")]
+        [InlineData("FR-fr", "fr-FR")]
+        [InlineData("DE-de", "de-DE")]
+        [InlineData("ES-es", "es-ES")]
+        [InlineData("RU-ru", "ru-RU")]
+        public void NormalizeLanguage_ReturnsCanonicalSupportedCode(string input, string expected)
+        {
+            Assert.Equal(expected, LocalizationService.NormalizeLanguage(input));
+        }
+
+        [Theory]
+        [InlineData("en-GB", "en-US")]
+        [InlineData("it-CH", "it-IT")]
+        [InlineData("fr-CA", "fr-FR")]
+        [InlineData("de-AT", "de-DE")]
+        [InlineData("es-MX", "es-ES")]
+        [InlineData("ru-KZ", "ru-RU")]
+        [InlineData("zh-CN", "zh-CN")]
+        [InlineData("zh-SG", "zh-CN")]
+        [InlineData("zh-Hans", "zh-CN")]
+        [InlineData("zh-TW", "en-US")]
+        [InlineData("zh-Hant", "en-US")]
+        [InlineData("pt-BR", "en-US")]
+        public void ResolveSystemLanguage_MapsSupportedLanguageFamilies(string cultureName, string expected)
+        {
+            Assert.Equal(expected, LocalizationService.ResolveSystemLanguage(new CultureInfo(cultureName)));
         }
 
         [Fact]
@@ -85,7 +136,7 @@ namespace ThreadPilot.Core.Tests
         [InlineData(null)]
         [InlineData("")]
         [InlineData("   ")]
-        [InlineData("fr-FR")]
+        [InlineData("pt-BR")]
         [InlineData("zh")]
         public void ApplyLanguage_FallsBackToEnglish_WhenLanguageIsInvalid(string? language)
         {
@@ -133,19 +184,25 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public void LocaleFiles_DefineEnglishDefaultAndOptionalChineseLanguageLabels()
+        public void LocaleFiles_DefineEnglishDefaultAndAllLanguageLabels()
         {
             var root = FindRepositoryRoot();
             var english = File.ReadAllText(Path.Combine(root, "Locales", "en-US.xaml"));
-            var chinese = File.ReadAllText(Path.Combine(root, "Locales", "zh-CN.xaml"));
             var appXaml = File.ReadAllText(Path.Combine(root, "App.xaml"));
 
             Assert.Contains("Source=\"Locales/en-US.xaml\"", appXaml, StringComparison.Ordinal);
-            Assert.DoesNotContain("Source=\"Locales/zh-CN.xaml\"", appXaml, StringComparison.Ordinal);
+            foreach (var localeCode in LocaleCodes.Where(code => code != "en-US"))
+            {
+                Assert.DoesNotContain($"Source=\"Locales/{localeCode}.xaml\"", appXaml, StringComparison.Ordinal);
+            }
+
             Assert.Contains("x:Key=\"SettingsView_LanguageEnUs\"", english, StringComparison.Ordinal);
             Assert.Contains("x:Key=\"SettingsView_LanguageZhCn\"", english, StringComparison.Ordinal);
-            Assert.Contains("x:Key=\"SettingsView_LanguageEnUs\"", chinese, StringComparison.Ordinal);
-            Assert.Contains("x:Key=\"SettingsView_LanguageZhCn\"", chinese, StringComparison.Ordinal);
+            Assert.Contains("x:Key=\"SettingsView_LanguageItIt\"", english, StringComparison.Ordinal);
+            Assert.Contains("x:Key=\"SettingsView_LanguageFrFr\"", english, StringComparison.Ordinal);
+            Assert.Contains("x:Key=\"SettingsView_LanguageDeDe\"", english, StringComparison.Ordinal);
+            Assert.Contains("x:Key=\"SettingsView_LanguageEsEs\"", english, StringComparison.Ordinal);
+            Assert.Contains("x:Key=\"SettingsView_LanguageRuRu\"", english, StringComparison.Ordinal);
         }
 
         [Fact]
@@ -153,10 +210,59 @@ namespace ThreadPilot.Core.Tests
         {
             var root = FindRepositoryRoot();
             var english = ReadLocaleKeys(Path.Combine(root, "Locales", "en-US.xaml"));
-            var chinese = ReadLocaleKeys(Path.Combine(root, "Locales", "zh-CN.xaml"));
+            foreach (var localeCode in LocaleCodes.Where(code => code != "en-US"))
+            {
+                var localized = ReadLocaleKeys(Path.Combine(root, "Locales", $"{localeCode}.xaml"));
+                Assert.Empty(english.Except(localized).Order(StringComparer.Ordinal));
+                Assert.Empty(localized.Except(english).Order(StringComparer.Ordinal));
+            }
+        }
 
-            Assert.Empty(english.Except(chinese).Order(StringComparer.Ordinal));
-            Assert.Empty(chinese.Except(english).Order(StringComparer.Ordinal));
+        [Fact]
+        public void LocaleFiles_DefineUniqueNonEmptyValuesAndMatchingFormatPlaceholders()
+        {
+            var root = FindRepositoryRoot();
+            var english = ReadLocaleEntries(Path.Combine(root, "Locales", "en-US.xaml"));
+
+            foreach (var localeCode in LocaleCodes)
+            {
+                var path = Path.Combine(root, "Locales", $"{localeCode}.xaml");
+                var matches = LocaleStringRegex().Matches(File.ReadAllText(path));
+                var localized = ReadLocaleEntries(path);
+
+                Assert.Equal(matches.Count, localized.Count);
+                Assert.DoesNotContain(localized, entry => string.IsNullOrWhiteSpace(entry.Value));
+                foreach (var key in english.Keys)
+                {
+                    Assert.Equal(ReadFormatPlaceholders(english[key]), ReadFormatPlaceholders(localized[key]));
+                }
+            }
+        }
+
+        [Fact]
+        public void LocaleFiles_AreWellFormedResourceDictionaries()
+        {
+            var root = FindRepositoryRoot();
+            foreach (var localeCode in LocaleCodes)
+            {
+                var document = XDocument.Load(Path.Combine(root, "Locales", $"{localeCode}.xaml"));
+
+                Assert.Equal("ResourceDictionary", document.Root?.Name.LocalName);
+            }
+        }
+
+        [Fact]
+        public void SettingsView_LanguageTagsMatchSupportedLanguageRegistry()
+        {
+            var root = FindRepositoryRoot();
+            var settingsView = File.ReadAllText(Path.Combine(root, "Views", "SettingsView.xaml"));
+            var tags = Regex.Matches(settingsView, "Tag=\"(?<code>[a-z]{2}-[A-Z]{2})\"", RegexOptions.CultureInvariant)
+                .Select(match => match.Groups["code"].Value)
+                .ToHashSet(StringComparer.Ordinal);
+
+            Assert.Equal(
+                LocalizationService.SupportedLanguages.Order(StringComparer.Ordinal),
+                tags.Order(StringComparer.Ordinal));
         }
 
         [Fact]
@@ -260,6 +366,24 @@ namespace ThreadPilot.Core.Tests
             return keys;
         }
 
+        private static Dictionary<string, string> ReadLocaleEntries(string path)
+        {
+            return LocaleStringRegex().Matches(File.ReadAllText(path))
+                .ToDictionary(
+                    match => match.Groups["key"].Value,
+                    match => match.Groups["value"].Value,
+                    StringComparer.Ordinal);
+        }
+
+        private static string[] ReadFormatPlaceholders(string value)
+        {
+            return Regex.Matches(value, "\\{\\d+(?:[^}]*)\\}", RegexOptions.CultureInvariant)
+                .Select(match => match.Value)
+                .Distinct(StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal)
+                .ToArray();
+        }
+
         private static bool IsAllowedHardcodedUiValue(string attribute, string value)
         {
             if (value.Contains('{', StringComparison.Ordinal) ||
@@ -298,5 +422,8 @@ namespace ThreadPilot.Core.Tests
 
         [GeneratedRegex("(?<attribute>Text|Content|Header|Title|ToolTip|PlaceholderText|AutomationProperties\\.Name|AutomationProperties\\.HelpText)=\"(?<value>[^\"]*[A-Za-z][^\"]*)\"", RegexOptions.CultureInvariant)]
         private static partial Regex HardcodedUiAttributeRegex();
+
+        [GeneratedRegex("<sys:String x:Key=\"(?<key>[^\"]+)\">(?<value>.*?)</sys:String>", RegexOptions.CultureInvariant | RegexOptions.Singleline)]
+        private static partial Regex LocaleStringRegex();
     }
 }

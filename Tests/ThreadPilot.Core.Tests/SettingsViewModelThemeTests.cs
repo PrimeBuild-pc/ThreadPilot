@@ -4,6 +4,7 @@ namespace ThreadPilot.Core.Tests
     using CommunityToolkit.Mvvm.Input;
     using Microsoft.Extensions.Logging.Abstractions;
     using Moq;
+    using ThreadPilot.Helpers;
     using ThreadPilot.Models;
     using ThreadPilot.Services;
     using ThreadPilot.ViewModels;
@@ -152,6 +153,28 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task NavigationPrompt_SavePersistsPendingSettingsBeforeNavigating()
+        {
+            var harness = new Harness();
+            harness.SettingsService
+                .Setup(service => service.UpdateSettingsAsync(It.IsAny<ApplicationSettingsModel>()))
+                .Returns(Task.CompletedTask);
+            var viewModel = harness.CreateViewModel();
+            viewModel.Settings.Language = "it-IT";
+
+            var canNavigate = await NavigationBehavior.EnsureCanNavigateAsync(
+                "Process",
+                viewModel,
+                () => Task.FromResult(System.Windows.MessageBoxResult.Yes));
+
+            Assert.True(canNavigate);
+            Assert.False(viewModel.HasUnsavedChanges);
+            harness.SettingsService.Verify(
+                service => service.UpdateSettingsAsync(It.Is<ApplicationSettingsModel>(settings => settings.Language == "it-IT")),
+                Times.Once);
+        }
+
+        [Fact]
         public void SettingsView_ExposesPersistentRuleAutoApplyToggle()
         {
             var settingsViewPath = Path.Combine(
@@ -173,7 +196,7 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public void SettingsView_ExposesOptionalChineseLanguageSelection()
+        public void SettingsView_ExposesAllSupportedLanguageSelections()
         {
             var settingsViewPath = Path.Combine(
                 AppContext.BaseDirectory,
@@ -187,8 +210,10 @@ namespace ThreadPilot.Core.Tests
             var serialized = File.ReadAllText(settingsViewPath);
 
             Assert.Contains("SelectedValue=\"{Binding Settings.Language}\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Tag=\"en-US\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Tag=\"zh-CN\"", serialized, StringComparison.Ordinal);
+            foreach (var language in new[] { "en-US", "zh-CN", "it-IT", "fr-FR", "de-DE", "es-ES", "ru-RU" })
+            {
+                Assert.Contains($"Tag=\"{language}\"", serialized, StringComparison.Ordinal);
+            }
         }
 
         private sealed class Harness

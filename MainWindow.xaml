@@ -254,8 +254,8 @@
                                     <Button Content="{DynamicResource MainWindow_RequestElevation}"
                                             Command="{Binding RequestElevationCommand}"
                                             Click="ElevationWarningRequestElevation_Click"
-                                            Background="{DynamicResource AccentFillColorDefaultBrush}"
-                                            Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                            Background="{DynamicResource ControlFillColorTertiaryBrush}"
+                                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                             Padding="16,8"/>
                                 </StackPanel>
                             </StackPanel>
@@ -361,8 +361,8 @@
                                 Content="{DynamicResource PerformanceView_Continue}"
                                 Click="PerformanceIntroContinue_Click"
                                 HorizontalAlignment="Right"
-                                Background="{DynamicResource AccentFillColorDefaultBrush}"
-                                Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                Background="{DynamicResource ControlFillColorTertiaryBrush}"
+                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                 Padding="16,8"/>
                     </StackPanel>
                 </Border>
@@ -388,8 +388,8 @@
                         <DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity="0.16"/>
                     </Border.Effect>
                     <StackPanel>
-                        <Border Background="{DynamicResource InfoBackgroundBrush}"
-                                BorderBrush="{DynamicResource InfoBorderBrush}"
+                        <Border Background="{DynamicResource StatusPillBackgroundBrush}"
+                                BorderBrush="{DynamicResource StatusPillBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="{DynamicResource StandardCardCornerRadius}"
                                 Padding="8,3"
@@ -398,7 +398,7 @@
                             <TextBlock Text="{DynamicResource MainWindow_Recommended}"
                                        FontSize="{DynamicResource CaptionFontSize}"
                                        FontWeight="SemiBold"
-                                       Foreground="{DynamicResource InfoTextBrush}"/>
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                         </Border>
                         <TextBlock Text="{DynamicResource MainWindow_StartupMinimizedSuggestionTitle}"
                                    FontSize="20"
@@ -418,8 +418,8 @@
                                     Margin="0,0,10,0"/>
                             <Button Content="{DynamicResource MainWindow_OpenSettings}"
                                     Click="StartupSuggestionOpenSettings_Click"
-                                    Background="{DynamicResource AccentFillColorDefaultBrush}"
-                                    Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                    Background="{DynamicResource ControlFillColorTertiaryBrush}"
+                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                     Padding="14,7"/>
                         </StackPanel>
                     </StackPanel>
@@ -451,6 +451,7 @@
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                    Margin="0,0,0,10"/>
                         <TextBlock x:Name="UnsavedSettingsDialogMessage"
+                                   Text="{DynamicResource SettingsWindow_UnsavedDescription}"
                                    TextWrapping="Wrap"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Margin="0,0,0,18"/>
@@ -469,8 +470,8 @@
                                     Margin="0,0,10,0"/>
                             <Button Content="{DynamicResource SettingsWindow_Save}"
                                     Click="UnsavedSettingsSave_Click"
-                                    Background="{DynamicResource AccentFillColorDefaultBrush}"
-                                    Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                    Background="{DynamicResource ControlFillColorTertiaryBrush}"
+                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                     Padding="16,8"/>
                         </StackPanel>
                     </StackPanel>

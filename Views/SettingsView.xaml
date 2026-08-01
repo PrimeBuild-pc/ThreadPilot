@@ -212,6 +212,11 @@
                             <ComboBox SelectedValue="{Binding Settings.Language}" SelectedValuePath="Tag" Margin="0,0,0,5">
                                 <ComboBoxItem Content="{DynamicResource SettingsView_LanguageEnUs}" Tag="en-US"/>
                                 <ComboBoxItem Content="{DynamicResource SettingsView_LanguageZhCn}" Tag="zh-CN"/>
+                                <ComboBoxItem Content="{DynamicResource SettingsView_LanguageItIt}" Tag="it-IT"/>
+                                <ComboBoxItem Content="{DynamicResource SettingsView_LanguageFrFr}" Tag="fr-FR"/>
+                                <ComboBoxItem Content="{DynamicResource SettingsView_LanguageDeDe}" Tag="de-DE"/>
+                                <ComboBoxItem Content="{DynamicResource SettingsView_LanguageEsEs}" Tag="es-ES"/>
+                                <ComboBoxItem Content="{DynamicResource SettingsView_LanguageRuRu}" Tag="ru-RU"/>
                             </ComboBox>
                             <TextBlock Text="{DynamicResource SettingsView_LanguageDescription}"
                                        Style="{StaticResource DescriptionStyle}"

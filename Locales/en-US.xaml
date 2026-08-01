@@ -409,6 +409,11 @@
     <sys:String x:Key="SettingsView_Language">Language</sys:String>
     <sys:String x:Key="SettingsView_LanguageZhCn">简体中文 (Simplified Chinese)</sys:String>
     <sys:String x:Key="SettingsView_LanguageEnUs">English (English)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageItIt">Italiano (Italian)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageFrFr">Français (French)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageDeDe">Deutsch (German)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageEsEs">Español (Spanish)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageRuRu">Русский (Russian)</sys:String>
     <sys:String x:Key="SettingsView_LanguageDescription">Applies a global display language across the entire application interface.</sys:String>
     
     <sys:String x:Key="SettingsView_RulesAutomation">Rules &amp; automation</sys:String>
@@ -493,6 +498,11 @@
     <sys:String x:Key="Settings_StatusMatchSaved">Settings match the saved configuration</sys:String>
     <sys:String x:Key="Settings_LanguageSimplifiedChinese">Simplified Chinese</sys:String>
     <sys:String x:Key="Settings_LanguageEnglish">English</sys:String>
+    <sys:String x:Key="Settings_LanguageItalian">Italian</sys:String>
+    <sys:String x:Key="Settings_LanguageFrench">French</sys:String>
+    <sys:String x:Key="Settings_LanguageGerman">German</sys:String>
+    <sys:String x:Key="Settings_LanguageSpanish">Spanish</sys:String>
+    <sys:String x:Key="Settings_LanguageRussian">Russian</sys:String>
     <sys:String x:Key="Settings_ThemeDark">Dark</sys:String>
     <sys:String x:Key="Settings_ThemeLight">Light</sys:String>
     <sys:String x:Key="Settings_DialogExportTitle">Export ThreadPilot Configuration</sys:String>
@@ -502,7 +512,7 @@
     <!-- SettingsWindow -->
     <sys:String x:Key="SettingsWindow_Title">ThreadPilot Settings</sys:String>
     <sys:String x:Key="SettingsWindow_UnsavedTitle">Unsaved Settings</sys:String>
-    <sys:String x:Key="SettingsWindow_UnsavedDescription">You have unsaved changes. Save before closing, discard the changes, or cancel to keep editing.</sys:String>
+    <sys:String x:Key="SettingsWindow_UnsavedDescription">You have unsaved changes. Save them, discard them, or cancel to keep editing.</sys:String>
     <sys:String x:Key="SettingsWindow_Cancel">Cancel</sys:String>
     <sys:String x:Key="SettingsWindow_Discard">Discard</sys:String>
     <sys:String x:Key="SettingsWindow_Save">Save</sys:String>
@@ -520,14 +530,14 @@
     <sys:String x:Key="SystemTweak_CoreParking_Desc">Controls CPU core parking for power management</sys:String>
     <sys:String x:Key="SystemTweak_CStates_Name">C-States</sys:String>
     <sys:String x:Key="SystemTweak_CStates_Desc">Controls CPU C-States for power management</sys:String>
+    <sys:String x:Key="SystemTweak_Hpet_Name">HPET</sys:String>
+    <sys:String x:Key="SystemTweak_Hpet_Desc">High Precision Event Timer for system timing</sys:String>
     <sys:String x:Key="SystemTweak_SysMain_Name">SysMain Service</sys:String>
     <sys:String x:Key="SystemTweak_SysMain_Desc">Windows Superfetch/SysMain service for memory management</sys:String>
     <sys:String x:Key="SystemTweak_Prefetch_Name">Prefetch</sys:String>
     <sys:String x:Key="SystemTweak_Prefetch_Desc">Windows Prefetch feature for faster application loading</sys:String>
     <sys:String x:Key="SystemTweak_PowerThrottling_Name">Power Throttling</sys:String>
     <sys:String x:Key="SystemTweak_PowerThrottling_Desc">Windows Power Throttling for energy efficiency</sys:String>
-    <sys:String x:Key="SystemTweak_Hpet_Name">HPET</sys:String>
-    <sys:String x:Key="SystemTweak_Hpet_Desc">High Precision Event Timer for system timing</sys:String>
     <sys:String x:Key="SystemTweak_HighSchedulingCategory_Name">High Scheduling Category</sys:String>
     <sys:String x:Key="SystemTweak_HighSchedulingCategory_Desc">High scheduling priority for gaming applications</sys:String>
     <sys:String x:Key="SystemTweak_MenuShowDelay_Name">Menu Show Delay</sys:String>

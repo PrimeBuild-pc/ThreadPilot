@@ -228,9 +228,17 @@ namespace ThreadPilot.ViewModels
             {
                 this.localizationService.ApplyLanguage(normalizedLanguage);
                 this.Settings.Language = normalizedLanguage;
-                var languageName = normalizedLanguage == LocalizationService.SimplifiedChineseLanguage
-                    ? this.GetLocalizedString("Settings_LanguageSimplifiedChinese", "Simplified Chinese")
-                    : this.GetLocalizedString("Settings_LanguageEnglish", "English");
+                var (languageNameKey, languageNameFallback) = normalizedLanguage switch
+                {
+                    LocalizationService.SimplifiedChineseLanguage => ("Settings_LanguageSimplifiedChinese", "Simplified Chinese"),
+                    LocalizationService.ItalianLanguage => ("Settings_LanguageItalian", "Italian"),
+                    LocalizationService.FrenchLanguage => ("Settings_LanguageFrench", "French"),
+                    LocalizationService.GermanLanguage => ("Settings_LanguageGerman", "German"),
+                    LocalizationService.SpanishLanguage => ("Settings_LanguageSpanish", "Spanish"),
+                    LocalizationService.RussianLanguage => ("Settings_LanguageRussian", "Russian"),
+                    _ => ("Settings_LanguageEnglish", "English"),
+                };
+                var languageName = this.GetLocalizedString(languageNameKey, languageNameFallback);
                 this.StatusMessage = this.GetLocalizedString("Settings_StatusLanguageChangedFormat", "Language changed to {0}.", languageName);
 
                 if (logUserAction)
