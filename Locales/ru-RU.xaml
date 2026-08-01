@@ -489,7 +489,7 @@
     <sys:String x:Key="Settings_UpdateNotChecked">Не проверено</sys:String>
     <sys:String x:Key="Settings_UpdateLastCheckedNever">Никогда</sys:String>
     <sys:String x:Key="Settings_UpdateConfirmTitle">Установите обновление ThreadPilot</sys:String>
-    <sys:String x:Key="Settings_UpdateConfirmMessageFormat">ThreadPilot загрузит и проверит версию {0}, затем запросит у Windows разрешение на запуск установщика. Продолжить?</sys:String>
+    <sys:String x:Key="Settings_UpdateConfirmMessageFormat">ThreadPilot загрузит, проверит и установит версию {0}, а затем автоматически перезапустится. Продолжить?</sys:String>
     <sys:String x:Key="Settings_StatusUpdateCanceled">Обновление отменено.</sys:String>
     <sys:String x:Key="Settings_StatusDownloadingUpdate">Загрузка и проверка обновления...</sys:String>
     <sys:String x:Key="Settings_StatusUpdateInstallerStarted">Установщик обновлений запустился.</sys:String>
@@ -530,8 +530,6 @@
     <sys:String x:Key="SystemTweak_CoreParking_Desc">Элементы управления CPU core parking для управления питанием</sys:String>
     <sys:String x:Key="SystemTweak_CStates_Name">C-States</sys:String>
     <sys:String x:Key="SystemTweak_CStates_Desc">Элементы управления CPU C-States для управления питанием</sys:String>
-    <sys:String x:Key="SystemTweak_Hpet_Name">HPET</sys:String>
-    <sys:String x:Key="SystemTweak_Hpet_Desc">Высокоточный таймер событий для системной синхронизации</sys:String>
     <sys:String x:Key="SystemTweak_SysMain_Name">SysMain Сервис</sys:String>
     <sys:String x:Key="SystemTweak_SysMain_Desc">Windows Superfetch/SysMain сервис управления памятью</sys:String>
     <sys:String x:Key="SystemTweak_Prefetch_Name">Prefetch</sys:String>

@@ -93,11 +93,11 @@
     <SolidColorBrush x:Key="ErrorBorderBrush" Color="#FFDADADA"/>
     <SolidColorBrush x:Key="ErrorTextBrush" Color="#FFC42B1C"/>
 
-    <SolidColorBrush x:Key="SoftSelectionBackgroundBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.12"/>
-    <SolidColorBrush x:Key="SoftSelectionBorderBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.24"/>
-    <SolidColorBrush x:Key="MaskSelectedBackgroundBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.06"/>
-    <SolidColorBrush x:Key="MaskSelectedListBackgroundBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.04"/>
-    <SolidColorBrush x:Key="MaskSelectedBorderBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.45"/>
+    <SolidColorBrush x:Key="SoftSelectionBackgroundBrush" Color="#FFF0F0F0"/>
+    <SolidColorBrush x:Key="SoftSelectionBorderBrush" Color="#FFE3E3E3"/>
+    <SolidColorBrush x:Key="MaskSelectedBackgroundBrush" Color="#FFF3F3F3"/>
+    <SolidColorBrush x:Key="MaskSelectedListBackgroundBrush" Color="#FFF0F0F0"/>
+    <SolidColorBrush x:Key="MaskSelectedBorderBrush" Color="#FFE3E3E3"/>
 
     <!-- System Colors overrides -->
     <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="{StaticResource ApplicationBackgroundColor}"/>

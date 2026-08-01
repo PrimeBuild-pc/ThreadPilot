@@ -61,7 +61,11 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
-; Intentionally do not auto-launch after setup to keep package-manager installs unattended.
+; Normal/package-manager installs stay unattended. In-app updates opt in through
+; /THREADPILOTUPDATE=1 and relaunch ThreadPilot after the replacement completes.
+[Run]
+Filename: "{app}\{#MyAppExeName}"; Flags: nowait; Check: IsThreadPilotUpdate
+
 ; ThreadPilot user data is preserved during install/update. Inno removes installed
 ; files and shortcuts automatically only when the generated uninstaller runs.
 ; Per-user AppData cleanup is limited to the account context used by uninstall.
@@ -107,4 +111,9 @@ begin
   DeleteLegacyBetaUninstallEntry(HKLM);
   DeleteLegacyBetaUninstallEntry(HKCU);
   Result := True;
+end;
+
+function IsThreadPilotUpdate(): Boolean;
+begin
+  Result := CompareText(ExpandConstant('{param:THREADPILOTUPDATE|0}'), '1') = 0;
 end;

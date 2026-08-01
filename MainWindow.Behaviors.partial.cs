@@ -156,10 +156,40 @@ namespace ThreadPilot
                     return;
                 }
 
-                await this.notificationService.ShowNotificationAsync(
-                    "Update available",
-                    $"ThreadPilot {result.Release.Version} is available. Open Settings to download and install it.",
-                    NotificationType.Information);
+                var title = Application.Current.TryFindResource("Settings_UpdateConfirmTitle") as string
+                    ?? "Install ThreadPilot update";
+                var messageFormat = Application.Current.TryFindResource("Settings_UpdateConfirmMessageFormat") as string
+                    ?? "ThreadPilot will download, verify and install version {0}, then restart automatically. Continue?";
+                var confirmation = MessageBox.Show(
+                    this,
+                    string.Format(messageFormat, result.Release.Version),
+                    title,
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Information);
+
+                if (confirmation != MessageBoxResult.Yes)
+                {
+                    this.LogDebug($"Startup update declined: {result.Release.Version}");
+                    return;
+                }
+
+                var downloadingMessage = Application.Current.TryFindResource("Settings_StatusDownloadingUpdate") as string
+                    ?? "Downloading and verifying update...";
+                await this.notificationService.ShowNotificationAsync(title, downloadingMessage, NotificationType.Information);
+
+                var installResult = await updateService.DownloadAndInstallAsync(result.Release);
+                if (installResult.Status != UpdateInstallStatus.Started)
+                {
+                    var failureFormat = Application.Current.TryFindResource("Settings_StatusUpdateInstallFailedFormat") as string
+                        ?? "Update install failed: {0}";
+                    MessageBox.Show(
+                        this,
+                        string.Format(failureFormat, installResult.Message),
+                        title,
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+
                 this.LogDebug($"Startup update check found update: installed {result.CurrentVersion}, latest {result.Release.Version}");
             }
             catch (Exception ex)
@@ -401,6 +431,11 @@ namespace ThreadPilot
                     await this.processViewModel.LoadProcesses();
                     this.LogDebug($"ProcessViewModel fallback (LoadProcesses only) completed after exception, process count: {this.processViewModel.Processes?.Count ?? 0}, filtered count: {this.processViewModel.FilteredProcesses?.Count ?? 0}");
                 }
+
+                this.LogDebug("Detecting persisted system tweak state...");
+                await this.systemTweaksViewModel.LoadAsync();
+                this.initializedSections.Add("Tweaks");
+                this.LogDebug("System tweak state detected successfully");
 
                 this.LogDebug("Skipping inactive view initialization until each page is opened.");
 

@@ -489,7 +489,7 @@
     <sys:String x:Key="Settings_UpdateNotChecked">Non vérifié</sys:String>
     <sys:String x:Key="Settings_UpdateLastCheckedNever">Jamais</sys:String>
     <sys:String x:Key="Settings_UpdateConfirmTitle">Installer la mise à jour ThreadPilot</sys:String>
-    <sys:String x:Key="Settings_UpdateConfirmMessageFormat">ThreadPilot téléchargera et vérifiera la version {0}, puis demandera à Windows l'autorisation d'exécuter le programme d'installation. Continuer ?</sys:String>
+    <sys:String x:Key="Settings_UpdateConfirmMessageFormat">ThreadPilot téléchargera, vérifiera et installera la version {0}, puis redémarrera automatiquement. Continuer ?</sys:String>
     <sys:String x:Key="Settings_StatusUpdateCanceled">Mise à jour annulée.</sys:String>
     <sys:String x:Key="Settings_StatusDownloadingUpdate">Téléchargement et vérification de la mise à jour...</sys:String>
     <sys:String x:Key="Settings_StatusUpdateInstallerStarted">Le programme d'installation de la mise à jour a démarré.</sys:String>
@@ -530,8 +530,6 @@
     <sys:String x:Key="SystemTweak_CoreParking_Desc">Contrôle CPU core parking pour la gestion de l'alimentation</sys:String>
     <sys:String x:Key="SystemTweak_CStates_Name">C-States</sys:String>
     <sys:String x:Key="SystemTweak_CStates_Desc">Contrôle CPU C-States pour la gestion de l'alimentation</sys:String>
-    <sys:String x:Key="SystemTweak_Hpet_Name">HPET</sys:String>
-    <sys:String x:Key="SystemTweak_Hpet_Desc">Minuteur d'événements haute précision pour la synchronisation du système</sys:String>
     <sys:String x:Key="SystemTweak_SysMain_Name">Service SysMain</sys:String>
     <sys:String x:Key="SystemTweak_SysMain_Desc">Service Windows Superfetch/SysMain pour la gestion de la mémoire</sys:String>
     <sys:String x:Key="SystemTweak_Prefetch_Name">Prefetch</sys:String>

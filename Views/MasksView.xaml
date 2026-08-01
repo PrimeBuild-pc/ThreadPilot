@@ -40,7 +40,7 @@
                 <Trigger Property="IsSelected" Value="True">
                     <Setter Property="Background" Value="{DynamicResource MaskSelectedListBackgroundBrush}"/>
                     <Setter Property="BorderBrush" Value="{DynamicResource MaskSelectedBorderBrush}"/>
-                    <Setter Property="BorderThickness" Value="2"/>
+                    <Setter Property="BorderThickness" Value="1"/>
                     <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
                 </Trigger>
             </Style.Triggers>
@@ -195,7 +195,7 @@
                                                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
                                                                 <Setter Property="Background" Value="{DynamicResource MaskSelectedBackgroundBrush}"/>
                                                                 <Setter Property="BorderBrush" Value="{DynamicResource MaskSelectedBorderBrush}"/>
-                                                                <Setter Property="BorderThickness" Value="2"/>
+                                                                <Setter Property="BorderThickness" Value="1"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>

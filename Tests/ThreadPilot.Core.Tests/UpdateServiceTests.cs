@@ -41,15 +41,15 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public async Task CheckForUpdatesAsync_StartupSkipsWhenLastCheckInsideInterval()
+        public async Task CheckForUpdatesAsync_StartupChecksOnEveryLaunch()
         {
             var harness = new Harness();
             harness.Settings.LastUpdateCheckUtc = harness.Clock.UtcNow.AddDays(-2);
 
             var result = await harness.Service.CheckForUpdatesAsync(new UpdateCheckRequest(UpdateCheckTrigger.Startup));
 
-            Assert.Equal(UpdateCheckStatus.Skipped, result.Status);
-            Assert.False(harness.ReleaseClient.RequestedReleases);
+            Assert.Equal(UpdateCheckStatus.UpdateAvailable, result.Status);
+            Assert.True(harness.ReleaseClient.RequestedReleases);
         }
 
         [Fact]
@@ -147,6 +147,42 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal(UpdateInstallStatus.Started, result.Status);
             harness.Installer.Verify(service => service.LaunchInstallerElevatedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
             harness.Shutdown.Verify(service => service.RequestShutdownForUpdate(), Times.Once);
+            harness.TempProvider.Verify(provider => provider.Cleanup(It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateInstallerService_UsesSilentRestartingUpdateMode()
+        {
+            using var tempRoot = new TempDirectory();
+            var tempProvider = new UpdateTempDirectoryProvider(tempRoot.Path);
+            var updateDirectory = tempProvider.CreateUpdateTempDirectory(new SemanticVersion(1, 5, 0));
+            var installerPath = Path.Combine(updateDirectory, "ThreadPilot_v1.5.0_Setup.exe");
+            File.WriteAllText(installerPath, "installer");
+            IReadOnlyList<string>? launchedArguments = null;
+            var launcher = new Mock<IUpdateProcessLauncher>();
+            launcher
+                .Setup(service => service.LaunchElevatedAsync(installerPath, It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+                .Callback<string, IReadOnlyList<string>, CancellationToken>((_, arguments, _) => launchedArguments = arguments)
+                .Returns(Task.CompletedTask);
+            var service = new UpdateInstallerService(tempProvider, launcher.Object);
+
+            await service.LaunchInstallerElevatedAsync(installerPath);
+
+            Assert.NotNull(launchedArguments);
+            Assert.Contains("/VERYSILENT", launchedArguments);
+            Assert.Contains("/CLOSEAPPLICATIONS", launchedArguments);
+            Assert.Contains("/RESTARTAPPLICATIONS", launchedArguments);
+            Assert.Contains("/THREADPILOTUPDATE=1", launchedArguments);
+        }
+
+        [Fact]
+        public void InstallerScript_RestartsOnlyInAppUpdates()
+        {
+            var setupScript = File.ReadAllText(Path.Combine(GetRepositoryRoot(), "Installer", "setup.iss"));
+
+            Assert.Contains("[Run]", setupScript, StringComparison.Ordinal);
+            Assert.Contains("Check: IsThreadPilotUpdate", setupScript, StringComparison.Ordinal);
+            Assert.Contains("{param:THREADPILOTUPDATE|0}", setupScript, StringComparison.Ordinal);
         }
 
         private static UpdateDownloadService CreateDownloadService(string tempRoot, IUpdateDownloadClient client)
@@ -183,6 +219,17 @@ namespace ThreadPilot.Core.Tests
             return Convert.ToHexString(hash);
         }
 
+        private static string GetRepositoryRoot()
+        {
+            var directory = new DirectoryInfo(AppContext.BaseDirectory);
+            while (directory != null && !File.Exists(Path.Combine(directory.FullName, "ThreadPilot.csproj")))
+            {
+                directory = directory.Parent;
+            }
+
+            return directory?.FullName ?? throw new InvalidOperationException("Repository root was not found.");
+        }
+
         private sealed class Harness
         {
             public ApplicationSettingsModel Settings { get; } = new();
@@ -213,6 +260,8 @@ namespace ThreadPilot.Core.Tests
 
             public Mock<IApplicationShutdownService> Shutdown { get; } = new(MockBehavior.Strict);
 
+            public Mock<IUpdateTempDirectoryProvider> TempProvider { get; } = new(MockBehavior.Strict);
+
             public string TempDirectory { get; }
 
             public UpdateService Service { get; }
@@ -235,8 +284,7 @@ namespace ThreadPilot.Core.Tests
                 versionProvider.SetupGet(provider => provider.CurrentVersion).Returns(new SemanticVersion(1, 3, 1));
                 versionProvider.SetupGet(provider => provider.DisplayVersion).Returns("v1.3.1");
 
-                var tempProvider = new Mock<IUpdateTempDirectoryProvider>();
-                tempProvider.Setup(provider => provider.Cleanup(It.IsAny<string>()));
+                this.TempProvider.Setup(provider => provider.Cleanup(It.IsAny<string>()));
 
                 this.Shutdown.Setup(service => service.RequestShutdownForUpdate());
                 this.Installer
@@ -249,7 +297,7 @@ namespace ThreadPilot.Core.Tests
                     versionProvider.Object,
                     this.Download.Object,
                     this.Installer.Object,
-                    tempProvider.Object,
+                    this.TempProvider.Object,
                     this.Shutdown.Object,
                     this.Clock,
                     NullLogger<UpdateService>.Instance);

@@ -359,25 +359,6 @@
                                       IsChecked="{Binding Settings.EnableAutomaticUpdateChecks}"
                                       Margin="0,0,0,6"/>
 
-                            <Grid Margin="20,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-
-                                <TextBlock Text="{DynamicResource SettingsView_UpdateIntervalDays}" VerticalAlignment="Center"/>
-                                <Slider Grid.Column="1"
-                                        Value="{Binding Settings.UpdateCheckIntervalDays}"
-                                        Minimum="1" Maximum="30"
-                                        TickFrequency="1"
-                                        IsSnapToTickEnabled="True"
-                                        Margin="10,0"/>
-                                <TextBlock Grid.Column="2"
-                                           Text="{Binding Settings.UpdateCheckIntervalDays}"
-                                           VerticalAlignment="Center" MinWidth="30"/>
-                            </Grid>
-
                             <CheckBox Content="{DynamicResource SettingsView_IncludePrereleaseUpdates}"
                                       IsChecked="{Binding Settings.IncludePrereleaseUpdates}"
                                       Margin="0,0,0,10"/>

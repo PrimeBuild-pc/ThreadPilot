@@ -489,7 +489,7 @@
     <sys:String x:Key="Settings_UpdateNotChecked">Not checked</sys:String>
     <sys:String x:Key="Settings_UpdateLastCheckedNever">Never</sys:String>
     <sys:String x:Key="Settings_UpdateConfirmTitle">Install ThreadPilot update</sys:String>
-    <sys:String x:Key="Settings_UpdateConfirmMessageFormat">ThreadPilot will download and verify version {0}, then ask Windows for permission to run the installer. Continue?</sys:String>
+    <sys:String x:Key="Settings_UpdateConfirmMessageFormat">ThreadPilot will download, verify and install version {0}, then restart automatically. Continue?</sys:String>
     <sys:String x:Key="Settings_StatusUpdateCanceled">Update canceled.</sys:String>
     <sys:String x:Key="Settings_StatusDownloadingUpdate">Downloading and verifying update...</sys:String>
     <sys:String x:Key="Settings_StatusUpdateInstallerStarted">Update installer started.</sys:String>
@@ -530,8 +530,6 @@
     <sys:String x:Key="SystemTweak_CoreParking_Desc">Controls CPU core parking for power management</sys:String>
     <sys:String x:Key="SystemTweak_CStates_Name">C-States</sys:String>
     <sys:String x:Key="SystemTweak_CStates_Desc">Controls CPU C-States for power management</sys:String>
-    <sys:String x:Key="SystemTweak_Hpet_Name">HPET</sys:String>
-    <sys:String x:Key="SystemTweak_Hpet_Desc">High Precision Event Timer for system timing</sys:String>
     <sys:String x:Key="SystemTweak_SysMain_Name">SysMain Service</sys:String>
     <sys:String x:Key="SystemTweak_SysMain_Desc">Windows Superfetch/SysMain service for memory management</sys:String>
     <sys:String x:Key="SystemTweak_Prefetch_Name">Prefetch</sys:String>

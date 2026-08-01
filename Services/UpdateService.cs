@@ -58,13 +58,6 @@ namespace ThreadPilot.Services
                 {
                     return new UpdateCheckResult(UpdateCheckStatus.Skipped, currentVersion, null, "Automatic update checks are disabled.");
                 }
-
-                var intervalDays = Math.Max(1, settings.UpdateCheckIntervalDays);
-                if (settings.LastUpdateCheckUtc.HasValue &&
-                    this.clock.UtcNow - settings.LastUpdateCheckUtc.Value < TimeSpan.FromDays(intervalDays))
-                {
-                    return new UpdateCheckResult(UpdateCheckStatus.Skipped, currentVersion, null, "Startup update check throttled.");
-                }
             }
 
             await this.checkGate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -122,16 +115,16 @@ namespace ThreadPilot.Services
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                this.logger.LogWarning(ex, "ThreadPilot update install failed");
-                return new UpdateInstallResult(UpdateInstallStatus.Failed, ex.Message);
-            }
-            finally
-            {
                 if (download != null)
                 {
                     this.TryCleanup(download.TempDirectory);
                 }
 
+                this.logger.LogWarning(ex, "ThreadPilot update install failed");
+                return new UpdateInstallResult(UpdateInstallStatus.Failed, ex.Message);
+            }
+            finally
+            {
                 this.installGate.Release();
             }
         }

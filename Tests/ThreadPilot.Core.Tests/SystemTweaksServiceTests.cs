@@ -5,12 +5,11 @@ namespace ThreadPilot.Core.Tests
     public sealed class SystemTweaksServiceTests
     {
         [Fact]
-        public void GetHighSchedulingCategoryRegistryValue_WhenEnabled_ReturnsWin32PrioritySeparation26()
+        public void GetHighSchedulingCategoryRegistryValue_WhenEnabled_ReturnsHigh()
         {
             var value = SystemTweaksService.GetHighSchedulingCategoryRegistryValue(enabled: true);
 
-            Assert.Equal(26, value);
-            Assert.Equal(0x1A, value);
+            Assert.Equal("High", value);
         }
 
         [Fact]
@@ -18,7 +17,7 @@ namespace ThreadPilot.Core.Tests
         {
             var value = SystemTweaksService.GetHighSchedulingCategoryRegistryValue(enabled: false);
 
-            Assert.Equal(2, value);
+            Assert.Equal("Medium", value);
         }
     }
 }
