@@ -1,38 +1,20 @@
-## ThreadPilot v1.4.4
+## ThreadPilot v1.5.0
 
-Patch release focused on reducing ThreadPilot's foreground and background runtime overhead while preserving process automation and persistent CPU-priority verification.
+ThreadPilot 1.5.0 adds five languages, refines the Windows 11 experience, and makes future updates one-click.
 
-### Measured improvements
+### Highlights
 
-Compared with the official v1.4.3 build on the same system and using the same Release profile:
+- Italian, French, German, Spanish, and Russian translations, with automatic Windows language detection.
+- One-click updates checked at every enabled startup: consent once, then ThreadPilot downloads, verifies, installs, and restarts automatically.
+- Reliable startup detection and persistence for supported Windows system tweaks.
+- Native Windows power API handling for Core Parking and C-States.
+- More neutral Windows 11 styling for tweaks, dialogs, and selected items.
+- Fixed saving pending settings from the navigation/close confirmation dialog.
 
-- **Approximately 80-100% lower background idle CPU** in measured tray scenarios, reaching 0% in the final idle sample.
-- **Approximately 8% lower CPU overhead during process churn** with 80 short-lived processes.
-- **Approximately 4-5% lower hidden working-set memory**.
-- **Approximately 12-13% lower peak handle usage** while hidden.
-- **Approximately 85% fewer external command launches during visible startup**, reduced from 27 to 4.
-
-Results vary by hardware, Windows configuration, active page, and workload. The Process page remains intentionally more active while visible because it refreshes live process information.
-
-### Runtime changes
-
-- Cached persistent-rule snapshots in memory and pre-matched process starts before expensive enrichment.
-- Disposed process handles consistently and cleared PID-scoped caches on process exit.
-- Deferred initialization of inactive Power Plans, Rules, Settings, Tweaks, and Logs pages.
-- Reused the process monitor's initial snapshot and PID/start-time-validated static process metadata.
-- Parsed the active plan from a single `powercfg /list` call and limited periodic power-plan refresh to the visible Power Plans page.
-- Suspended Log Viewer collection updates while hidden and changed log flushing to one-shot scheduling.
-- Added WMI recovery backoff while preserving fallback polling reliability.
-
-### Compatibility and safety
-
-- Persistent rules, process start/stop tracking, and lazy diagnostics remain covered by regression tests.
-- CPU-priority verification and the bounded retry introduced for issue #32 are unchanged.
-- No default ThreadPilot affinity limit was enabled.
+Existing settings, profiles, masks, rules, imported power plans, and logs are preserved during upgrades.
 
 ### Validation
 
-- Release build completed with zero warnings and zero errors.
-- All 581 automated tests passed before release preparation.
-- CI and CodeQL passed for both performance pull requests.
-- NuGet dependency audit found no known vulnerable packages.
+- 634 automated Release tests passed before release preparation.
+- CI and CodeQL passed for both feature pull requests.
+- Release single-file publish, smoke test, and Inno Setup compilation passed.

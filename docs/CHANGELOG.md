@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.5.0 - Languages, Windows 11 polish, and one-click updates
+
+### Added
+
+- Added complete Italian, French, German, Spanish, and Russian localization.
+- Added Windows language detection with safe English fallback.
+- Added one-click in-app updates: ThreadPilot checks on every enabled startup, asks for consent, verifies and installs the update, then relaunches automatically.
+
+### Changed
+
+- System tweak state is detected at every startup and verified again after changes.
+- Core Parking and C-State detection now use native Windows power APIs instead of localized command output.
+- Updated tweak controls, dialogs, and selected states with more neutral Windows 11 styling.
+- Removed the unsupported HPET performance toggle and corrected the MMCSS Games scheduling tweak.
+
+### Fixed
+
+- Saving from the unsaved-settings dialog now persists language and other pending settings correctly.
+- In-app upgrades preserve the user's `%AppData%` settings and no longer require a manual installer download or app restart.
+
 ## v1.4.4 - Runtime efficiency
 
 ### Performance
