@@ -1,0 +1,665 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- MainWindow / General -->
+    <sys:String x:Key="MainWindow_Title">ThreadPilot - Gestionnaire de processus et de plan d'alimentation</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningTitle">Privilèges d'administrateur recommandés</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningDescription">ThreadPilot s'exécute avec des privilèges limités. Certaines fonctionnalités peuvent ne pas être disponibles.</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningRequired">L'accès administrateur est requis pour :</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningPowerPlans">• Modification des configurations du plan d'alimentation</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningAffinity">• Modification de l'affinité et de la priorité du processus CPU</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningTweaks">• Application d'optimisations et de réglages au niveau du système</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningProtected">• Gestion des processus protégés</sys:String>
+    <sys:String x:Key="MainWindow_ContinueWithoutElevation">Continuer sans élévation</sys:String>
+    <sys:String x:Key="MainWindow_RequestElevation">Demander une élévation</sys:String>
+
+    <!-- MainWindow Navigation -->
+    <sys:String x:Key="MainWindow_NavProcess">Gestion des processus</sys:String>
+    <sys:String x:Key="MainWindow_NavMasks">Masques CPU</sys:String>
+    <sys:String x:Key="MainWindow_NavPower">Plans d'alimentation</sys:String>
+    <sys:String x:Key="MainWindow_NavRules">Règles</sys:String>
+    <sys:String x:Key="MainWindow_NavDiagnostics">Diagnostic</sys:String>
+    <sys:String x:Key="MainWindow_NavActivity">Activité de ThreadPilot</sys:String>
+    <sys:String x:Key="MainWindow_NavTweaks">Optimisations</sys:String>
+    <sys:String x:Key="MainWindow_NavSettings">Paramètres</sys:String>
+
+    <!-- MainWindow Overlays -->
+    <sys:String x:Key="MainWindow_StartupMinimizedSuggestionTitle">Démarrage minimisé</sys:String>
+    <sys:String x:Key="MainWindow_StartupMinimizedSuggestionDescription">Activez le démarrage réduit lorsque vous souhaitez que ThreadPilot démarre silencieusement dans la barre d'état lors des futures connexions Windows.</sys:String>
+    <sys:String x:Key="MainWindow_Recommended">Recommandé</sys:String>
+    <sys:String x:Key="MainWindow_DontShowAgain">Ne plus montrer</sys:String>
+    <sys:String x:Key="MainWindow_OpenSettings">Ouvrir les paramètres</sys:String>
+    <sys:String x:Key="MainWindow_PrimaryNavigation">Navigation principale</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningOverlay">Avertissement d’élévation de privilèges</sys:String>
+    <sys:String x:Key="MainWindow_PerformanceIntroductionOverlay">Superposition d'introduction aux performances</sys:String>
+    <sys:String x:Key="MainWindow_StartupMinimizedSuggestion">Suggestion réduite au démarrage</sys:String>
+    <sys:String x:Key="MainWindow_UnsavedSettingsDialog">Boîte de dialogue Paramètres non enregistrés</sys:String>
+    <sys:String x:Key="MainWindow_LoadingOverlay">Superposition de chargement au démarrage de l'application</sys:String>
+
+    <!-- LogViewerView -->
+    <sys:String x:Key="LogViewerView_Title">ThreadPilot Activité</sys:String>
+    <sys:String x:Key="LogViewerView_Subtitle">Affiche les actions effectuées par ThreadPilot, y compris les règles appliquées, les changements d'affinité, les changements de priorité, les changements de plan d'alimentation, les changements de paramètres, les ajustements, les optimisations et les messages d'échec sûrs.</sys:String>
+    <sys:String x:Key="LogViewerView_Search">Rechercher :</sys:String>
+    <sys:String x:Key="LogViewerView_CategoryLabel">Catégorie :</sys:String>
+    <sys:String x:Key="LogViewerView_LevelLabel">Niveau :</sys:String>
+    <sys:String x:Key="LogViewerView_From">De :</sys:String>
+    <sys:String x:Key="LogViewerView_To">Pour :</sys:String>
+    <sys:String x:Key="LogViewerView_Refresh">Actualiser</sys:String>
+    <sys:String x:Key="LogViewerView_ClearDisplay">Effacer l’affichage</sys:String>
+    <sys:String x:Key="LogViewerView_ExportActivity">Exporter l’activité</sys:String>
+    <sys:String x:Key="LogViewerView_CleanupDiagnostics">Nettoyer les fichiers de diagnostic</sys:String>
+    <sys:String x:Key="LogViewerView_OpenFolder">Ouvrir le dossier de diagnostic</sys:String>
+
+    <!-- LogViewerView Grid Headers -->
+    <sys:String x:Key="LogViewerView_HeaderTime">Temps</sys:String>
+    <sys:String x:Key="LogViewerView_HeaderStatus">Statut</sys:String>
+    <sys:String x:Key="LogViewerView_HeaderCategory">Catégorie</sys:String>
+    <sys:String x:Key="LogViewerView_HeaderMessage">Message</sys:String>
+    <sys:String x:Key="LogViewerView_HeaderDetails">Détails</sys:String>
+    <sys:String x:Key="LogViewerView_HeaderId">ID</sys:String>
+    <sys:String x:Key="LogViewerView_ContextMenuCopy">Copier l'entrée</sys:String>
+    <sys:String x:Key="LogViewerView_ContextMenuRefresh">Actualiser</sys:String>
+    <sys:String x:Key="LogViewerView_NoEntries">Aucune entrée de journal à afficher</sys:String>
+    <sys:String x:Key="LogViewerView_NoEntriesTip">Ajustez les filtres ou actualisez les journaux pour charger l’activité ThreadPilot récente.</sys:String>
+
+    <!-- LogViewerView Details -->
+    <sys:String x:Key="LogViewerView_DetailsTitle">Détails de l'activité</sys:String>
+    <sys:String x:Key="LogViewerView_Timestamp">Horodatage :</sys:String>
+    <sys:String x:Key="LogViewerView_Status">Statut :</sys:String>
+    <sys:String x:Key="LogViewerView_Category">Catégorie :</sys:String>
+    <sys:String x:Key="LogViewerView_Message">Message :</sys:String>
+    <sys:String x:Key="LogViewerView_Details">Détails :</sys:String>
+    <sys:String x:Key="LogViewerView_CorrelationId">ID de corrélation :</sys:String>
+    <sys:String x:Key="LogViewerView_NoEntrySelected">Aucune entrée de journal sélectionnée</sys:String>
+    <sys:String x:Key="LogViewerView_Files">Fichiers :</sys:String>
+    <sys:String x:Key="LogViewerView_Size">Taille :</sys:String>
+    <sys:String x:Key="LogViewerView_DebugDiagnostics">Diagnostics de débogage</sys:String>
+    <sys:String x:Key="LogViewerView_MaxSize">Taille maximale (MB) :</sys:String>
+    <sys:String x:Key="LogViewerView_Retention">Rétention (jours) :</sys:String>
+    <sys:String x:Key="LogViewerView_SaveSettings">Enregistrer les paramètres</sys:String>
+
+    <!-- MasksView -->
+    <sys:String x:Key="MasksView_Title">Masques CPU</sys:String>
+    <sys:String x:Key="MasksView_Subtitle">Créez des préréglages d'affinité CPU réutilisables pour une utilisation par processus.</sys:String>
+    <sys:String x:Key="MasksView_EditingClarification">La sélection d'un masque ici modifie uniquement le préréglage. Cela ne modifie pas l'affinité CPU jusqu'à ce que vous l'appliquiez à un processus ou que vous l'enregistriez dans une règle de processus.</sys:String>
+    <sys:String x:Key="MasksView_New">Nouveau</sys:String>
+    <sys:String x:Key="MasksView_Delete">Supprimer</sys:String>
+    <sys:String x:Key="MasksView_Duplicate">Dupliquer le masque</sys:String>
+    <sys:String x:Key="MasksView_Info">Informations sur le masque</sys:String>
+    <sys:String x:Key="MasksView_Name">Nom :</sys:String>
+    <sys:String x:Key="MasksView_Description">Descriptif :</sys:String>
+    <sys:String x:Key="MasksView_Enabled">Activé</sys:String>
+    <sys:String x:Key="MasksView_DefaultPreset">Préréglage par défaut</sys:String>
+    <sys:String x:Key="MasksView_DefaultPresetTip">Présélectionné lorsque ThreadPilot a besoin d'un masque de secours ou lors de la création de règles par processus. Il n’applique pas automatiquement l’affinité CPU.</sys:String>
+    <sys:String x:Key="MasksView_DisableTip">Désactiver pour masquer temporairement ce masque</sys:String>
+    <sys:String x:Key="MasksView_SelectCpus">Sélectionner les CPU</sys:String>
+    <sys:String x:Key="MasksView_SelectCpusTip">Activez CPUs pour modifier ce préréglage de masque. Les modifications sont enregistrées automatiquement et n'affectent pas les processus en cours. All Cores est le préréglage par défaut protégé.</sys:String>
+    <sys:String x:Key="MasksView_SavedAutomatically">Les noms de masques, les descriptions, les sélections CPU et les options sont enregistrés automatiquement.</sys:String>
+    <sys:String x:Key="MasksView_CreateNewTooltip">Créer un nouveau masque CPU</sys:String>
+    <sys:String x:Key="MasksView_DeleteTooltip">Supprimer le masque sélectionné</sys:String>
+    <sys:String x:Key="MasksView_CpusHeader">CPUs</sys:String>
+    <sys:String x:Key="MasksView_Cpu">CPU</sys:String>
+    <sys:String x:Key="MasksView_Options">Options de masque</sys:String>
+
+    <!-- PerformanceView -->
+    <sys:String x:Key="PerformanceView_OptionalDiagnostics">Diagnostics en option</sys:String>
+    <sys:String x:Key="PerformanceView_DiagnosticsDesc">Les diagnostics sont facultatifs et destinés au dépannage. Pour les superpositions dans le jeu et les graphiques de performances détaillés, utilisez des outils dédiés.</sys:String>
+    <sys:String x:Key="PerformanceView_DiagnosticsDesc1">Les diagnostics sont facultatifs et destinés au dépannage.</sys:String>
+    <sys:String x:Key="PerformanceView_DiagnosticsDesc2">Pour les superpositions dans le jeu et les graphiques de performances détaillés, utilisez des outils dédiés.</sys:String>
+    <sys:String x:Key="PerformanceView_QuickTips">Conseils rapides :</sys:String>
+    <sys:String x:Key="PerformanceView_Tip1">1. Ouvrez les diagnostics uniquement lorsque vous avez besoin d'un instantané de dépannage ciblé.</sys:String>
+    <sys:String x:Key="PerformanceView_Tip2">2. Examinez les hotspots uniquement à titre indicatif avant de créer des règles d'automatisation.</sys:String>
+    <sys:String x:Key="PerformanceView_Tip3">3. Arrêtez les métriques en direct lorsque vous avez terminé le dépannage.</sys:String>
+    <sys:String x:Key="PerformanceView_Continue">Continuer vers Diagnostics</sys:String>
+
+    <sys:String x:Key="PerformanceView_ActiveProcesses">Processus actifs</sys:String>
+    <sys:String x:Key="PerformanceView_TopConsumersDesc">Principaux consommateurs de CPU et de mémoire avec création de règles en un clic.</sys:String>
+    <sys:String x:Key="PerformanceView_SearchPlaceholder">Rechercher des processus par nom</sys:String>
+    <sys:String x:Key="PerformanceView_RuleBackedOnly">Basé sur des règles uniquement</sys:String>
+    <sys:String x:Key="PerformanceView_ActionableOnly">Actionnable uniquement</sys:String>
+    <sys:String x:Key="PerformanceView_RuleImpact">Impact des règles</sys:String>
+    <sys:String x:Key="PerformanceView_CreateRuleButton">Créer/mettre à jour une règle à partir de la sélection</sys:String>
+    <sys:String x:Key="PerformanceView_CreateRuleTooltip">Créer ou mettre à jour une règle d'automatisation à partir du processus hotspot sélectionné</sys:String>
+
+    <sys:String x:Key="PerformanceView_Timeline">Chronologie de la stabilité</sys:String>
+    <sys:String x:Key="PerformanceView_ClearHistory">Effacer l'historique</sys:String>
+    <sys:String x:Key="PerformanceView_ClearHistoryTooltip">Effacer les métriques affichées et l'historique de la chronologie</sys:String>
+    <sys:String x:Key="PerformanceView_CoreSnapshot">Aperçu des cœurs</sys:String>
+    <sys:String x:Key="PerformanceView_CoreSnapshotDesc">Utilisation par cœur pour repérer rapidement les déséquilibres.</sys:String>
+    <sys:String x:Key="PerformanceView_ToggleCore">Basculer le panneau principal</sys:String>
+    <sys:String x:Key="PerformanceView_ToggleProcess">Basculer le panneau de processus</sys:String>
+    <sys:String x:Key="PerformanceView_StartLive">Démarrer les métriques en direct</sys:String>
+    <sys:String x:Key="PerformanceView_StartLiveTooltip">Démarrer la collecte de métriques en direct pour ce tableau de bord</sys:String>
+    <sys:String x:Key="PerformanceView_StopLive">Arrêter les métriques en direct</sys:String>
+    <sys:String x:Key="PerformanceView_StopLiveTooltip">Suspendre la collecte de métriques en direct ; l'automatisation en arrière-plan est séparée</sys:String>
+    <sys:String x:Key="PerformanceView_Refresh">Actualiser</sys:String>
+    <sys:String x:Key="PerformanceView_RefreshTooltip">Actualiser l'instantané actuel du tableau de bord</sys:String>
+
+    <sys:String x:Key="PerformanceView_GlobalPowerPlan">Plan d'alimentation mondial</sys:String>
+    <sys:String x:Key="PerformanceView_ProcessHotspots">Points chauds de traitement</sys:String>
+    <sys:String x:Key="PerformanceView_Filter">Filtrer</sys:String>
+    <sys:String x:Key="PerformanceView_Memory">Mémoire</sys:String>
+    <sys:String x:Key="PerformanceView_Name">Nom</sys:String>
+    <sys:String x:Key="PerformanceView_Priority">Priorité</sys:String>
+    <sys:String x:Key="PerformanceView_Window">Fenêtre</sys:String>
+    <sys:String x:Key="PerformanceView_MemoryUsed">Mémoire utilisée</sys:String>
+    <sys:String x:Key="PerformanceView_CpuPercent">CPU %</sys:String>
+    <sys:String x:Key="PerformanceView_MemPercent">% mémoire</sys:String>
+    <sys:String x:Key="PerformanceView_Threads">Threads</sys:String>
+    <sys:String x:Key="PerformanceView_Events">Événements</sys:String>
+    <sys:String x:Key="PerformanceView_Severity">Gravité</sys:String>
+    <sys:String x:Key="PerformanceView_Detail">Détail</sys:String>
+    <sys:String x:Key="PerformanceView_Time">Temps</sys:String>
+    <sys:String x:Key="PerformanceView_Category">Catégorie</sys:String>
+    <sys:String x:Key="PerformanceView_Process">Processus</sys:String>
+    <sys:String x:Key="PerformanceView_SelectedHotspot">Processus de point chaud sélectionné</sys:String>
+    <sys:String x:Key="PerformanceView_Metrics">Métriques</sys:String>
+    <sys:String x:Key="PerformanceView_Processes">Processus</sys:String>
+
+    <!-- PowerPlanView -->
+    <sys:String x:Key="PowerPlanView_Title">Plans d'alimentation</sys:String>
+    <sys:String x:Key="PowerPlanView_Subtitle">Gérez le plan d'alimentation Windows actif et importez des profils .pow personnalisés</sys:String>
+    <sys:String x:Key="PowerPlanView_WindowsPowerPlans">Windows Plans d'alimentation</sys:String>
+    <sys:String x:Key="PowerPlanView_SelectActiveTip">Sélectionnez le plan Windows à rendre actif.</sys:String>
+    <sys:String x:Key="PowerPlanView_SetActive">Définir comme plan Windows actif</sys:String>
+    <sys:String x:Key="PowerPlanView_SetActiveTooltip">Remplacez le plan d'alimentation Windows actif par le plan sélectionné</sys:String>
+    <sys:String x:Key="PowerPlanView_Refresh">Actualiser les plans</sys:String>
+    <sys:String x:Key="PowerPlanView_RefreshTooltip">Actualiser la liste des plans d'alimentation disponibles</sys:String>
+    <sys:String x:Key="PowerPlanView_CustomPowerPlans">Plans d'alimentation personnalisés</sys:String>
+    <sys:String x:Key="PowerPlanView_LocalPlansTip">Fichiers .pow locaux prêts à être importés dans Windows.</sys:String>
+    <sys:String x:Key="PowerPlanView_ImportSelected">Importer le fichier .pow sélectionné</sys:String>
+    <sys:String x:Key="PowerPlanView_ImportSelectedTooltip">Importez le fichier .pow personnalisé sélectionné dans Windows</sys:String>
+    <sys:String x:Key="PowerPlanView_AddFile">Ajouter un fichier .pow</sys:String>
+    <sys:String x:Key="PowerPlanView_AddFileTooltip">Ajouter un nouveau fichier de plan d'alimentation personnalisé à la bibliothèque personnalisée</sys:String>
+    <sys:String x:Key="PowerPlanView_Delete">Supprimer</sys:String>
+    <sys:String x:Key="PowerPlanView_Active">Actif</sys:String>
+
+    <!-- ProcessPowerPlanAssociationView -->
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Title">Règles et automatisation</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Subtitle">La surveillance de l'automatisation surveille les événements de démarrage/arrêt du processus et applique le plan d'alimentation configuré, le masque CPU et les règles de priorité.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RuleEditor">Éditeur de règles</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_EditorSubtitle">Créez une règle à partir d'un processus exécutable ou en cours d'exécution pour automatiser le plan d'alimentation, le masque CPU et le comportement de priorité.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_ExecutableMatch">Correspondance exécutable :</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_MatchByPath">Correspondance par chemin</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_MatchByPathTooltip">Faire correspondre les processus par chemin complet au lieu de simplement le nom de l'exécutable</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Browse">Rechercher un exécutable</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_BrowseTooltip">Cliquez pour sélectionner un fichier exécutable (.exe) sur votre ordinateur</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_ExecutableHelp">Choisissez un exécutable. La correspondance par chemin est plus précise ; la correspondance par nom s'applique à tout processus portant ce nom d'exécutable.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_UseRunningProcess">Utiliser le processus en cours :</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_UseRunningProcessTooltip">Sélectionnez un processus en cours d'exécution pour utiliser son exécutable</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_UseSelectedProcess">Utiliser le processus sélectionné</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_UseSelectedProcessTooltip">Utiliser l'exécutable du processus en cours d'exécution sélectionné</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulePowerPlan">Plan d'alimentation de règle (commutateur global) :</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulePowerPlanHelp">Lorsque cette règle correspond, Windows change le plan d’alimentation actif global.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RuleCpuMask">Règle CPU Masque :</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RuleCpuMaskHelp">Facultatif : Sélectionnez un masque CPU à appliquer au démarrage de ce processus.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulePriority">Priorité des règles</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Update">Mise à jour</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulePriorityHelp">Facultatif : Sélectionnez la priorité du processus à appliquer au démarrage de ce processus.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AssociationPriority">Priorité de l'association :</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AssociationPriorityHelp">Les associations de priorité plus élevée sont prioritaires en cas de correspondance multiple</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AddRule">Ajouter une règle</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_UpdateRule">Mettre à jour la règle sélectionnée</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_UpdateRuleTooltip">Mettre à jour l'association sélectionnée</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_ClearSelection">Effacer la sélection</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_ClearSelectionTooltip">Effacer l'exécutable sélectionné</sys:String>
+
+    <sys:String x:Key="ProcessPowerPlanAssociationView_CurrentRules">Règles actuelles</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulesDescription">Définissez des règles par processus. Les plans d’alimentation sont mondiaux ; les masques et les priorités s'appliquent aux processus de correspondance.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Remove">Supprimer</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RemoveTooltip">Supprimer l'association sélectionnée</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_DefaultPowerPlan">Plan d'alimentation par défaut (repli lorsqu'aucune règle ne correspond)</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_DefaultPowerPlanHelp">Plan d'alimentation à utiliser lorsqu'aucun processus associé n'est en cours d'exécution :</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SetDefault">Définir le plan d'alimentation par défaut</sys:String>
+
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SettingsTitle">Paramètres de surveillance de l'automatisation</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_EnableWmi">Activer l'automatisation basée sur les événements (WMI)</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_EnableFallback">Activer l'interrogation de secours automatisée</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_PollingInterval">Intervalle d'interrogation (secondes) :</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_ChangeDelay">Délai de changement de mode d'alimentation (ms) :</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_PreventDuplicates">Empêcher les modifications du plan d'alimentation en double</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SaveConfig">Enregistrer la configuration</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_NoRules">Aucune règle d'automatisation pour l'instant</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Status">Statut :</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AutomationMonitoring">Surveillance de l'automatisation</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_StartAutomation">Démarrer la surveillance de l'automatisation</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_StopAutomation">Arrêter la surveillance de l'automatisation</sys:String>
+
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AppliedToMatching">Appliqué à chaque processus de correspondance lors de l'exécution de la règle d'automatisation.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AppliedOnlyToMatching">Appliqué uniquement aux processus de correspondance ; cela ne modifie pas le plan d’alimentation global Windows.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SelectedExecutable">Exécutable sélectionné :</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_DescriptionLabel">Descriptif :</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AutomationService">Service d'automatisation</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulesHeader">Règles</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">Exécutable</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_PowerPlan">Plan d'alimentation</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_CpuMask">CPU Masque</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Priority">Priorité</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Description">Descriptif</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_ProcessPriority">Priorité du processus :</sys:String>
+
+    <!-- ProcessView -->
+    <sys:String x:Key="ProcessView_Title">Gestion des processus</sys:String>
+    <sys:String x:Key="ProcessView_Subtitle">Rechercher, filtrer et contrôler les configurations de processus actifs</sys:String>
+    <sys:String x:Key="ProcessView_SearchPlaceholder">Rechercher des processus par nom</sys:String>
+    <sys:String x:Key="ProcessView_SearchAutomationName">Recherche de processus</sys:String>
+    <sys:String x:Key="ProcessView_HideSystem">Masquer les processus système Windows</sys:String>
+    <sys:String x:Key="ProcessView_HideSystemShort">Masquer les processus système</sys:String>
+    <sys:String x:Key="ProcessView_HideLowCpu">Masquer les processus avec une très faible utilisation de CPU</sys:String>
+    <sys:String x:Key="ProcessView_HideIdle">Masquer les processus inactifs</sys:String>
+    <sys:String x:Key="ProcessView_VisibleWindowsOnly">Afficher uniquement les applications avec windows visible</sys:String>
+    <sys:String x:Key="ProcessView_ActiveAppsOnly">Applications actives uniquement</sys:String>
+    <sys:String x:Key="ProcessView_LockList">Liste des processus de verrouillage</sys:String>
+    <sys:String x:Key="ProcessView_LockListTooltip">Suspendez le processus d'actualisation de la liste et de tri des mises à jour pendant que vous travaillez avec la liste actuelle. La surveillance en arrière-plan et l'application automatique des règles enregistrées se poursuivent pendant l'exécution de ThreadPilot.</sys:String>
+    <sys:String x:Key="ProcessView_SortBy">Trier par :</sys:String>
+    <sys:String x:Key="ProcessView_SortByTooltip">Choisissez comment trier la liste des processus</sys:String>
+
+    <sys:String x:Key="ProcessView_SelectedProcess">Processus sélectionné</sys:String>
+    <sys:String x:Key="ProcessView_NoProcessSelected">Aucun processus sélectionné</sys:String>
+    <sys:String x:Key="ProcessView_SelectProcessTip">Sélectionnez un processus dans le tableau pour activer les actions d'affinité, de priorité, de plan d'alimentation et de règle.</sys:String>
+    <sys:String x:Key="ProcessView_PowerPlanPending">Plan d'alimentation/Paramètres en attente</sys:String>
+    <sys:String x:Key="ProcessView_PowerPlanTooltip">Choisissez le plan d'alimentation à activer manuellement ou à inclure avec une application rapide</sys:String>
+    <sys:String x:Key="ProcessView_SetPowerPlan">Définir le plan d'alimentation</sys:String>
+    <sys:String x:Key="ProcessView_SetPowerPlanTooltip">Activer le plan d'alimentation Windows sélectionné</sys:String>
+
+    <sys:String x:Key="ProcessView_PendingCoreMask">Masque de base en attente</sys:String>
+    <sys:String x:Key="ProcessView_StageMaskTooltip">Sélectionnez un masque pour le mettre en scène. Cela ne modifie pas l'affinité du système d'exploitation jusqu'à ce que vous cliquiez sur Appliquer l'affinité.</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinity">Appliquer l'affinité</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinityTooltip">Appliquez le masque principal en attente au processus sélectionné et vérifiez l'état d'affinité Windows</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinitySaveRule">Appliquer l'affinité et enregistrer en tant que règle</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinitySaveRuleTooltip">En règle générale, enregistrez les paramètres de processus actuels. Ces paramètres seront automatiquement appliqués lorsque ce processus démarrera à l’avenir.</sys:String>
+
+    <sys:String x:Key="ProcessView_SetCpuPriority">Définir la priorité CPU</sys:String>
+    <sys:String x:Key="ProcessView_ApplyPriorityTooltip">Appliquer la priorité sélectionnée au processus</sys:String>
+    <sys:String x:Key="ProcessView_EnforcePriorityRegistry">Appliquer la priorité par le registre</sys:String>
+    <sys:String x:Key="ProcessView_EnforcePriorityRegistryTooltip">Appliquez la priorité via le registre Windows. Le processus doit être redémarré pour que les modifications prennent effet. Ce paramètre persiste lors des redémarrages du système.</sys:String>
+    <sys:String x:Key="ProcessView_SetPriority">Définir la priorité</sys:String>
+    <sys:String x:Key="ProcessView_RealtimeBlockedHelp">La priorité en temps réel est bloquée par ThreadPilot car elle peut rendre Windows instable ou ne pas répondre.</sys:String>
+    <sys:String x:Key="ProcessView_RealtimeBlocked">Temps réel (bloqué)</sys:String>
+
+    <sys:String x:Key="ProcessView_DisableIdleServer">Désactiver le serveur inactif</sys:String>
+    <sys:String x:Key="ProcessView_DisableIdleServerTooltip">Empêche le système d'entrer en état d'inactivité pendant l'exécution de ce processus. Utile pour les jeux et les applications critiques en termes de performances.</sys:String>
+
+    <sys:String x:Key="ProcessView_ProfileRule">Profil / Règle</sys:String>
+    <sys:String x:Key="ProcessView_ProfileNamePlaceholder">Entrez un nom de profil pour enregistrer ou charger les paramètres</sys:String>
+    <sys:String x:Key="ProcessView_SaveProfile">Enregistrer le profil</sys:String>
+    <sys:String x:Key="ProcessView_SaveProfileTooltip">Enregistrer l'affinité et la priorité CPU actuelles en tant que profil réutilisable</sys:String>
+    <sys:String x:Key="ProcessView_LoadProfile">Charger le profil</sys:String>
+    <sys:String x:Key="ProcessView_LoadProfileTooltip">Charger un profil précédemment enregistré</sys:String>
+    <sys:String x:Key="ProcessView_SaveCurrentRule">Enregistrer les paramètres actuels en tant que règle</sys:String>
+
+    <sys:String x:Key="ProcessView_LastAction">Dernière action ThreadPilot :</sys:String>
+    <sys:String x:Key="ProcessView_Refresh">Actualiser</sys:String>
+    <sys:String x:Key="ProcessView_RefreshTooltip">Actualiser la liste des processus</sys:String>
+    <sys:String x:Key="ProcessView_LoadMore">Charger plus</sys:String>
+    <sys:String x:Key="ProcessView_LoadMoreTooltip">Charger plus de processus</sys:String>
+    <sys:String x:Key="ProcessView_RefreshAutomationName">Actualiser les processus</sys:String>
+    <sys:String x:Key="ProcessView_LoadMoreAutomationName">Charger plus de processus</sys:String>
+    <sys:String x:Key="ProcessView_RunningListAutomationName">Liste des processus en cours d'exécution</sys:String>
+    <sys:String x:Key="ProcessView_RunningListAutomationHelp">Table de processus virtualisée avec tri et sélection</sys:String>
+
+    <sys:String x:Key="ProcessView_ColProcessName">Nom du processus</sys:String>
+    <sys:String x:Key="ProcessView_ColWindowTitle">Titre de la fenêtre</sys:String>
+    <sys:String x:Key="ProcessView_ColCpuUsage">CPU Utilisation</sys:String>
+    <sys:String x:Key="ProcessView_ColMemory">Utilisation de la mémoire</sys:String>
+
+    <sys:String x:Key="ProcessView_AffinityStagedTooltip">Affinité mise en scène dans l'interface utilisateur. Il n’est pas appliqué tant que vous n’avez pas cliqué sur Appliquer l’affinité.</sys:String>
+    <sys:String x:Key="ProcessView_AffinityCurrentTooltip">Affinité actuellement signalée par Windows pour le processus sélectionné</sys:String>
+    <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Aperçu en lecture seule de la sélection CPU actuelle ou en attente</sys:String>
+    <sys:String x:Key="ProcessView_OpenMasksTabTooltip">Ouvrez l'onglet CPU Masques pour créer un nouveau masque personnalisé.</sys:String>
+    <sys:String x:Key="ProcessView_HyperThreadingTooltip">Indique si Hyper-Threading (Intel) ou SMT (AMD) est présent et actif sur ce système</sys:String>
+
+    <sys:String x:Key="ProcessView_CopyProcessInfo">Copier les informations sur le processus</sys:String>
+    <sys:String x:Key="ProcessView_OpenLocation">Emplacement de l'exécutable ouvert</sys:String>
+    <sys:String x:Key="ProcessView_ClearCpuSets">Effacer les ensembles CPU</sys:String>
+    <sys:String x:Key="ProcessView_ApplyPendingSettings">Appliquer les paramètres en attente</sys:String>
+    <sys:String x:Key="ProcessView_ApplyPendingSettingsTooltip">Appliquer l'affinité en attente et le plan d'alimentation sélectionné au processus sélectionné</sys:String>
+    <sys:String x:Key="ProcessView_RulesAppliedOnlyWhenConfigured">Les règles et les modifications sont appliquées par ThreadPilot uniquement lorsqu'elles sont configurées.</sys:String>
+    <sys:String x:Key="ProcessView_CurrentProcessStatus">Statut actuel du processus</sys:String>
+    <sys:String x:Key="ProcessView_AdvancedAffinityPicker">Sélecteur d'affinité avancé</sys:String>
+    <sys:String x:Key="ProcessView_RowMaskTooltip">Sélectionnez le masque en attente pour les actions d'affinité du menu contextuel des lignes</sys:String>
+    <sys:String x:Key="ProcessView_SelectedPowerPlan">Plan d'alimentation sélectionné</sys:String>
+    <sys:String x:Key="ProcessView_SaveAsRule">Enregistrer comme règle</sys:String>
+    <sys:String x:Key="ProcessView_NoVisibleWindowTitle">Aucun titre de fenêtre visible</sys:String>
+    <sys:String x:Key="ProcessView_BatchLabel">Traitement par lots</sys:String>
+    <sys:String x:Key="ProcessView_TotalSuffix">total)</sys:String>
+    <sys:String x:Key="ProcessView_PriorityInlineLabel">Priorité</sys:String>
+    <sys:String x:Key="ProcessSummary_CpuUnavailable">CPU : indisponible</sys:String>
+    <sys:String x:Key="ProcessSummary_MemoryUnavailable">Mémoire : indisponible</sys:String>
+    <sys:String x:Key="ProcessSummary_CpuPriorityUnavailable">Priorité CPU : indisponible</sys:String>
+    <sys:String x:Key="ProcessSummary_MemoryPriorityUnavailable">Priorité mémoire indisponible</sys:String>
+    <sys:String x:Key="ProcessSummary_AffinityUnavailable">Affinité : indisponible</sys:String>
+    <sys:String x:Key="ProcessSummary_NoSavedRule">Aucune règle enregistrée</sys:String>
+    <sys:String x:Key="ProcessSummary_NoRecentAction">Aucune action ThreadPilot récente</sys:String>
+    <sys:String x:Key="ProcessSummary_SelectedProcessFormat">Processus sélectionné : {0} (PID {1})</sys:String>
+    <sys:String x:Key="ProcessSummary_StatusProtected">Statut actuel du processus : protégé ou accès refusé</sys:String>
+    <sys:String x:Key="ProcessSummary_StatusSelected">Statut actuel du processus : sélectionné</sys:String>
+    <sys:String x:Key="ProcessSummary_CpuFormat">CPU : {0:N1} %</sys:String>
+    <sys:String x:Key="ProcessSummary_MemoryFormat">Mémoire : {0}</sys:String>
+    <sys:String x:Key="ProcessSummary_CpuPriorityFormat">Priorité CPU : {0}</sys:String>
+    <sys:String x:Key="ProcessSummary_AffinityLegacyFormat">Affinité : masque hérité 0x{0:X}</sys:String>
+    <sys:String x:Key="ProcessSummary_MemoryPriorityFormat">Priorité mémoire : {0}</sys:String>
+    <sys:String x:Key="ProcessSummary_SavedRuleFallback">règle enregistrée</sys:String>
+    <sys:String x:Key="ProcessSummary_SavedRuleExistsFormat">La règle enregistrée existe : {0}</sys:String>
+
+    <sys:String x:Key="ProcessView_PriorityAboveNormal">Au-dessus de la normale</sys:String>
+    <sys:String x:Key="ProcessView_PriorityBelowNormal">En dessous de la normale</sys:String>
+    <sys:String x:Key="ProcessView_PriorityHigh">Élevé</sys:String>
+    <sys:String x:Key="ProcessView_PriorityIdle">Inactif</sys:String>
+    <sys:String x:Key="ProcessView_PriorityLow">Faible</sys:String>
+    <sys:String x:Key="ProcessView_PriorityNormal">Normale</sys:String>
+    <sys:String x:Key="ProcessView_PriorityRealtime">Temps réel</sys:String>
+    <sys:String x:Key="ProcessView_PriorityBatch">Traitement par lots</sys:String>
+    <sys:String x:Key="ProcessView_PriorityCustom">Personnalisé</sys:String>
+
+    <sys:String x:Key="ProcessView_HasWindow">A une fenêtre</sys:String>
+    <sys:String x:Key="ProcessView_Window">Fenêtre</sys:String>
+    <sys:String x:Key="ProcessView_PID">PID</sys:String>
+    <sys:String x:Key="ProcessView_ID">ID</sys:String>
+    <sys:String x:Key="ProcessView_MemoryMb">Mémoire (MB)</sys:String>
+    <sys:String x:Key="ProcessView_Affinity">Affinité</sys:String>
+    <sys:String x:Key="ProcessView_Priority">Priorité</sys:String>
+    <sys:String x:Key="ProcessView_Rules">Règles</sys:String>
+    <sys:String x:Key="ProcessView_Name">Nom</sys:String>
+    <sys:String x:Key="ProcessView_SetMemoryPriority">Définir la priorité de la mémoire</sys:String>
+    <sys:String x:Key="ProcessView_PriorityVeryLow">Très faible</sys:String>
+    <sys:String x:Key="ProcessView_PriorityMedium">Moyen</sys:String>
+    <sys:String x:Key="ProcessView_RefreshInfo">Actualiser les informations sur le processus</sys:String>
+
+    <!-- SettingsView -->
+    <sys:String x:Key="SettingsView_Title">Paramètres des applications</sys:String>
+    <sys:String x:Key="SettingsView_Subtitle">Configurer les notifications, la barre d'état système et le comportement des applications</sys:String>
+    <sys:String x:Key="SettingsView_Notifications">Notifications</sys:String>
+    <sys:String x:Key="SettingsView_EnableNotifications">Activer les notifications</sys:String>
+    <sys:String x:Key="SettingsView_NotificationLevel">Niveau de notification</sys:String>
+    <sys:String x:Key="SettingsView_NotificationLevelAll">Tout</sys:String>
+    <sys:String x:Key="SettingsView_NotificationLevelWarningsErrors">Avertissements/Erreurs uniquement</sys:String>
+    <sys:String x:Key="SettingsView_NotificationLevelSilent">Silencieux</sys:String>
+    <sys:String x:Key="SettingsView_EnableBalloon">Activer les notifications par bulles (barre d'état système)</sys:String>
+    <sys:String x:Key="SettingsView_EnableToast">Activer les notifications toast (Windows 10+)</sys:String>
+    <sys:String x:Key="SettingsView_NotificationTypes">Types de notifications</sys:String>
+    <sys:String x:Key="SettingsView_NotifyPowerPlan">Modifications du plan d'alimentation</sys:String>
+    <sys:String x:Key="SettingsView_NotifyProcess">Événements de surveillance des processus</sys:String>
+    <sys:String x:Key="SettingsView_NotifyError">Notifications d'erreur</sys:String>
+    <sys:String x:Key="SettingsView_NotifySuccess">Notifications de réussite</sys:String>
+    <sys:String x:Key="SettingsView_Duration">Durée (ms) :</sys:String>
+    <sys:String x:Key="SettingsView_TestNotification">Avis de test</sys:String>
+
+    <sys:String x:Key="SettingsView_SystemTray">Barre d'état système</sys:String>
+    <sys:String x:Key="SettingsView_ShowTrayIcon">Afficher l'icône de la barre d'état</sys:String>
+    <sys:String x:Key="SettingsView_MinimizeToTray">Réduire dans le bac</sys:String>
+    <sys:String x:Key="SettingsView_CloseToTray">Près du plateau (au lieu de la sortie)</sys:String>
+    <sys:String x:Key="SettingsView_StartMinimized">Démarrer réduit</sys:String>
+    <sys:String x:Key="SettingsView_QuickApply">Activer l'application des paramètres en attente à partir du bac</sys:String>
+    <sys:String x:Key="SettingsView_MonitoringControl">Activer les contrôles de surveillance de l'automatisation à partir du bac</sys:String>
+    <sys:String x:Key="SettingsView_DetailedTooltips">Afficher des info-bulles détaillées</sys:String>
+
+    <sys:String x:Key="SettingsView_BasicPreferences">Préférences de base</sys:String>
+    <sys:String x:Key="SettingsView_Autostart">Démarrage automatique</sys:String>
+    <sys:String x:Key="SettingsView_StartWithWindows">Commencez par Windows</sys:String>
+    <sys:String x:Key="SettingsView_AutostartDescription">Démarrer automatiquement ThreadPilot au démarrage de Windows</sys:String>
+    <sys:String x:Key="SettingsView_LowImpactMode">Mode faible impact en arrière-plan</sys:String>
+    <sys:String x:Key="SettingsView_LowImpactDescription">Réduisez la priorité du processus de ThreadPilot lorsqu'il est réduit ou masqué dans la barre d'état.</sys:String>
+
+    <sys:String x:Key="SettingsView_Appearance">Apparence</sys:String>
+    <sys:String x:Key="SettingsView_UseDarkTheme">Utiliser un thème sombre</sys:String>
+    <sys:String x:Key="SettingsView_ThemeDescription">Applique un thème global Dark/Light sur tous les onglets</sys:String>
+
+    <sys:String x:Key="SettingsView_Language">Langue</sys:String>
+    <sys:String x:Key="SettingsView_LanguageZhCn">简体中文 (Simplified Chinese)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageEnUs">English (English)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageItIt">Italiano (Italian)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageFrFr">Français (French)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageDeDe">Deutsch (German)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageEsEs">Español (Spanish)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageRuRu">Русский (Russian)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageDescription">Applique une langue d’affichage globale sur toute l’interface de l’application.</sys:String>
+
+    <sys:String x:Key="SettingsView_RulesAutomation">Règles et automatisation</sys:String>
+    <sys:String x:Key="SettingsView_RuleAutoApply">Application automatique des règles enregistrées</sys:String>
+    <sys:String x:Key="SettingsView_ApplyOnStart">Appliquer les règles enregistrées au démarrage des processus de correspondance</sys:String>
+    <sys:String x:Key="SettingsView_ApplyOnStartDescription">Applique les règles enregistrées activées pendant l'exécution de ThreadPilot. Cela n'installe pas de service Windows et n'utilise pas la persistance du registre/IFEO.</sys:String>
+    <sys:String x:Key="SettingsView_EnableWmi">Activer les événements de processus WMI</sys:String>
+    <sys:String x:Key="SettingsView_WmiDescription">Utiliser Windows Management Instrumentation pour les événements de démarrage/arrêt de processus</sys:String>
+    <sys:String x:Key="SettingsView_EnableFallback">Activer l'interrogation de secours</sys:String>
+    <sys:String x:Key="SettingsView_FallbackDescription">Utiliser l'interrogation comme sauvegarde lorsque les événements de processus WMI échouent</sys:String>
+    <sys:String x:Key="SettingsView_PollingInterval">Intervalle d'interrogation (ms) :</sys:String>
+    <sys:String x:Key="SettingsView_FallbackPollingInterval">Interrogation de secours (ms) :</sys:String>
+
+    <sys:String x:Key="SettingsView_Advanced">Avancé</sys:String>
+    <sys:String x:Key="SettingsView_NotificationHistory">Activer l'historique des notifications</sys:String>
+    <sys:String x:Key="SettingsView_MaxHistory">Nombre maximum d'éléments d'historique :</sys:String>
+    <sys:String x:Key="SettingsView_AutoHide">Masquer automatiquement les notifications</sys:String>
+    <sys:String x:Key="SettingsView_NotificationSound">Activer le son des notifications</sys:String>
+    <sys:String x:Key="SettingsView_DebugLogging">Activer la journalisation du débogage</sys:String>
+    <sys:String x:Key="SettingsView_PerformanceCounters">Activer les compteurs de performances</sys:String>
+
+    <sys:String x:Key="SettingsView_About">À propos</sys:String>
+    <sys:String x:Key="SettingsView_Version">Version :</sys:String>
+    <sys:String x:Key="SettingsView_Copyright">Copyright © 2026 PrimeBuild</sys:String>
+    <sys:String x:Key="SettingsView_Translator">Traducteur : Ylimhs</sys:String>
+    <sys:String x:Key="SettingsView_License">Licence : AGPLv3</sys:String>
+    <sys:String x:Key="SettingsView_CheckUpdates">Vérifier les mises à jour</sys:String>
+    <sys:String x:Key="SettingsView_DownloadInstallUpdate">Téléchargez et installez la mise à jour</sys:String>
+    <sys:String x:Key="SettingsView_EnableAutomaticUpdateChecks">Vérifier automatiquement au démarrage</sys:String>
+    <sys:String x:Key="SettingsView_UpdateIntervalDays">Intervalle de vérification (jours) :</sys:String>
+    <sys:String x:Key="SettingsView_IncludePrereleaseUpdates">Inclure les mises à jour préliminaires</sys:String>
+    <sys:String x:Key="SettingsView_LatestVersion">Dernière version :</sys:String>
+    <sys:String x:Key="SettingsView_LastUpdateCheck">Dernière vérification :</sys:String>
+    <sys:String x:Key="SettingsView_UpdatesDescription">Vérifications sur demande à l'aide des versions officielles GitHub.</sys:String>
+
+    <sys:String x:Key="SettingsView_ResetDefaults">Réinitialiser aux valeurs par défaut</sys:String>
+    <sys:String x:Key="SettingsView_ExportConfig">Exporter la configuration</sys:String>
+    <sys:String x:Key="SettingsView_ImportConfig">Importer la configuration</sys:String>
+    <sys:String x:Key="SettingsView_SaveSettings">Enregistrer les paramètres</sys:String>
+    <sys:String x:Key="SettingsView_ThreadPilot">ThreadPilot</sys:String>
+    <sys:String x:Key="Settings_StatusThemeChangedFormat">Le thème a été remplacé par {0}.</sys:String>
+    <sys:String x:Key="Settings_StatusThemeChangeFailedFormat">Échec du changement de thème en {0}.</sys:String>
+    <sys:String x:Key="Settings_StatusLanguageChangedFormat">La langue a été modifiée en {0}.</sys:String>
+    <sys:String x:Key="Settings_StatusLanguageChangeFailed">Échec du changement de langue.</sys:String>
+    <sys:String x:Key="Settings_StatusSaving">Enregistrement des paramètres...</sys:String>
+    <sys:String x:Key="Settings_StatusSavedWarningsFormat">Paramètres enregistrés avec avertissements : {0}</sys:String>
+    <sys:String x:Key="Settings_StatusSavedApplied">Paramètres enregistrés et appliqués avec succès.</sys:String>
+    <sys:String x:Key="Settings_StatusErrorSavingFormat">Erreur lors de l'enregistrement des paramètres : {0}</sys:String>
+    <sys:String x:Key="Settings_StatusResetting">Réinitialisation aux valeurs par défaut...</sys:String>
+    <sys:String x:Key="Settings_StatusResetPending">Paramètres réinitialisés aux valeurs par défaut (pas encore enregistrés)</sys:String>
+    <sys:String x:Key="Settings_StatusErrorResettingFormat">Erreur lors de la réinitialisation des paramètres : {0}</sys:String>
+    <sys:String x:Key="Settings_StatusExporting">Exportation du bundle de configuration...</sys:String>
+    <sys:String x:Key="Settings_StatusExportCanceled">Exportation annulée</sys:String>
+    <sys:String x:Key="Settings_StatusExportedFormat">Configuration exportée vers : {0}</sys:String>
+    <sys:String x:Key="Settings_StatusErrorExportingFormat">Erreur lors de l'exportation des paramètres : {0}</sys:String>
+    <sys:String x:Key="Settings_StatusImporting">Importation de la configuration...</sys:String>
+    <sys:String x:Key="Settings_StatusImportCanceled">Importation annulée</sys:String>
+    <sys:String x:Key="Settings_StatusImportedApplied">Ensemble de configuration importé et appliqué</sys:String>
+    <sys:String x:Key="Settings_StatusLegacyImported">Paramètres hérités importés (règles inchangées)</sys:String>
+    <sys:String x:Key="Settings_StatusErrorImportingFormat">Erreur lors de l'importation des paramètres : {0}</sys:String>
+    <sys:String x:Key="Settings_StatusTestSent">Notification de test envoyée</sys:String>
+    <sys:String x:Key="Settings_StatusErrorTestFormat">Erreur lors de l'envoi de la notification de test : {0}</sys:String>
+    <sys:String x:Key="Settings_StatusLoading">Chargement des paramètres...</sys:String>
+    <sys:String x:Key="Settings_StatusLoaded">Paramètres chargés</sys:String>
+    <sys:String x:Key="Settings_StatusErrorLoadingFormat">Erreur de chargement des paramètres : {0}</sys:String>
+    <sys:String x:Key="Settings_StatusSynchronized">Paramètres synchronisés</sys:String>
+    <sys:String x:Key="Settings_StatusCheckingUpdates">Vérification des mises à jour...</sys:String>
+    <sys:String x:Key="Settings_StatusLatestUnknown">Impossible de déterminer la dernière version.</sys:String>
+    <sys:String x:Key="Settings_StatusNewVersionFormat">Nouvelle version disponible : {0}</sys:String>
+    <sys:String x:Key="Settings_StatusUpToDateFormat">L'application est à jour. Version installée : {0}</sys:String>
+    <sys:String x:Key="Settings_StatusUpdateErrorFormat">Erreur lors de la vérification des mises à jour : {0}</sys:String>
+    <sys:String x:Key="Settings_UpdateLatestUnknown">Inconnu</sys:String>
+    <sys:String x:Key="Settings_UpdateNotChecked">Non vérifié</sys:String>
+    <sys:String x:Key="Settings_UpdateLastCheckedNever">Jamais</sys:String>
+    <sys:String x:Key="Settings_UpdateConfirmTitle">Installer la mise à jour ThreadPilot</sys:String>
+    <sys:String x:Key="Settings_UpdateConfirmMessageFormat">ThreadPilot téléchargera et vérifiera la version {0}, puis demandera à Windows l'autorisation d'exécuter le programme d'installation. Continuer ?</sys:String>
+    <sys:String x:Key="Settings_StatusUpdateCanceled">Mise à jour annulée.</sys:String>
+    <sys:String x:Key="Settings_StatusDownloadingUpdate">Téléchargement et vérification de la mise à jour...</sys:String>
+    <sys:String x:Key="Settings_StatusUpdateInstallerStarted">Le programme d'installation de la mise à jour a démarré.</sys:String>
+    <sys:String x:Key="Settings_StatusUpdateInstallFailedFormat">Échec de l'installation de la mise à jour : {0}</sys:String>
+    <sys:String x:Key="Settings_StatusModified">Les paramètres ont été modifiés</sys:String>
+    <sys:String x:Key="Settings_StatusMatchSaved">Les paramètres correspondent à la configuration enregistrée</sys:String>
+    <sys:String x:Key="Settings_LanguageSimplifiedChinese">Chinois simplifié</sys:String>
+    <sys:String x:Key="Settings_LanguageEnglish">Anglais</sys:String>
+    <sys:String x:Key="Settings_LanguageItalian">Italien</sys:String>
+    <sys:String x:Key="Settings_LanguageFrench">Français</sys:String>
+    <sys:String x:Key="Settings_LanguageGerman">Allemand</sys:String>
+    <sys:String x:Key="Settings_LanguageSpanish">Espagnol</sys:String>
+    <sys:String x:Key="Settings_LanguageRussian">Russe</sys:String>
+    <sys:String x:Key="Settings_ThemeDark">Sombre</sys:String>
+    <sys:String x:Key="Settings_ThemeLight">Clair</sys:String>
+    <sys:String x:Key="Settings_DialogExportTitle">Exporter la configuration ThreadPilot</sys:String>
+    <sys:String x:Key="Settings_DialogImportTitle">Importer la configuration ThreadPilot</sys:String>
+    <sys:String x:Key="Settings_WarningAutostartFailed">Échec de la mise à jour du démarrage automatique Windows. Conserver l'état de démarrage automatique précédent.</sys:String>
+
+    <!-- SettingsWindow -->
+    <sys:String x:Key="SettingsWindow_Title">ThreadPilot Paramètres</sys:String>
+    <sys:String x:Key="SettingsWindow_UnsavedTitle">Paramètres non enregistrés</sys:String>
+    <sys:String x:Key="SettingsWindow_UnsavedDescription">Certaines modifications ne sont pas enregistrées. Enregistrez-les, ignorez-les ou annulez pour continuer à les modifier.</sys:String>
+    <sys:String x:Key="SettingsWindow_Cancel">Annuler</sys:String>
+    <sys:String x:Key="SettingsWindow_Discard">Jeter</sys:String>
+    <sys:String x:Key="SettingsWindow_Save">Enregistrer</sys:String>
+
+    <!-- SystemTweaksView -->
+    <sys:String x:Key="SystemTweaksView_Title">Ajustements et optimisations du système</sys:String>
+    <sys:String x:Key="SystemTweaksView_Subtitle">Configurer les optimisations du système Windows et les ajustements de performances</sys:String>
+    <sys:String x:Key="SystemTweaksView_RefreshAll">Actualiser tout</sys:String>
+    <sys:String x:Key="SystemTweaksView_RefreshAllTooltip">Actualiser tous les états de réglage</sys:String>
+    <sys:String x:Key="SystemTweaksView_TweakTooltip">Activez ce réglage Windows</sys:String>
+    <sys:String x:Key="SystemTweaksView_Status">Statut</sys:String>
+
+    <!-- SystemTweaks Names and Descriptions -->
+    <sys:String x:Key="SystemTweak_CoreParking_Name">Core Parking</sys:String>
+    <sys:String x:Key="SystemTweak_CoreParking_Desc">Contrôle CPU core parking pour la gestion de l'alimentation</sys:String>
+    <sys:String x:Key="SystemTweak_CStates_Name">C-States</sys:String>
+    <sys:String x:Key="SystemTweak_CStates_Desc">Contrôle CPU C-States pour la gestion de l'alimentation</sys:String>
+    <sys:String x:Key="SystemTweak_Hpet_Name">HPET</sys:String>
+    <sys:String x:Key="SystemTweak_Hpet_Desc">Minuteur d'événements haute précision pour la synchronisation du système</sys:String>
+    <sys:String x:Key="SystemTweak_SysMain_Name">Service SysMain</sys:String>
+    <sys:String x:Key="SystemTweak_SysMain_Desc">Service Windows Superfetch/SysMain pour la gestion de la mémoire</sys:String>
+    <sys:String x:Key="SystemTweak_Prefetch_Name">Prefetch</sys:String>
+    <sys:String x:Key="SystemTweak_Prefetch_Desc">Fonctionnalité Windows Prefetch pour un chargement plus rapide des applications</sys:String>
+    <sys:String x:Key="SystemTweak_PowerThrottling_Name">Power Throttling</sys:String>
+    <sys:String x:Key="SystemTweak_PowerThrottling_Desc">Windows Power Throttling pour l'efficacité énergétique</sys:String>
+    <sys:String x:Key="SystemTweak_HighSchedulingCategory_Name">Catégorie de planification élevée</sys:String>
+    <sys:String x:Key="SystemTweak_HighSchedulingCategory_Desc">Priorité de planification élevée pour les applications de jeux</sys:String>
+    <sys:String x:Key="SystemTweak_MenuShowDelay_Name">Menu Afficher le délai</sys:String>
+    <sys:String x:Key="SystemTweak_MenuShowDelay_Desc">Délai avant l'affichage des menus contextuels</sys:String>
+
+    <!-- SystemTweaksViewModel Messages -->
+    <sys:String x:Key="SystemTweaks_StatusReady">Prêt</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusRefreshing">Modifications rafraîchissantes du système...</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusLastRefreshedFormat">Dernière actualisation : {0}</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusRefreshFailed">Échec de l'actualisation des réglages du système</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusRefreshFailedShort">Échec de l'actualisation</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusTogglingFormat">Basculer {0}...</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusEnabledFormat">{0} activé avec succès</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusDisabledFormat">{0} désactivé avec succès</sys:String>
+    <sys:String x:Key="SystemTweaks_NotifyEnabledFormat">{0} a été activé</sys:String>
+    <sys:String x:Key="SystemTweaks_NotifyDisabledFormat">{0} a été désactivé</sys:String>
+    <sys:String x:Key="SystemTweaks_NotifyUpdatedTitle">Ajustement du système mis à jour</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusToggleFailedFormat">Échec de l'activation de {0}</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusEnableFailedFormat">Échec de l'activation de {0}</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusDisableFailedFormat">Échec de la désactivation de {0}</sys:String>
+    <sys:String x:Key="SystemTweaks_NotifyFailedTitle">Échec de la modification du système</sys:String>
+    <sys:String x:Key="SystemTweaks_NotifyFailedFormat">Échec de {0} {1}</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusErrorTogglingFormat">Erreur lors du basculement de {0}</sys:String>
+    <sys:String x:Key="SystemTweaks_NotifyErrorFormat">Erreur lors du basculement de {0} : {1}</sys:String>
+    <sys:String x:Key="SystemTweaks_WordEnable">activer</sys:String>
+    <sys:String x:Key="SystemTweaks_WordDisable">désactiver</sys:String>
+    <sys:String x:Key="SystemTweaks_WordEnabled">activé</sys:String>
+    <sys:String x:Key="SystemTweaks_WordDisabled">désactivé</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusEnabled">Activé</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusDisabled">Désactivé</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusNotAvailable">Non disponible</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusLoading">Chargement des modifications du système...</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusLoadedSuccess">Les réglages du système ont été chargés avec succès</sys:String>
+
+    <!-- SystemTray Context Menu & Status -->
+    <sys:String x:Key="SystemTray_OpenDashboard">Ouvrir le tableau de bord</sys:String>
+    <sys:String x:Key="SystemTray_OpenDiagnostics">Ouvrir le diagnostic</sys:String>
+    <sys:String x:Key="SystemTray_PauseMonitoring">Suspendre la surveillance de l'automatisation</sys:String>
+    <sys:String x:Key="SystemTray_ResumeMonitoring">Reprendre la surveillance de l'automatisation</sys:String>
+    <sys:String x:Key="SystemTray_SystemStatus">État du système</sys:String>
+    <sys:String x:Key="SystemTray_NoProcessSelected">Aucun processus sélectionné</sys:String>
+    <sys:String x:Key="SystemTray_SelectedProcessFormat">Sélectionné : {0}</sys:String>
+    <sys:String x:Key="SystemTray_ApplyPendingToSelected">Appliquer les paramètres en attente au processus sélectionné</sys:String>
+    <sys:String x:Key="SystemTray_ApplyPendingToProcessFormat">Appliquer les paramètres en attente à {0}</sys:String>
+    <sys:String x:Key="SystemTray_PowerPlans">🔋 Plans d'alimentation</sys:String>
+    <sys:String x:Key="SystemTray_Profiles">📋 Profils</sys:String>
+    <sys:String x:Key="SystemTray_Settings">Paramètres</sys:String>
+    <sys:String x:Key="SystemTray_Exit">Quitter</sys:String>
+    <sys:String x:Key="SystemTray_NoProfilesAvailable">Aucun profil disponible</sys:String>
+    <sys:String x:Key="SystemTray_PowerPlanFormat">Plan d'alimentation : {0}</sys:String>
+    <sys:String x:Key="SystemTray_StatusWmiError">Erreur d'automatisation WMI</sys:String>
+    <sys:String x:Key="SystemTray_StatusActive">Automatisation active</sys:String>
+    <sys:String x:Key="SystemTray_StatusDisabled">Automatisation désactivée</sys:String>
+    <sys:String x:Key="SystemTray_Unknown">Inconnu</sys:String>
+    <sys:String x:Key="SystemTray_CpuRamStatusFormat">💻 CPU : {0:F1}% | RAM : {1:F1}% | {2}</sys:String>
+
+    <!-- ProcessOperationUserMessages -->
+    <sys:String x:Key="ProcessOperationUserMessages_AccessDenied">Windows a refusé cette modification. Le processus peut nécessiter des droits d'administrateur ou peut être protégé.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_AntiCheatProtectedLikely">Le processus semble protégé par un anti-triche ou une protection de processus. ThreadPilot n'essaiera pas de le contourner.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_AdminClarification">Le mode Administrateur peut aider à résoudre les problèmes d'autorisation normaux, mais ne peut pas contourner les restrictions anti-triche ou de processus protégés.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_LegacyFallbackBlocked">Cette sélection CPU ne peut pas être représentée en toute sécurité par les API d'affinité héritées sur cette topologie. CPU Des ensembles sont requis pour cette sélection.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_InvalidTopology">Cette sélection CPU ne correspond pas à la topologie CPU actuelle. Vérifiez ou recréez le préréglage.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_ProcessExited">Le processus s'est terminé avant que ThreadPilot puisse appliquer la modification.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_CpuSetsUnavailable">Windows CPU Les ensembles ne sont pas disponibles ou ont rejeté cette sélection. ThreadPilot utilisera une solution de secours sécurisée uniquement lorsque cela est possible.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_HighPriorityWarning">Une priorité élevée peut améliorer la réactivité de certaines charges de travail, mais peut réduire la réactivité du système.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_RealtimePriorityBlocked">La priorité en temps réel est bloquée par ThreadPilot car elle peut rendre Windows instable ou ne pas répondre.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_PersistentLaunchTimePriorityNotice">La priorité persistante au moment du lancement peut être prise en charge pour les processus normaux, mais elle ne contourne pas les processus protégés ou les restrictions anti-triche.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_PersistentRulesDescription">Applique les règles enregistrées lorsqu'un processus de correspondance démarre. Certains processus protégés ou anti-triche peuvent rejeter les modifications. Le mode Administrateur peut résoudre les problèmes d'autorisation normaux, mais ne peut pas contourner la protection.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_PersistentRulesProtectedProcessWarning">Le processus semble protégé par un anti-triche ou une protection de processus. ThreadPilot n'essaiera pas de le remplacer.</sys:String>
+
+    <!-- Notifications -->
+    <sys:String x:Key="Notification_PowerPlanChangedTitle">Plan d'alimentation modifié</sys:String>
+    <sys:String x:Key="Notification_PowerPlanChangedFormat">Le plan d'alimentation est passé de « {0} » à « {1} »</sys:String>
+    <sys:String x:Key="Notification_PowerPlanChangedProcessFormat">Le plan d'alimentation a été modifié en « {0} » pour le processus « {1} »</sys:String>
+    <sys:String x:Key="Notification_ProcessMonitoringEnabled">Surveillance des processus activée</sys:String>
+    <sys:String x:Key="Notification_ProcessMonitoringDisabled">Surveillance du processus désactivée</sys:String>
+    <sys:String x:Key="Notification_CpuAffinityAppliedTitle">CPU Affinité appliquée</sys:String>
+    <sys:String x:Key="Notification_CpuAffinityAppliedFormat">Ensemble d'affinité CPU pour '{0}' : {1}</sys:String>
+    <sys:String x:Key="Notification_GameBoostActivatedTitle">Boost de jeu activé</sys:String>
+    <sys:String x:Key="Notification_GameBoostActivatedFormat">Mode Game Boost activé pour {0}</sys:String>
+    <sys:String x:Key="Notification_GameBoostDeactivatedTitle">Boost de jeu désactivé</sys:String>
+    <sys:String x:Key="Notification_GameBoostDeactivatedFormat">Mode Game Boost désactivé après {0}</sys:String>
+    <sys:String x:Key="Notification_ProcessMonitorErrorTitle">Erreur du moniteur de processus</sys:String>
+    <sys:String x:Key="Notification_AffinityBlockedTitle">Affinité bloquée</sys:String>
+    <sys:String x:Key="Notification_AffinityAppliedTitle">Affinité appliquée</sys:String>
+    <sys:String x:Key="Notification_AffinityAdjustedTitle">Affinité ajustée</sys:String>
+    <sys:String x:Key="Notification_AffinityFailedTitle">L'affinité a échoué</sys:String>
+    <sys:String x:Key="Notification_AffinityErrorTitle">Erreur d'affinité</sys:String>
+    <sys:String x:Key="Notification_PriorityBlockedTitle">Priorité bloquée</sys:String>
+    <sys:String x:Key="Notification_PriorityWarningTitle">Avertissement prioritaire</sys:String>
+    <sys:String x:Key="Notification_PriorityAppliedTitle">Priorité appliquée</sys:String>
+    <sys:String x:Key="Notification_PriorityAdjustedTitle">Priorité ajustée</sys:String>
+    <sys:String x:Key="Notification_PriorityErrorTitle">Erreur de priorité</sys:String>
+    <sys:String x:Key="Notification_KeyboardShortcutTitle">Raccourci clavier</sys:String>
+    <sys:String x:Key="Notification_ToggleMonitoringShortcut">Basculer le raccourci de surveillance activé</sys:String>
+    <sys:String x:Key="Notification_HighPerformanceShortcut">Raccourci du mode d'alimentation hautes performances activé</sys:String>
+    <sys:String x:Key="Notification_RefreshProcessListShortcut">Raccourci d'actualisation de la liste des processus activé</sys:String>
+    <sys:String x:Key="Notification_ThreadPilotStartedTitle">ThreadPilot Démarré</sys:String>
+    <sys:String x:Key="Notification_ThreadPilotStartedMessage">La surveillance des processus et la gestion du plan d'alimentation sont désormais actives</sys:String>
+    <sys:String x:Key="Notification_StartupErrorTitle">Erreur de démarrage</sys:String>
+    <sys:String x:Key="Notification_ProcessMonitoringStartFailed">Échec du démarrage du gestionnaire de surveillance des processus</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringErrorTitle">Erreur de surveillance de l'automatisation</sys:String>
+    <sys:String x:Key="Notification_SettingsSavedTitle">Paramètres enregistrés</sys:String>
+    <sys:String x:Key="Notification_SettingsSavedMessage">Les paramètres de l'application ont été enregistrés avec succès</sys:String>
+    <sys:String x:Key="Notification_SettingsSavedWarningsTitle">Paramètres enregistrés avec les avertissements</sys:String>
+    <sys:String x:Key="Notification_SettingsErrorTitle">Erreur de paramètres</sys:String>
+    <sys:String x:Key="Notification_SettingsSaveFailed">Échec de l'enregistrement des paramètres</sys:String>
+    <sys:String x:Key="Notification_TestNotificationMessage">Il s'agit d'une notification de test pour vérifier que vos paramètres fonctionnent correctement.</sys:String>
+
+    <!-- Elevation Service -->
+    <sys:String x:Key="Elevation_RequestPromptText">ThreadPilot nécessite des privilèges d'administrateur pour gérer l'affinité des processus et les plans d'alimentation.&#x0a;&#x0a;Souhaitez-vous redémarrer l'application avec les privilèges d'administrateur ?</sys:String>
+    <sys:String x:Key="Elevation_RequestPromptTitle">Privilèges d'administrateur requis</sys:String>
+    <sys:String x:Key="Elevation_FailedText">Échec du redémarrage avec les privilèges d'administrateur. Veuillez exécuter manuellement ThreadPilot en tant qu'administrateur.</sys:String>
+    <sys:String x:Key="Elevation_FailedTitle">Échec de l'élévation</sys:String>
+    <sys:String x:Key="Elevation_StatusRunning">Exécution avec les privilèges d'administrateur</sys:String>
+    <sys:String x:Key="Elevation_StatusLimited">Fonctionner avec des privilèges limités</sys:String>
+
+    <!-- System Tweaks Errors -->
+    <sys:String x:Key="SystemTweak_Error_QueryCoreParking">Impossible d'interroger la valeur Core Parking via powercfg</sys:String>
+    <sys:String x:Key="SystemTweak_Error_QueryCStates">Impossible d'interroger la valeur C-States via powercfg</sys:String>
+    <sys:String x:Key="SystemTweak_Error_PrefetchKeyNotFound">Clé de registre Prefetch introuvable</sys:String>
+    <sys:String x:Key="SystemTweak_Error_PowerThrottlingNotAvailable">Power Throttling non disponible sur ce système</sys:String>
+    <sys:String x:Key="SystemTweak_Error_PriorityControlKeyNotFound">Clé de registre PriorityControl introuvable</sys:String>
+    <sys:String x:Key="SystemTweak_Error_DesktopKeyNotFound">Clé de registre de bureau introuvable</sys:String>
+</ResourceDictionary>

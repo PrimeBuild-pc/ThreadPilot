@@ -2,6 +2,7 @@ namespace ThreadPilot.Services
 {
     using System;
     using System.Collections.Generic;
+    using System.Globalization;
     using System.Windows;
     using Microsoft.Extensions.Logging;
 
@@ -9,13 +10,26 @@ namespace ThreadPilot.Services
     {
         public const string DefaultLanguage = "en-US";
         public const string SimplifiedChineseLanguage = "zh-CN";
+        public const string ItalianLanguage = "it-IT";
+        public const string FrenchLanguage = "fr-FR";
+        public const string GermanLanguage = "de-DE";
+        public const string SpanishLanguage = "es-ES";
+        public const string RussianLanguage = "ru-RU";
 
-        private const string EnUsDictionaryPath = "Locales/en-US.xaml";
-        private const string ZhCnDictionaryPath = "Locales/zh-CN.xaml";
+        private static readonly Dictionary<string, string> LocaleDictionaryPaths =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [DefaultLanguage] = "Locales/en-US.xaml",
+                [SimplifiedChineseLanguage] = "Locales/zh-CN.xaml",
+                [ItalianLanguage] = "Locales/it-IT.xaml",
+                [FrenchLanguage] = "Locales/fr-FR.xaml",
+                [GermanLanguage] = "Locales/de-DE.xaml",
+                [SpanishLanguage] = "Locales/es-ES.xaml",
+                [RussianLanguage] = "Locales/ru-RU.xaml",
+            };
 
         private readonly ILogger<LocalizationService> logger;
-        private readonly IReadOnlyDictionary<string, string>? englishStrings;
-        private readonly IReadOnlyDictionary<string, string>? chineseStrings;
+        private readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>? localizedStringOverrides;
         private ResourceDictionary? activeLocaleDictionary;
         private ResourceDictionary? englishFallbackDictionary;
         private Uri? activeLocaleUri;
@@ -25,7 +39,7 @@ namespace ThreadPilot.Services
         public event EventHandler<string>? LanguageChanged;
 
         public LocalizationService(ILogger<LocalizationService> logger)
-            : this(logger, englishStrings: null, chineseStrings: null)
+            : this(logger, localizedStringOverrides: null)
         {
         }
 
@@ -33,20 +47,71 @@ namespace ThreadPilot.Services
             ILogger<LocalizationService> logger,
             IReadOnlyDictionary<string, string>? englishStrings,
             IReadOnlyDictionary<string, string>? chineseStrings)
+            : this(logger, CreateOverrides(englishStrings, chineseStrings))
+        {
+        }
+
+        internal LocalizationService(
+            ILogger<LocalizationService> logger,
+            IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>? localizedStringOverrides)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            this.englishStrings = englishStrings;
-            this.chineseStrings = chineseStrings;
+            this.localizedStringOverrides = localizedStringOverrides;
         }
+
+        internal static IReadOnlyCollection<string> SupportedLanguages => LocaleDictionaryPaths.Keys;
 
         public static string NormalizeLanguage(string? language)
         {
-            if (string.Equals(language, SimplifiedChineseLanguage, StringComparison.OrdinalIgnoreCase))
+            return TryNormalizeSupportedLanguage(language, out var normalizedLanguage)
+                ? normalizedLanguage
+                : DefaultLanguage;
+        }
+
+        internal static bool TryNormalizeSupportedLanguage(string? language, out string normalizedLanguage)
+        {
+            if (!string.IsNullOrWhiteSpace(language))
             {
-                return SimplifiedChineseLanguage;
+                foreach (var supportedLanguage in LocaleDictionaryPaths.Keys)
+                {
+                    if (string.Equals(language, supportedLanguage, StringComparison.OrdinalIgnoreCase))
+                    {
+                        normalizedLanguage = supportedLanguage;
+                        return true;
+                    }
+                }
             }
 
-            return DefaultLanguage;
+            normalizedLanguage = DefaultLanguage;
+            return false;
+        }
+
+        internal static string ResolveLanguagePreference(string? language, CultureInfo systemUiCulture)
+        {
+            if (TryNormalizeSupportedLanguage(language, out var normalizedLanguage))
+            {
+                return normalizedLanguage;
+            }
+
+            return ResolveSystemLanguage(systemUiCulture);
+        }
+
+        internal static string ResolveSystemLanguage(CultureInfo systemUiCulture)
+        {
+            ArgumentNullException.ThrowIfNull(systemUiCulture);
+
+            var language = systemUiCulture.TwoLetterISOLanguageName;
+            return language.ToLowerInvariant() switch
+            {
+                "en" => DefaultLanguage,
+                "it" => ItalianLanguage,
+                "fr" => FrenchLanguage,
+                "de" => GermanLanguage,
+                "es" => SpanishLanguage,
+                "ru" => RussianLanguage,
+                "zh" when IsSimplifiedChineseCulture(systemUiCulture) => SimplifiedChineseLanguage,
+                _ => DefaultLanguage,
+            };
         }
 
         public void ApplyLanguage(string? language)
@@ -54,11 +119,10 @@ namespace ThreadPilot.Services
             var normalizedLanguage = NormalizeLanguage(language);
             var targetUri = new Uri(GetDictionaryPath(normalizedLanguage), UriKind.Relative);
 
-            this.CurrentLanguage = normalizedLanguage;
-
             var appResources = System.Windows.Application.Current?.Resources;
             if (appResources == null)
             {
+                this.CurrentLanguage = normalizedLanguage;
                 this.activeLocaleUri = targetUri;
                 this.LanguageChanged?.Invoke(this, normalizedLanguage);
                 return;
@@ -67,6 +131,7 @@ namespace ThreadPilot.Services
             try
             {
                 this.ApplyLanguageDictionary(appResources, targetUri);
+                this.CurrentLanguage = normalizedLanguage;
                 this.activeLocaleUri = targetUri;
                 this.logger.LogInformation("Applied display language {Language}", normalizedLanguage);
                 this.LanguageChanged?.Invoke(this, normalizedLanguage);
@@ -74,6 +139,7 @@ namespace ThreadPilot.Services
             catch (Exception ex)
             {
                 this.logger.LogError(ex, "Failed to apply language {Language}", normalizedLanguage);
+                this.ApplyEnglishFallback(appResources, normalizedLanguage);
             }
         }
 
@@ -150,14 +216,27 @@ namespace ThreadPilot.Services
 
         private static string GetDictionaryPath(string language)
         {
-            return language == SimplifiedChineseLanguage ? ZhCnDictionaryPath : EnUsDictionaryPath;
+            return LocaleDictionaryPaths.TryGetValue(language, out var path)
+                ? path
+                : LocaleDictionaryPaths[DefaultLanguage];
         }
 
         private static bool IsLocaleDictionary(string? source)
         {
-            return !string.IsNullOrWhiteSpace(source) &&
-                (source.EndsWith(EnUsDictionaryPath, StringComparison.OrdinalIgnoreCase) ||
-                 source.EndsWith(ZhCnDictionaryPath, StringComparison.OrdinalIgnoreCase));
+            if (string.IsNullOrWhiteSpace(source))
+            {
+                return false;
+            }
+
+            foreach (var path in LocaleDictionaryPaths.Values)
+            {
+                if (source.EndsWith(path, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool TryGetString(ResourceDictionary dictionary, string key, out string value)
@@ -174,8 +253,10 @@ namespace ThreadPilot.Services
 
         private bool TryGetStringFromOverrides(string language, string key, out string value)
         {
-            var source = language == SimplifiedChineseLanguage ? this.chineseStrings : this.englishStrings;
-            if (source != null && source.TryGetValue(key, out var text) && !string.IsNullOrEmpty(text))
+            if (this.localizedStringOverrides != null &&
+                this.localizedStringOverrides.TryGetValue(language, out var source) &&
+                source.TryGetValue(key, out var text) &&
+                !string.IsNullOrEmpty(text))
             {
                 value = text;
                 return true;
@@ -236,7 +317,7 @@ namespace ThreadPilot.Services
             {
                 this.englishFallbackDictionary ??= new ResourceDictionary
                 {
-                    Source = new Uri(EnUsDictionaryPath, UriKind.Relative),
+                    Source = new Uri(LocaleDictionaryPaths[DefaultLanguage], UriKind.Relative),
                 };
                 return TryGetString(this.englishFallbackDictionary, key, out value);
             }
@@ -245,6 +326,61 @@ namespace ThreadPilot.Services
                 this.logger.LogDebug(ex, "Failed to load English fallback localization dictionary");
                 return false;
             }
+        }
+
+        private static bool IsSimplifiedChineseCulture(CultureInfo culture)
+        {
+            var name = culture.Name;
+            return name.Contains("Hans", StringComparison.OrdinalIgnoreCase) ||
+                name.Contains("CHS", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(name, "zh-CN", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(name, "zh-SG", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void ApplyEnglishFallback(ResourceDictionary appResources, string failedLanguage)
+        {
+            var fallbackUri = new Uri(GetDictionaryPath(DefaultLanguage), UriKind.Relative);
+            try
+            {
+                if (!string.Equals(failedLanguage, DefaultLanguage, StringComparison.OrdinalIgnoreCase))
+                {
+                    this.ApplyLanguageDictionary(appResources, fallbackUri);
+                }
+
+                this.CurrentLanguage = DefaultLanguage;
+                this.activeLocaleUri = fallbackUri;
+                this.LanguageChanged?.Invoke(this, DefaultLanguage);
+            }
+            catch (Exception fallbackException)
+            {
+                this.CurrentLanguage = DefaultLanguage;
+                this.activeLocaleUri = fallbackUri;
+                this.logger.LogError(fallbackException, "Failed to apply English fallback language");
+                this.LanguageChanged?.Invoke(this, DefaultLanguage);
+            }
+        }
+
+        private static Dictionary<string, IReadOnlyDictionary<string, string>>? CreateOverrides(
+            IReadOnlyDictionary<string, string>? englishStrings,
+            IReadOnlyDictionary<string, string>? chineseStrings)
+        {
+            if (englishStrings == null && chineseStrings == null)
+            {
+                return null;
+            }
+
+            var overrides = new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+            if (englishStrings != null)
+            {
+                overrides[DefaultLanguage] = englishStrings;
+            }
+
+            if (chineseStrings != null)
+            {
+                overrides[SimplifiedChineseLanguage] = chineseStrings;
+            }
+
+            return overrides;
         }
     }
 }

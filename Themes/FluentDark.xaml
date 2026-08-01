@@ -52,7 +52,7 @@
 
     <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource ControlStrokeColorDefault}"/>
     <SolidColorBrush x:Key="BorderSubtleBrush" Color="{StaticResource ControlStrokeColorSecondary}"/>
-    <SolidColorBrush x:Key="OverlayBrush" Color="#99020617"/>
+    <SolidColorBrush x:Key="OverlayBrush" Color="#99000000"/>
     <SolidColorBrush x:Key="SpinnerTrackBrush" Color="{StaticResource ControlStrokeColorDefault}"/>
 
     <SolidColorBrush x:Key="InputBackgroundBrush" Color="{StaticResource ControlFillColorDefault}"/>
@@ -76,21 +76,21 @@
     <SolidColorBrush x:Key="StatusPillBackgroundBrush" Color="{StaticResource ControlFillColorSecondary}"/>
     <SolidColorBrush x:Key="StatusPillBorderBrush" Color="{StaticResource ControlStrokeColorDefault}"/>
     
-    <!-- State Colors (system-derived, soft contrast) -->
-    <SolidColorBrush x:Key="InfoBackgroundBrush" Color="#FF243241"/>
-    <SolidColorBrush x:Key="InfoBorderBrush" Color="#FF36516B"/>
-    <SolidColorBrush x:Key="InfoTextBrush" Color="#FF8ACDFF"/>
+    <!-- Neutral state surfaces with semantic text only where it aids recognition. -->
+    <SolidColorBrush x:Key="InfoBackgroundBrush" Color="#FF303030"/>
+    <SolidColorBrush x:Key="InfoBorderBrush" Color="#FF4A4A4A"/>
+    <SolidColorBrush x:Key="InfoTextBrush" Color="{StaticResource TextFillColorPrimary}"/>
 
-    <SolidColorBrush x:Key="SuccessBackgroundBrush" Color="#FF26372A"/>
-    <SolidColorBrush x:Key="SuccessBorderBrush" Color="#FF34543B"/>
+    <SolidColorBrush x:Key="SuccessBackgroundBrush" Color="#FF303030"/>
+    <SolidColorBrush x:Key="SuccessBorderBrush" Color="#FF4A4A4A"/>
     <SolidColorBrush x:Key="SuccessTextBrush" Color="#FF6CCB7F"/>
 
-    <SolidColorBrush x:Key="WarningBackgroundBrush" Color="#FF3A3120"/>
-    <SolidColorBrush x:Key="WarningBorderBrush" Color="#FF5A4A24"/>
+    <SolidColorBrush x:Key="WarningBackgroundBrush" Color="#FF303030"/>
+    <SolidColorBrush x:Key="WarningBorderBrush" Color="#FF4A4A4A"/>
     <SolidColorBrush x:Key="WarningTextBrush" Color="#FFFFD66B"/>
 
-    <SolidColorBrush x:Key="ErrorBackgroundBrush" Color="#FF3B2426"/>
-    <SolidColorBrush x:Key="ErrorBorderBrush" Color="#FF623236"/>
+    <SolidColorBrush x:Key="ErrorBackgroundBrush" Color="#FF303030"/>
+    <SolidColorBrush x:Key="ErrorBorderBrush" Color="#FF4A4A4A"/>
     <SolidColorBrush x:Key="ErrorTextBrush" Color="#FFFF8A8A"/>
 
     <SolidColorBrush x:Key="SoftSelectionBackgroundBrush" Color="{StaticResource SystemAccentColorPrimary}" Opacity="0.16"/>

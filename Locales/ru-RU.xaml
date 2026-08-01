@@ -1,0 +1,665 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- MainWindow / General -->
+    <sys:String x:Key="MainWindow_Title">ThreadPilot — Менеджер процесса и плана электропитания</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningTitle">Рекомендуемые права администратора</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningDescription">ThreadPilot работает с ограниченными привилегиями. Некоторые функции могут быть недоступны.</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningRequired">Доступ администратора необходим для:</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningPowerPlans">• Изменение конфигурации плана электропитания.</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningAffinity">• Изменение привязки процесса к CPU и его приоритета</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningTweaks">• Применение оптимизаций и настроек на уровне системы.</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningProtected">• Управление защищенными процессами</sys:String>
+    <sys:String x:Key="MainWindow_ContinueWithoutElevation">Продолжить без повышения</sys:String>
+    <sys:String x:Key="MainWindow_RequestElevation">Запросить повышение</sys:String>
+
+    <!-- MainWindow Navigation -->
+    <sys:String x:Key="MainWindow_NavProcess">Управление процессами</sys:String>
+    <sys:String x:Key="MainWindow_NavMasks">Маски CPU</sys:String>
+    <sys:String x:Key="MainWindow_NavPower">Планы электропитания</sys:String>
+    <sys:String x:Key="MainWindow_NavRules">Правила</sys:String>
+    <sys:String x:Key="MainWindow_NavDiagnostics">Диагностика</sys:String>
+    <sys:String x:Key="MainWindow_NavActivity">Активность ThreadPilot</sys:String>
+    <sys:String x:Key="MainWindow_NavTweaks">Тонкая настройка</sys:String>
+    <sys:String x:Key="MainWindow_NavSettings">Настройки</sys:String>
+
+    <!-- MainWindow Overlays -->
+    <sys:String x:Key="MainWindow_StartupMinimizedSuggestionTitle">Запуск свернут</sys:String>
+    <sys:String x:Key="MainWindow_StartupMinimizedSuggestionDescription">Включите свертывание запуска, если вы хотите, чтобы ThreadPilot автоматически запускался в области уведомлений при последующих входах в систему Windows.</sys:String>
+    <sys:String x:Key="MainWindow_Recommended">Рекомендуется</sys:String>
+    <sys:String x:Key="MainWindow_DontShowAgain">Больше не показывать</sys:String>
+    <sys:String x:Key="MainWindow_OpenSettings">Открыть настройки</sys:String>
+    <sys:String x:Key="MainWindow_PrimaryNavigation">Основная навигация</sys:String>
+    <sys:String x:Key="MainWindow_ElevationWarningOverlay">Предупреждение о повышении прав</sys:String>
+    <sys:String x:Key="MainWindow_PerformanceIntroductionOverlay">Оверлей представления производительности</sys:String>
+    <sys:String x:Key="MainWindow_StartupMinimizedSuggestion">Предложение при запуске свернуто</sys:String>
+    <sys:String x:Key="MainWindow_UnsavedSettingsDialog">Диалог несохраненных настроек</sys:String>
+    <sys:String x:Key="MainWindow_LoadingOverlay">Оверлей загрузки приложения при запуске</sys:String>
+
+    <!-- LogViewerView -->
+    <sys:String x:Key="LogViewerView_Title">ThreadPilot Активность</sys:String>
+    <sys:String x:Key="LogViewerView_Subtitle">Показывает действия, выполняемые ThreadPilot, включая примененные правила, изменения привязки, изменения приоритета, изменения плана электропитания, изменения настроек, настройки, оптимизации и сообщения о безопасных сбоях.</sys:String>
+    <sys:String x:Key="LogViewerView_Search">Поиск:</sys:String>
+    <sys:String x:Key="LogViewerView_CategoryLabel">Категория:</sys:String>
+    <sys:String x:Key="LogViewerView_LevelLabel">Уровень:</sys:String>
+    <sys:String x:Key="LogViewerView_From">От:</sys:String>
+    <sys:String x:Key="LogViewerView_To">Кому:</sys:String>
+    <sys:String x:Key="LogViewerView_Refresh">Обновить</sys:String>
+    <sys:String x:Key="LogViewerView_ClearDisplay">Очистить список</sys:String>
+    <sys:String x:Key="LogViewerView_ExportActivity">Экспортировать журнал</sys:String>
+    <sys:String x:Key="LogViewerView_CleanupDiagnostics">Очистка диагностических файлов</sys:String>
+    <sys:String x:Key="LogViewerView_OpenFolder">Открыть папку диагностики</sys:String>
+
+    <!-- LogViewerView Grid Headers -->
+    <sys:String x:Key="LogViewerView_HeaderTime">Время</sys:String>
+    <sys:String x:Key="LogViewerView_HeaderStatus">Статус</sys:String>
+    <sys:String x:Key="LogViewerView_HeaderCategory">Категория</sys:String>
+    <sys:String x:Key="LogViewerView_HeaderMessage">Сообщение</sys:String>
+    <sys:String x:Key="LogViewerView_HeaderDetails">Подробности</sys:String>
+    <sys:String x:Key="LogViewerView_HeaderId">идентификатор</sys:String>
+    <sys:String x:Key="LogViewerView_ContextMenuCopy">Копировать запись</sys:String>
+    <sys:String x:Key="LogViewerView_ContextMenuRefresh">Обновить</sys:String>
+    <sys:String x:Key="LogViewerView_NoEntries">Нет записей журнала для отображения</sys:String>
+    <sys:String x:Key="LogViewerView_NoEntriesTip">Настройте фильтры или обновите журналы, чтобы загрузить недавнюю активность ThreadPilot.</sys:String>
+
+    <!-- LogViewerView Details -->
+    <sys:String x:Key="LogViewerView_DetailsTitle">Детали деятельности</sys:String>
+    <sys:String x:Key="LogViewerView_Timestamp">Временная метка:</sys:String>
+    <sys:String x:Key="LogViewerView_Status">Статус:</sys:String>
+    <sys:String x:Key="LogViewerView_Category">Категория:</sys:String>
+    <sys:String x:Key="LogViewerView_Message">Сообщение:</sys:String>
+    <sys:String x:Key="LogViewerView_Details">Подробности:</sys:String>
+    <sys:String x:Key="LogViewerView_CorrelationId">Идентификатор корреляции:</sys:String>
+    <sys:String x:Key="LogViewerView_NoEntrySelected">Запись журнала не выбрана</sys:String>
+    <sys:String x:Key="LogViewerView_Files">Файлы:</sys:String>
+    <sys:String x:Key="LogViewerView_Size">Размер:</sys:String>
+    <sys:String x:Key="LogViewerView_DebugDiagnostics">Отладочная диагностика</sys:String>
+    <sys:String x:Key="LogViewerView_MaxSize">Максимальный размер (MB):</sys:String>
+    <sys:String x:Key="LogViewerView_Retention">Срок хранения (дней):</sys:String>
+    <sys:String x:Key="LogViewerView_SaveSettings">Сохранить настройки</sys:String>
+
+    <!-- MasksView -->
+    <sys:String x:Key="MasksView_Title">Маски CPU</sys:String>
+    <sys:String x:Key="MasksView_Subtitle">Создавайте повторно используемые наборы привязки к CPU для отдельных процессов.</sys:String>
+    <sys:String x:Key="MasksView_EditingClarification">Выбор маски здесь редактирует только предустановку. Привязка CPU не изменяется до тех пор, пока вы не примените ее к процессу или не сохраните в правиле процесса.</sys:String>
+    <sys:String x:Key="MasksView_New">Новый</sys:String>
+    <sys:String x:Key="MasksView_Delete">Удалить</sys:String>
+    <sys:String x:Key="MasksView_Duplicate">Дублировать маску</sys:String>
+    <sys:String x:Key="MasksView_Info">Информация о маске</sys:String>
+    <sys:String x:Key="MasksView_Name">Имя:</sys:String>
+    <sys:String x:Key="MasksView_Description">Описание:</sys:String>
+    <sys:String x:Key="MasksView_Enabled">Включено</sys:String>
+    <sys:String x:Key="MasksView_DefaultPreset">Предустановка по умолчанию</sys:String>
+    <sys:String x:Key="MasksView_DefaultPresetTip">Выбирается заранее, когда ThreadPilot требуется резервная маска или при создании правил для каждого процесса. Привязка CPU не применяется автоматически.</sys:String>
+    <sys:String x:Key="MasksView_DisableTip">Отключите, чтобы временно скрыть эту маску.</sys:String>
+    <sys:String x:Key="MasksView_SelectCpus">Выбрать CPU</sys:String>
+    <sys:String x:Key="MasksView_SelectCpusTip">Переключите CPUs, чтобы отредактировать эту предустановку маски. Изменения сохраняются автоматически и не влияют на запущенные процессы. «Все ядра» — это защищенная предустановка по умолчанию.</sys:String>
+    <sys:String x:Key="MasksView_SavedAutomatically">Имена масок, описания, выбор CPU и параметры сохраняются автоматически.</sys:String>
+    <sys:String x:Key="MasksView_CreateNewTooltip">Создайте новую маску CPU.</sys:String>
+    <sys:String x:Key="MasksView_DeleteTooltip">Удалить выбранную маску</sys:String>
+    <sys:String x:Key="MasksView_CpusHeader">CPUs</sys:String>
+    <sys:String x:Key="MasksView_Cpu">CPU</sys:String>
+    <sys:String x:Key="MasksView_Options">Параметры маски</sys:String>
+
+    <!-- PerformanceView -->
+    <sys:String x:Key="PerformanceView_OptionalDiagnostics">Дополнительная диагностика</sys:String>
+    <sys:String x:Key="PerformanceView_DiagnosticsDesc">Диагностика не является обязательной и предназначена для устранения неполадок. Для внутриигровых наложений и подробных графиков производительности используйте специальные инструменты.</sys:String>
+    <sys:String x:Key="PerformanceView_DiagnosticsDesc1">Диагностика не является обязательной и предназначена для устранения неполадок.</sys:String>
+    <sys:String x:Key="PerformanceView_DiagnosticsDesc2">Для внутриигровых наложений и подробных графиков производительности используйте специальные инструменты.</sys:String>
+    <sys:String x:Key="PerformanceView_QuickTips">Быстрые советы:</sys:String>
+    <sys:String x:Key="PerformanceView_Tip1">1. Открывайте диагностику только в том случае, если вам нужен снимок целенаправленного устранения неполадок.</sys:String>
+    <sys:String x:Key="PerformanceView_Tip2">2. Просмотрите горячие точки только в качестве подсказки перед созданием правил автоматизации.</sys:String>
+    <sys:String x:Key="PerformanceView_Tip3">3. Остановите оперативные показатели после завершения устранения неполадок.</sys:String>
+    <sys:String x:Key="PerformanceView_Continue">Перейти к диагностике</sys:String>
+
+    <sys:String x:Key="PerformanceView_ActiveProcesses">Активные процессы</sys:String>
+    <sys:String x:Key="PerformanceView_TopConsumersDesc">Лучшие потребители CPU и памяти с созданием правил в один клик.</sys:String>
+    <sys:String x:Key="PerformanceView_SearchPlaceholder">Поиск процессов по названию</sys:String>
+    <sys:String x:Key="PerformanceView_RuleBackedOnly">Только на основе правил</sys:String>
+    <sys:String x:Key="PerformanceView_ActionableOnly">Действует только</sys:String>
+    <sys:String x:Key="PerformanceView_RuleImpact">Влияние правила</sys:String>
+    <sys:String x:Key="PerformanceView_CreateRuleButton">Создать/обновить правило из выбора</sys:String>
+    <sys:String x:Key="PerformanceView_CreateRuleTooltip">Создайте или обновите правило автоматизации из выбранного процесса горячей точки.</sys:String>
+
+    <sys:String x:Key="PerformanceView_Timeline">График стабильности</sys:String>
+    <sys:String x:Key="PerformanceView_ClearHistory">Очистить историю</sys:String>
+    <sys:String x:Key="PerformanceView_ClearHistoryTooltip">Очистите отображаемые показатели и историю временной шкалы.</sys:String>
+    <sys:String x:Key="PerformanceView_CoreSnapshot">Сводка по ядрам</sys:String>
+    <sys:String x:Key="PerformanceView_CoreSnapshotDesc">Загрузка каждого ядра для быстрого выявления дисбаланса.</sys:String>
+    <sys:String x:Key="PerformanceView_ToggleCore">Переключить основную панель</sys:String>
+    <sys:String x:Key="PerformanceView_ToggleProcess">Переключить панель процессов</sys:String>
+    <sys:String x:Key="PerformanceView_StartLive">Запустить живые метрики</sys:String>
+    <sys:String x:Key="PerformanceView_StartLiveTooltip">Начать сбор показателей в реальном времени для этой информационной панели.</sys:String>
+    <sys:String x:Key="PerformanceView_StopLive">Остановить живые показатели</sys:String>
+    <sys:String x:Key="PerformanceView_StopLiveTooltip">Приостановить сбор показателей в реальном времени; фоновая автоматизация отдельная</sys:String>
+    <sys:String x:Key="PerformanceView_Refresh">Обновить</sys:String>
+    <sys:String x:Key="PerformanceView_RefreshTooltip">Обновить текущий снимок панели мониторинга</sys:String>
+
+    <sys:String x:Key="PerformanceView_GlobalPowerPlan">Глобальный план электроэнергетики</sys:String>
+    <sys:String x:Key="PerformanceView_ProcessHotspots">Горячие точки процесса</sys:String>
+    <sys:String x:Key="PerformanceView_Filter">Фильтр</sys:String>
+    <sys:String x:Key="PerformanceView_Memory">Память</sys:String>
+    <sys:String x:Key="PerformanceView_Name">Имя</sys:String>
+    <sys:String x:Key="PerformanceView_Priority">Приоритет</sys:String>
+    <sys:String x:Key="PerformanceView_Window">Окно</sys:String>
+    <sys:String x:Key="PerformanceView_MemoryUsed">Используемая память</sys:String>
+    <sys:String x:Key="PerformanceView_CpuPercent">CPU %</sys:String>
+    <sys:String x:Key="PerformanceView_MemPercent">Мем %</sys:String>
+    <sys:String x:Key="PerformanceView_Threads">Потоки</sys:String>
+    <sys:String x:Key="PerformanceView_Events">События</sys:String>
+    <sys:String x:Key="PerformanceView_Severity">Серьезность</sys:String>
+    <sys:String x:Key="PerformanceView_Detail">Деталь</sys:String>
+    <sys:String x:Key="PerformanceView_Time">Время</sys:String>
+    <sys:String x:Key="PerformanceView_Category">Категория</sys:String>
+    <sys:String x:Key="PerformanceView_Process">Процесс</sys:String>
+    <sys:String x:Key="PerformanceView_SelectedHotspot">Выбранный процесс горячей точки</sys:String>
+    <sys:String x:Key="PerformanceView_Metrics">Метрики</sys:String>
+    <sys:String x:Key="PerformanceView_Processes">Процессы</sys:String>
+
+    <!-- PowerPlanView -->
+    <sys:String x:Key="PowerPlanView_Title">Планы электропитания</sys:String>
+    <sys:String x:Key="PowerPlanView_Subtitle">Управляйте активным планом электропитания Windows и импортируйте пользовательские профили .pow.</sys:String>
+    <sys:String x:Key="PowerPlanView_WindowsPowerPlans">Windows Планы электропитания</sys:String>
+    <sys:String x:Key="PowerPlanView_SelectActiveTip">Выберите план Windows, чтобы активировать его.</sys:String>
+    <sys:String x:Key="PowerPlanView_SetActive">Установить как активный план Windows</sys:String>
+    <sys:String x:Key="PowerPlanView_SetActiveTooltip">Измените активный план электропитания Windows на выбранный план.</sys:String>
+    <sys:String x:Key="PowerPlanView_Refresh">Обновить планы</sys:String>
+    <sys:String x:Key="PowerPlanView_RefreshTooltip">Обновить список доступных планов электропитания.</sys:String>
+    <sys:String x:Key="PowerPlanView_CustomPowerPlans">Пользовательские планы электропитания</sys:String>
+    <sys:String x:Key="PowerPlanView_LocalPlansTip">Локальные файлы .pow, готовые к импорту в Windows.</sys:String>
+    <sys:String x:Key="PowerPlanView_ImportSelected">Импортировать выбранный .pow</sys:String>
+    <sys:String x:Key="PowerPlanView_ImportSelectedTooltip">Импортируйте выбранный пользовательский файл .pow в Windows.</sys:String>
+    <sys:String x:Key="PowerPlanView_AddFile">Добавить файл .pow</sys:String>
+    <sys:String x:Key="PowerPlanView_AddFileTooltip">Добавьте новый файл пользовательского плана электропитания в пользовательскую библиотеку.</sys:String>
+    <sys:String x:Key="PowerPlanView_Delete">Удалить</sys:String>
+    <sys:String x:Key="PowerPlanView_Active">Активный</sys:String>
+
+    <!-- ProcessPowerPlanAssociationView -->
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Title">Правила и автоматизация</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Subtitle">Мониторинг автоматизации отслеживает события запуска и остановки процесса и применяет настроенный план электропитания, маску CPU и правила приоритета.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RuleEditor">Редактор правил</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_EditorSubtitle">Создайте правило из исполняемого или запущенного процесса для автоматизации плана электропитания, маски CPU и приоритетного поведения.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_ExecutableMatch">Исполняемое совпадение:</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_MatchByPath">Сопоставление по пути</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_MatchByPathTooltip">Сопоставление процессов по полному пути, а не только по имени исполняемого файла.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Browse">Найдите исполняемый файл</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_BrowseTooltip">Нажмите, чтобы выбрать исполняемый файл (.exe) на вашем компьютере.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_ExecutableHelp">Выберите исполняемый файл. Сопоставление по пути является более точным; сопоставление по имени применяется к любому процессу с этим именем исполняемого файла.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_UseRunningProcess">Использовать запущенный процесс:</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_UseRunningProcessTooltip">Выберите текущий запущенный процесс, чтобы использовать его исполняемый файл.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_UseSelectedProcess">Использовать выбранный процесс</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_UseSelectedProcessTooltip">Использовать исполняемый файл выбранного запущенного процесса.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulePowerPlan">План электропитания правил (глобальный коммутатор):</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulePowerPlanHelp">Если это правило соответствует, Windows переключает глобальный план активной мощности.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RuleCpuMask">Правило CPU Маска:</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RuleCpuMaskHelp">Необязательно: выберите маску CPU, которая будет применяться при запуске этого процесса.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulePriority">Приоритет правила</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Update">Обновить</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulePriorityHelp">Необязательно: выберите приоритет процесса, который будет применяться при запуске этого процесса.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AssociationPriority">Приоритет Ассоциации:</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AssociationPriorityHelp">Ассоциации с более высоким приоритетом имеют приоритет при множественном совпадении.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AddRule">Добавить правило</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_UpdateRule">Обновить выбранное правило</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_UpdateRuleTooltip">Обновить выбранную ассоциацию</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_ClearSelection">Очистить выбор</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_ClearSelectionTooltip">Очистить выбранный исполняемый файл</sys:String>
+
+    <sys:String x:Key="ProcessPowerPlanAssociationView_CurrentRules">Текущие правила</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulesDescription">Определите правила для каждого процесса. Планы электропитания являются глобальными; маски и приоритеты применяются к процессам сопоставления.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Remove">Удалить</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RemoveTooltip">Удалить выбранную ассоциацию</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_DefaultPowerPlan">План электропитания по умолчанию (резервный вариант, если ни одно правило не соответствует)</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_DefaultPowerPlanHelp">План электропитания, который будет использоваться, когда никакие связанные процессы не запущены:</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SetDefault">Установить план электропитания по умолчанию</sys:String>
+
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SettingsTitle">Настройки мониторинга автоматизации</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_EnableWmi">Включить автоматизацию на основе событий (WMI)</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_EnableFallback">Включить резервный опрос автоматизации</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_PollingInterval">Интервал опроса (секунды):</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_ChangeDelay">Задержка изменения плана электропитания (мс):</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_PreventDuplicates">Предотвращение дублирования изменений плана электропитания</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SaveConfig">Сохранить конфигурацию</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_NoRules">Правил автоматизации пока нет</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Status">Статус:</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AutomationMonitoring">Автоматизация мониторинга</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_StartAutomation">Начать мониторинг автоматизации</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_StopAutomation">Остановить мониторинг автоматизации</sys:String>
+
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AppliedToMatching">Применяется к каждому процессу сопоставления при выполнении правила автоматизации.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AppliedOnlyToMatching">Применяется только к соответствующим процессам; это не меняет глобальный план электропитания Windows.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SelectedExecutable">Выбранный исполняемый файл:</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_DescriptionLabel">Описание:</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AutomationService">Служба автоматизации</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulesHeader">Правила</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">Исполняемый файл</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_PowerPlan">План электропитания</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_CpuMask">CPU Маска</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Priority">Приоритет</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Description">Описание</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_ProcessPriority">Приоритет процесса:</sys:String>
+
+    <!-- ProcessView -->
+    <sys:String x:Key="ProcessView_Title">Управление процессами</sys:String>
+    <sys:String x:Key="ProcessView_Subtitle">Поиск, фильтрация и контроль активных конфигураций процессов</sys:String>
+    <sys:String x:Key="ProcessView_SearchPlaceholder">Поиск процессов по названию</sys:String>
+    <sys:String x:Key="ProcessView_SearchAutomationName">Процесс поиска</sys:String>
+    <sys:String x:Key="ProcessView_HideSystem">Скрыть системные процессы Windows</sys:String>
+    <sys:String x:Key="ProcessView_HideSystemShort">Скрыть системные процессы</sys:String>
+    <sys:String x:Key="ProcessView_HideLowCpu">Скрыть процессы с очень низким использованием CPU</sys:String>
+    <sys:String x:Key="ProcessView_HideIdle">Скрыть простаивающие процессы</sys:String>
+    <sys:String x:Key="ProcessView_VisibleWindowsOnly">Показывать только приложения с видимым windows</sys:String>
+    <sys:String x:Key="ProcessView_ActiveAppsOnly">Только активные приложения</sys:String>
+    <sys:String x:Key="ProcessView_LockList">Блокировать список процессов</sys:String>
+    <sys:String x:Key="ProcessView_LockListTooltip">Приостановите обновление списка процессов и сортировку обновлений во время работы с текущим списком. Фоновый мониторинг и автоматическое применение сохраненных правил продолжаются, пока работает ThreadPilot.</sys:String>
+    <sys:String x:Key="ProcessView_SortBy">Сортировать по:</sys:String>
+    <sys:String x:Key="ProcessView_SortByTooltip">Выберите способ сортировки списка процессов</sys:String>
+
+    <sys:String x:Key="ProcessView_SelectedProcess">Выбранный процесс</sys:String>
+    <sys:String x:Key="ProcessView_NoProcessSelected">Процесс не выбран</sys:String>
+    <sys:String x:Key="ProcessView_SelectProcessTip">Выберите процесс в таблице, чтобы настроить привязку к CPU, приоритет, план электропитания и правила.</sys:String>
+    <sys:String x:Key="ProcessView_PowerPlanPending">План электропитания/ожидающие настройки</sys:String>
+    <sys:String x:Key="ProcessView_PowerPlanTooltip">Выберите план электропитания для активации вручную или включите его с помощью быстрого применения.</sys:String>
+    <sys:String x:Key="ProcessView_SetPowerPlan">Установить план электропитания</sys:String>
+    <sys:String x:Key="ProcessView_SetPowerPlanTooltip">Активируйте выбранный план электропитания Windows.</sys:String>
+
+    <sys:String x:Key="ProcessView_PendingCoreMask">Ожидаемая основная маска</sys:String>
+    <sys:String x:Key="ProcessView_StageMaskTooltip">Выберите маску для ее создания. Привязка ОС не изменится до тех пор, пока не будет нажата кнопка Применить привязку.</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinity">Применить привязку</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinityTooltip">Примените ожидающую основную маску к выбранному процессу и проверьте состояние привязки Windows.</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinitySaveRule">Применить привязку и сохранить как правило</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinitySaveRuleTooltip">Сохраните текущие настройки процесса как правило. Эти настройки будут автоматически применены при запуске этого процесса в будущем.</sys:String>
+
+    <sys:String x:Key="ProcessView_SetCpuPriority">Установить приоритет CPU</sys:String>
+    <sys:String x:Key="ProcessView_ApplyPriorityTooltip">Применить выбранный приоритет к процессу</sys:String>
+    <sys:String x:Key="ProcessView_EnforcePriorityRegistry">Обеспечение приоритета реестра</sys:String>
+    <sys:String x:Key="ProcessView_EnforcePriorityRegistryTooltip">Примените приоритет через реестр Windows. Чтобы изменения вступили в силу, процесс необходимо перезапустить. Этот параметр сохраняется при перезагрузке системы.</sys:String>
+    <sys:String x:Key="ProcessView_SetPriority">Установить приоритет</sys:String>
+    <sys:String x:Key="ProcessView_RealtimeBlockedHelp">Приоритет реального времени блокируется ThreadPilot, поскольку это может сделать Windows нестабильным или перестать отвечать на запросы.</sys:String>
+    <sys:String x:Key="ProcessView_RealtimeBlocked">В реальном времени (заблокировано)</sys:String>
+
+    <sys:String x:Key="ProcessView_DisableIdleServer">Отключить простаивающий сервер</sys:String>
+    <sys:String x:Key="ProcessView_DisableIdleServerTooltip">Предотвращает переход системы в состояние ожидания во время выполнения этого процесса. Полезно для игр и приложений, критичных к производительности.</sys:String>
+
+    <sys:String x:Key="ProcessView_ProfileRule">Профиль/Правило</sys:String>
+    <sys:String x:Key="ProcessView_ProfileNamePlaceholder">Введите имя профиля, чтобы сохранить или загрузить настройки.</sys:String>
+    <sys:String x:Key="ProcessView_SaveProfile">Сохранить профиль</sys:String>
+    <sys:String x:Key="ProcessView_SaveProfileTooltip">Сохранить текущие настройки привязки к CPU и приоритета как повторно используемый профиль.</sys:String>
+    <sys:String x:Key="ProcessView_LoadProfile">Загрузить профиль</sys:String>
+    <sys:String x:Key="ProcessView_LoadProfileTooltip">Загрузите ранее сохраненный профиль</sys:String>
+    <sys:String x:Key="ProcessView_SaveCurrentRule">Сохранить текущие настройки как правило</sys:String>
+
+    <sys:String x:Key="ProcessView_LastAction">Последнее действие ThreadPilot:</sys:String>
+    <sys:String x:Key="ProcessView_Refresh">Обновить</sys:String>
+    <sys:String x:Key="ProcessView_RefreshTooltip">Обновить список процессов</sys:String>
+    <sys:String x:Key="ProcessView_LoadMore">Загрузить больше</sys:String>
+    <sys:String x:Key="ProcessView_LoadMoreTooltip">Загрузить больше процессов</sys:String>
+    <sys:String x:Key="ProcessView_RefreshAutomationName">Обновить процессы</sys:String>
+    <sys:String x:Key="ProcessView_LoadMoreAutomationName">Загрузить больше процессов</sys:String>
+    <sys:String x:Key="ProcessView_RunningListAutomationName">Список запущенных процессов</sys:String>
+    <sys:String x:Key="ProcessView_RunningListAutomationHelp">Виртуализированная таблица процессов с сортировкой и выбором</sys:String>
+
+    <sys:String x:Key="ProcessView_ColProcessName">Имя процесса</sys:String>
+    <sys:String x:Key="ProcessView_ColWindowTitle">Название окна</sys:String>
+    <sys:String x:Key="ProcessView_ColCpuUsage">Загрузка CPU</sys:String>
+    <sys:String x:Key="ProcessView_ColMemory">Использование памяти</sys:String>
+
+    <sys:String x:Key="ProcessView_AffinityStagedTooltip">Привязка подготовлена в интерфейсе и будет применена только после нажатия кнопки «Применить привязку».</sys:String>
+    <sys:String x:Key="ProcessView_AffinityCurrentTooltip">Текущая привязка выбранного процесса по данным Windows</sys:String>
+    <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Предварительный просмотр текущего или ожидающего выбора CPU только для чтения</sys:String>
+    <sys:String x:Key="ProcessView_OpenMasksTabTooltip">Откройте вкладку «Маски» CPU, чтобы создать новую пользовательскую маску.</sys:String>
+    <sys:String x:Key="ProcessView_HyperThreadingTooltip">Показывает, присутствует ли и активен ли Hyper-Threading (Intel) или SMT (AMD) в этой системе.</sys:String>
+
+    <sys:String x:Key="ProcessView_CopyProcessInfo">Копировать информацию о процессе</sys:String>
+    <sys:String x:Key="ProcessView_OpenLocation">Открыть расположение исполняемого файла</sys:String>
+    <sys:String x:Key="ProcessView_ClearCpuSets">Очистить наборы CPU</sys:String>
+    <sys:String x:Key="ProcessView_ApplyPendingSettings">Применить ожидающие настройки</sys:String>
+    <sys:String x:Key="ProcessView_ApplyPendingSettingsTooltip">Примените ожидающее соответствие и выбранный план электропитания к выбранному процессу.</sys:String>
+    <sys:String x:Key="ProcessView_RulesAppliedOnlyWhenConfigured">Правила и изменения применяются ThreadPilot только после настройки.</sys:String>
+    <sys:String x:Key="ProcessView_CurrentProcessStatus">Текущий статус процесса</sys:String>
+    <sys:String x:Key="ProcessView_AdvancedAffinityPicker">Расширенный выбор привязки</sys:String>
+    <sys:String x:Key="ProcessView_RowMaskTooltip">Выберите ожидающую маску для действий привязки контекстного меню строки.</sys:String>
+    <sys:String x:Key="ProcessView_SelectedPowerPlan">Выбранный план электропитания</sys:String>
+    <sys:String x:Key="ProcessView_SaveAsRule">Сохранить как правило</sys:String>
+    <sys:String x:Key="ProcessView_NoVisibleWindowTitle">Нет видимого заголовка окна</sys:String>
+    <sys:String x:Key="ProcessView_BatchLabel">Пакетный</sys:String>
+    <sys:String x:Key="ProcessView_TotalSuffix">всего)</sys:String>
+    <sys:String x:Key="ProcessView_PriorityInlineLabel">Приоритет</sys:String>
+    <sys:String x:Key="ProcessSummary_CpuUnavailable">CPU: недоступен</sys:String>
+    <sys:String x:Key="ProcessSummary_MemoryUnavailable">Память: недоступна</sys:String>
+    <sys:String x:Key="ProcessSummary_CpuPriorityUnavailable">CPU приоритет: недоступен</sys:String>
+    <sys:String x:Key="ProcessSummary_MemoryPriorityUnavailable">Приоритет памяти недоступен</sys:String>
+    <sys:String x:Key="ProcessSummary_AffinityUnavailable">Родственность: недоступна</sys:String>
+    <sys:String x:Key="ProcessSummary_NoSavedRule">Нет сохраненного правила</sys:String>
+    <sys:String x:Key="ProcessSummary_NoRecentAction">Нет недавних действий ThreadPilot</sys:String>
+    <sys:String x:Key="ProcessSummary_SelectedProcessFormat">Выбранный процесс: {0} (PID {1})</sys:String>
+    <sys:String x:Key="ProcessSummary_StatusProtected">Текущий статус процесса: защищен или доступ запрещен.</sys:String>
+    <sys:String x:Key="ProcessSummary_StatusSelected">Текущий статус процесса: выбрано</sys:String>
+    <sys:String x:Key="ProcessSummary_CpuFormat">CPU: {0:N1}%</sys:String>
+    <sys:String x:Key="ProcessSummary_MemoryFormat">Память: {0}</sys:String>
+    <sys:String x:Key="ProcessSummary_CpuPriorityFormat">CPU приоритет: {0}</sys:String>
+    <sys:String x:Key="ProcessSummary_AffinityLegacyFormat">Привязка: устаревшая маска 0x{0:X}</sys:String>
+    <sys:String x:Key="ProcessSummary_MemoryPriorityFormat">Приоритет памяти: {0}</sys:String>
+    <sys:String x:Key="ProcessSummary_SavedRuleFallback">сохраненное правило</sys:String>
+    <sys:String x:Key="ProcessSummary_SavedRuleExistsFormat">Существует сохраненное правило: {0}.</sys:String>
+
+    <sys:String x:Key="ProcessView_PriorityAboveNormal">Выше нормы</sys:String>
+    <sys:String x:Key="ProcessView_PriorityBelowNormal">Ниже нормы</sys:String>
+    <sys:String x:Key="ProcessView_PriorityHigh">Высокий</sys:String>
+    <sys:String x:Key="ProcessView_PriorityIdle">Простой</sys:String>
+    <sys:String x:Key="ProcessView_PriorityLow">Низкий</sys:String>
+    <sys:String x:Key="ProcessView_PriorityNormal">Нормальный</sys:String>
+    <sys:String x:Key="ProcessView_PriorityRealtime">В реальном времени</sys:String>
+    <sys:String x:Key="ProcessView_PriorityBatch">Пакетный</sys:String>
+    <sys:String x:Key="ProcessView_PriorityCustom">Пользовательский</sys:String>
+
+    <sys:String x:Key="ProcessView_HasWindow">Имеет окно</sys:String>
+    <sys:String x:Key="ProcessView_Window">Окно</sys:String>
+    <sys:String x:Key="ProcessView_PID">PID</sys:String>
+    <sys:String x:Key="ProcessView_ID">идентификатор</sys:String>
+    <sys:String x:Key="ProcessView_MemoryMb">Память (MB)</sys:String>
+    <sys:String x:Key="ProcessView_Affinity">Привязка</sys:String>
+    <sys:String x:Key="ProcessView_Priority">Приоритет</sys:String>
+    <sys:String x:Key="ProcessView_Rules">Правила</sys:String>
+    <sys:String x:Key="ProcessView_Name">Имя</sys:String>
+    <sys:String x:Key="ProcessView_SetMemoryPriority">Установить приоритет памяти</sys:String>
+    <sys:String x:Key="ProcessView_PriorityVeryLow">Очень низкий</sys:String>
+    <sys:String x:Key="ProcessView_PriorityMedium">Средний</sys:String>
+    <sys:String x:Key="ProcessView_RefreshInfo">Обновить информацию о процессе</sys:String>
+
+    <!-- SettingsView -->
+    <sys:String x:Key="SettingsView_Title">Настройки приложения</sys:String>
+    <sys:String x:Key="SettingsView_Subtitle">Настройка уведомлений, панели задач и поведения приложений</sys:String>
+    <sys:String x:Key="SettingsView_Notifications">Уведомления</sys:String>
+    <sys:String x:Key="SettingsView_EnableNotifications">Включить уведомления</sys:String>
+    <sys:String x:Key="SettingsView_NotificationLevel">Уровень уведомления</sys:String>
+    <sys:String x:Key="SettingsView_NotificationLevelAll">Все</sys:String>
+    <sys:String x:Key="SettingsView_NotificationLevelWarningsErrors">Только предупреждения/ошибки</sys:String>
+    <sys:String x:Key="SettingsView_NotificationLevelSilent">Тихий</sys:String>
+    <sys:String x:Key="SettingsView_EnableBalloon">Включить всплывающие уведомления (в системном трее)</sys:String>
+    <sys:String x:Key="SettingsView_EnableToast">Включить всплывающие уведомления (Windows 10+)</sys:String>
+    <sys:String x:Key="SettingsView_NotificationTypes">Типы уведомлений</sys:String>
+    <sys:String x:Key="SettingsView_NotifyPowerPlan">Изменения в схеме электропитания</sys:String>
+    <sys:String x:Key="SettingsView_NotifyProcess">События мониторинга процесса</sys:String>
+    <sys:String x:Key="SettingsView_NotifyError">Уведомления об ошибках</sys:String>
+    <sys:String x:Key="SettingsView_NotifySuccess">Уведомления об успехах</sys:String>
+    <sys:String x:Key="SettingsView_Duration">Длительность (мс):</sys:String>
+    <sys:String x:Key="SettingsView_TestNotification">Тестовое уведомление</sys:String>
+
+    <sys:String x:Key="SettingsView_SystemTray">Системный трей</sys:String>
+    <sys:String x:Key="SettingsView_ShowTrayIcon">Показать значок в трее</sys:String>
+    <sys:String x:Key="SettingsView_MinimizeToTray">Свернуть в трей</sys:String>
+    <sys:String x:Key="SettingsView_CloseToTray">Рядом с лотком (вместо выхода)</sys:String>
+    <sys:String x:Key="SettingsView_StartMinimized">Начать сворачивать</sys:String>
+    <sys:String x:Key="SettingsView_QuickApply">Включить ожидающие настройки, применимые из трея</sys:String>
+    <sys:String x:Key="SettingsView_MonitoringControl">Включить элементы управления мониторингом автоматизации из трея</sys:String>
+    <sys:String x:Key="SettingsView_DetailedTooltips">Показать подробные подсказки</sys:String>
+
+    <sys:String x:Key="SettingsView_BasicPreferences">Основные настройки</sys:String>
+    <sys:String x:Key="SettingsView_Autostart">Автозапуск</sys:String>
+    <sys:String x:Key="SettingsView_StartWithWindows">Начните с Windows</sys:String>
+    <sys:String x:Key="SettingsView_AutostartDescription">Автоматически запускать ThreadPilot при запуске Windows.</sys:String>
+    <sys:String x:Key="SettingsView_LowImpactMode">Режим низкого воздействия в фоновом режиме</sys:String>
+    <sys:String x:Key="SettingsView_LowImpactDescription">Понизьте приоритет процесса ThreadPilot, пока он свёрнут или скрыт в трее.</sys:String>
+
+    <sys:String x:Key="SettingsView_Appearance">Внешний вид</sys:String>
+    <sys:String x:Key="SettingsView_UseDarkTheme">Использовать темную тему</sys:String>
+    <sys:String x:Key="SettingsView_ThemeDescription">Применяет глобальную темную/светлую тему на всех вкладках.</sys:String>
+
+    <sys:String x:Key="SettingsView_Language">Язык</sys:String>
+    <sys:String x:Key="SettingsView_LanguageZhCn">简体中文 (Simplified Chinese)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageEnUs">English (English)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageItIt">Italiano (Italian)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageFrFr">Français (French)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageDeDe">Deutsch (German)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageEsEs">Español (Spanish)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageRuRu">Русский (Russian)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageDescription">Применяет глобальный язык отображения ко всему интерфейсу приложения.</sys:String>
+
+    <sys:String x:Key="SettingsView_RulesAutomation">Правила и автоматизация</sys:String>
+    <sys:String x:Key="SettingsView_RuleAutoApply">Сохраненное правило применяется автоматически</sys:String>
+    <sys:String x:Key="SettingsView_ApplyOnStart">Применять сохраненные правила при запуске соответствующих процессов</sys:String>
+    <sys:String x:Key="SettingsView_ApplyOnStartDescription">Применяет включенные сохраненные правила во время работы ThreadPilot. При этом служба Windows не устанавливается и не используется сохранение реестра/IFEO.</sys:String>
+    <sys:String x:Key="SettingsView_EnableWmi">Включить события процесса WMI</sys:String>
+    <sys:String x:Key="SettingsView_WmiDescription">Используйте Windows Инструментарий управления для событий запуска/остановки процесса.</sys:String>
+    <sys:String x:Key="SettingsView_EnableFallback">Включить резервный опрос</sys:String>
+    <sys:String x:Key="SettingsView_FallbackDescription">Используйте опрос в качестве резервной копии в случае сбоя событий процесса WMI.</sys:String>
+    <sys:String x:Key="SettingsView_PollingInterval">Интервал опроса (мс):</sys:String>
+    <sys:String x:Key="SettingsView_FallbackPollingInterval">Резервный опрос (мс):</sys:String>
+
+    <sys:String x:Key="SettingsView_Advanced">Расширенный</sys:String>
+    <sys:String x:Key="SettingsView_NotificationHistory">Включить историю уведомлений</sys:String>
+    <sys:String x:Key="SettingsView_MaxHistory">Максимальное количество элементов истории:</sys:String>
+    <sys:String x:Key="SettingsView_AutoHide">Автоматическое скрытие уведомлений</sys:String>
+    <sys:String x:Key="SettingsView_NotificationSound">Включить звук уведомлений</sys:String>
+    <sys:String x:Key="SettingsView_DebugLogging">Включить ведение журнала отладки</sys:String>
+    <sys:String x:Key="SettingsView_PerformanceCounters">Включить счетчики производительности</sys:String>
+
+    <sys:String x:Key="SettingsView_About">О</sys:String>
+    <sys:String x:Key="SettingsView_Version">Версия:</sys:String>
+    <sys:String x:Key="SettingsView_Copyright">© 2026 PrimeBuild.</sys:String>
+    <sys:String x:Key="SettingsView_Translator">Переводчик: Ylimhs</sys:String>
+    <sys:String x:Key="SettingsView_License">Лицензия: AGPLv3</sys:String>
+    <sys:String x:Key="SettingsView_CheckUpdates">Проверьте наличие обновлений</sys:String>
+    <sys:String x:Key="SettingsView_DownloadInstallUpdate">Загрузите и установите обновление</sys:String>
+    <sys:String x:Key="SettingsView_EnableAutomaticUpdateChecks">Автоматическая проверка при запуске</sys:String>
+    <sys:String x:Key="SettingsView_UpdateIntervalDays">Интервал проверки (дни):</sys:String>
+    <sys:String x:Key="SettingsView_IncludePrereleaseUpdates">Включить предварительные обновления</sys:String>
+    <sys:String x:Key="SettingsView_LatestVersion">Последняя версия:</sys:String>
+    <sys:String x:Key="SettingsView_LastUpdateCheck">Последняя проверка:</sys:String>
+    <sys:String x:Key="SettingsView_UpdatesDescription">Проверяется по требованию с использованием официальных выпусков GitHub.</sys:String>
+
+    <sys:String x:Key="SettingsView_ResetDefaults">Сброс к настройкам по умолчанию</sys:String>
+    <sys:String x:Key="SettingsView_ExportConfig">Экспортировать конфигурацию</sys:String>
+    <sys:String x:Key="SettingsView_ImportConfig">Импортировать конфигурацию</sys:String>
+    <sys:String x:Key="SettingsView_SaveSettings">Сохранить настройки</sys:String>
+    <sys:String x:Key="SettingsView_ThreadPilot">ThreadPilot</sys:String>
+    <sys:String x:Key="Settings_StatusThemeChangedFormat">Тема изменена на {0}.</sys:String>
+    <sys:String x:Key="Settings_StatusThemeChangeFailedFormat">Не удалось изменить тему на {0}.</sys:String>
+    <sys:String x:Key="Settings_StatusLanguageChangedFormat">Язык изменен на {0}.</sys:String>
+    <sys:String x:Key="Settings_StatusLanguageChangeFailed">Не удалось изменить язык.</sys:String>
+    <sys:String x:Key="Settings_StatusSaving">Сохранение настроек...</sys:String>
+    <sys:String x:Key="Settings_StatusSavedWarningsFormat">Настройки сохранены с предупреждениями: {0}.</sys:String>
+    <sys:String x:Key="Settings_StatusSavedApplied">Настройки сохранены и успешно применены.</sys:String>
+    <sys:String x:Key="Settings_StatusErrorSavingFormat">Ошибка сохранения настроек: {0}.</sys:String>
+    <sys:String x:Key="Settings_StatusResetting">Сброс к настройкам по умолчанию...</sys:String>
+    <sys:String x:Key="Settings_StatusResetPending">Настройки сброшены на значения по умолчанию (еще не сохранены)</sys:String>
+    <sys:String x:Key="Settings_StatusErrorResettingFormat">Ошибка сброса настроек: {0}.</sys:String>
+    <sys:String x:Key="Settings_StatusExporting">Экспорт пакета конфигурации...</sys:String>
+    <sys:String x:Key="Settings_StatusExportCanceled">Экспорт отменен</sys:String>
+    <sys:String x:Key="Settings_StatusExportedFormat">Конфигурация экспортирована в: {0}.</sys:String>
+    <sys:String x:Key="Settings_StatusErrorExportingFormat">Ошибка экспорта настроек: {0}.</sys:String>
+    <sys:String x:Key="Settings_StatusImporting">Импорт конфигурации...</sys:String>
+    <sys:String x:Key="Settings_StatusImportCanceled">Импорт отменен</sys:String>
+    <sys:String x:Key="Settings_StatusImportedApplied">Пакет конфигурации импортирован и применен.</sys:String>
+    <sys:String x:Key="Settings_StatusLegacyImported">Импортированы устаревшие настройки (правила не изменены).</sys:String>
+    <sys:String x:Key="Settings_StatusErrorImportingFormat">Ошибка импорта настроек: {0}.</sys:String>
+    <sys:String x:Key="Settings_StatusTestSent">Уведомление о тестировании отправлено</sys:String>
+    <sys:String x:Key="Settings_StatusErrorTestFormat">Ошибка отправки тестового уведомления: {0}.</sys:String>
+    <sys:String x:Key="Settings_StatusLoading">Загрузка настроек...</sys:String>
+    <sys:String x:Key="Settings_StatusLoaded">Настройки загружены</sys:String>
+    <sys:String x:Key="Settings_StatusErrorLoadingFormat">Ошибка загрузки настроек: {0}.</sys:String>
+    <sys:String x:Key="Settings_StatusSynchronized">Настройки синхронизированы</sys:String>
+    <sys:String x:Key="Settings_StatusCheckingUpdates">Проверяем наличие обновлений...</sys:String>
+    <sys:String x:Key="Settings_StatusLatestUnknown">Не удалось определить последнюю версию.</sys:String>
+    <sys:String x:Key="Settings_StatusNewVersionFormat">Доступна новая версия: {0}.</sys:String>
+    <sys:String x:Key="Settings_StatusUpToDateFormat">Приложение актуальное. Установленная версия: {0}.</sys:String>
+    <sys:String x:Key="Settings_StatusUpdateErrorFormat">Ошибка при проверке обновлений: {0}.</sys:String>
+    <sys:String x:Key="Settings_UpdateLatestUnknown">Неизвестно</sys:String>
+    <sys:String x:Key="Settings_UpdateNotChecked">Не проверено</sys:String>
+    <sys:String x:Key="Settings_UpdateLastCheckedNever">Никогда</sys:String>
+    <sys:String x:Key="Settings_UpdateConfirmTitle">Установите обновление ThreadPilot</sys:String>
+    <sys:String x:Key="Settings_UpdateConfirmMessageFormat">ThreadPilot загрузит и проверит версию {0}, затем запросит у Windows разрешение на запуск установщика. Продолжить?</sys:String>
+    <sys:String x:Key="Settings_StatusUpdateCanceled">Обновление отменено.</sys:String>
+    <sys:String x:Key="Settings_StatusDownloadingUpdate">Загрузка и проверка обновления...</sys:String>
+    <sys:String x:Key="Settings_StatusUpdateInstallerStarted">Установщик обновлений запустился.</sys:String>
+    <sys:String x:Key="Settings_StatusUpdateInstallFailedFormat">Не удалось установить обновление: {0}.</sys:String>
+    <sys:String x:Key="Settings_StatusModified">Настройки были изменены</sys:String>
+    <sys:String x:Key="Settings_StatusMatchSaved">Настройки соответствуют сохраненной конфигурации</sys:String>
+    <sys:String x:Key="Settings_LanguageSimplifiedChinese">Китайский (упрощённый)</sys:String>
+    <sys:String x:Key="Settings_LanguageEnglish">Английский</sys:String>
+    <sys:String x:Key="Settings_LanguageItalian">Итальянский</sys:String>
+    <sys:String x:Key="Settings_LanguageFrench">Французский</sys:String>
+    <sys:String x:Key="Settings_LanguageGerman">Немецкий</sys:String>
+    <sys:String x:Key="Settings_LanguageSpanish">Испанский</sys:String>
+    <sys:String x:Key="Settings_LanguageRussian">Русский</sys:String>
+    <sys:String x:Key="Settings_ThemeDark">Тёмная</sys:String>
+    <sys:String x:Key="Settings_ThemeLight">Светлая</sys:String>
+    <sys:String x:Key="Settings_DialogExportTitle">Экспорт конфигурации ThreadPilot</sys:String>
+    <sys:String x:Key="Settings_DialogImportTitle">Импорт конфигурации ThreadPilot</sys:String>
+    <sys:String x:Key="Settings_WarningAutostartFailed">Не удалось обновить автозапуск Windows. Сохранение предыдущего состояния автозапуска.</sys:String>
+
+    <!-- SettingsWindow -->
+    <sys:String x:Key="SettingsWindow_Title">ThreadPilot Настройки</sys:String>
+    <sys:String x:Key="SettingsWindow_UnsavedTitle">Несохраненные настройки</sys:String>
+    <sys:String x:Key="SettingsWindow_UnsavedDescription">Есть несохранённые изменения. Сохраните или отмените их либо вернитесь к редактированию.</sys:String>
+    <sys:String x:Key="SettingsWindow_Cancel">Отмена</sys:String>
+    <sys:String x:Key="SettingsWindow_Discard">Отбросить</sys:String>
+    <sys:String x:Key="SettingsWindow_Save">Сохранить</sys:String>
+
+    <!-- SystemTweaksView -->
+    <sys:String x:Key="SystemTweaksView_Title">Системные настройки и оптимизации</sys:String>
+    <sys:String x:Key="SystemTweaksView_Subtitle">Настройте оптимизацию системы Windows и настройки производительности.</sys:String>
+    <sys:String x:Key="SystemTweaksView_RefreshAll">Обновить все</sys:String>
+    <sys:String x:Key="SystemTweaksView_RefreshAllTooltip">Обновить все состояния настройки</sys:String>
+    <sys:String x:Key="SystemTweaksView_TweakTooltip">Переключить эту настройку Windows</sys:String>
+    <sys:String x:Key="SystemTweaksView_Status">Статус</sys:String>
+
+    <!-- SystemTweaks Names and Descriptions -->
+    <sys:String x:Key="SystemTweak_CoreParking_Name">Core Parking</sys:String>
+    <sys:String x:Key="SystemTweak_CoreParking_Desc">Элементы управления CPU core parking для управления питанием</sys:String>
+    <sys:String x:Key="SystemTweak_CStates_Name">C-States</sys:String>
+    <sys:String x:Key="SystemTweak_CStates_Desc">Элементы управления CPU C-States для управления питанием</sys:String>
+    <sys:String x:Key="SystemTweak_Hpet_Name">HPET</sys:String>
+    <sys:String x:Key="SystemTweak_Hpet_Desc">Высокоточный таймер событий для системной синхронизации</sys:String>
+    <sys:String x:Key="SystemTweak_SysMain_Name">SysMain Сервис</sys:String>
+    <sys:String x:Key="SystemTweak_SysMain_Desc">Windows Superfetch/SysMain сервис управления памятью</sys:String>
+    <sys:String x:Key="SystemTweak_Prefetch_Name">Prefetch</sys:String>
+    <sys:String x:Key="SystemTweak_Prefetch_Desc">Windows Prefetch функция для более быстрой загрузки приложений</sys:String>
+    <sys:String x:Key="SystemTweak_PowerThrottling_Name">Power Throttling</sys:String>
+    <sys:String x:Key="SystemTweak_PowerThrottling_Desc">Windows Power Throttling для энергоэффективности</sys:String>
+    <sys:String x:Key="SystemTweak_HighSchedulingCategory_Name">Категория высокого планирования</sys:String>
+    <sys:String x:Key="SystemTweak_HighSchedulingCategory_Desc">Высокий приоритет планирования для игровых приложений</sys:String>
+    <sys:String x:Key="SystemTweak_MenuShowDelay_Name">Задержка показа меню</sys:String>
+    <sys:String x:Key="SystemTweak_MenuShowDelay_Desc">Задержка перед показом контекстных меню</sys:String>
+
+    <!-- SystemTweaksViewModel Messages -->
+    <sys:String x:Key="SystemTweaks_StatusReady">Готово</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusRefreshing">Обновление настроек системы...</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusLastRefreshedFormat">Последнее обновление: {0}</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusRefreshFailed">Не удалось обновить настройки системы.</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusRefreshFailedShort">Обновить не удалось</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusTogglingFormat">Переключение {0}...</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusEnabledFormat">{0} успешно включен</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusDisabledFormat">{0} успешно отключен</sys:String>
+    <sys:String x:Key="SystemTweaks_NotifyEnabledFormat">{0} включен</sys:String>
+    <sys:String x:Key="SystemTweaks_NotifyDisabledFormat">{0} отключен</sys:String>
+    <sys:String x:Key="SystemTweaks_NotifyUpdatedTitle">Системная настройка обновлена</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusToggleFailedFormat">Не удалось переключить {0}.</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusEnableFailedFormat">Не удалось включить {0}.</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusDisableFailedFormat">Не удалось отключить {0}.</sys:String>
+    <sys:String x:Key="SystemTweaks_NotifyFailedTitle">Настройка системы не удалась</sys:String>
+    <sys:String x:Key="SystemTweaks_NotifyFailedFormat">Не удалось выполнить {0} {1}.</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusErrorTogglingFormat">Ошибка переключения {0}</sys:String>
+    <sys:String x:Key="SystemTweaks_NotifyErrorFormat">Ошибка переключения {0}: {1}</sys:String>
+    <sys:String x:Key="SystemTweaks_WordEnable">включить</sys:String>
+    <sys:String x:Key="SystemTweaks_WordDisable">отключить</sys:String>
+    <sys:String x:Key="SystemTweaks_WordEnabled">включен</sys:String>
+    <sys:String x:Key="SystemTweaks_WordDisabled">отключен</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusEnabled">Включено</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusDisabled">Отключено</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusNotAvailable">Недоступно</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusLoading">Загрузка настроек системы...</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusLoadedSuccess">Системные настройки успешно загружены</sys:String>
+
+    <!-- SystemTray Context Menu & Status -->
+    <sys:String x:Key="SystemTray_OpenDashboard">Открыть панель управления</sys:String>
+    <sys:String x:Key="SystemTray_OpenDiagnostics">Открыть диагностику</sys:String>
+    <sys:String x:Key="SystemTray_PauseMonitoring">Приостановить мониторинг автоматизации</sys:String>
+    <sys:String x:Key="SystemTray_ResumeMonitoring">Возобновить мониторинг автоматизации</sys:String>
+    <sys:String x:Key="SystemTray_SystemStatus">Статус системы</sys:String>
+    <sys:String x:Key="SystemTray_NoProcessSelected">Процесс не выбран</sys:String>
+    <sys:String x:Key="SystemTray_SelectedProcessFormat">Выбрано: {0}</sys:String>
+    <sys:String x:Key="SystemTray_ApplyPendingToSelected">Применить ожидающие настройки к выбранному процессу</sys:String>
+    <sys:String x:Key="SystemTray_ApplyPendingToProcessFormat">Применить ожидающие настройки к {0}</sys:String>
+    <sys:String x:Key="SystemTray_PowerPlans">🔋 Планы электропитания</sys:String>
+    <sys:String x:Key="SystemTray_Profiles">📋 Профили</sys:String>
+    <sys:String x:Key="SystemTray_Settings">Настройки</sys:String>
+    <sys:String x:Key="SystemTray_Exit">Выход</sys:String>
+    <sys:String x:Key="SystemTray_NoProfilesAvailable">Нет доступных профилей</sys:String>
+    <sys:String x:Key="SystemTray_PowerPlanFormat">Схема электропитания: {0}</sys:String>
+    <sys:String x:Key="SystemTray_StatusWmiError">Ошибка автоматизации WMI</sys:String>
+    <sys:String x:Key="SystemTray_StatusActive">Автоматизация активна</sys:String>
+    <sys:String x:Key="SystemTray_StatusDisabled">Автоматизация отключена</sys:String>
+    <sys:String x:Key="SystemTray_Unknown">Неизвестно</sys:String>
+    <sys:String x:Key="SystemTray_CpuRamStatusFormat">💻 CPU: {0:F1}% | RAM: {1:F1}% | {2}</sys:String>
+
+    <!-- ProcessOperationUserMessages -->
+    <sys:String x:Key="ProcessOperationUserMessages_AccessDenied">Windows отклонил это изменение. Для этого процесса могут потребоваться права администратора или он может быть защищен.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_AntiCheatProtectedLikely">Процесс выглядит защищенным античитом или защитой процесса. ThreadPilot не будет пытаться обойти его.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_AdminClarification">Режим администратора может помочь решить обычные проблемы с разрешениями, но не может обойти ограничения античитов или защищенных процессов.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_LegacyFallbackBlocked">Этот выбор CPU не может быть безопасно представлен устаревшими API привязки в этой топологии. CPU Для этого выбора необходимы наборы.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_InvalidTopology">Этот выбор CPU не соответствует текущей топологии CPU. Просмотрите или воссоздайте предустановку.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_ProcessExited">Процесс завершился до того, как ThreadPilot смог применить изменение.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_CpuSetsUnavailable">Windows CPU Наборы недоступны или этот выбор отклонен. ThreadPilot будет использовать безопасный резервный вариант только тогда, когда это возможно.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_HighPriorityWarning">Высокий приоритет может улучшить скорость реагирования на некоторые рабочие нагрузки, но может снизить скорость реагирования системы.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_RealtimePriorityBlocked">Приоритет реального времени блокируется ThreadPilot, поскольку это может сделать Windows нестабильным или перестать отвечать на запросы.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_PersistentLaunchTimePriorityNotice">Постоянный приоритет времени запуска может поддерживаться для обычных процессов, но он не обходит защищенные процессы или ограничения защиты от мошенничества.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_PersistentRulesDescription">Применяет сохраненные правила при запуске процесса сопоставления. Некоторые защищенные или античит-процессы могут отклонять изменения. Режим администратора может помочь решить обычные проблемы с разрешениями, но не может обойти защиту.</sys:String>
+    <sys:String x:Key="ProcessOperationUserMessages_PersistentRulesProtectedProcessWarning">Процесс выглядит защищенным античитом или защитой процесса. ThreadPilot не будет пытаться его переопределить.</sys:String>
+
+    <!-- Notifications -->
+    <sys:String x:Key="Notification_PowerPlanChangedTitle">План электропитания изменен</sys:String>
+    <sys:String x:Key="Notification_PowerPlanChangedFormat">План электропитания изменен с «{0}» на «{1}».</sys:String>
+    <sys:String x:Key="Notification_PowerPlanChangedProcessFormat">Схема электропитания изменена на «{0}» для процесса «{1}».</sys:String>
+    <sys:String x:Key="Notification_ProcessMonitoringEnabled">Мониторинг процессов включен</sys:String>
+    <sys:String x:Key="Notification_ProcessMonitoringDisabled">Мониторинг процессов отключен</sys:String>
+    <sys:String x:Key="Notification_CpuAffinityAppliedTitle">CPU Привязка применена</sys:String>
+    <sys:String x:Key="Notification_CpuAffinityAppliedFormat">CPU набор привязок для «{0}»: {1}</sys:String>
+    <sys:String x:Key="Notification_GameBoostActivatedTitle">Ускорение игры активировано</sys:String>
+    <sys:String x:Key="Notification_GameBoostActivatedFormat">Режим Game Boost активирован для {0}</sys:String>
+    <sys:String x:Key="Notification_GameBoostDeactivatedTitle">Ускорение игры отключено</sys:String>
+    <sys:String x:Key="Notification_GameBoostDeactivatedFormat">Режим Game Boost отключен после {0}</sys:String>
+    <sys:String x:Key="Notification_ProcessMonitorErrorTitle">Ошибка монитора процесса</sys:String>
+    <sys:String x:Key="Notification_AffinityBlockedTitle">Родственность заблокирована</sys:String>
+    <sys:String x:Key="Notification_AffinityAppliedTitle">Привязка применена</sys:String>
+    <sys:String x:Key="Notification_AffinityAdjustedTitle">Привязка скорректирована</sys:String>
+    <sys:String x:Key="Notification_AffinityFailedTitle">Не удалось применить привязку</sys:String>
+    <sys:String x:Key="Notification_AffinityErrorTitle">Ошибка привязки</sys:String>
+    <sys:String x:Key="Notification_PriorityBlockedTitle">Приоритет заблокирован</sys:String>
+    <sys:String x:Key="Notification_PriorityWarningTitle">Приоритетное предупреждение</sys:String>
+    <sys:String x:Key="Notification_PriorityAppliedTitle">Приоритет применен</sys:String>
+    <sys:String x:Key="Notification_PriorityAdjustedTitle">Приоритет изменен</sys:String>
+    <sys:String x:Key="Notification_PriorityErrorTitle">Ошибка приоритета</sys:String>
+    <sys:String x:Key="Notification_KeyboardShortcutTitle">Сочетание клавиш</sys:String>
+    <sys:String x:Key="Notification_ToggleMonitoringShortcut">Переключить ярлык мониторинга активирован</sys:String>
+    <sys:String x:Key="Notification_HighPerformanceShortcut">Ярлык плана электропитания высокой производительности активирован</sys:String>
+    <sys:String x:Key="Notification_RefreshProcessListShortcut">Ярлык обновления списка процессов активирован</sys:String>
+    <sys:String x:Key="Notification_ThreadPilotStartedTitle">ThreadPilot Начато</sys:String>
+    <sys:String x:Key="Notification_ThreadPilotStartedMessage">Мониторинг процессов и управление планом электропитания теперь активны</sys:String>
+    <sys:String x:Key="Notification_StartupErrorTitle">Ошибка запуска</sys:String>
+    <sys:String x:Key="Notification_ProcessMonitoringStartFailed">Не удалось запустить диспетчер мониторинга процессов.</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringErrorTitle">Ошибка мониторинга автоматизации</sys:String>
+    <sys:String x:Key="Notification_SettingsSavedTitle">Настройки сохранены</sys:String>
+    <sys:String x:Key="Notification_SettingsSavedMessage">Настройки приложения успешно сохранены</sys:String>
+    <sys:String x:Key="Notification_SettingsSavedWarningsTitle">Настройки сохранены с предупреждениями</sys:String>
+    <sys:String x:Key="Notification_SettingsErrorTitle">Ошибка настроек</sys:String>
+    <sys:String x:Key="Notification_SettingsSaveFailed">Не удалось сохранить настройки.</sys:String>
+    <sys:String x:Key="Notification_TestNotificationMessage">Это тестовое уведомление, позволяющее убедиться, что ваши настройки работают правильно.</sys:String>
+
+    <!-- Elevation Service -->
+    <sys:String x:Key="Elevation_RequestPromptText">ThreadPilot требуются права администратора для управления привязкой процессов и планами электропитания.&#x0a;&#x0a;Хотите перезапустить приложение с правами администратора?</sys:String>
+    <sys:String x:Key="Elevation_RequestPromptTitle">Требуются права администратора</sys:String>
+    <sys:String x:Key="Elevation_FailedText">Не удалось перезагрузить компьютер с правами администратора. Пожалуйста, запустите ThreadPilot вручную от имени администратора.</sys:String>
+    <sys:String x:Key="Elevation_FailedTitle">Не удалось повысить высоту</sys:String>
+    <sys:String x:Key="Elevation_StatusRunning">Запуск с правами администратора</sys:String>
+    <sys:String x:Key="Elevation_StatusLimited">Работа с ограниченными привилегиями</sys:String>
+
+    <!-- System Tweaks Errors -->
+    <sys:String x:Key="SystemTweak_Error_QueryCoreParking">Не удалось запросить значение Core Parking через powercfg.</sys:String>
+    <sys:String x:Key="SystemTweak_Error_QueryCStates">Не удалось запросить значение C-States через powercfg.</sys:String>
+    <sys:String x:Key="SystemTweak_Error_PrefetchKeyNotFound">Ключ реестра Prefetch не найден</sys:String>
+    <sys:String x:Key="SystemTweak_Error_PowerThrottlingNotAvailable">Power Throttling недоступен в этой системе</sys:String>
+    <sys:String x:Key="SystemTweak_Error_PriorityControlKeyNotFound">Ключ реестра PriorityControl не найден</sys:String>
+    <sys:String x:Key="SystemTweak_Error_DesktopKeyNotFound">Ключ реестра рабочего стола не найден</sys:String>
+</ResourceDictionary>

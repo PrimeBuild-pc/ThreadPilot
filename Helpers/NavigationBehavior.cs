@@ -43,7 +43,7 @@ namespace ThreadPilot.Helpers
             }
 
             var result = showUnsavedSettingsPromptAsync != null
-                ? await showUnsavedSettingsPromptAsync().ConfigureAwait(false)
+                ? await showUnsavedSettingsPromptAsync()
                 : MessageBox.Show(
                     "You have unsaved changes in Settings.\n\nChoose an action:\n- Yes: Save changes\n- No: Discard changes\n- Cancel: Stay on current tab",
                     "Unsaved Settings",
@@ -53,8 +53,8 @@ namespace ThreadPilot.Helpers
             return result switch
             {
                 MessageBoxResult.Cancel => false,
-                MessageBoxResult.Yes => await settingsViewModel.SaveIfDirtyAsync().ConfigureAwait(false),
-                MessageBoxResult.No => await DiscardPendingChangesAsync(settingsViewModel).ConfigureAwait(false),
+                MessageBoxResult.Yes => await settingsViewModel.SaveIfDirtyAsync(),
+                MessageBoxResult.No => await DiscardPendingChangesAsync(settingsViewModel),
                 _ => true,
             };
         }
@@ -66,7 +66,7 @@ namespace ThreadPilot.Helpers
 
         private static async Task<bool> DiscardPendingChangesAsync(SettingsViewModel settingsViewModel)
         {
-            await settingsViewModel.DiscardPendingChangesAsync().ConfigureAwait(false);
+            await settingsViewModel.DiscardPendingChangesAsync();
             return true;
         }
     }

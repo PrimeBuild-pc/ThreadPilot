@@ -770,8 +770,7 @@ namespace ThreadPilot
                 return true;
             }
 
-            var result = await this.ShowUnsavedSettingsDialogAsync(
-                "You have unsaved changes in Settings. Save before exiting, discard the changes, or cancel to return to ThreadPilot.");
+            var result = await this.ShowUnsavedSettingsDialogAsync();
 
             if (result == MessageBoxResult.Cancel)
             {
@@ -1653,11 +1652,11 @@ namespace ThreadPilot
             this.PerformanceIntroOverlay.Visibility = Visibility.Collapsed;
         }
 
-        private Task<MessageBoxResult> ShowUnsavedSettingsDialogAsync(string message)
+        private Task<MessageBoxResult> ShowUnsavedSettingsDialogAsync()
         {
             if (!this.Dispatcher.CheckAccess())
             {
-                return this.Dispatcher.InvokeAsync(() => this.ShowUnsavedSettingsDialogAsync(message)).Task.Unwrap();
+                return this.Dispatcher.InvokeAsync(this.ShowUnsavedSettingsDialogAsync).Task.Unwrap();
             }
 
             if (this.unsavedSettingsDialogCompletionSource != null)
@@ -1665,7 +1664,6 @@ namespace ThreadPilot
                 return Task.FromResult(MessageBoxResult.Cancel);
             }
 
-            this.UnsavedSettingsDialogMessage.Text = message;
             this.unsavedSettingsDialogCompletionSource = new TaskCompletionSource<MessageBoxResult>(
                 TaskCreationOptions.RunContinuationsAsynchronously);
             this.UnsavedSettingsOverlay.Visibility = Visibility.Visible;
@@ -1736,7 +1734,7 @@ namespace ThreadPilot
             try
             {
                 var settings = this.settingsService.Settings;
-                
+
                 // Only show if user is not admin AND hasn't dismissed the warning yet
                 if (this.elevationService?.IsRunningAsAdministrator() == true || settings.HasSeenElevationWarning)
                 {
@@ -1944,8 +1942,7 @@ namespace ThreadPilot
                 var canNavigate = await NavigationBehavior.EnsureCanNavigateAsync(
                     tag,
                     this.settingsViewModel,
-                    () => this.ShowUnsavedSettingsDialogAsync(
-                        "You have unsaved changes in Settings. Save before switching tabs, discard the changes, or cancel to stay on Settings."));
+                    this.ShowUnsavedSettingsDialogAsync);
                 if (!canNavigate)
                 {
                     return;

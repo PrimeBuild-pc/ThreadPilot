@@ -2,6 +2,7 @@ namespace ThreadPilot.Core.Tests
 {
     using System;
     using System.Collections.Generic;
+    using System.Globalization;
     using System.IO;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging.Abstractions;
@@ -27,6 +28,18 @@ namespace ThreadPilot.Core.Tests
             Assert.True(service.Settings.AutostartWithWindows);
             Assert.False(service.Settings.StartMinimized);
             Assert.Equal("en-US", service.Settings.Language);
+        }
+
+        [Fact]
+        public async Task LoadSettingsAsync_UsesAndPersistsWindowsLanguage_WhenFileIsMissing()
+        {
+            var storage = new FakeSettingsStorage();
+            var service = CreateService(storage, "it-CH");
+
+            await service.LoadSettingsAsync();
+
+            Assert.Equal("it-IT", service.Settings.Language);
+            Assert.Contains("\"language\": \"it-IT\"", storage.Writes[TestPaths.SettingsFilePath], StringComparison.Ordinal);
         }
 
         [Fact]
@@ -149,28 +162,15 @@ namespace ThreadPilot.Core.Tests
             Assert.True(service.Settings.HasSeenStartupMinimizedSuggestion);
         }
 
-        [Fact]
-        public async Task LoadSettingsAsync_PreservesSupportedLanguage()
-        {
-            var storage = new FakeSettingsStorage();
-            storage.Files[TestPaths.SettingsFilePath] = """
-                {
-                  "language": "zh-CN"
-                }
-                """;
-            var service = CreateService(storage);
-
-            await service.LoadSettingsAsync();
-
-            Assert.Equal("zh-CN", service.Settings.Language);
-        }
-
         [Theory]
-        [InlineData("")]
-        [InlineData("   ")]
+        [InlineData("en-US")]
+        [InlineData("zh-CN")]
+        [InlineData("it-IT")]
         [InlineData("fr-FR")]
-        [InlineData("zh")]
-        public async Task LoadSettingsAsync_FallsBackToEnglish_WhenLanguageIsInvalid(string language)
+        [InlineData("de-DE")]
+        [InlineData("es-ES")]
+        [InlineData("ru-RU")]
+        public async Task LoadSettingsAsync_PreservesSupportedLanguage(string language)
         {
             var storage = new FakeSettingsStorage();
             storage.Files[TestPaths.SettingsFilePath] = $$"""
@@ -178,11 +178,94 @@ namespace ThreadPilot.Core.Tests
                   "language": "{{language}}"
                 }
                 """;
-            var service = CreateService(storage);
+            var service = CreateService(storage, "it-IT");
 
             await service.LoadSettingsAsync();
 
-            Assert.Equal("en-US", service.Settings.Language);
+            Assert.Equal(language, service.Settings.Language);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("   ")]
+        [InlineData("pt-BR")]
+        [InlineData("zh")]
+        public async Task LoadSettingsAsync_UsesAndPersistsWindowsLanguage_WhenLanguageIsInvalid(string language)
+        {
+            var storage = new FakeSettingsStorage();
+            storage.Files[TestPaths.SettingsFilePath] = $$"""
+                {
+                  "language": "{{language}}"
+                }
+                """;
+            var service = CreateService(storage, "ru-KZ");
+
+            await service.LoadSettingsAsync();
+
+            Assert.Equal("ru-RU", service.Settings.Language);
+            Assert.Contains("\"language\": \"ru-RU\"", storage.Writes[TestPaths.SettingsFilePath], StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public async Task LoadSettingsAsync_UsesWindowsLanguage_WhenLanguagePropertyIsMissing()
+        {
+            var storage = new FakeSettingsStorage();
+            storage.Files[TestPaths.SettingsFilePath] = """
+                {
+                  "startMinimized": true
+                }
+                """;
+            var service = CreateService(storage, "fr-CA");
+
+            await service.LoadSettingsAsync();
+
+            Assert.Equal("fr-FR", service.Settings.Language);
+            Assert.Contains("\"language\": \"fr-FR\"", storage.Writes[TestPaths.SettingsFilePath], StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public async Task LoadSettingsAsync_NormalizesAndPersistsSupportedLanguageCasing()
+        {
+            var storage = new FakeSettingsStorage();
+            storage.Files[TestPaths.SettingsFilePath] = """
+                {
+                  "language": "IT-it"
+                }
+                """;
+            var service = CreateService(storage, "ru-RU");
+
+            await service.LoadSettingsAsync();
+
+            Assert.Equal("it-IT", service.Settings.Language);
+            Assert.Contains("\"language\": \"it-IT\"", storage.Writes[TestPaths.SettingsFilePath], StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public async Task ResetToDefaultsAsync_UsesWindowsLanguage()
+        {
+            var storage = new FakeSettingsStorage();
+            var service = CreateService(storage, "de-AT");
+
+            await service.ResetToDefaultsAsync();
+
+            Assert.Equal("de-DE", service.Settings.Language);
+        }
+
+        [Fact]
+        public async Task ImportSettingsAsync_UsesWindowsLanguage_WhenLanguageIsInvalid()
+        {
+            const string ImportPath = "import-settings.json";
+            var storage = new FakeSettingsStorage();
+            storage.Files[ImportPath] = """
+                {
+                  "language": "unsupported"
+                }
+                """;
+            var service = CreateService(storage, "es-MX");
+
+            await service.ImportSettingsAsync(ImportPath);
+
+            Assert.Equal("es-ES", service.Settings.Language);
         }
 
         [Fact]
@@ -210,13 +293,16 @@ namespace ThreadPilot.Core.Tests
             Assert.False(service.Settings.UseCustomTrayIcon);
         }
 
-        private static ApplicationSettingsService CreateService(FakeSettingsStorage storage)
+        private static ApplicationSettingsService CreateService(
+            FakeSettingsStorage storage,
+            string systemUiCultureName = "en-US")
         {
             return new ApplicationSettingsService(
                 NullLogger<ApplicationSettingsService>.Instance,
                 storage,
                 TestPaths.SettingsFilePath,
-                legacySettingsPath: null);
+                legacySettingsPath: null,
+                () => new CultureInfo(systemUiCultureName));
         }
 
         private static class TestPaths

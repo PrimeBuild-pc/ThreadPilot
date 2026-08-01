@@ -1,6 +1,7 @@
 namespace ThreadPilot.Services
 {
     using System;
+    using System.Globalization;
     using System.IO;
     using System.Text;
     using System.Text.Json;
@@ -15,6 +16,7 @@ namespace ThreadPilot.Services
         private readonly ISettingsStorage settingsStorage;
         private readonly string settingsFilePath;
         private readonly string? legacySettingsPath;
+        private readonly Func<CultureInfo> systemUiCultureProvider;
         private ApplicationSettingsModel settings;
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -34,7 +36,8 @@ namespace ThreadPilot.Services
                 logger,
                 CreateDefaultStorage(),
                 StoragePaths.SettingsFilePath,
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json"))
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json"),
+                () => CultureInfo.CurrentUICulture)
         {
         }
 
@@ -42,16 +45,18 @@ namespace ThreadPilot.Services
             ILogger<ApplicationSettingsService> logger,
             ISettingsStorage settingsStorage,
             string settingsFilePath,
-            string? legacySettingsPath)
+            string? legacySettingsPath,
+            Func<CultureInfo>? systemUiCultureProvider = null)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.settingsStorage = settingsStorage ?? throw new ArgumentNullException(nameof(settingsStorage));
             this.settingsFilePath = settingsFilePath ?? throw new ArgumentNullException(nameof(settingsFilePath));
             this.legacySettingsPath = legacySettingsPath;
+            this.systemUiCultureProvider = systemUiCultureProvider ?? (() => CultureInfo.CurrentUICulture);
 
             this.MigrateLegacySettingsIfNeeded();
 
-            this.settings = new ApplicationSettingsModel();
+            this.settings = this.CreateDefaultSettings();
         }
 
         public async Task LoadSettingsAsync()
@@ -63,7 +68,7 @@ namespace ThreadPilot.Services
                 if (!this.settingsStorage.Exists(this.settingsFilePath))
                 {
                     this.logger.LogInformation("Settings file not found, using defaults");
-                    this.settings = new ApplicationSettingsModel();
+                    this.settings = this.CreateDefaultSettings();
                     await this.SaveSettingsAsync();
                     return;
                 }
@@ -72,12 +77,13 @@ namespace ThreadPilot.Services
                 if (string.IsNullOrWhiteSpace(json))
                 {
                     this.logger.LogWarning("Settings file was empty, using defaults");
-                    this.settings = new ApplicationSettingsModel();
+                    this.settings = this.CreateDefaultSettings();
                     await this.SaveSettingsAsync();
                     return;
                 }
 
                 var legacyThemePreferenceDetected = false;
+                var hasLanguagePreference = false;
 
                 try
                 {
@@ -87,6 +93,9 @@ namespace ThreadPilot.Services
                         var hasThemePreferenceFlag = document.RootElement.TryGetProperty("hasUserThemePreference", out _);
                         var hasUseDarkThemeFlag = document.RootElement.TryGetProperty("useDarkTheme", out _);
                         legacyThemePreferenceDetected = !hasThemePreferenceFlag && hasUseDarkThemeFlag;
+                        hasLanguagePreference = document.RootElement.TryGetProperty("language", out var languageElement) &&
+                            languageElement.ValueKind == JsonValueKind.String &&
+                            !string.IsNullOrWhiteSpace(languageElement.GetString());
                     }
                 }
                 catch (JsonException ex)
@@ -103,9 +112,28 @@ namespace ThreadPilot.Services
                         loadedSettings.HasUserThemePreference = true;
                     }
 
+                    if (!hasLanguagePreference)
+                    {
+                        loadedSettings.Language = string.Empty;
+                    }
+
+                    var languageIsSupported = LocalizationService.TryNormalizeSupportedLanguage(
+                        loadedSettings.Language,
+                        out var normalizedLanguage);
+                    var requiresLanguageRepair = !languageIsSupported ||
+                        !string.Equals(loadedSettings.Language, normalizedLanguage, StringComparison.Ordinal);
+                    loadedSettings.Language = LocalizationService.ResolveLanguagePreference(
+                        loadedSettings.Language,
+                        this.systemUiCultureProvider());
+
                     var oldSettings = (ApplicationSettingsModel)this.settings.Clone();
                     this.settings.CopyFrom(loadedSettings);
                     this.ValidateAndFixSettings();
+
+                    if (requiresLanguageRepair)
+                    {
+                        await this.SaveSettingsAsync();
+                    }
 
                     this.logger.LogInformation("Settings loaded successfully");
                     this.OnSettingsChanged(oldSettings, this.settings);
@@ -113,13 +141,14 @@ namespace ThreadPilot.Services
                 else
                 {
                     this.logger.LogWarning("Failed to deserialize settings, using defaults");
-                    this.settings = new ApplicationSettingsModel();
+                    this.settings = this.CreateDefaultSettings();
+                    await this.SaveSettingsAsync();
                 }
             }
             catch (Exception ex)
             {
                 this.logger.LogError(ex, "Error loading settings, using defaults");
-                this.settings = new ApplicationSettingsModel();
+                this.settings = this.CreateDefaultSettings();
             }
         }
 
@@ -153,7 +182,11 @@ namespace ThreadPilot.Services
             try
             {
                 var oldSettings = (ApplicationSettingsModel)this.settings.Clone();
+                var resolvedLanguage = LocalizationService.ResolveLanguagePreference(
+                    newSettings.Language,
+                    this.systemUiCultureProvider());
                 this.settings.CopyFrom(newSettings);
+                this.settings.Language = resolvedLanguage;
 
                 await this.SaveSettingsAsync();
 
@@ -174,7 +207,7 @@ namespace ThreadPilot.Services
                 this.logger.LogInformation("Resetting settings to defaults");
 
                 var oldSettings = (ApplicationSettingsModel)this.settings.Clone();
-                this.settings = new ApplicationSettingsModel();
+                this.settings = this.CreateDefaultSettings();
 
                 await this.SaveSettingsAsync();
 
@@ -237,7 +270,9 @@ namespace ThreadPilot.Services
                 }
             }
 
-            this.settings.Language = LocalizationService.NormalizeLanguage(this.settings.Language);
+            this.settings.Language = LocalizationService.ResolveLanguagePreference(
+                this.settings.Language,
+                this.systemUiCultureProvider());
 
             if (this.settings.UpdateCheckIntervalDays < 1)
             {
@@ -320,6 +355,15 @@ namespace ThreadPilot.Services
             {
                 this.logger.LogError(ex, "Error firing settings changed event");
             }
+        }
+
+        private ApplicationSettingsModel CreateDefaultSettings()
+        {
+            var defaults = new ApplicationSettingsModel
+            {
+                Language = LocalizationService.ResolveSystemLanguage(this.systemUiCultureProvider()),
+            };
+            return defaults;
         }
 
         private void MigrateLegacySettingsIfNeeded()

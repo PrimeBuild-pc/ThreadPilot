@@ -409,6 +409,11 @@
     <sys:String x:Key="SettingsView_Language">显示语言</sys:String>
     <sys:String x:Key="SettingsView_LanguageZhCn">简体中文 (Simplified Chinese)</sys:String>
     <sys:String x:Key="SettingsView_LanguageEnUs">English (English)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageItIt">Italiano (Italian)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageFrFr">Français (French)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageDeDe">Deutsch (German)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageEsEs">Español (Spanish)</sys:String>
+    <sys:String x:Key="SettingsView_LanguageRuRu">Русский (Russian)</sys:String>
     <sys:String x:Key="SettingsView_LanguageDescription">在整个应用程序界面应用全局的语言设置。</sys:String>
     
     <sys:String x:Key="SettingsView_RulesAutomation">规则与自动化</sys:String>
@@ -493,6 +498,11 @@
     <sys:String x:Key="Settings_StatusMatchSaved">设置与已保存的配置一致</sys:String>
     <sys:String x:Key="Settings_LanguageSimplifiedChinese">简体中文</sys:String>
     <sys:String x:Key="Settings_LanguageEnglish">英文</sys:String>
+    <sys:String x:Key="Settings_LanguageItalian">意大利语</sys:String>
+    <sys:String x:Key="Settings_LanguageFrench">法语</sys:String>
+    <sys:String x:Key="Settings_LanguageGerman">德语</sys:String>
+    <sys:String x:Key="Settings_LanguageSpanish">西班牙语</sys:String>
+    <sys:String x:Key="Settings_LanguageRussian">俄语</sys:String>
     <sys:String x:Key="Settings_ThemeDark">深色</sys:String>
     <sys:String x:Key="Settings_ThemeLight">浅色</sys:String>
     <sys:String x:Key="Settings_DialogExportTitle">导出 ThreadPilot 配置</sys:String>
@@ -502,7 +512,7 @@
     <!-- SettingsWindow -->
     <sys:String x:Key="SettingsWindow_Title">ThreadPilot 设置</sys:String>
     <sys:String x:Key="SettingsWindow_UnsavedTitle">未保存的设置</sys:String>
-    <sys:String x:Key="SettingsWindow_UnsavedDescription">您有尚未保存的更改。请选择在关闭前保存、放弃修改或取消并返回编辑。</sys:String>
+    <sys:String x:Key="SettingsWindow_UnsavedDescription">您有尚未保存的更改。请选择保存、放弃修改或取消并继续编辑。</sys:String>
     <sys:String x:Key="SettingsWindow_Cancel">取消</sys:String>
     <sys:String x:Key="SettingsWindow_Discard">放弃更改</sys:String>
     <sys:String x:Key="SettingsWindow_Save">保存</sys:String>
@@ -520,14 +530,14 @@
     <sys:String x:Key="SystemTweak_CoreParking_Desc">控制 CPU 核心休眠以进行电源管理</sys:String>
     <sys:String x:Key="SystemTweak_CStates_Name">C-States 状态</sys:String>
     <sys:String x:Key="SystemTweak_CStates_Desc">控制 CPU C-States 以进行节能电源管理</sys:String>
+    <sys:String x:Key="SystemTweak_Hpet_Name">HPET 定时器</sys:String>
+    <sys:String x:Key="SystemTweak_Hpet_Desc">高精度事件计时器，用于系统精准定时</sys:String>
     <sys:String x:Key="SystemTweak_SysMain_Name">SysMain 服务</sys:String>
     <sys:String x:Key="SystemTweak_SysMain_Desc">Windows Superfetch/SysMain 服务，用于内存管理</sys:String>
     <sys:String x:Key="SystemTweak_Prefetch_Name">预取 (Prefetch)</sys:String>
     <sys:String x:Key="SystemTweak_Prefetch_Desc">Windows Prefetch 功能，用于加速应用程序加载</sys:String>
     <sys:String x:Key="SystemTweak_PowerThrottling_Name">电源限流 (Power Throttling)</sys:String>
     <sys:String x:Key="SystemTweak_PowerThrottling_Desc">Windows 电源限流功能，用于能效优化</sys:String>
-    <sys:String x:Key="SystemTweak_Hpet_Name">HPET 定时器</sys:String>
-    <sys:String x:Key="SystemTweak_Hpet_Desc">高精度事件计时器，用于系统精准定时</sys:String>
     <sys:String x:Key="SystemTweak_HighSchedulingCategory_Name">高调度优先级类别</sys:String>
     <sys:String x:Key="SystemTweak_HighSchedulingCategory_Desc">为游戏应用程序提供高调度优先级</sys:String>
     <sys:String x:Key="SystemTweak_MenuShowDelay_Name">菜单显示延迟</sys:String>
