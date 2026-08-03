@@ -1,9 +1,6 @@
 {
   "DefaultPowerPlanGuid": "",
   "DefaultPowerPlanName": "",
-  "IsEventBasedMonitoringEnabled": true,
-  "IsFallbackPollingEnabled": true,
-  "PollingIntervalSeconds": 5,
   "PreventDuplicatePowerPlanChanges": true,
   "PowerPlanChangeDelayMs": 250,
   "Associations": [

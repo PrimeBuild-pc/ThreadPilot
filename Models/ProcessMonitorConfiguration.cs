@@ -13,15 +13,6 @@ namespace ThreadPilot.Models
         private string defaultPowerPlanName = string.Empty;
 
         [ObservableProperty]
-        private bool isEventBasedMonitoringEnabled = true;
-
-        [ObservableProperty]
-        private bool isFallbackPollingEnabled = true;
-
-        [ObservableProperty]
-        private int pollingIntervalSeconds = 5;
-
-        [ObservableProperty]
         private bool preventDuplicatePowerPlanChanges = true;
 
         [ObservableProperty]
@@ -94,11 +85,6 @@ namespace ThreadPilot.Models
         public List<string> Validate()
         {
             var errors = new List<string>();
-
-            if (this.PollingIntervalSeconds < 1)
-            {
-                errors.Add("Polling interval must be at least 1 second");
-            }
 
             if (this.PowerPlanChangeDelayMs < 0)
             {
