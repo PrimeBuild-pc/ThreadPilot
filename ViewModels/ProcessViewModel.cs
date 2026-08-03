@@ -33,6 +33,7 @@ namespace ThreadPilot.ViewModels
         private readonly IProcessAffinityApplyCoordinator processAffinityApplyCoordinator;
         private readonly IProcessMemoryPriorityService? memoryPriorityService;
         private readonly IProcessRuleCreationService? processRuleCreationService;
+        private readonly IApplicationSettingsService? settingsService;
         private readonly Action<string> clipboardSetter;
         private readonly Action<string> executableLocationOpener;
         private System.Timers.Timer? refreshTimer;
@@ -45,6 +46,9 @@ namespace ThreadPilot.ViewModels
         private bool isApplyingFilter;
         private bool filterRefreshPending;
         private bool suppressCoreSelectionEvents;
+
+        [ObservableProperty]
+        private bool isAutomationMonitoringEnabled = true;
 
         [ObservableProperty]
         private ObservableCollection<ProcessModel> processes = new();
@@ -182,7 +186,8 @@ namespace ThreadPilot.ViewModels
             IProcessRuleCreationService? processRuleCreationService = null,
             Action<string>? clipboardSetter = null,
             Action<string>? executableLocationOpener = null,
-            ILocalizationService? localizationService = null)
+            ILocalizationService? localizationService = null,
+            IApplicationSettingsService? settingsService = null)
             : base(logger, enhancedLoggingService, activityAuditService)
         {
             this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
@@ -205,6 +210,13 @@ namespace ThreadPilot.ViewModels
                 new CpuSelectionMigrationService(),
                 NullLogger<ProcessAffinityApplyCoordinator>.Instance);
             this.memoryPriorityService = memoryPriorityService;
+            this.settingsService = settingsService;
+            this.IsAutomationMonitoringEnabled = settingsService?.Settings.EnableAutomationMonitoring ?? true;
+            if (settingsService != null)
+            {
+                settingsService.SettingsChanged += this.OnSettingsChanged;
+            }
+
             this.processRuleCreationService = processRuleCreationService ?? (persistentRuleStore == null
                 ? null
                 : new ProcessRuleCreationService(
@@ -239,6 +251,19 @@ namespace ThreadPilot.ViewModels
             this.SetupRefreshTimer();
             this.SetupVirtualizedProcessService();
             // Note: InitializeAsync() will be called explicitly by MainWindow loading overlay
+        }
+
+        private void OnSettingsChanged(object? sender, ApplicationSettingsChangedEventArgs e)
+        {
+            this.IsAutomationMonitoringEnabled = e.NewSettings.EnableAutomationMonitoring;
+            if (!this.IsAutomationMonitoringEnabled)
+            {
+                this.SetUiRefreshEnabled(false, refreshImmediately: false);
+                this.SelectedProcess = null;
+                return;
+            }
+
+            this.SetUiRefreshEnabled(this.isProcessViewActive && !this.IsProcessListLocked);
         }
 
         public IReadOnlyList<ProcessPriorityClass> ContextMenuCpuPriorityActions { get; } =

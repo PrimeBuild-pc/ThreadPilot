@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.5.1 - Persistent automation monitoring preference
+
+### Fixed
+
+- Stopping Automation Monitoring now remains in effect after restarting ThreadPilot.
+- Added a clear in-app confirmation explaining which automatic process rules pause while monitoring is disabled.
+- Process Management now shows that monitoring is disabled instead of refreshing the process list.
+
+
 ## v1.5.0 - Languages, Windows 11 polish, and one-click updates
 
 ### Added

@@ -93,12 +93,12 @@ namespace ThreadPilot
             {
                 if (this.IsProcessMonitoringActive)
                 {
-                    await this.processMonitorManagerService.StopAsync();
+                    await this.processMonitorManagerService.SetAutomationMonitoringEnabledAsync(false);
                     await this.LogUserActionAsync("ProcessMonitoring", "Stopped automation monitoring", "User action");
                 }
                 else
                 {
-                    await this.processMonitorManagerService.StartAsync();
+                    await this.processMonitorManagerService.SetAutomationMonitoringEnabledAsync(true);
                     await this.LogUserActionAsync("ProcessMonitoring", "Started automation monitoring", "User action");
                 }
             }, this.IsProcessMonitoringActive ? "Stopping automation monitoring..." : "Starting automation monitoring...");

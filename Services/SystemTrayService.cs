@@ -331,7 +331,7 @@ namespace ThreadPilot.Services
                 this.monitoringToggleMenuItem.Text = isMonitoring
                     ? this.Localize("SystemTray_PauseMonitoring", "Pause Automation Monitoring")
                     : this.Localize("SystemTray_ResumeMonitoring", "Resume Automation Monitoring");
-                this.monitoringToggleMenuItem.Enabled = isWmiAvailable;
+                this.monitoringToggleMenuItem.Enabled = true;
             }
 
             // Update tray icon state

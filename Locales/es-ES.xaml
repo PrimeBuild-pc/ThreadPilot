@@ -298,6 +298,8 @@
     <sys:String x:Key="ProcessView_LoadMoreAutomationName">Cargar más procesos</sys:String>
     <sys:String x:Key="ProcessView_RunningListAutomationName">Lista de procesos en ejecución</sys:String>
     <sys:String x:Key="ProcessView_RunningListAutomationHelp">Mesa de proceso virtualizada con clasificación y selección.</sys:String>
+    <sys:String x:Key="ProcessView_MonitoringDisabled">La supervisión de automatización está desactivada.</sys:String>
+    <sys:String x:Key="ProcessView_MonitoringDisabledDescription">Active la supervisión de automatización desde Reglas y automatización o desde la bandeja del sistema para mostrar y actualizar la lista de procesos.</sys:String>
 
     <sys:String x:Key="ProcessView_ColProcessName">Nombre del proceso</sys:String>
     <sys:String x:Key="ProcessView_ColWindowTitle">Título de la ventana</sys:String>
@@ -514,6 +516,11 @@
     <sys:String x:Key="SettingsWindow_UnsavedTitle">Configuraciones no guardadas</sys:String>
     <sys:String x:Key="SettingsWindow_UnsavedDescription">Hay cambios sin guardar. Guárdalos, descártalos o cancela para seguir editando.</sys:String>
     <sys:String x:Key="SettingsWindow_Cancel">Cancelar</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Title">¿Deshabilitar la supervisión de automatización?</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Message">La supervisión de automatización seguirá deshabilitada después de reiniciar.</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Impact">La automatización de planes de energía, máscaras de CPU, prioridades y reglas guardadas no se ejecutará hasta volver a habilitarla.</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Cancel">Cancelar</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Confirm">Deshabilitar supervisión</sys:String>
     <sys:String x:Key="SettingsWindow_Discard">Descartar</sys:String>
     <sys:String x:Key="SettingsWindow_Save">Guardar</sys:String>
 
@@ -638,6 +645,13 @@
     <sys:String x:Key="Notification_StartupErrorTitle">Error de inicio</sys:String>
     <sys:String x:Key="Notification_ProcessMonitoringStartFailed">No se pudo iniciar el administrador de monitoreo de procesos</sys:String>
     <sys:String x:Key="Notification_AutomationMonitoringErrorTitle">Error de monitoreo de automatización</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringEnabledMessage">Se habilitaron la automatización de reglas de procesos y la administración del plan de energía.</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringDisabledMessage">La supervisión de automatización está desactivada hasta que la habilite de nuevo. Las reglas automáticas de procesos no se ejecutarán.</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringToggleFailed">No se pudo cambiar la supervisión de automatización.</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusStarting">Iniciando la supervisión de automatización...</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusEnabled">Supervisión de automatización habilitada.</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusStopping">Deteniendo la supervisión de automatización...</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusDisabled">Supervisión de automatización deshabilitada.</sys:String>
     <sys:String x:Key="Notification_SettingsSavedTitle">Configuración guardada</sys:String>
     <sys:String x:Key="Notification_SettingsSavedMessage">La configuración de la aplicación se ha guardado correctamente.</sys:String>
     <sys:String x:Key="Notification_SettingsSavedWarningsTitle">Configuraciones guardadas con advertencias</sys:String>

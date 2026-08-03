@@ -16,6 +16,7 @@
         <converters:CoreTypeToColorConverter x:Key="CoreTypeToColorConverter"/>
         <converters:BoolToColorConverter x:Key="BoolToColorConverter"/>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
         <converters:NullToBoolConverter x:Key="NullToBoolConverter"/>
         <converters:AffinityMaskConverter x:Key="AffinityMaskConverter"/>
         <converters:BytesToMbConverter x:Key="BytesToMbConverter"/>
@@ -256,6 +257,7 @@
                 <Grid Grid.Row="1">
                     <DataGrid ItemsSource="{Binding FilteredProcesses}"
                               SelectedItem="{Binding SelectedProcess}"
+                              Visibility="{Binding IsAutomationMonitoringEnabled, Converter={StaticResource BoolToVisibilityConverter}}"
                               AutoGenerateColumns="False"
                               IsReadOnly="True"
                               SelectionMode="Single"
@@ -397,6 +399,25 @@
                             <DataGridTextColumn Header="{DynamicResource ProcessView_Priority}" Binding="{Binding Priority}" Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>
+
+                    <Border Background="{DynamicResource CardSurfaceBrush}"
+                            BorderBrush="{DynamicResource BorderSubtleBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="24"
+                            Visibility="{Binding IsAutomationMonitoringEnabled, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource ProcessView_MonitoringDisabled}"
+                                       FontSize="{StaticResource ProcessFontMedium}"
+                                       FontWeight="SemiBold"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource ProcessView_MonitoringDisabledDescription}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
 
                     <Border Background="{DynamicResource OverlayBrush}" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">

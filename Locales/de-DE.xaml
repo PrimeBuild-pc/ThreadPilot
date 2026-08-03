@@ -298,6 +298,8 @@
     <sys:String x:Key="ProcessView_LoadMoreAutomationName">Laden Sie weitere Prozesse</sys:String>
     <sys:String x:Key="ProcessView_RunningListAutomationName">Liste der laufenden Prozesse</sys:String>
     <sys:String x:Key="ProcessView_RunningListAutomationHelp">Virtualisierte Prozesstabelle mit Sortierung und Auswahl</sys:String>
+    <sys:String x:Key="ProcessView_MonitoringDisabled">Die Automatisierungsüberwachung ist deaktiviert.</sys:String>
+    <sys:String x:Key="ProcessView_MonitoringDisabledDescription">Aktivieren Sie die Automatisierungsüberwachung unter Regeln und Automatisierung oder im Infobereich, um die Prozessliste anzuzeigen und zu aktualisieren.</sys:String>
 
     <sys:String x:Key="ProcessView_ColProcessName">Prozessname</sys:String>
     <sys:String x:Key="ProcessView_ColWindowTitle">Fenstertitel</sys:String>
@@ -514,6 +516,11 @@
     <sys:String x:Key="SettingsWindow_UnsavedTitle">Nicht gespeicherte Einstellungen</sys:String>
     <sys:String x:Key="SettingsWindow_UnsavedDescription">Es gibt nicht gespeicherte Änderungen. Speichern oder verwerfen Sie sie, oder brechen Sie ab, um weiterzuarbeiten.</sys:String>
     <sys:String x:Key="SettingsWindow_Cancel">Abbrechen</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Title">Automatisierungsüberwachung deaktivieren?</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Message">Die Automatisierungsüberwachung bleibt auch nach einem Neustart deaktiviert.</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Impact">Automatisierung für Energiepläne, CPU-Masken, Prioritäten und gespeicherte Regeln läuft erst nach erneutem Aktivieren wieder.</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Cancel">Abbrechen</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Confirm">Überwachung deaktivieren</sys:String>
     <sys:String x:Key="SettingsWindow_Discard">Verwerfen</sys:String>
     <sys:String x:Key="SettingsWindow_Save">Speichern</sys:String>
 
@@ -638,6 +645,13 @@
     <sys:String x:Key="Notification_StartupErrorTitle">Startfehler</sys:String>
     <sys:String x:Key="Notification_ProcessMonitoringStartFailed">Der Prozessüberwachungsmanager konnte nicht gestartet werden</sys:String>
     <sys:String x:Key="Notification_AutomationMonitoringErrorTitle">Fehler bei der Automatisierungsüberwachung</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringEnabledMessage">Prozessregelautomatisierung und Energieplanverwaltung wurden aktiviert.</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringDisabledMessage">Die Automatisierungsüberwachung ist deaktiviert, bis Sie sie wieder aktivieren. Automatische Prozessregeln werden nicht ausgeführt.</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringToggleFailed">Die Automatisierungsüberwachung konnte nicht umgeschaltet werden.</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusStarting">Automatisierungsüberwachung wird gestartet...</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusEnabled">Automatisierungsüberwachung aktiviert.</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusStopping">Automatisierungsüberwachung wird beendet...</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusDisabled">Automatisierungsüberwachung deaktiviert.</sys:String>
     <sys:String x:Key="Notification_SettingsSavedTitle">Einstellungen gespeichert</sys:String>
     <sys:String x:Key="Notification_SettingsSavedMessage">Die Anwendungseinstellungen wurden erfolgreich gespeichert</sys:String>
     <sys:String x:Key="Notification_SettingsSavedWarningsTitle">Einstellungen mit Warnungen gespeichert</sys:String>

@@ -12,6 +12,7 @@ namespace ThreadPilot.Core.Tests
             Assert.True(settings.AutostartWithWindows);
             Assert.False(settings.StartMinimized);
             Assert.True(settings.ApplyPersistentRulesOnProcessStart);
+            Assert.True(settings.EnableAutomationMonitoring);
             Assert.False(settings.HasSeenStartupMinimizedSuggestion);
             Assert.Equal("en-US", settings.Language);
             Assert.True(settings.EnableAutomaticUpdateChecks);
@@ -25,12 +26,14 @@ namespace ThreadPilot.Core.Tests
             var source = new ApplicationSettingsModel
             {
                 Language = "zh-CN",
+                EnableAutomationMonitoring = false,
             };
             var target = new ApplicationSettingsModel();
 
             target.CopyFrom(source);
 
             Assert.Equal("zh-CN", target.Language);
+            Assert.False(target.EnableAutomationMonitoring);
         }
 
         [Fact]

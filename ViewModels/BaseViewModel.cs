@@ -15,7 +15,7 @@ namespace ThreadPilot.ViewModels
         private bool disposed;
         private CancellationTokenSource? statusLifetimeCts;
         private bool preserveStatusUntilReplaced;
-        private const int StatusVisibleDurationMs = 1500;
+        private const int StatusVisibleDurationMs = 2500;
         private const int StatusFadeDurationMs = 500;
 
         [ObservableProperty]

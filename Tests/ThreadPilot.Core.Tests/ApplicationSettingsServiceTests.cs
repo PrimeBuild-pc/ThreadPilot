@@ -31,6 +31,34 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task LoadSettingsAsync_DefaultsAutomationMonitoringEnabled_ForOlderSettingsJson()
+        {
+            var storage = new FakeSettingsStorage();
+            storage.Files[TestPaths.SettingsFilePath] = "{}";
+            var service = CreateService(storage);
+
+            await service.LoadSettingsAsync();
+
+            Assert.True(service.Settings.EnableAutomationMonitoring);
+        }
+
+        [Fact]
+        public async Task UpdateSettingsAsync_PersistsAutomationMonitoringDisabled()
+        {
+            var storage = new FakeSettingsStorage();
+            var service = CreateService(storage);
+            await service.LoadSettingsAsync();
+            var settings = service.Settings;
+            settings.EnableAutomationMonitoring = false;
+
+            await service.UpdateSettingsAsync(settings);
+
+            var reloaded = CreateService(storage);
+            await reloaded.LoadSettingsAsync();
+            Assert.False(reloaded.Settings.EnableAutomationMonitoring);
+        }
+
+        [Fact]
         public async Task LoadSettingsAsync_UsesAndPersistsWindowsLanguage_WhenFileIsMissing()
         {
             var storage = new FakeSettingsStorage();

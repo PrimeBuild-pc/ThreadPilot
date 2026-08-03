@@ -83,9 +83,12 @@ namespace ThreadPilot.ViewModels
                 await this.RefreshPowerPlansAsync();
                 System.Diagnostics.Debug.WriteLine("ProcessViewModel.InitializeAsync: Power plans loaded");
 
-                // Load processes automatically on startup (Bug #8 fix)
-                System.Diagnostics.Debug.WriteLine("ProcessViewModel.InitializeAsync: About to load processes automatically");
-                await this.LoadProcessesCommand.ExecuteAsync(null);
+                // Load processes automatically only while automation monitoring is enabled.
+                if (this.IsAutomationMonitoringEnabled)
+                {
+                    System.Diagnostics.Debug.WriteLine("ProcessViewModel.InitializeAsync: About to load processes automatically");
+                    await this.LoadProcessesCommand.ExecuteAsync(null);
+                }
 
                 // Access process count on UI thread to avoid threading issues
                 int processCount = 0;
@@ -95,9 +98,12 @@ namespace ThreadPilot.ViewModels
                 });
                 System.Diagnostics.Debug.WriteLine($"ProcessViewModel.InitializeAsync: Processes loaded automatically, count: {processCount}");
 
-                // Start refresh timer for real-time updates
-                System.Diagnostics.Debug.WriteLine("ProcessViewModel.InitializeAsync: Starting refresh timer");
-                this.refreshTimer?.Start();
+                // Start refresh timer only while automation monitoring is enabled.
+                if (this.IsAutomationMonitoringEnabled)
+                {
+                    System.Diagnostics.Debug.WriteLine("ProcessViewModel.InitializeAsync: Starting refresh timer");
+                    this.refreshTimer?.Start();
+                }
                 System.Diagnostics.Debug.WriteLine("ProcessViewModel.InitializeAsync: Initialization completed successfully");
             }
             catch (Exception ex)
@@ -2010,7 +2016,7 @@ namespace ThreadPilot.ViewModels
 
         private bool ShouldRunProcessUiRefresh()
         {
-            return this.isProcessViewActive && !this.isUiRefreshPaused && !this.IsProcessListLocked;
+            return this.IsAutomationMonitoringEnabled && this.isProcessViewActive && !this.isUiRefreshPaused && !this.IsProcessListLocked;
         }
 
         private bool ShouldPreloadVirtualizedBatches()
@@ -2402,6 +2408,10 @@ namespace ThreadPilot.ViewModels
 
             this.cpuTopologyService.TopologyDetected -= this.OnTopologyDetected;
             this.systemTrayService.QuickApplyRequested -= this.OnTrayQuickApplyRequested;
+            if (this.settingsService != null)
+            {
+                this.settingsService.SettingsChanged -= this.OnSettingsChanged;
+            }
 
             base.OnDispose();
         }

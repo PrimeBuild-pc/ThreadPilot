@@ -298,6 +298,8 @@
     <sys:String x:Key="ProcessView_LoadMoreAutomationName">Загрузить больше процессов</sys:String>
     <sys:String x:Key="ProcessView_RunningListAutomationName">Список запущенных процессов</sys:String>
     <sys:String x:Key="ProcessView_RunningListAutomationHelp">Виртуализированная таблица процессов с сортировкой и выбором</sys:String>
+    <sys:String x:Key="ProcessView_MonitoringDisabled">Мониторинг автоматизации отключен.</sys:String>
+    <sys:String x:Key="ProcessView_MonitoringDisabledDescription">Включите мониторинг автоматизации в разделе «Правила и автоматизация» или в системном трее, чтобы показать и обновлять список процессов.</sys:String>
 
     <sys:String x:Key="ProcessView_ColProcessName">Имя процесса</sys:String>
     <sys:String x:Key="ProcessView_ColWindowTitle">Название окна</sys:String>
@@ -514,6 +516,11 @@
     <sys:String x:Key="SettingsWindow_UnsavedTitle">Несохраненные настройки</sys:String>
     <sys:String x:Key="SettingsWindow_UnsavedDescription">Есть несохранённые изменения. Сохраните или отмените их либо вернитесь к редактированию.</sys:String>
     <sys:String x:Key="SettingsWindow_Cancel">Отмена</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Title">Отключить мониторинг автоматизации?</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Message">Мониторинг автоматизации останется отключенным после перезапуска.</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Impact">Автоматизация планов питания, масок ЦП, приоритетов и сохраненных правил не будет выполняться, пока вы не включите ее снова.</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Cancel">Отмена</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Confirm">Отключить мониторинг</sys:String>
     <sys:String x:Key="SettingsWindow_Discard">Отбросить</sys:String>
     <sys:String x:Key="SettingsWindow_Save">Сохранить</sys:String>
 
@@ -638,6 +645,13 @@
     <sys:String x:Key="Notification_StartupErrorTitle">Ошибка запуска</sys:String>
     <sys:String x:Key="Notification_ProcessMonitoringStartFailed">Не удалось запустить диспетчер мониторинга процессов.</sys:String>
     <sys:String x:Key="Notification_AutomationMonitoringErrorTitle">Ошибка мониторинга автоматизации</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringEnabledMessage">Автоматизация правил процессов и управление планом питания включены.</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringDisabledMessage">Мониторинг автоматизации отключен, пока вы не включите его снова. Автоматические правила процессов выполняться не будут.</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringToggleFailed">Не удалось переключить мониторинг автоматизации.</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusStarting">Запуск мониторинга автоматизации...</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusEnabled">Мониторинг автоматизации включен.</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusStopping">Остановка мониторинга автоматизации...</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusDisabled">Мониторинг автоматизации отключен.</sys:String>
     <sys:String x:Key="Notification_SettingsSavedTitle">Настройки сохранены</sys:String>
     <sys:String x:Key="Notification_SettingsSavedMessage">Настройки приложения успешно сохранены</sys:String>
     <sys:String x:Key="Notification_SettingsSavedWarningsTitle">Настройки сохранены с предупреждениями</sys:String>

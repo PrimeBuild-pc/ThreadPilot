@@ -298,6 +298,8 @@
     <sys:String x:Key="ProcessView_LoadMoreAutomationName">Charger plus de processus</sys:String>
     <sys:String x:Key="ProcessView_RunningListAutomationName">Liste des processus en cours d'exécution</sys:String>
     <sys:String x:Key="ProcessView_RunningListAutomationHelp">Table de processus virtualisée avec tri et sélection</sys:String>
+    <sys:String x:Key="ProcessView_MonitoringDisabled">La surveillance de l'automatisation est désactivée.</sys:String>
+    <sys:String x:Key="ProcessView_MonitoringDisabledDescription">Activez la surveillance de l'automatisation depuis Règles et automatisation ou la zone de notification pour afficher et actualiser la liste des processus.</sys:String>
 
     <sys:String x:Key="ProcessView_ColProcessName">Nom du processus</sys:String>
     <sys:String x:Key="ProcessView_ColWindowTitle">Titre de la fenêtre</sys:String>
@@ -514,6 +516,11 @@
     <sys:String x:Key="SettingsWindow_UnsavedTitle">Paramètres non enregistrés</sys:String>
     <sys:String x:Key="SettingsWindow_UnsavedDescription">Certaines modifications ne sont pas enregistrées. Enregistrez-les, ignorez-les ou annulez pour continuer à les modifier.</sys:String>
     <sys:String x:Key="SettingsWindow_Cancel">Annuler</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Title">Désactiver la surveillance de l'automatisation ?</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Message">La surveillance de l'automatisation restera désactivée après le redémarrage.</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Impact">L'automatisation des plans d'alimentation, masques CPU, priorités et règles enregistrées ne fonctionnera pas jusqu'à sa réactivation.</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Cancel">Annuler</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Confirm">Désactiver la surveillance</sys:String>
     <sys:String x:Key="SettingsWindow_Discard">Jeter</sys:String>
     <sys:String x:Key="SettingsWindow_Save">Enregistrer</sys:String>
 
@@ -638,6 +645,13 @@
     <sys:String x:Key="Notification_StartupErrorTitle">Erreur de démarrage</sys:String>
     <sys:String x:Key="Notification_ProcessMonitoringStartFailed">Échec du démarrage du gestionnaire de surveillance des processus</sys:String>
     <sys:String x:Key="Notification_AutomationMonitoringErrorTitle">Erreur de surveillance de l'automatisation</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringEnabledMessage">L'automatisation des règles de processus et la gestion du plan d'alimentation sont activées.</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringDisabledMessage">La surveillance de l'automatisation est désactivée jusqu'à sa réactivation. Les règles automatiques de processus ne seront pas exécutées.</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringToggleFailed">Impossible de modifier la surveillance de l'automatisation.</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusStarting">Démarrage de la surveillance de l'automatisation...</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusEnabled">Surveillance de l'automatisation activée.</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusStopping">Arrêt de la surveillance de l'automatisation...</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusDisabled">Surveillance de l'automatisation désactivée.</sys:String>
     <sys:String x:Key="Notification_SettingsSavedTitle">Paramètres enregistrés</sys:String>
     <sys:String x:Key="Notification_SettingsSavedMessage">Les paramètres de l'application ont été enregistrés avec succès</sys:String>
     <sys:String x:Key="Notification_SettingsSavedWarningsTitle">Paramètres enregistrés avec les avertissements</sys:String>

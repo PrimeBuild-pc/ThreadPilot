@@ -298,6 +298,8 @@
     <sys:String x:Key="ProcessView_LoadMoreAutomationName">Carica più processi</sys:String>
     <sys:String x:Key="ProcessView_RunningListAutomationName">Elenco dei processi in esecuzione</sys:String>
     <sys:String x:Key="ProcessView_RunningListAutomationHelp">Tabella dei processi virtualizzata con ordinamento e selezione</sys:String>
+    <sys:String x:Key="ProcessView_MonitoringDisabled">Il monitoraggio dell'automazione è disabilitato.</sys:String>
+    <sys:String x:Key="ProcessView_MonitoringDisabledDescription">Abilita il monitoraggio dell'automazione da Regole e automazione o dall'area di notifica per visualizzare e aggiornare l'elenco dei processi.</sys:String>
 
     <sys:String x:Key="ProcessView_ColProcessName">Nome del processo</sys:String>
     <sys:String x:Key="ProcessView_ColWindowTitle">Titolo della finestra</sys:String>
@@ -514,6 +516,11 @@
     <sys:String x:Key="SettingsWindow_UnsavedTitle">Impostazioni non salvate</sys:String>
     <sys:String x:Key="SettingsWindow_UnsavedDescription">Sono presenti modifiche non salvate. Salvale, scartale oppure annulla per continuare a modificarle.</sys:String>
     <sys:String x:Key="SettingsWindow_Cancel">Annulla</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Title">Disabilitare il monitoraggio dell'automazione?</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Message">Il monitoraggio dell'automazione rimarrà disabilitato anche dopo il riavvio.</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Impact">L'automazione di piano energetico, maschera CPU, priorità e regole salvate non verrà eseguita finché non la riabiliti.</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Cancel">Annulla</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Confirm">Disabilita monitoraggio</sys:String>
     <sys:String x:Key="SettingsWindow_Discard">Scartare</sys:String>
     <sys:String x:Key="SettingsWindow_Save">Salva</sys:String>
 
@@ -638,6 +645,13 @@
     <sys:String x:Key="Notification_StartupErrorTitle">Errore di avvio</sys:String>
     <sys:String x:Key="Notification_ProcessMonitoringStartFailed">Impossibile avviare il gestore del monitoraggio del processo</sys:String>
     <sys:String x:Key="Notification_AutomationMonitoringErrorTitle">Errore di monitoraggio dell'automazione</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringEnabledMessage">L'automazione delle regole dei processi e la gestione del piano energetico sono state abilitate.</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringDisabledMessage">Il monitoraggio dell'automazione è disabilitato finché non lo riabiliti. Le regole automatiche dei processi non verranno eseguite.</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringToggleFailed">Impossibile modificare il monitoraggio dell'automazione.</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusStarting">Avvio del monitoraggio dell'automazione...</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusEnabled">Monitoraggio dell'automazione abilitato.</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusStopping">Arresto del monitoraggio dell'automazione...</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusDisabled">Monitoraggio dell'automazione disabilitato.</sys:String>
     <sys:String x:Key="Notification_SettingsSavedTitle">Impostazioni salvate</sys:String>
     <sys:String x:Key="Notification_SettingsSavedMessage">Le impostazioni dell'applicazione sono state salvate correttamente</sys:String>
     <sys:String x:Key="Notification_SettingsSavedWarningsTitle">Impostazioni salvate con avvisi</sys:String>

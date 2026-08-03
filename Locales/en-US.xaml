@@ -298,6 +298,8 @@
     <sys:String x:Key="ProcessView_LoadMoreAutomationName">Load more processes</sys:String>
     <sys:String x:Key="ProcessView_RunningListAutomationName">Running process list</sys:String>
     <sys:String x:Key="ProcessView_RunningListAutomationHelp">Virtualized process table with sorting and selection</sys:String>
+    <sys:String x:Key="ProcessView_MonitoringDisabled">Automation monitoring is disabled.</sys:String>
+    <sys:String x:Key="ProcessView_MonitoringDisabledDescription">Enable Automation Monitoring from Rules &amp; Automation or the system tray to show and refresh the process list.</sys:String>
 
     <sys:String x:Key="ProcessView_ColProcessName">Process Name</sys:String>
     <sys:String x:Key="ProcessView_ColWindowTitle">Window Title</sys:String>
@@ -514,6 +516,11 @@
     <sys:String x:Key="SettingsWindow_UnsavedTitle">Unsaved Settings</sys:String>
     <sys:String x:Key="SettingsWindow_UnsavedDescription">You have unsaved changes. Save them, discard them, or cancel to keep editing.</sys:String>
     <sys:String x:Key="SettingsWindow_Cancel">Cancel</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Title">Disable Automation Monitoring?</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Message">Automation monitoring will remain disabled after restart.</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Impact">Process power-plan, CPU mask, priority, and saved-rule automation will not run until you enable it again.</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Cancel">Cancel</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Confirm">Disable monitoring</sys:String>
     <sys:String x:Key="SettingsWindow_Discard">Discard</sys:String>
     <sys:String x:Key="SettingsWindow_Save">Save</sys:String>
 
@@ -638,6 +645,13 @@
     <sys:String x:Key="Notification_StartupErrorTitle">Startup Error</sys:String>
     <sys:String x:Key="Notification_ProcessMonitoringStartFailed">Failed to start process monitoring manager</sys:String>
     <sys:String x:Key="Notification_AutomationMonitoringErrorTitle">Automation Monitoring Error</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringEnabledMessage">Process rule automation and power plan management have been enabled.</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringDisabledMessage">Automation monitoring is disabled until you enable it again. Automatic process rules will not run.</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringToggleFailed">Failed to toggle automation monitoring.</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusStarting">Starting automation monitoring...</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusEnabled">Automation monitoring enabled.</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusStopping">Stopping automation monitoring...</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusDisabled">Automation monitoring disabled.</sys:String>
     <sys:String x:Key="Notification_SettingsSavedTitle">Settings Saved</sys:String>
     <sys:String x:Key="Notification_SettingsSavedMessage">Application settings have been saved successfully</sys:String>
     <sys:String x:Key="Notification_SettingsSavedWarningsTitle">Settings Saved with Warnings</sys:String>

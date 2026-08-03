@@ -22,6 +22,7 @@ namespace ThreadPilot.ViewModels
         private readonly IProcessMonitorManagerService monitorManagerService;
         private readonly ICoreMaskService coreMaskService;
         private bool isInitialized;
+        private readonly ILocalizationService? localizationService;
 
         [ObservableProperty]
         private ObservableCollection<ProcessPowerPlanAssociation> associations = new();
@@ -120,7 +121,8 @@ namespace ThreadPilot.ViewModels
             IProcessService processService,
             IProcessMonitorManagerService monitorManagerService,
             ICoreMaskService coreMaskService,
-            IEnhancedLoggingService? enhancedLoggingService = null)
+            IEnhancedLoggingService? enhancedLoggingService = null,
+            ILocalizationService? localizationService = null)
             : base(logger, enhancedLoggingService)
         {
             this.associationService = associationService ?? throw new ArgumentNullException(nameof(associationService));
@@ -128,6 +130,7 @@ namespace ThreadPilot.ViewModels
             this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
             this.monitorManagerService = monitorManagerService ?? throw new ArgumentNullException(nameof(monitorManagerService));
             this.coreMaskService = coreMaskService ?? throw new ArgumentNullException(nameof(coreMaskService));
+            this.localizationService = localizationService;
 
             // Subscribe to events
             this.associationService.ConfigurationChanged += this.OnConfigurationChanged;
@@ -359,8 +362,9 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                this.SetStatus("Starting automation monitoring...");
-                await this.monitorManagerService.StartAsync();
+                this.SetStatus(this.Localize("AutomationMonitoring_StatusStarting", "Starting automation monitoring..."));
+                await this.monitorManagerService.SetAutomationMonitoringEnabledAsync(true);
+                this.SetStatus(this.Localize("AutomationMonitoring_StatusEnabled", "Automation monitoring enabled."), false);
             }
             catch (Exception ex)
             {
@@ -373,8 +377,14 @@ namespace ThreadPilot.ViewModels
         {
             try
             {
-                this.SetStatus("Stopping automation monitoring...");
-                await this.monitorManagerService.StopAsync();
+                if (new Views.MonitoringDisableDialog().ShowDialog() != true)
+                {
+                    return;
+                }
+
+                this.SetStatus(this.Localize("AutomationMonitoring_StatusStopping", "Stopping automation monitoring..."));
+                await this.monitorManagerService.SetAutomationMonitoringEnabledAsync(false);
+                this.SetStatus(this.Localize("AutomationMonitoring_StatusDisabled", "Automation monitoring disabled."), false);
             }
             catch (Exception ex)
             {
@@ -580,6 +590,9 @@ namespace ThreadPilot.ViewModels
                 this.SetStatus($"Power plan changed: {e.NewPowerPlan?.Name} for {e.Process.Name}", false);
             });
         }
+
+        private string Localize(string key, string fallback) =>
+            this.localizationService?.GetString(key) ?? fallback;
 
         private void UpdateServiceStatus()
         {

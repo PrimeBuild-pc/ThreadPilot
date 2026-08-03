@@ -43,6 +43,51 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task SetAutomationMonitoringEnabledAsync_StopsAndPersistsDisabledState()
+        {
+            var processMonitor = new FakeProcessMonitorService();
+            var settings = new ApplicationSettingsModel();
+            var manager = CreateService(
+                processMonitor,
+                CreateAssociationService(new ProcessMonitorConfiguration()),
+                CreatePowerPlanService(),
+                CreateNotificationService(),
+                CreateProcessService(),
+                CreateCoreMaskService(),
+                CreateAffinityApplyService(),
+                settings: settings);
+            await manager.StartAsync();
+
+            await manager.SetAutomationMonitoringEnabledAsync(false);
+
+            Assert.False(manager.IsRunning);
+            Assert.Equal(1, processMonitor.StopCalls);
+            Assert.False(settings.EnableAutomationMonitoring);
+        }
+
+        [Fact]
+        public async Task SetAutomationMonitoringEnabledAsync_StartsAndPersistsEnabledState()
+        {
+            var processMonitor = new FakeProcessMonitorService();
+            var settings = new ApplicationSettingsModel { EnableAutomationMonitoring = false };
+            var manager = CreateService(
+                processMonitor,
+                CreateAssociationService(new ProcessMonitorConfiguration()),
+                CreatePowerPlanService(),
+                CreateNotificationService(),
+                CreateProcessService(),
+                CreateCoreMaskService(),
+                CreateAffinityApplyService(),
+                settings: settings);
+
+            await manager.SetAutomationMonitoringEnabledAsync(true);
+
+            Assert.True(manager.IsRunning);
+            Assert.Equal(1, processMonitor.StartCalls);
+            Assert.True(settings.EnableAutomationMonitoring);
+        }
+
+        [Fact]
         public async Task StartAsync_SelectsHighestPriorityAssociation()
         {
             var processMonitor = new FakeProcessMonitorService
@@ -808,12 +853,18 @@ namespace ThreadPilot.Core.Tests
             Mock<IAffinityApplyService> affinityApplyService,
             Mock<IPersistentRuleAutoApplyService>? autoApplyService = null,
             ILogger<ProcessMonitorManagerService>? logger = null,
-            Mock<IEnhancedLoggingService>? enhancedLogger = null)
+            Mock<IEnhancedLoggingService>? enhancedLogger = null,
+            ApplicationSettingsModel? settings = null)
         {
             var resolvedEnhancedLogger = enhancedLogger ?? CreateEnhancedLogger();
 
+            var persistedSettings = settings ?? new ApplicationSettingsModel();
             var settingsService = new Mock<IApplicationSettingsService>(MockBehavior.Loose);
-            settingsService.SetupGet(x => x.Settings).Returns(new ApplicationSettingsModel());
+            settingsService.SetupGet(x => x.Settings).Returns(() => persistedSettings);
+            settingsService
+                .Setup(x => x.UpdateSettingsAsync(It.IsAny<ApplicationSettingsModel>()))
+                .Callback<ApplicationSettingsModel>(updated => persistedSettings.CopyFrom(updated))
+                .Returns(Task.CompletedTask);
 
             return new ProcessMonitorManagerService(
                 processMonitorService,

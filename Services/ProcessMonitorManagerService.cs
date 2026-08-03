@@ -200,6 +200,22 @@ namespace ThreadPilot.Services
             }
         }
 
+        public async Task SetAutomationMonitoringEnabledAsync(bool enabled)
+        {
+            if (enabled)
+            {
+                await this.StartAsync();
+            }
+            else
+            {
+                await this.StopAsync();
+            }
+
+            var settings = this.settingsService.Settings;
+            settings.EnableAutomationMonitoring = enabled;
+            await this.settingsService.UpdateSettingsAsync(settings);
+        }
+
         public async Task EvaluateCurrentProcessesAsync()
         {
             if (!this.isRunning || this.configuration == null)

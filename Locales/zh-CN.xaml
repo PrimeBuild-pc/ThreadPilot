@@ -298,6 +298,8 @@
     <sys:String x:Key="ProcessView_LoadMoreAutomationName">加载更多进程</sys:String>
     <sys:String x:Key="ProcessView_RunningListAutomationName">运行中进程列表</sys:String>
     <sys:String x:Key="ProcessView_RunningListAutomationHelp">支持排序和选择的虚拟化进程表</sys:String>
+    <sys:String x:Key="ProcessView_MonitoringDisabled">自动化监控已禁用。</sys:String>
+    <sys:String x:Key="ProcessView_MonitoringDisabledDescription">请从“规则和自动化”或系统托盘启用自动化监控，以显示和刷新进程列表。</sys:String>
     
     <sys:String x:Key="ProcessView_ColProcessName">进程名称</sys:String>
     <sys:String x:Key="ProcessView_ColWindowTitle">窗口标题</sys:String>
@@ -514,6 +516,11 @@
     <sys:String x:Key="SettingsWindow_UnsavedTitle">未保存的设置</sys:String>
     <sys:String x:Key="SettingsWindow_UnsavedDescription">您有尚未保存的更改。请选择保存、放弃修改或取消并继续编辑。</sys:String>
     <sys:String x:Key="SettingsWindow_Cancel">取消</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Title">要禁用自动化监控吗？</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Message">自动化监控在重启后仍将保持禁用。</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Impact">在再次启用前，进程电源计划、CPU 掩码、优先级和已保存规则的自动化不会运行。</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Cancel">取消</sys:String>
+    <sys:String x:Key="MonitoringDisableDialog_Confirm">禁用监控</sys:String>
     <sys:String x:Key="SettingsWindow_Discard">放弃更改</sys:String>
     <sys:String x:Key="SettingsWindow_Save">保存</sys:String>
 
@@ -638,6 +645,13 @@
     <sys:String x:Key="Notification_StartupErrorTitle">启动错误</sys:String>
     <sys:String x:Key="Notification_ProcessMonitoringStartFailed">无法启动进程监控管理器</sys:String>
     <sys:String x:Key="Notification_AutomationMonitoringErrorTitle">自动化监控错误</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringEnabledMessage">进程规则自动化和电源计划管理已启用。</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringDisabledMessage">自动化监控已禁用，直到您再次启用它。自动进程规则不会运行。</sys:String>
+    <sys:String x:Key="Notification_AutomationMonitoringToggleFailed">无法切换自动化监控。</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusStarting">正在启动自动化监控...</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusEnabled">自动化监控已启用。</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusStopping">正在停止自动化监控...</sys:String>
+    <sys:String x:Key="AutomationMonitoring_StatusDisabled">自动化监控已禁用。</sys:String>
     <sys:String x:Key="Notification_SettingsSavedTitle">设置已保存</sys:String>
     <sys:String x:Key="Notification_SettingsSavedMessage">应用设置已成功保存</sys:String>
     <sys:String x:Key="Notification_SettingsSavedWarningsTitle">设置已保存但有警告</sys:String>

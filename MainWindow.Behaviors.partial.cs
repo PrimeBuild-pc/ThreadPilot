@@ -501,9 +501,13 @@ namespace ThreadPilot
             await this.InitializeMonitoringAsync();
             this.LogDebug("Monitoring initialized successfully");
 
-            if (this.skipProcessMonitoringDuringStartup)
+            if (this.skipProcessMonitoringDuringStartup || !this.settingsService.Settings.EnableAutomationMonitoring)
             {
-                this.LogDebug("Skipping process monitoring manager startup (temporary bypass enabled)");
+                this.LogDebug(this.skipProcessMonitoringDuringStartup
+                    ? "Skipping process monitoring manager startup (temporary bypass enabled)"
+                    : "Automation monitoring remains disabled by saved setting.");
+                this.systemTrayService.UpdateMonitoringStatus(false);
+                this.mainWindowViewModel.UpdateProcessMonitoringStatus(false, this.Localize("SystemTray_StatusDisabled", "Automation Disabled"));
             }
             else
             {
@@ -852,25 +856,31 @@ namespace ThreadPilot
             {
                 if (e.EnableMonitoring)
                 {
-                    await this.processMonitorManagerService.StartAsync();
+                    await this.processMonitorManagerService.SetAutomationMonitoringEnabledAsync(true);
                     await this.notificationService.ShowSuccessNotificationAsync(
-                        "Automation Monitoring Enabled",
-                        "Process rule automation and power plan management have been enabled.");
+                        this.Localize("Notification_ProcessMonitoringEnabled", "Process Monitoring Enabled"),
+                        this.Localize("Notification_AutomationMonitoringEnabledMessage", "Process rule automation and power plan management have been enabled."));
                 }
                 else
                 {
-                    await this.processMonitorManagerService.StopAsync();
+                    if (new MonitoringDisableDialog { Owner = this }.ShowDialog() != true)
+                    {
+                        this.systemTrayService.UpdateMonitoringStatus(true, this.processMonitorService.IsWmiAvailable);
+                        return;
+                    }
+
+                    await this.processMonitorManagerService.SetAutomationMonitoringEnabledAsync(false);
                     await this.notificationService.ShowNotificationAsync(
-                        "Automation Monitoring Disabled",
-                        "Process rule automation and power plan management have been disabled.",
+                        this.Localize("Notification_ProcessMonitoringDisabled", "Process Monitoring Disabled"),
+                        this.Localize("Notification_AutomationMonitoringDisabledMessage", "Automation monitoring is disabled until you enable it again. Automatic process rules will not run."),
                         Models.NotificationType.Warning);
                 }
             }
             catch (Exception ex)
             {
                 await this.notificationService.ShowErrorNotificationAsync(
-                    "Automation Monitoring Error",
-                    "Failed to toggle automation monitoring.",
+                    this.Localize("Notification_AutomationMonitoringErrorTitle", "Automation Monitoring Error"),
+                    this.Localize("Notification_AutomationMonitoringToggleFailed", "Failed to toggle automation monitoring."),
                     ex);
             }
         }
@@ -1288,6 +1298,9 @@ namespace ThreadPilot
             DwmHelper.ApplyWindowCaptionTheme(this, useDarkTheme);
             this.ApplySelfResourcePolicy(this.lastAppliedRefreshState ?? this.GetForegroundActivityState(), e.NewSettings);
         }
+
+        private string Localize(string key, string fallback) =>
+            Application.Current.TryFindResource(key) as string ?? fallback;
 
         private void OnMonitoringStatusChanged(object? sender, MonitoringStatusEventArgs e)
         {

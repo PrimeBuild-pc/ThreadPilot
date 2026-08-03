@@ -21,6 +21,8 @@ namespace ThreadPilot.Services
 
         Task StopAsync();
 
+        Task SetAutomationMonitoringEnabledAsync(bool enabled);
+
         Task EvaluateCurrentProcessesAsync();
 
         Task ForceDefaultPowerPlanAsync();

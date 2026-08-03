@@ -1,6 +1,6 @@
-## ThreadPilot v1.5.0
+## ThreadPilot v1.5.1
 
-ThreadPilot 1.5.0 adds five languages, refines the Windows 11 experience, and makes future updates one-click.
+ThreadPilot 1.5.1 adds five languages, refines the Windows 11 experience, and makes future updates one-click.
 
 ### Highlights
 
