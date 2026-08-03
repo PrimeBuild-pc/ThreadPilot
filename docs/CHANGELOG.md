@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.5.2 - Process monitoring configuration
+
+### Fixed
+
+- Consolidated process-monitoring configuration so application settings are the single runtime source for WMI, fallback polling, and fallback interval behavior.
+- Removed ineffective duplicate WMI, fallback polling, and polling interval settings from Rules & Automation.
+- Existing configuration JSON files remain compatible when they contain the removed legacy fields.
+
 ## v1.5.1 - Persistent automation monitoring preference
 
 ### Fixed
