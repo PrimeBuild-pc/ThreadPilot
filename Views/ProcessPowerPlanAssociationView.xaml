@@ -325,21 +325,6 @@
                         <!-- Automation Monitoring Settings -->
                         <GroupBox Header="{DynamicResource ProcessPowerPlanAssociationView_SettingsTitle}" Margin="0,0,0,15">
                             <StackPanel>
-                                <CheckBox Content="{DynamicResource ProcessPowerPlanAssociationView_EnableWmi}"
-                                         IsChecked="{Binding IsEventBasedMonitoringEnabled}"
-                                         Margin="0,0,0,10"/>
-
-                                <CheckBox Content="{DynamicResource ProcessPowerPlanAssociationView_EnableFallback}"
-                                         IsChecked="{Binding IsFallbackPollingEnabled}"
-                                         Margin="0,0,0,10"/>
-
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                    <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_PollingInterval}"
-                                              VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                    <TextBox Text="{Binding PollingIntervalSeconds}"
-                                            Width="60" Padding="5"/>
-                                </StackPanel>
-
                                 <CheckBox Content="{DynamicResource ProcessPowerPlanAssociationView_PreventDuplicates}"
                                          IsChecked="{Binding PreventDuplicatePowerPlanChanges}"
                                          Margin="0,0,0,10"/>

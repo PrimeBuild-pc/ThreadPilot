@@ -90,18 +90,6 @@ namespace ThreadPilot.ViewModels
         private PowerPlanModel? defaultPowerPlan;
 
         [ObservableProperty]
-        private bool isMonitoringEnabled = true;
-
-        [ObservableProperty]
-        private bool isEventBasedMonitoringEnabled = true;
-
-        [ObservableProperty]
-        private bool isFallbackPollingEnabled = true;
-
-        [ObservableProperty]
-        private int pollingIntervalSeconds = 5;
-
-        [ObservableProperty]
         private bool preventDuplicatePowerPlanChanges = true;
 
         [ObservableProperty]
@@ -182,9 +170,6 @@ namespace ThreadPilot.ViewModels
 
                 // Load configuration settings
                 var config = this.associationService.Configuration;
-                this.IsEventBasedMonitoringEnabled = config.IsEventBasedMonitoringEnabled;
-                this.IsFallbackPollingEnabled = config.IsFallbackPollingEnabled;
-                this.PollingIntervalSeconds = config.PollingIntervalSeconds;
                 this.PreventDuplicatePowerPlanChanges = config.PreventDuplicatePowerPlanChanges;
                 this.PowerPlanChangeDelayMs = config.PowerPlanChangeDelayMs;
 
@@ -391,9 +376,6 @@ namespace ThreadPilot.ViewModels
 
                 // Update configuration with current settings
                 var config = this.associationService.Configuration;
-                config.IsEventBasedMonitoringEnabled = this.IsEventBasedMonitoringEnabled;
-                config.IsFallbackPollingEnabled = this.IsFallbackPollingEnabled;
-                config.PollingIntervalSeconds = this.PollingIntervalSeconds;
                 config.PreventDuplicatePowerPlanChanges = this.PreventDuplicatePowerPlanChanges;
                 config.PowerPlanChangeDelayMs = this.PowerPlanChangeDelayMs;
 
