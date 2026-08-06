@@ -338,6 +338,8 @@ namespace ThreadPilot
             this.DispatcherUnhandledException -= this.OnDispatcherUnhandledException;
             TaskScheduler.UnobservedTaskException -= this.OnUnobservedTaskException;
 
+            this.DisposeServiceProvider();
+
             if (this.singleInstanceMutex != null)
             {
                 try
@@ -353,6 +355,24 @@ namespace ThreadPilot
             }
 
             base.OnExit(e);
+        }
+
+        private void DisposeServiceProvider()
+        {
+            if (this.ServiceProvider is not IDisposable disposableProvider)
+            {
+                return;
+            }
+
+            var logger = this.ServiceProvider.GetService<ILogger<App>>();
+            try
+            {
+                disposableProvider.Dispose();
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "Failed to dispose the application service provider during shutdown");
+            }
         }
 
 #if DEBUG

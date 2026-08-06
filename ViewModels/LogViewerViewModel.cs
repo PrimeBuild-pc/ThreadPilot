@@ -12,13 +12,14 @@ using ThreadPilot.Services;
 
 namespace ThreadPilot.ViewModels
 {
-    public partial class LogViewerViewModel : ObservableObject
+    public partial class LogViewerViewModel : ObservableObject, IDisposable
     {
         private readonly IActivityAuditService activityAuditService;
         private readonly IEnhancedLoggingService loggingService;
         private readonly IApplicationSettingsService settingsService;
         private readonly ILogger<LogViewerViewModel> logger;
         private bool isActive;
+        private bool disposed;
 
         [ObservableProperty]
         private ObservableCollection<LogEntryDisplayModel> logEntries = new();
@@ -353,6 +354,18 @@ namespace ThreadPilot.ViewModels
         {
             // Implementation for auto-refresh timer would go here
             // For now, we'll keep it simple without the timer
+        }
+
+        public void Dispose()
+        {
+            if (this.disposed)
+            {
+                return;
+            }
+
+            this.disposed = true;
+            this.isActive = false;
+            this.activityAuditService.EntryAdded -= this.OnActivityEntryAdded;
         }
 
         private void OnActivityEntryAdded(object? sender, ActivityAuditEntry entry)

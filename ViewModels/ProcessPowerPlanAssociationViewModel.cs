@@ -126,6 +126,14 @@ namespace ThreadPilot.ViewModels
             this.monitorManagerService.ProcessPowerPlanChanged += this.OnProcessPowerPlanChanged;
         }
 
+        protected override void OnDispose()
+        {
+            this.associationService.ConfigurationChanged -= this.OnConfigurationChanged;
+            this.monitorManagerService.ServiceStatusChanged -= this.OnServiceStatusChanged;
+            this.monitorManagerService.ProcessPowerPlanChanged -= this.OnProcessPowerPlanChanged;
+            base.OnDispose();
+        }
+
         public override async Task InitializeAsync()
         {
             if (this.isInitialized)
