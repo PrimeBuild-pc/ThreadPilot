@@ -22,6 +22,7 @@ namespace ThreadPilot.Services
         private int flushScheduled;
         private bool isInitialized;
         private bool disposed;
+        private volatile bool isDebugLoggingEnabled;
 
         // PERFORMANCE IMPROVEMENT: Correlation tracking for better debugging
         internal readonly AsyncLocal<string?> CorrelationId = new();
@@ -31,7 +32,7 @@ namespace ThreadPilot.Services
 
         public string LogDirectoryPath => this.logDirectory;
 
-        public bool IsDebugLoggingEnabled => this.settingsService.Settings.EnableDebugLogging;
+        public bool IsDebugLoggingEnabled => this.isDebugLoggingEnabled;
 
         public event EventHandler<CriticalErrorEventArgs>? CriticalErrorOccurred;
 
@@ -44,7 +45,15 @@ namespace ThreadPilot.Services
             this.logDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ThreadPilot", "Logs");
             this.currentLogFilePath = this.GetCurrentLogFilePath();
 
+            this.isDebugLoggingEnabled = settingsService.Settings.EnableDebugLogging;
+            this.settingsService.SettingsChanged += this.OnSettingsChanged;
+
             this.flushTimer = new System.Threading.Timer(this.FlushLogs, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        }
+
+        private void OnSettingsChanged(object? sender, ApplicationSettingsChangedEventArgs e)
+        {
+            this.isDebugLoggingEnabled = e.NewSettings.EnableDebugLogging;
         }
 
         public async Task InitializeAsync()
@@ -517,6 +526,7 @@ namespace ThreadPilot.Services
                 return;
             }
 
+            this.settingsService.SettingsChanged -= this.OnSettingsChanged;
             this.flushTimer?.Dispose();
             this.FlushLogsAsync().Wait(TimeSpan.FromSeconds(5));
             this.fileLock?.Dispose();
