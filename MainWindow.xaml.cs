@@ -70,6 +70,7 @@ namespace ThreadPilot
         private TaskCompletionSource<MessageBoxResult>? unsavedSettingsDialogCompletionSource;
         private bool isSilentStartupMode;
         private bool showStartupMinimizedSuggestionOnReady;
+        private IPowerPlanService? trayPowerPlanService;
 
         public MainWindow(
             ProcessViewModel processViewModel,
