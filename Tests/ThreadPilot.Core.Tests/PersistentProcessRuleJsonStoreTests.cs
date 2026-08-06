@@ -224,6 +224,54 @@ namespace ThreadPilot.Core.Tests
             }
         }
 
+        [Fact]
+        public async Task LoadAsync_AfterFailedRead_RetriesInsteadOfCachingAnEmptySet()
+        {
+            var filePath = CreateTemporaryFilePath();
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+            await File.WriteAllTextAsync(filePath, "{ not json");
+            var store = new PersistentProcessRuleJsonStore(() => filePath);
+
+            try
+            {
+                Assert.Empty(await store.LoadAsync());
+
+                await new PersistentProcessRuleJsonStore(() => filePath)
+                    .SaveAsync([CreateRule("recovered", "Recovered.exe", ProcessPriorityClass.High)]);
+
+                var reloaded = await store.LoadAsync();
+
+                Assert.Equal("recovered", Assert.Single(reloaded).Id);
+            }
+            finally
+            {
+                DeleteFile(filePath);
+            }
+        }
+
+        [Fact]
+        public async Task LoadAsync_WithUnreadableFile_PreservesACopyForRecovery()
+        {
+            var filePath = CreateTemporaryFilePath();
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+            const string OriginalContent = "{ not json but the user's only copy";
+            await File.WriteAllTextAsync(filePath, OriginalContent);
+            var store = new PersistentProcessRuleJsonStore(() => filePath);
+
+            try
+            {
+                Assert.Empty(await store.LoadAsync());
+
+                var backupPath = filePath + ".unreadable";
+                Assert.True(File.Exists(backupPath));
+                Assert.Equal(OriginalContent, await File.ReadAllTextAsync(backupPath));
+            }
+            finally
+            {
+                DeleteFile(filePath);
+            }
+        }
+
         private static PersistentProcessRule CreateRule(
             string id,
             string processName,
