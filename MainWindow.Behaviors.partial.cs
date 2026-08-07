@@ -603,6 +603,10 @@ namespace ThreadPilot
                 // Initialize system tray context menu with current data
                 await this.UpdateSystemTrayContextMenuAsync();
 
+                this.trayPowerPlanService ??= this.serviceProvider.GetRequiredService<IPowerPlanService>();
+                this.trayPowerPlanService.PowerPlanChanged -= this.OnPowerPlanChangedForTray;
+                this.trayPowerPlanService.PowerPlanChanged += this.OnPowerPlanChangedForTray;
+
                 // Start periodic system tray updates
                 this.StartSystemTrayUpdateTimer();
             }
@@ -1092,12 +1096,22 @@ namespace ThreadPilot
         {
             try
             {
-                await this.systemTrayStatusUpdater.UpdateContextMenuAsync(this.systemTrayService);
+                await this.systemTrayStatusUpdater.UpdateContextMenuAsync(
+                    this.systemTrayService,
+                    action => this.Dispatcher.InvokeAsync(action).Task);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to update system tray context menu: {ex.Message}");
+                this.LogDebug($"Failed to update system tray context menu: {ex.Message}");
             }
+        }
+
+        private void OnPowerPlanChangedForTray(object? sender, PowerPlanChangedEventArgs e)
+        {
+            TaskSafety.FireAndForget(this.UpdateSystemTrayContextMenuAsync(), ex =>
+            {
+                this.LogDebug($"Failed to refresh tray menu after power plan change: {ex.Message}");
+            });
         }
 
         private void StartSystemTrayUpdateTimer()
@@ -1304,8 +1318,15 @@ namespace ThreadPilot
 
         private void OnMonitoringStatusChanged(object? sender, MonitoringStatusEventArgs e)
         {
-            // Update tray icon and status
-            this.systemTrayService.UpdateMonitoringStatus(e.IsMonitoring, e.IsWmiAvailable);
+            if (this.Dispatcher.CheckAccess())
+            {
+                this.systemTrayService.UpdateMonitoringStatus(e.IsMonitoring, e.IsWmiAvailable);
+            }
+            else
+            {
+                this.Dispatcher.InvokeAsync(() =>
+                    this.systemTrayService.UpdateMonitoringStatus(e.IsMonitoring, e.IsWmiAvailable));
+            }
 
             // Show notification if there's an error
             if (e.Error != null && this.settingsService.Settings.EnableErrorNotifications)
@@ -2045,7 +2066,16 @@ namespace ThreadPilot
             }
 
             e.Cancel = true;
-            _ = this.HandleWindowCloseAsync();
+
+            TaskSafety.FireAndForget(this.HandleWindowCloseAsync(), ex =>
+            {
+                this.LogDebug($"Window close handling failed: {ex.Message}");
+                this.Dispatcher.InvokeAsync(() =>
+                {
+                    this.isPerformingShutdown = true;
+                    System.Windows.Application.Current?.Shutdown();
+                });
+            });
         }
 
         protected override void OnClosed(EventArgs e)
@@ -2060,6 +2090,12 @@ namespace ThreadPilot
                 this.processMonitorManagerService.ServiceStatusChanged -= this.OnProcessMonitorManagerStatusChanged;
                 this.keyboardShortcutService.ShortcutActivated -= this.OnShortcutActivated;
 
+                if (this.trayPowerPlanService != null)
+                {
+                    this.trayPowerPlanService.PowerPlanChanged -= this.OnPowerPlanChangedForTray;
+                    this.trayPowerPlanService = null;
+                }
+
                 this.UnsubscribeSystemTrayEvents();
 
                 this.systemTrayUpdateTimer?.Stop();
@@ -2067,7 +2103,14 @@ namespace ThreadPilot
 
                 this.initializationTimeoutTimer?.Stop();
                 this.initializationTimeoutTimer?.Dispose();
+
                 this.performanceViewModel?.Dispose();
+                this.settingsViewModel.Dispose();
+                this.powerPlanViewModel.Dispose();
+                this.associationViewModel.Dispose();
+                this.logViewerViewModel.Dispose();
+                this.systemTweaksViewModel.Dispose();
+                this.mainWindowViewModel.Dispose();
 
                 this.selfResourceManagementService.RestoreForegroundMode();
                 this.navigationBehavior.Dispose();

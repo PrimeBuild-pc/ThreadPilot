@@ -64,8 +64,13 @@ namespace ThreadPilot.ViewModels
 
                 try
                 {
-                    // Marshal timer callback to UI thread to prevent cross-thread access exceptions
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
+                    var dispatcher = System.Windows.Application.Current?.Dispatcher;
+                    if (dispatcher == null)
+                    {
+                        return;
+                    }
+
+                    await dispatcher.InvokeAsync(async () =>
                     {
                         if (!this.isAutoRefreshPaused)
                         {
@@ -82,6 +87,20 @@ namespace ThreadPilot.ViewModels
                     Interlocked.Exchange(ref this.isRefreshInProgress, 0);
                 }
             };
+        }
+
+        protected override void OnDispose()
+        {
+            this.isAutoRefreshPaused = true;
+
+            if (this.refreshTimer != null)
+            {
+                this.refreshTimer.Stop();
+                this.refreshTimer.Dispose();
+                this.refreshTimer = null;
+            }
+
+            base.OnDispose();
         }
 
         public void PauseAutoRefresh()

@@ -193,3 +193,4 @@ gitleaks*.tar.gz
 *.orig
 *.rej
 *.xaml.bak
+/tmp

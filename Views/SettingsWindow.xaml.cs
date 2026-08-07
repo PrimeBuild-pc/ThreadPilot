@@ -33,16 +33,31 @@ namespace ThreadPilot.Views
 
         private async void UnsavedSettingsSave_Click(object sender, RoutedEventArgs e)
         {
-            var saved = await this.viewModel.SaveIfDirtyAsync();
-            if (saved)
+            try
             {
-                this.CloseAfterUnsavedPrompt();
+                var saved = await this.viewModel.SaveIfDirtyAsync();
+                if (saved)
+                {
+                    this.CloseAfterUnsavedPrompt();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to save settings from the unsaved-changes prompt: {ex.Message}");
             }
         }
 
         private async void UnsavedSettingsDiscard_Click(object sender, RoutedEventArgs e)
         {
-            await this.viewModel.DiscardPendingChangesAsync();
+            try
+            {
+                await this.viewModel.DiscardPendingChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to discard pending settings: {ex.Message}");
+            }
+
             this.CloseAfterUnsavedPrompt();
         }
 

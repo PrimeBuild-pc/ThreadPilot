@@ -621,17 +621,27 @@ namespace ThreadPilot.ViewModels
         private void OnSettingsServiceSettingsChanged(object? sender, ApplicationSettingsChangedEventArgs e)
         {
             // Marshal to UI thread to avoid cross-thread property change issues
-            System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            System.Windows.Application.Current?.Dispatcher.InvokeAsync(() =>
             {
                 this.isSyncingFromService = true;
                 try
                 {
-                    this.Settings.CopyFrom(e.NewSettings);
+                    var persistedSettings = (ApplicationSettingsModel)e.NewSettings.Clone();
                     if (!string.IsNullOrWhiteSpace(this.cachedDefaultPowerPlanGuid))
                     {
-                        this.Settings.DefaultPowerPlanId = this.cachedDefaultPowerPlanGuid;
-                        this.Settings.DefaultPowerPlanName = this.cachedDefaultPowerPlanName;
+                        persistedSettings.DefaultPowerPlanId = this.cachedDefaultPowerPlanGuid;
+                        persistedSettings.DefaultPowerPlanName = this.cachedDefaultPowerPlanName;
                     }
+
+                    if (this.HasUnsavedChanges)
+                    {
+                        this.savedSettingsSnapshot = persistedSettings;
+                        this.UpdatePendingChangesState();
+                        this.Logger.LogDebug("Settings changed externally while edits were pending; kept the pending edits and re-based the saved snapshot");
+                        return;
+                    }
+
+                    this.Settings.CopyFrom(persistedSettings);
                     this.SetSavedSettingsSnapshot(this.Settings);
                     this.ApplyLanguagePreference(this.Settings.Language, logUserAction: false);
                     this.StatusMessage = this.GetLocalizedString("Settings_StatusSynchronized", "Settings synchronized");
@@ -641,6 +651,13 @@ namespace ThreadPilot.ViewModels
                     this.isSyncingFromService = false;
                 }
             });
+        }
+
+        protected override void OnDispose()
+        {
+            this.Settings.PropertyChanged -= this.OnSettingsPropertyChanged;
+            this.settingsService.SettingsChanged -= this.OnSettingsServiceSettingsChanged;
+            base.OnDispose();
         }
 
         private async Task RefreshPowerPlansAsync()

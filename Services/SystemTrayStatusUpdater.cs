@@ -5,13 +5,14 @@ namespace ThreadPilot.Services
     using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
     using ThreadPilot.Models;
 
     public interface ISystemTrayStatusUpdater
     {
         bool ShouldRunPerformanceStatusUpdates { get; }
 
-        Task UpdateContextMenuAsync(ISystemTrayService systemTrayService);
+        Task UpdateContextMenuAsync(ISystemTrayService systemTrayService, Func<Action, Task> dispatchAsync);
 
         Task<bool> UpdateStatusAsync(ISystemTrayService systemTrayService, Func<Action, Task> dispatchAsync);
     }
@@ -21,34 +22,34 @@ namespace ThreadPilot.Services
         private readonly IPowerPlanService powerPlanService;
         private readonly Lazy<IPerformanceMonitoringService> performanceService;
         private readonly ILocalizationService? localizationService;
+        private readonly ILogger<SystemTrayStatusUpdater>? logger;
 
         public SystemTrayStatusUpdater(
             IPowerPlanService powerPlanService,
             Lazy<IPerformanceMonitoringService> performanceService,
-            ILocalizationService? localizationService = null)
+            ILocalizationService? localizationService = null,
+            ILogger<SystemTrayStatusUpdater>? logger = null)
         {
             this.powerPlanService = powerPlanService ?? throw new ArgumentNullException(nameof(powerPlanService));
             this.performanceService = performanceService ?? throw new ArgumentNullException(nameof(performanceService));
             this.localizationService = localizationService;
+            this.logger = logger;
         }
 
         public bool ShouldRunPerformanceStatusUpdates => AppNavigationOptions.ShowAdvancedDiagnostics;
 
-        public async Task UpdateContextMenuAsync(ISystemTrayService systemTrayService)
+        public async Task UpdateContextMenuAsync(ISystemTrayService systemTrayService, Func<Action, Task> dispatchAsync)
         {
             ArgumentNullException.ThrowIfNull(systemTrayService);
+            ArgumentNullException.ThrowIfNull(dispatchAsync);
 
-            var activePowerPlan = await this.UpdatePowerPlanMenuAsync(systemTrayService).ConfigureAwait(false);
-            this.UpdateProfileMenu(systemTrayService);
+            var activePowerPlan = await this.UpdatePowerPlanMenuAsync(systemTrayService, dispatchAsync).ConfigureAwait(false);
+            await this.UpdateProfileMenuAsync(systemTrayService, dispatchAsync).ConfigureAwait(false);
 
             await this.UpdateStatusCoreAsync(
                 systemTrayService,
                 activePowerPlan,
-                action =>
-                {
-                    action();
-                    return Task.CompletedTask;
-                }).ConfigureAwait(false);
+                dispatchAsync).ConfigureAwait(false);
         }
 
         public async Task<bool> UpdateStatusAsync(ISystemTrayService systemTrayService, Func<Action, Task> dispatchAsync)
@@ -62,34 +63,48 @@ namespace ThreadPilot.Services
                 await this.UpdateStatusCoreAsync(systemTrayService, activePowerPlan, dispatchAsync).ConfigureAwait(false);
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                this.logger?.LogDebug(ex, "Failed to update the system tray status");
                 return false;
             }
         }
 
-        private async Task<PowerPlanModel?> UpdatePowerPlanMenuAsync(ISystemTrayService systemTrayService)
+        private async Task<PowerPlanModel?> UpdatePowerPlanMenuAsync(
+            ISystemTrayService systemTrayService,
+            Func<Action, Task> dispatchAsync)
         {
             var powerPlans = await this.powerPlanService.GetPowerPlansAsync().ConfigureAwait(false);
             var activePowerPlan = powerPlans.FirstOrDefault(plan => plan.IsActive);
-            systemTrayService.UpdatePowerPlans(powerPlans, activePowerPlan);
+
+            await dispatchAsync(() => systemTrayService.UpdatePowerPlans(powerPlans, activePowerPlan)).ConfigureAwait(false);
             return activePowerPlan;
         }
 
-        private void UpdateProfileMenu(ISystemTrayService systemTrayService)
+        private async Task UpdateProfileMenuAsync(
+            ISystemTrayService systemTrayService,
+            Func<Action, Task> dispatchAsync)
         {
             var profilesDirectory = StoragePaths.ProfilesDirectory;
             var profileNames = new List<string>();
 
-            if (Directory.Exists(profilesDirectory))
+            try
             {
-                profileNames = Directory.GetFiles(profilesDirectory, "*.json")
-                    .Select(Path.GetFileNameWithoutExtension)
-                    .Where(name => !string.IsNullOrWhiteSpace(name))
-                    .ToList()!;
+                if (Directory.Exists(profilesDirectory))
+                {
+                    profileNames = Directory.GetFiles(profilesDirectory, "*.json")
+                        .Select(Path.GetFileNameWithoutExtension)
+                        .Where(name => !string.IsNullOrWhiteSpace(name))
+                        .ToList()!;
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                this.logger?.LogDebug(ex, "Could not enumerate saved profiles for the tray menu");
+                profileNames = new List<string>();
             }
 
-            systemTrayService.UpdateProfiles(profileNames);
+            await dispatchAsync(() => systemTrayService.UpdateProfiles(profileNames)).ConfigureAwait(false);
         }
 
         private async Task UpdateStatusCoreAsync(

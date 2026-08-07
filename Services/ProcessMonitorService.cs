@@ -30,6 +30,7 @@ namespace ThreadPilot.Services
         private bool isWmiAvailable;
         private bool isFallbackPollingActive;
         private int disposedFlag;
+        private int disposeRequestedFlag;
 
         // Configuration - will be updated from settings
         private int fallbackPollingIntervalMs = 5000; // Default 5 seconds
@@ -131,8 +132,15 @@ namespace ThreadPilot.Services
             }
 
             var semaphoreHeld = false;
-            await this.wmiStartSemaphore.WaitAsync().ConfigureAwait(false);
-            semaphoreHeld = true;
+            try
+            {
+                await this.wmiStartSemaphore.WaitAsync().ConfigureAwait(false);
+                semaphoreHeld = true;
+            }
+            catch (ObjectDisposedException)
+            {
+                return;
+            }
 
             try
             {
@@ -167,7 +175,13 @@ namespace ThreadPilot.Services
             {
                 if (semaphoreHeld)
                 {
-                    this.wmiStartSemaphore.Release();
+                    try
+                    {
+                        this.wmiStartSemaphore.Release();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                    }
                 }
             }
         }
@@ -227,7 +241,15 @@ namespace ThreadPilot.Services
                 return false;
             }
 
-            await this.wmiStartSemaphore.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await this.wmiStartSemaphore.WaitAsync().ConfigureAwait(false);
+            }
+            catch (ObjectDisposedException)
+            {
+                return false;
+            }
+
             try
             {
                 if (this.IsDisposed || !this.isMonitoring || !this.enableWmiMonitoring)
@@ -286,7 +308,13 @@ namespace ThreadPilot.Services
             }
             finally
             {
-                this.wmiStartSemaphore.Release();
+                try
+                {
+                    this.wmiStartSemaphore.Release();
+                }
+                catch (ObjectDisposedException)
+                {
+                }
             }
         }
 
@@ -684,7 +712,7 @@ namespace ThreadPilot.Services
 
         public void Dispose()
         {
-            if (Interlocked.Exchange(ref this.disposedFlag, 1) == 1)
+            if (Interlocked.Exchange(ref this.disposeRequestedFlag, 1) == 1)
             {
                 return;
             }
@@ -698,7 +726,16 @@ namespace ThreadPilot.Services
                 this.OnMonitoringStatusChanged($"Error during process monitor disposal: {ex.Message}", ex);
             }
 
-            this.wmiStartSemaphore.Dispose();
+            Interlocked.Exchange(ref this.disposedFlag, 1);
+
+            try
+            {
+                this.wmiStartSemaphore.Dispose();
+            }
+            catch (Exception ex)
+            {
+                this.OnMonitoringStatusChanged($"Error releasing process monitor resources: {ex.Message}", ex);
+            }
         }
     }
 }

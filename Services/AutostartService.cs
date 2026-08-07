@@ -14,8 +14,8 @@ namespace ThreadPilot.Services
         private readonly ILogger<AutostartService> logger;
         private readonly IElevationService elevationService;
         private readonly IElevatedTaskService elevatedTaskService;
-        private bool isAutostartEnabled;
-        private string? autostartPath;
+        private volatile bool isAutostartEnabled;
+        private volatile string? autostartPath;
 
         public event EventHandler<AutostartStatusChangedEventArgs>? AutostartStatusChanged;
 
@@ -50,9 +50,6 @@ namespace ThreadPilot.Services
                 var arguments = this.GetAutostartArguments(startMinimized);
                 var fullCommand = $"\"{executablePath}\" {arguments}";
 
-                // Clean up legacy registry-based startup to keep a single elevated startup mechanism.
-                this.TryRemoveLegacyRegistryAutostart();
-
                 if (!this.elevationService.IsRunningAsAdministrator())
                 {
                     LogAutostartRequiresElevation(this.logger);
@@ -68,6 +65,11 @@ namespace ThreadPilot.Services
                 }
 
                 var scheduledTaskCreated = await this.elevatedTaskService.EnsureAutostartTaskAsync(executablePath, arguments);
+                if (scheduledTaskCreated)
+                {
+                    this.TryRemoveLegacyRegistryAutostart();
+                }
+
                 if (!scheduledTaskCreated)
                 {
                     LogAutostartTaskRegistrationFailed(this.logger);
@@ -113,14 +115,14 @@ namespace ThreadPilot.Services
                     return false;
                 }
 
-                this.TryRemoveLegacyRegistryAutostart();
-
                 var scheduledTaskRemoved = await this.elevatedTaskService.RemoveAutostartTaskAsync();
                 if (!scheduledTaskRemoved)
                 {
                     LogAutostartTaskRemovalFailed(this.logger);
                     return false;
                 }
+
+                this.TryRemoveLegacyRegistryAutostart();
 
                 LogAutostartDisabled(this.logger);
 
@@ -169,13 +171,6 @@ namespace ThreadPilot.Services
 
         public async Task<bool> UpdateAutostartAsync(bool startMinimized = true)
         {
-            if (!this.isAutostartEnabled)
-            {
-                return await this.EnableAutostartAsync(startMinimized);
-            }
-
-            // Re-enable with new parameters
-            await this.DisableAutostartAsync();
             return await this.EnableAutostartAsync(startMinimized);
         }
 
