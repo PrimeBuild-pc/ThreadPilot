@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-## Unreleased - Reliability, lifecycle and threading hardening
+## v1.5.3 - Reliability, lifecycle and threading hardening
 
 ### Fixed
 
