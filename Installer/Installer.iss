@@ -5,7 +5,7 @@
 #define MyAppPublisher "ThreadPilot"
 #define MyAppURL "https://github.com/"
 #define MyAppExeName "ThreadPilot.exe"
-#define MyAppVersion "1.5.2"
+#define MyAppVersion "1.5.3"
 
 #ifndef MyWizardStyle
   #define MyWizardStyle "modern dynamic windows11"
