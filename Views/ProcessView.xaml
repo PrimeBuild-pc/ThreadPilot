@@ -400,25 +400,6 @@
                         </DataGrid.Columns>
                     </DataGrid>
 
-                    <Border Background="{DynamicResource CardSurfaceBrush}"
-                            BorderBrush="{DynamicResource BorderSubtleBrush}"
-                            BorderThickness="1"
-                            CornerRadius="8"
-                            Padding="24"
-                            Visibility="{Binding IsAutomationMonitoringEnabled, Converter={StaticResource InverseBoolToVisibilityConverter}}">
-                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource ProcessView_MonitoringDisabled}"
-                                       FontSize="{StaticResource ProcessFontMedium}"
-                                       FontWeight="SemiBold"
-                                       HorizontalAlignment="Center"/>
-                            <TextBlock Text="{DynamicResource ProcessView_MonitoringDisabledDescription}"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       TextAlignment="Center"
-                                       TextWrapping="Wrap"
-                                       Margin="0,8,0,0"/>
-                        </StackPanel>
-                    </Border>
-
                     <Border Background="{DynamicResource OverlayBrush}" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                             <ProgressBar Value="{Binding LoadingProgress}" Maximum="100" Width="200" Height="20" Margin="0,0,0,10"/>
@@ -593,6 +574,24 @@
                             </StackPanel>
                         </Expander>
                     </StackPanel>
+                </Border>
+
+                <Border x:Name="MonitoringDisabledOverlay"
+                        Grid.RowSpan="3"
+                        Panel.ZIndex="10"
+                        Background="{DynamicResource SurfaceMutedBrush}"
+                        BorderBrush="{DynamicResource BorderSubtleBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="24"
+                        Visibility="{Binding IsAutomationMonitoringEnabled, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                    <TextBlock Text="{DynamicResource ProcessView_MonitoringDisabled}"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               FontSize="{StaticResource ProcessFontMedium}"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               TextAlignment="Center"/>
                 </Border>
             </Grid>
 
