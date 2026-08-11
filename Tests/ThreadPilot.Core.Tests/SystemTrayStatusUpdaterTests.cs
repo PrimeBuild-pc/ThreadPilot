@@ -13,12 +13,69 @@ namespace ThreadPilot.Core.Tests
             var harness = new Harness();
             var updater = harness.CreateUpdater(performanceFactory: () => throw new InvalidOperationException("Performance service should not be resolved."));
 
-            await updater.UpdateContextMenuAsync(harness.Tray.Object);
+            await updater.UpdateContextMenuAsync(harness.Tray.Object, Harness.PassThroughDispatcher);
 
             harness.Tray.Verify(x => x.UpdatePowerPlans(It.IsAny<IEnumerable<PowerPlanModel>>(), It.IsAny<PowerPlanModel?>()), Times.Once);
             harness.Tray.Verify(x => x.UpdateProfiles(It.IsAny<IEnumerable<string>>()), Times.Once);
             harness.Tray.Verify(x => x.UpdateSystemStatus("Balanced"), Times.Once);
             harness.Tray.Verify(x => x.UpdateSystemStatus(It.IsAny<string>(), It.IsAny<double>(), It.IsAny<double>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateContextMenuAsync_MarshalsEveryTrayMutationThroughTheDispatcher()
+        {
+            var harness = new Harness();
+            var updater = harness.CreateUpdater(performanceFactory: () => throw new InvalidOperationException("Performance service should not be resolved."));
+            var dispatchedCallCount = 0;
+            var undispatchedTrayCalls = 0;
+            var insideDispatcher = false;
+
+            harness.Tray
+                .Setup(x => x.UpdatePowerPlans(It.IsAny<IEnumerable<PowerPlanModel>>(), It.IsAny<PowerPlanModel?>()))
+                .Callback(() =>
+                {
+                    if (!insideDispatcher)
+                    {
+                        undispatchedTrayCalls++;
+                    }
+                });
+            harness.Tray
+                .Setup(x => x.UpdateProfiles(It.IsAny<IEnumerable<string>>()))
+                .Callback(() =>
+                {
+                    if (!insideDispatcher)
+                    {
+                        undispatchedTrayCalls++;
+                    }
+                });
+            harness.Tray
+                .Setup(x => x.UpdateSystemStatus(It.IsAny<string>()))
+                .Callback(() =>
+                {
+                    if (!insideDispatcher)
+                    {
+                        undispatchedTrayCalls++;
+                    }
+                });
+
+            await updater.UpdateContextMenuAsync(harness.Tray.Object, action =>
+            {
+                dispatchedCallCount++;
+                insideDispatcher = true;
+                try
+                {
+                    action();
+                }
+                finally
+                {
+                    insideDispatcher = false;
+                }
+
+                return Task.CompletedTask;
+            });
+
+            Assert.Equal(0, undispatchedTrayCalls);
+            Assert.Equal(3, dispatchedCallCount);
         }
 
         [Fact]
@@ -41,6 +98,12 @@ namespace ThreadPilot.Core.Tests
 
         private sealed class Harness
         {
+            public static Task PassThroughDispatcher(Action action)
+            {
+                action();
+                return Task.CompletedTask;
+            }
+
             public Mock<ISystemTrayService> Tray { get; } = new(MockBehavior.Strict);
 
             public Mock<IPowerPlanService> PowerPlan { get; } = new(MockBehavior.Strict);

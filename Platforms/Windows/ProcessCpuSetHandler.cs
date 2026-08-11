@@ -14,6 +14,9 @@ namespace ThreadPilot.Platforms.Windows
         private static CpuSetMapping staticCpuSetMapping = CpuSetMapping.Empty;
         private static readonly object staticInitLock = new object();
         private static bool staticInitialized = false;
+        private static long lastCpuSetMappingFailureTicks = -1;
+
+        private static readonly TimeSpan CpuSetMappingRetryInterval = TimeSpan.FromSeconds(30);
 
         private readonly Queue<CpuTimeTimestamp> cpuTimeMovingAverageBuffer = new();
         private readonly string executableName;
@@ -77,19 +80,26 @@ namespace ThreadPilot.Platforms.Windows
                     return staticCpuSetMapping;
                 }
 
+                if (lastCpuSetMappingFailureTicks >= 0 &&
+                    Environment.TickCount64 - lastCpuSetMappingFailureTicks < CpuSetMappingRetryInterval.TotalMilliseconds)
+                {
+                    return CpuSetMapping.Empty;
+                }
+
                 try
                 {
                     staticCpuSetMapping = GetCpuSetMapping(nativeApi);
+                    lastCpuSetMappingFailureTicks = -1;
+
+                    staticInitialized = true;
+                    return staticCpuSetMapping;
                 }
                 catch (Exception)
                 {
-                    // If we can't get CPU Set mapping, CPU Sets won't be available
-                    // The handler will still work but ApplyCpuSetMask will return false
                     staticCpuSetMapping = CpuSetMapping.Empty;
+                    lastCpuSetMappingFailureTicks = Environment.TickCount64;
+                    return CpuSetMapping.Empty;
                 }
-
-                staticInitialized = true;
-                return staticCpuSetMapping;
             }
         }
 

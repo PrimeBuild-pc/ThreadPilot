@@ -53,6 +53,44 @@ namespace ThreadPilot.Core.Tests
             Assert.Contains("Fallback polling started (interval: 12345ms)", messages);
         }
 
+        [Fact]
+        public async Task Dispose_ActuallyStopsMonitoring()
+        {
+            var monitor = CreateMonitor(new ApplicationSettingsModel
+            {
+                EnableWmiMonitoring = false,
+                EnableFallbackPolling = true,
+                FallbackPollingIntervalMs = 60000,
+            });
+
+            await monitor.StartMonitoringAsync();
+            Assert.True(monitor.IsMonitoring);
+            Assert.True(monitor.IsFallbackPollingActive);
+
+            monitor.Dispose();
+
+            Assert.False(monitor.IsMonitoring);
+            Assert.False(monitor.IsFallbackPollingActive);
+        }
+
+        [Fact]
+        public async Task Dispose_IsIdempotent()
+        {
+            var monitor = CreateMonitor(new ApplicationSettingsModel
+            {
+                EnableWmiMonitoring = false,
+                EnableFallbackPolling = true,
+                FallbackPollingIntervalMs = 60000,
+            });
+
+            await monitor.StartMonitoringAsync();
+
+            monitor.Dispose();
+            monitor.Dispose();
+
+            Assert.False(monitor.IsMonitoring);
+        }
+
         private static ProcessMonitorService CreateMonitor(ApplicationSettingsModel settings)
         {
             var processService = new Mock<IProcessService>(MockBehavior.Strict);

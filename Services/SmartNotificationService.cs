@@ -18,13 +18,16 @@ namespace ThreadPilot.Services
         private readonly ConcurrentDictionary<string, DateTime> lastNotificationTimes = new();
         private readonly ConcurrentDictionary<string, List<DateTime>> notificationHistory = new();
         private readonly List<SmartNotification> sentNotifications = new();
+
+        private readonly object historyLock = new();
         private readonly System.Threading.Timer processingTimer;
         private readonly System.Threading.Timer cleanupTimer;
         private readonly SemaphoreSlim processingLock = new(1, 1);
 
         private NotificationPreferences preferences = new();
         private DateTime? doNotDisturbUntil;
-        private bool disposed;
+
+        private volatile bool disposed;
 
         public event EventHandler<SmartNotificationEventArgs>? NotificationSent;
 
@@ -40,6 +43,8 @@ namespace ThreadPilot.Services
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.baseNotificationService = baseNotificationService ?? throw new ArgumentNullException(nameof(baseNotificationService));
+
+            this.preferences = this.CreateDefaultPreferences();
 
             // Set up processing timer (process queue every 2 seconds)
             this.processingTimer = new System.Threading.Timer(this.ProcessQueueCallback, null,
@@ -157,16 +162,19 @@ namespace ThreadPilot.Services
             return await this.SendNotificationAsync(notification);
         }
 
-        public async Task<bool> ScheduleNotificationAsync(SmartNotification notification, DateTime deliveryTime)
+        public Task<bool> ScheduleNotificationAsync(SmartNotification notification, DateTime deliveryTime)
         {
+            ArgumentNullException.ThrowIfNull(notification);
+
             notification.ScheduledFor = deliveryTime;
-            this.scheduledNotifications.TryAdd(notification.Id, notification);
+
+            this.scheduledNotifications[notification.Id] = notification;
 
             this.logger.LogDebug(
                 "Scheduled notification {Id} for delivery at {DeliveryTime}",
                 notification.Id, deliveryTime);
 
-            return true;
+            return Task.FromResult(true);
         }
 
         public async Task<bool> CancelNotificationAsync(string notificationId)
@@ -205,15 +213,21 @@ namespace ThreadPilot.Services
             }
         }
 
-        public async Task ClearHistoryAsync()
+        public Task ClearHistoryAsync()
         {
             lock (this.sentNotifications)
             {
                 this.sentNotifications.Clear();
             }
 
-            this.notificationHistory.Clear();
+            lock (this.historyLock)
+            {
+                this.notificationHistory.Clear();
+            }
+
+            this.lastNotificationTimes.Clear();
             this.logger.LogInformation("Cleared notification history");
+            return Task.CompletedTask;
         }
 
         public async Task UpdatePreferencesAsync(NotificationPreferences preferences)
@@ -260,25 +274,35 @@ namespace ThreadPilot.Services
                 return false;
             }
 
-            if (this.doNotDisturbUntil.HasValue && DateTime.UtcNow > this.doNotDisturbUntil.Value)
+            if (this.doNotDisturbUntil.HasValue)
             {
+                if (DateTime.UtcNow <= this.doNotDisturbUntil.Value)
+                {
+                    return true;
+                }
+
                 this.preferences.DoNotDisturbMode = false;
                 this.doNotDisturbUntil = null;
+                this.DoNotDisturbChanged?.Invoke(this, false);
                 return false;
             }
 
-            // Check time-based DND
-            var now = DateTime.Now.TimeOfDay;
-            if (this.preferences.DoNotDisturbStart < this.preferences.DoNotDisturbEnd)
+            return IsWithinQuietHours(
+                DateTime.Now.TimeOfDay,
+                this.preferences.DoNotDisturbStart,
+                this.preferences.DoNotDisturbEnd);
+        }
+
+        internal static bool IsWithinQuietHours(TimeSpan timeOfDay, TimeSpan start, TimeSpan end)
+        {
+            if (start == end)
             {
-                // Same day range (e.g., 10 PM to 8 AM next day)
-                return now >= this.preferences.DoNotDisturbStart || now <= this.preferences.DoNotDisturbEnd;
+                return false;
             }
-            else
-            {
-                // Cross-midnight range (e.g., 10 PM to 8 AM)
-                return now >= this.preferences.DoNotDisturbStart && now <= this.preferences.DoNotDisturbEnd;
-            }
+
+            return start < end
+                ? timeOfDay >= start && timeOfDay <= end
+                : timeOfDay >= start || timeOfDay <= end;
         }
 
         public async Task<Dictionary<string, object>> GetStatisticsAsync()
@@ -340,7 +364,15 @@ namespace ThreadPilot.Services
                 return;
             }
 
-            await this.processingLock.WaitAsync();
+            try
+            {
+                await this.processingLock.WaitAsync().ConfigureAwait(false);
+            }
+            catch (ObjectDisposedException)
+            {
+                return;
+            }
+
             try
             {
                 var processedCount = 0;
@@ -366,7 +398,13 @@ namespace ThreadPilot.Services
             }
             finally
             {
-                this.processingLock.Release();
+                try
+                {
+                    this.processingLock.Release();
+                }
+                catch (ObjectDisposedException)
+                {
+                }
             }
         }
 
@@ -388,41 +426,33 @@ namespace ThreadPilot.Services
                     notification.Message,
                     this.ConvertToNotificationType(notification.Priority));
 
-                // Assume success since no exception was thrown
-                var success = true;
+                this.RecordNotificationSent(notification);
 
-                if (success)
+                this.NotificationSent?.Invoke(this, new SmartNotificationEventArgs
                 {
-                    // Record successful delivery
-                    this.RecordNotificationSent(notification);
+                    Notification = notification,
+                    Reason = "Successfully delivered",
+                });
 
-                    this.NotificationSent?.Invoke(this, new SmartNotificationEventArgs
-                    {
-                        Notification = notification,
-                        Reason = "Successfully delivered",
-                    });
-
-                    this.logger.LogDebug("Successfully sent notification: {Title}", notification.Title);
-                }
-                else if (notification.RetryCount < notification.MaxRetries)
-                {
-                    // Retry failed notification
-                    notification.RetryCount++;
-                    this.notificationQueue.Enqueue(notification);
-                    this.logger.LogDebug(
-                        "Retrying notification: {Title} (Attempt {Retry}/{Max})",
-                        notification.Title, notification.RetryCount, notification.MaxRetries);
-                }
-                else
-                {
-                    this.logger.LogWarning(
-                        "Failed to send notification after {MaxRetries} attempts: {Title}",
-                        notification.MaxRetries, notification.Title);
-                }
+                this.logger.LogDebug("Successfully sent notification: {Title}", notification.Title);
             }
             catch (Exception ex)
             {
-                this.logger.LogError(ex, "Error processing notification: {Title}", notification.Title);
+                if (notification.RetryCount < notification.MaxRetries)
+                {
+                    notification.RetryCount++;
+                    this.notificationQueue.Enqueue(notification);
+                    this.logger.LogWarning(
+                        ex,
+                        "Retrying notification: {Title} (Attempt {Retry}/{Max})",
+                        notification.Title, notification.RetryCount, notification.MaxRetries);
+                    return;
+                }
+
+                this.logger.LogError(
+                    ex,
+                    "Failed to send notification after {MaxRetries} attempts: {Title}",
+                    notification.MaxRetries, notification.Title);
             }
         }
 
@@ -446,21 +476,20 @@ namespace ThreadPilot.Services
             }
 
             // Check hourly and daily limits
-            if (!this.notificationHistory.TryGetValue(key, out var history))
-            {
-                history = new List<DateTime>();
-                this.notificationHistory[key] = history;
-            }
-
-            // Clean old entries
             var oneHourAgo = now.AddHours(-1);
             var oneDayAgo = now.AddDays(-1);
-            history.RemoveAll(t => t < oneDayAgo);
 
-            var hourlyCount = history.Count(t => t >= oneHourAgo);
-            var dailyCount = history.Count;
+            lock (this.historyLock)
+            {
+                var history = this.notificationHistory.GetOrAdd(key, _ => new List<DateTime>());
 
-            return hourlyCount >= config.MaxPerHour || dailyCount >= config.MaxPerDay;
+                history.RemoveAll(t => t < oneDayAgo);
+
+                var hourlyCount = history.Count(t => t >= oneHourAgo);
+                var dailyCount = history.Count;
+
+                return hourlyCount >= config.MaxPerHour || dailyCount >= config.MaxPerDay;
+            }
         }
 
         private bool IsDuplicate(SmartNotification notification)
@@ -492,12 +521,10 @@ namespace ThreadPilot.Services
 
             this.lastNotificationTimes[key] = now;
 
-            if (!this.notificationHistory.TryGetValue(key, out var history))
+            lock (this.historyLock)
             {
-                history = new List<DateTime>();
-                this.notificationHistory[key] = history;
+                this.notificationHistory.GetOrAdd(key, _ => new List<DateTime>()).Add(now);
             }
-            history.Add(now);
 
             lock (this.sentNotifications)
             {
@@ -573,21 +600,36 @@ namespace ThreadPilot.Services
 
                 // Clean notification history
                 var keysToRemove = new List<string>();
-                foreach (var kvp in this.notificationHistory)
+                lock (this.historyLock)
                 {
-                    kvp.Value.RemoveAll(t => t < cutoff);
-                    if (!kvp.Value.Any())
+                    foreach (var kvp in this.notificationHistory)
                     {
-                        keysToRemove.Add(kvp.Key);
+                        kvp.Value.RemoveAll(t => t < cutoff);
+                        if (kvp.Value.Count == 0)
+                        {
+                            keysToRemove.Add(kvp.Key);
+                        }
+                    }
+
+                    foreach (var key in keysToRemove)
+                    {
+                        this.notificationHistory.TryRemove(key, out _);
                     }
                 }
 
-                foreach (var key in keysToRemove)
+                var staleTimestampKeys = this.lastNotificationTimes
+                    .Where(kvp => kvp.Value < cutoff)
+                    .Select(kvp => kvp.Key)
+                    .ToList();
+                foreach (var key in staleTimestampKeys)
                 {
-                    this.notificationHistory.TryRemove(key, out _);
+                    this.lastNotificationTimes.TryRemove(key, out _);
                 }
 
-                this.logger.LogDebug("Cleaned up notification history, removed {Count} empty entries", keysToRemove.Count);
+                this.logger.LogDebug(
+                    "Cleaned up notification history, removed {Count} empty entries and {TimestampCount} stale timestamps",
+                    keysToRemove.Count,
+                    staleTimestampKeys.Count);
             }
             catch (Exception ex)
             {
@@ -597,16 +639,19 @@ namespace ThreadPilot.Services
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!this.disposed)
+            if (this.disposed)
             {
-                if (disposing)
-                {
-                    this.processingTimer?.Dispose();
-                    this.cleanupTimer?.Dispose();
-                    this.processingLock?.Dispose();
-                    this.logger.LogInformation("SmartNotificationService disposed");
-                }
-                this.disposed = true;
+                return;
+            }
+
+            this.disposed = true;
+
+            if (disposing)
+            {
+                this.processingTimer?.Dispose();
+                this.cleanupTimer?.Dispose();
+                this.processingLock?.Dispose();
+                this.logger.LogInformation("SmartNotificationService disposed");
             }
         }
 

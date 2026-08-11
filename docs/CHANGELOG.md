@@ -2,6 +2,40 @@
 
 All notable changes to this project are documented in this file.
 
+## Unreleased - Reliability, lifecycle and threading hardening
+
+### Fixed
+
+- Saved process rules are no longer lost when the rules file cannot be read. A transient lock from antivirus, backup or a sync client used to pin an empty rule set for the rest of the session, so the next save overwrote every saved rule. A file that cannot be parsed is now preserved alongside the original for recovery.
+- Pending edits in Settings are no longer discarded when something writes settings in the background, such as the startup update check recording its last-check time.
+- Do Not Disturb now suppresses notifications during the configured quiet hours. The overnight comparison was inverted, so the default 22:00-08:00 window never suppressed anything while a daytime window suppressed everything. Turning Do Not Disturb on explicitly now takes effect regardless of the schedule, and the timed window raises its change notification when it expires.
+- Default keyboard shortcuts are applied on a fresh installation. The fallback only ran when the stored shortcut list was null, which never happens, so no global hotkeys were registered.
+- Closing the main window can no longer leave the window permanently unclosable when saving settings fails during shutdown.
+- The last few seconds of diagnostics before exit are no longer lost. Application shutdown now releases the service container, which is what flushes buffered log entries and stops the WMI watchers and native performance counters.
+- Stopping process monitoring during shutdown now actually stops it; disposal previously short-circuited itself and left the WMI watchers and the polling timer running.
+- The tray Power Plans submenu now shows the active plan after a plan change instead of keeping the checkmark on whichever plan was active at startup.
+- Per-core CPU readings work on systems with more than 64 logical processors by using the group-aware performance counter category, and a single unavailable core instance no longer clears the whole per-core view.
+- Autostart no longer removes the existing startup entry before confirming the replacement was created, and updating autostart settings no longer disables it first.
+- Notification delivery failures now retry as intended instead of being dropped.
+
+### Changed
+
+- Tray menu, tray tooltip and monitoring-status updates are marshalled to the UI thread. These are Windows Forms controls that were previously mutated from WMI and timer threads.
+- Throttling, notification history, performance history and CPU counter state are guarded against concurrent access.
+- View models owned by the main window are released on close, including the power plan refresh timer and subscriptions to long-lived services.
+- Debug-logging state is cached instead of deep-cloning the settings model on every structured log call.
+- A failed CPU Set topology probe is retried after a short delay instead of disabling CPU Sets for the rest of the session.
+
+### Safety
+
+- No change to the elevation model, the administrator-required manifest, the protected-process denylist, the Realtime priority block or the High priority warning.
+- No change to how affinity, priority or memory priority are applied; the affinity apply pipeline and its fallback order are untouched.
+- Power plan behaviour is unchanged. The tray now listens to the existing power-plan-changed notification rather than polling, so no additional `powercfg` calls are introduced.
+
+### Notes
+
+- Windows Management Instrumentation recovery still depends on fallback polling being enabled, which remains the default.
+
 ## v1.5.2 - Process monitoring configuration
 
 ### Fixed

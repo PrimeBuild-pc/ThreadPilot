@@ -194,6 +194,27 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void MonitoringDisabledOverlay_CoversProcessControlsWithSinglePrimaryMessage()
+        {
+            var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);
+            var overlay = Assert.Single(
+                document.Descendants(),
+                element => element.Attributes().Any(attribute =>
+                    attribute.Name.LocalName == "Name" &&
+                    attribute.Value == "MonitoringDisabledOverlay"));
+            var serialized = overlay.ToString(SaveOptions.DisableFormatting);
+
+            Assert.Equal("Border", overlay.Name.LocalName);
+            Assert.Contains("Grid.RowSpan=\"3\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Panel.ZIndex=\"10\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Background=\"{DynamicResource SurfaceMutedBrush}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Foreground=\"{DynamicResource TextPrimaryBrush}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("InverseBoolToVisibilityConverter", serialized, StringComparison.Ordinal);
+            Assert.Single(overlay.Descendants(), element => element.Name.LocalName == "TextBlock");
+            Assert.DoesNotContain("ProcessView_MonitoringDisabledDescription", serialized, StringComparison.Ordinal);
+        }
+
+        [Fact]
         public void MasksView_SelectedCpuTilesUseSubtleMaskSelectionResources()
         {
             var masksViewPath = Path.Combine(

@@ -53,6 +53,14 @@ namespace ThreadPilot.Services
                     return false;
                 }
 
+                if (this.windowHandle == IntPtr.Zero)
+                {
+                    this.logger.LogWarning(
+                        "Skipped registering shortcut for action {Action} because no window handle is available yet",
+                        actionName);
+                    return false;
+                }
+
                 // Check if shortcut is already registered
                 if (await this.IsShortcutRegisteredAsync(key, modifiers))
                 {
@@ -106,7 +114,10 @@ namespace ThreadPilot.Services
             }
         }
 
-        public async Task<bool> UnregisterShortcutAsync(string actionName)
+        public Task<bool> UnregisterShortcutAsync(string actionName) =>
+            Task.FromResult(this.UnregisterShortcut(actionName));
+
+        private bool UnregisterShortcut(string actionName)
         {
             try
             {
@@ -123,23 +134,23 @@ namespace ThreadPilot.Services
                 }
 
                 // Unregister from Windows API
-                if (UnregisterHotKey(this.windowHandle, hotkeyId))
-                {
-                    this.registeredShortcuts.Remove(actionName);
-                    this.hotkeyIdToAction.Remove(hotkeyId);
+                var unregistered = UnregisterHotKey(this.windowHandle, hotkeyId);
 
+                this.registeredShortcuts.Remove(actionName);
+                this.hotkeyIdToAction.Remove(hotkeyId);
+
+                if (unregistered)
+                {
                     this.logger.LogInformation(
                         "Unregistered shortcut {Shortcut} for action {Action}",
                         shortcut.ToString(), actionName);
                     return true;
                 }
-                else
-                {
-                    this.logger.LogError(
-                        "Failed to unregister shortcut {Shortcut} for action {Action}",
-                        shortcut.ToString(), actionName);
-                    return false;
-                }
+
+                this.logger.LogError(
+                    "Failed to unregister shortcut {Shortcut} for action {Action}",
+                    shortcut.ToString(), actionName);
+                return false;
             }
             catch (Exception ex)
             {
@@ -169,10 +180,11 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var settings = this.settingsService.Settings;
-                if (settings.KeyboardShortcuts != null)
+                var configuredShortcuts = this.settingsService.Settings.KeyboardShortcuts;
+
+                if (configuredShortcuts != null && configuredShortcuts.Count > 0)
                 {
-                    foreach (var shortcutSetting in settings.KeyboardShortcuts)
+                    foreach (var shortcutSetting in configuredShortcuts)
                     {
                         if (shortcutSetting.IsEnabled)
                         {
@@ -210,12 +222,17 @@ namespace ThreadPilot.Services
             }
         }
 
-        public async Task ClearAllShortcutsAsync()
+        public Task ClearAllShortcutsAsync()
         {
-            var actions = this.registeredShortcuts.Keys.ToList();
-            foreach (var action in actions)
+            this.ClearAllShortcuts();
+            return Task.CompletedTask;
+        }
+
+        private void ClearAllShortcuts()
+        {
+            foreach (var action in this.registeredShortcuts.Keys.ToList())
             {
-                await this.UnregisterShortcutAsync(action);
+                this.UnregisterShortcut(action);
             }
         }
 
@@ -264,6 +281,17 @@ namespace ThreadPilot.Services
 
         public void SetWindowHandle(IntPtr windowHandle)
         {
+            if (this.windowHandle == windowHandle && this.hwndSource != null)
+            {
+                return;
+            }
+
+            if (this.hwndSource != null)
+            {
+                this.hwndSource.RemoveHook(this.WndProc);
+                this.hwndSource = null;
+            }
+
             this.windowHandle = windowHandle;
 
             // Set up message hook for hotkey messages
@@ -350,17 +378,19 @@ namespace ThreadPilot.Services
 
         public void Dispose()
         {
-            if (!this.disposed)
+            if (this.disposed)
             {
-                this.ClearAllShortcutsAsync().Wait();
+                return;
+            }
 
-                if (this.hwndSource != null)
-                {
-                    this.hwndSource.RemoveHook(this.WndProc);
-                    this.hwndSource = null;
-                }
+            this.disposed = true;
 
-                this.disposed = true;
+            this.ClearAllShortcuts();
+
+            if (this.hwndSource != null)
+            {
+                this.hwndSource.RemoveHook(this.WndProc);
+                this.hwndSource = null;
             }
         }
     }

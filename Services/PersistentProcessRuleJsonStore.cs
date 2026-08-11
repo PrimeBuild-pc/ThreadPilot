@@ -16,9 +16,12 @@ namespace ThreadPilot.Services
         };
 
         private readonly Func<string> filePathProvider;
+        private readonly Action<string, string> copyFile;
         private readonly ILogger<PersistentProcessRuleJsonStore>? logger;
         private readonly SemaphoreSlim cacheLock = new(1, 1);
         private volatile IReadOnlyList<PersistentProcessRule>? cachedRules;
+        private bool loadFailed;
+        private bool preservationRequired;
 
         public PersistentProcessRuleJsonStore(ILogger<PersistentProcessRuleJsonStore>? logger = null)
             : this(() => StoragePaths.PersistentRulesFilePath, logger)
@@ -27,10 +30,12 @@ namespace ThreadPilot.Services
 
         internal PersistentProcessRuleJsonStore(
             Func<string> filePathProvider,
-            ILogger<PersistentProcessRuleJsonStore>? logger = null)
+            ILogger<PersistentProcessRuleJsonStore>? logger = null,
+            Action<string, string>? copyFile = null)
         {
             this.filePathProvider = filePathProvider ?? throw new ArgumentNullException(nameof(filePathProvider));
             this.logger = logger;
+            this.copyFile = copyFile ?? ((source, destination) => File.Copy(source, destination, overwrite: false));
         }
 
         public async Task<IReadOnlyList<PersistentProcessRule>> LoadAsync()
@@ -53,6 +58,8 @@ namespace ThreadPilot.Services
                 if (!File.Exists(filePath))
                 {
                     this.logger?.LogDebug("Persistent process rules file does not exist at {FilePath}", filePath);
+                    this.loadFailed = false;
+                    this.preservationRequired = false;
                     return this.cachedRules = [];
                 }
 
@@ -61,12 +68,16 @@ namespace ThreadPilot.Services
                     var json = await File.ReadAllTextAsync(filePath).ConfigureAwait(false);
                     var rules = JsonSerializer.Deserialize<List<PersistentProcessRule>>(json, JsonOptions) ?? [];
                     this.logger?.LogDebug("Loaded {RuleCount} persistent process rules from {FilePath}", rules.Count, filePath);
+                    this.loadFailed = false;
+                    this.preservationRequired = false;
                     return this.cachedRules = rules.ToArray();
                 }
                 catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
                 {
-                    this.logger?.LogWarning(ex, "Could not load persistent process rules from {FilePath}", filePath);
-                    return this.cachedRules = [];
+                    this.loadFailed = true;
+                    this.preservationRequired = !this.TryPreserveUnreadableFile(filePath, ex);
+                    this.logger?.LogWarning(ex, "Could not load persistent process rules from {FilePath}. The rule set will be re-read on the next access.", filePath);
+                    return [];
                 }
             }
             finally
@@ -84,11 +95,30 @@ namespace ThreadPilot.Services
             {
                 var filePath = this.filePathProvider();
                 this.logger?.LogDebug("Saving {RuleCount} persistent process rules to {FilePath}", rules.Count, filePath);
+                if (this.preservationRequired && File.Exists(filePath))
+                {
+                    if (!this.TryPreserveUnreadableFile(filePath, null))
+                    {
+                        throw new IOException($"Cannot save persistent process rules because the existing file could not be preserved: {filePath}");
+                    }
+
+                    this.preservationRequired = false;
+                }
+
+                if (this.loadFailed)
+                {
+                    this.logger?.LogWarning(
+                        "Saving {RuleCount} persistent process rules to {FilePath} after a failed read. A copy of the previous file was preserved next to it.",
+                        rules.Count,
+                        filePath);
+                }
+
                 try
                 {
                     var json = JsonSerializer.Serialize(rules, JsonOptions);
                     await AtomicFileWriter.WriteAllTextAsync(filePath, json).ConfigureAwait(false);
                     this.cachedRules = rules.ToArray();
+                    this.loadFailed = false;
                     this.logger?.LogDebug("Saved {RuleCount} persistent process rules to {FilePath}", rules.Count, filePath);
                 }
                 catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
@@ -100,6 +130,26 @@ namespace ThreadPilot.Services
             finally
             {
                 this.cacheLock.Release();
+            }
+        }
+
+        private bool TryPreserveUnreadableFile(string filePath, Exception? readException)
+        {
+            var backupPath = $"{filePath}.unreadable.{DateTime.UtcNow:yyyyMMddHHmmssfff}.{Guid.NewGuid():N}";
+
+            try
+            {
+                this.copyFile(filePath, backupPath);
+                this.logger?.LogWarning(
+                    readException,
+                    "Preserved unreadable persistent process rules file as {BackupPath}",
+                    backupPath);
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                this.logger?.LogDebug(ex, "Could not preserve unreadable persistent process rules file {FilePath}", filePath);
+                return false;
             }
         }
     }
