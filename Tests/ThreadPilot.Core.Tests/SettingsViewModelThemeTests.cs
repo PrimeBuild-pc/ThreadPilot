@@ -153,6 +153,28 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task SaveSettingsCommand_MergesPendingEditWithExternalUpdate()
+        {
+            var harness = new Harness();
+            ApplicationSettingsModel? savedSettings = null;
+            harness.SettingsService
+                .Setup(service => service.UpdateSettingsAsync(It.IsAny<ApplicationSettingsModel>()))
+                .Callback<ApplicationSettingsModel>(settings => savedSettings = (ApplicationSettingsModel)settings.Clone())
+                .Returns(Task.CompletedTask);
+            var viewModel = harness.CreateViewModel();
+            viewModel.Settings.Language = "it-IT";
+            var externalUpdate = (ApplicationSettingsModel)harness.PersistedSettings.Clone();
+            externalUpdate.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
+
+            viewModel.ApplyPersistedSettings(externalUpdate);
+            await ((IAsyncRelayCommand)viewModel.SaveSettingsCommand).ExecuteAsync(null);
+
+            Assert.NotNull(savedSettings);
+            Assert.Equal("it-IT", savedSettings.Language);
+            Assert.Equal(externalUpdate.LastUpdateCheckUtc, savedSettings.LastUpdateCheckUtc);
+        }
+
+        [Fact]
         public async Task NavigationPrompt_SavePersistsPendingSettingsBeforeNavigating()
         {
             var harness = new Harness();
@@ -245,6 +267,8 @@ namespace ThreadPilot.Core.Tests
             public Mock<IEnhancedLoggingService> Logging { get; } = new(MockBehavior.Loose);
 
             public ActivityAuditService Audit { get; } = new(NullLogger<ActivityAuditService>.Instance);
+
+            public ApplicationSettingsModel PersistedSettings => this.settings;
 
             public Harness(bool initialDarkTheme = false)
             {

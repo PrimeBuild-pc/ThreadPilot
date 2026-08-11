@@ -21,7 +21,7 @@ namespace ThreadPilot.Services
         private readonly object counterInitializationLock = new();
         private PerformanceCounter? totalCpuCounter;
         private PerformanceCounter? memoryCounter;
-        private readonly List<PerformanceCounter> cpuCoreCounters;
+        private readonly List<(int LogicalProcessorIndex, PerformanceCounter Counter)> cpuCoreCounters;
         private System.Threading.Timer? monitoringTimer;
         private readonly object totalMemoryCacheLock = new();
         private readonly TimeSpan totalPhysicalMemoryCacheDuration = TimeSpan.FromMinutes(5);
@@ -35,6 +35,7 @@ namespace ThreadPilot.Services
         private readonly object historicalDataLock = new();
         private int isMonitoringTickInProgress;
         private int monitoringStartedFlag;
+        private int monitoringGeneration;
         private bool runtimeTelemetryInitialized;
         private int previousGen0Collections;
         private int previousGen1Collections;
@@ -69,7 +70,7 @@ namespace ThreadPilot.Services
             this.settingsService = settingsService;
             this.enhancedLoggingService = enhancedLoggingService;
             this.historicalData = new Queue<SystemPerformanceMetrics>(HistoricalDataCapacity);
-            this.cpuCoreCounters = new List<PerformanceCounter>();
+            this.cpuCoreCounters = new List<(int LogicalProcessorIndex, PerformanceCounter Counter)>();
         }
 
         public async Task<SystemPerformanceMetrics> GetSystemMetricsAsync(bool lightweight = false)
@@ -134,29 +135,15 @@ namespace ThreadPilot.Services
                 this.EnsureCpuCoreCountersInitialized();
                 var topology = await this.cpuTopologyService.DetectTopologyAsync().ConfigureAwait(false);
 
-                PerformanceCounter[] counters;
+                (int LogicalProcessorIndex, PerformanceCounter Counter)[] counters;
                 lock (this.counterInitializationLock)
                 {
                     counters = this.cpuCoreCounters.ToArray();
                 }
 
-                for (int i = 0; i < counters.Length; i++)
-                {
-                    var counter = counters[i];
-                    var usage = counter.NextValue();
-
-                    var coreUsage = new CpuCoreUsage
-                    {
-                        CoreId = i,
-                        CoreName = $"Core {i}",
-                        Usage = usage,
-                        CoreType = DetermineCoreType(i, topology),
-                        IsHyperThreaded = IsHyperThreadedCore(i, topology),
-                        PhysicalCoreId = GetPhysicalCoreId(i, topology),
-                    };
-
-                    coreUsages.Add(coreUsage);
-                }
+                coreUsages.AddRange(BuildCpuCoreUsages(
+                    counters.Select(counter => (counter.LogicalProcessorIndex, (double)counter.Counter.NextValue())),
+                    topology));
             }
             catch (Exception ex)
             {
@@ -165,6 +152,19 @@ namespace ThreadPilot.Services
 
             return coreUsages;
         }
+
+        internal static List<CpuCoreUsage> BuildCpuCoreUsages(
+            IEnumerable<(int LogicalProcessorIndex, double Usage)> samples,
+            CpuTopologyModel? topology) =>
+            samples.Select(sample => new CpuCoreUsage
+            {
+                CoreId = sample.LogicalProcessorIndex,
+                CoreName = $"Core {sample.LogicalProcessorIndex}",
+                Usage = sample.Usage,
+                CoreType = DetermineCoreType(sample.LogicalProcessorIndex, topology),
+                IsHyperThreaded = IsHyperThreadedCore(sample.LogicalProcessorIndex, topology),
+                PhysicalCoreId = GetPhysicalCoreId(sample.LogicalProcessorIndex, topology),
+            }).ToList();
 
         public async Task<MemoryUsageInfo> GetMemoryUsageAsync()
         {
@@ -292,12 +292,17 @@ namespace ThreadPilot.Services
 
             this.logger.LogInformation("Starting performance monitoring");
             this.isMonitoring = true;
-            Interlocked.Exchange(ref this.isMonitoringTickInProgress, 0);
+            var generation = Interlocked.Increment(ref this.monitoringGeneration);
 
             // PERFORMANCE OPTIMIZATION: Increased interval from 1s to 2s for better performance
             this.monitoringTimer = new System.Threading.Timer(
                 async _ =>
             {
+                if (generation != Volatile.Read(ref this.monitoringGeneration))
+                {
+                    return;
+                }
+
                 if (Interlocked.Exchange(ref this.isMonitoringTickInProgress, 1) == 1)
                 {
                     return;
@@ -305,14 +310,17 @@ namespace ThreadPilot.Services
 
                 try
                 {
-                    if (this.disposed || !this.isMonitoring)
+                    if (this.disposed || !this.isMonitoring || generation != Volatile.Read(ref this.monitoringGeneration))
                     {
                         return;
                     }
 
                     var metrics = await this.GetSystemMetricsAsync().ConfigureAwait(false);
                     await this.EmitGcDiagnosticsIfNeededAsync(metrics).ConfigureAwait(false);
-                    this.MetricsUpdated?.Invoke(this, new PerformanceMetricsUpdatedEventArgs(metrics));
+                    if (generation == Volatile.Read(ref this.monitoringGeneration))
+                    {
+                        this.MetricsUpdated?.Invoke(this, new PerformanceMetricsUpdatedEventArgs(metrics));
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -336,7 +344,7 @@ namespace ThreadPilot.Services
 
             this.logger.LogInformation("Stopping performance monitoring");
             this.isMonitoring = false;
-            Interlocked.Exchange(ref this.isMonitoringTickInProgress, 0);
+            Interlocked.Increment(ref this.monitoringGeneration);
 
             this.monitoringTimer?.Dispose();
             this.monitoringTimer = null;
@@ -367,7 +375,7 @@ namespace ThreadPilot.Services
 
         private void InitializeCpuCoreCounters()
         {
-            var tempCounters = new List<PerformanceCounter>();
+            var tempCounters = new List<(int LogicalProcessorIndex, PerformanceCounter Counter)>();
 
             try
             {
@@ -387,7 +395,7 @@ namespace ThreadPilot.Services
 
                     try
                     {
-                        tempCounters.Add(this.CreatePrimedCounter(categoryName, "% Processor Time", instanceName));
+                        tempCounters.Add((i, this.CreatePrimedCounter(categoryName, "% Processor Time", instanceName)));
                     }
                     catch (Exception ex) when (ex is InvalidOperationException or UnauthorizedAccessException)
                     {
@@ -421,7 +429,7 @@ namespace ThreadPilot.Services
                 {
                     try
                     {
-                        counter.Dispose();
+                        counter.Counter.Dispose();
                     }
                     catch
                     {
@@ -792,10 +800,10 @@ namespace ThreadPilot.Services
             this.disposed = true;
             this.isMonitoring = false;
             Interlocked.Exchange(ref this.monitoringStartedFlag, 0);
+            Interlocked.Increment(ref this.monitoringGeneration);
 
             this.monitoringTimer?.Dispose();
             this.monitoringTimer = null;
-            Interlocked.Exchange(ref this.isMonitoringTickInProgress, 0);
 
             lock (this.counterInitializationLock)
             {
@@ -806,7 +814,7 @@ namespace ThreadPilot.Services
 
                 foreach (var counter in this.cpuCoreCounters)
                 {
-                    counter?.Dispose();
+                    counter.Counter.Dispose();
                 }
 
                 this.cpuCoreCounters.Clear();

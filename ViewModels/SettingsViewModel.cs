@@ -8,6 +8,7 @@ namespace ThreadPilot.ViewModels
     using System.Reflection;
     using System.Text;
     using System.Text.Json;
+    using System.Text.Json.Nodes;
     using System.Threading.Tasks;
     using System.Windows;
     using System.Windows.Input;
@@ -621,36 +622,60 @@ namespace ThreadPilot.ViewModels
         private void OnSettingsServiceSettingsChanged(object? sender, ApplicationSettingsChangedEventArgs e)
         {
             // Marshal to UI thread to avoid cross-thread property change issues
-            System.Windows.Application.Current?.Dispatcher.InvokeAsync(() =>
+            System.Windows.Application.Current?.Dispatcher.InvokeAsync(() => this.ApplyPersistedSettings(e.NewSettings));
+        }
+
+        internal void ApplyPersistedSettings(ApplicationSettingsModel newSettings)
+        {
+            this.isSyncingFromService = true;
+            try
             {
-                this.isSyncingFromService = true;
-                try
+                var persistedSettings = (ApplicationSettingsModel)newSettings.Clone();
+                if (!string.IsNullOrWhiteSpace(this.cachedDefaultPowerPlanGuid))
                 {
-                    var persistedSettings = (ApplicationSettingsModel)e.NewSettings.Clone();
-                    if (!string.IsNullOrWhiteSpace(this.cachedDefaultPowerPlanGuid))
-                    {
-                        persistedSettings.DefaultPowerPlanId = this.cachedDefaultPowerPlanGuid;
-                        persistedSettings.DefaultPowerPlanName = this.cachedDefaultPowerPlanName;
-                    }
-
-                    if (this.HasUnsavedChanges)
-                    {
-                        this.savedSettingsSnapshot = persistedSettings;
-                        this.UpdatePendingChangesState();
-                        this.Logger.LogDebug("Settings changed externally while edits were pending; kept the pending edits and re-based the saved snapshot");
-                        return;
-                    }
-
-                    this.Settings.CopyFrom(persistedSettings);
-                    this.SetSavedSettingsSnapshot(this.Settings);
-                    this.ApplyLanguagePreference(this.Settings.Language, logUserAction: false);
-                    this.StatusMessage = this.GetLocalizedString("Settings_StatusSynchronized", "Settings synchronized");
+                    persistedSettings.DefaultPowerPlanId = this.cachedDefaultPowerPlanGuid;
+                    persistedSettings.DefaultPowerPlanName = this.cachedDefaultPowerPlanName;
                 }
-                finally
+
+                if (this.HasUnsavedChanges)
                 {
-                    this.isSyncingFromService = false;
+                    var mergedSettings = MergeSettings(this.savedSettingsSnapshot, this.Settings, persistedSettings);
+                    this.Settings.CopyFrom(mergedSettings);
+                    this.savedSettingsSnapshot = persistedSettings;
+                    this.UpdatePendingChangesState();
+                    this.Logger.LogDebug("Settings changed externally while edits were pending; kept the pending edits and re-based the saved snapshot");
+                    return;
                 }
-            });
+
+                this.Settings.CopyFrom(persistedSettings);
+                this.SetSavedSettingsSnapshot(this.Settings);
+                this.ApplyLanguagePreference(this.Settings.Language, logUserAction: false);
+                this.StatusMessage = this.GetLocalizedString("Settings_StatusSynchronized", "Settings synchronized");
+            }
+            finally
+            {
+                this.isSyncingFromService = false;
+            }
+        }
+
+        internal static ApplicationSettingsModel MergeSettings(
+            ApplicationSettingsModel previousPersisted,
+            ApplicationSettingsModel locallyEdited,
+            ApplicationSettingsModel newlyPersisted)
+        {
+            var previousJson = JsonSerializer.SerializeToNode(previousPersisted)!.AsObject();
+            var localJson = JsonSerializer.SerializeToNode(locallyEdited)!.AsObject();
+            var mergedJson = JsonSerializer.SerializeToNode(newlyPersisted)!.AsObject();
+
+            foreach (var property in localJson)
+            {
+                if (!JsonNode.DeepEquals(property.Value, previousJson[property.Key]))
+                {
+                    mergedJson[property.Key] = property.Value?.DeepClone();
+                }
+            }
+
+            return mergedJson.Deserialize<ApplicationSettingsModel>()!;
         }
 
         protected override void OnDispose()

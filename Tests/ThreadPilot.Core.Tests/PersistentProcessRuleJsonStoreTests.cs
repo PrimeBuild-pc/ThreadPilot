@@ -262,9 +262,94 @@ namespace ThreadPilot.Core.Tests
             {
                 Assert.Empty(await store.LoadAsync());
 
-                var backupPath = filePath + ".unreadable";
-                Assert.True(File.Exists(backupPath));
+                var backupPath = Assert.Single(Directory.GetFiles(Path.GetDirectoryName(filePath)!, "rules.json.unreadable*"));
                 Assert.Equal(OriginalContent, await File.ReadAllTextAsync(backupPath));
+            }
+            finally
+            {
+                DeleteFile(filePath);
+            }
+        }
+
+        [Fact]
+        public async Task SaveAsync_WhenUnreadableFileCannotBePreserved_DoesNotOverwriteOriginal()
+        {
+            var filePath = CreateTemporaryFilePath();
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+            const string OriginalContent = "{ locked user rules";
+            await File.WriteAllTextAsync(filePath, OriginalContent);
+            var store = new PersistentProcessRuleJsonStore(
+                () => filePath,
+                copyFile: (_, _) => throw new IOException("Recovery destination unavailable"));
+
+            try
+            {
+                Assert.Empty(await store.LoadAsync());
+
+                await Assert.ThrowsAsync<IOException>(() =>
+                    store.SaveAsync([CreateRule("replacement", "Replacement.exe", ProcessPriorityClass.High)]));
+                Assert.Equal(OriginalContent, await File.ReadAllTextAsync(filePath));
+            }
+            finally
+            {
+                DeleteFile(filePath);
+            }
+        }
+
+        [Fact]
+        public async Task LoadAsync_WithExistingRecoveryFile_CreatesANewRecoveryCopy()
+        {
+            var filePath = CreateTemporaryFilePath();
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+            const string CurrentContent = "{ current user rules";
+            await File.WriteAllTextAsync(filePath, CurrentContent);
+            await File.WriteAllTextAsync(filePath + ".unreadable", "stale recovery");
+            var store = new PersistentProcessRuleJsonStore(() => filePath);
+
+            try
+            {
+                Assert.Empty(await store.LoadAsync());
+
+                var recoveryFiles = Directory.GetFiles(Path.GetDirectoryName(filePath)!, "rules.json.unreadable*");
+                Assert.Equal(2, recoveryFiles.Length);
+                Assert.Contains(recoveryFiles, path => File.ReadAllText(path) == CurrentContent);
+            }
+            finally
+            {
+                DeleteFile(filePath);
+            }
+        }
+
+        [Fact]
+        public async Task SaveAsync_RetriesRecoveryAfterTransientCopyFailure()
+        {
+            var filePath = CreateTemporaryFilePath();
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+            const string OriginalContent = "{ temporarily locked user rules";
+            await File.WriteAllTextAsync(filePath, OriginalContent);
+            var copyAttempts = 0;
+            var store = new PersistentProcessRuleJsonStore(
+                () => filePath,
+                copyFile: (source, destination) =>
+                {
+                    if (Interlocked.Increment(ref copyAttempts) == 1)
+                    {
+                        throw new IOException("Transient copy failure");
+                    }
+
+                    File.Copy(source, destination);
+                });
+
+            try
+            {
+                Assert.Empty(await store.LoadAsync());
+
+                await store.SaveAsync([CreateRule("replacement", "Replacement.exe", ProcessPriorityClass.High)]);
+
+                Assert.Equal(2, copyAttempts);
+                Assert.Contains(
+                    Directory.GetFiles(Path.GetDirectoryName(filePath)!, "rules.json.unreadable*"),
+                    path => File.ReadAllText(path) == OriginalContent);
             }
             finally
             {
