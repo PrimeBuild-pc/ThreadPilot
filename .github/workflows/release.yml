@@ -66,13 +66,6 @@ jobs:
       - name: Publish self-contained single-file
         run: dotnet publish "ThreadPilot.csproj" --configuration Release -p:PublishProfile=WinX64-SingleFile
 
-      - name: Ensure bundled power plans in single-file output
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          New-Item -ItemType Directory -Force -Path "artifacts/release/singlefile/Powerplans" | Out-Null
-          Copy-Item "assets/Powerplans/*" -Destination "artifacts/release/singlefile/Powerplans" -Recurse -Force
-
       - name: Publish ReadyToRun
         run: dotnet publish "ThreadPilot.csproj" --configuration Release -p:PublishProfile=WinX64-ReadyToRun
 
@@ -158,6 +151,7 @@ jobs:
           taskkill /IM "ThreadPilot.exe" /F >nul 2>&1
 
           echo [2/4] Removing startup task and startup registry entry...
+          schtasks /Delete /TN "ThreadPilot_Launch" /F >nul 2>&1
           schtasks /Delete /TN "ThreadPilot_Startup" /F >nul 2>&1
           reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "ThreadPilot" /f >nul 2>&1
 

@@ -172,6 +172,8 @@
     <sys:String x:Key="PowerPlanView_ImportSelectedTooltip">Importe el archivo .pow personalizado seleccionado a Windows</sys:String>
     <sys:String x:Key="PowerPlanView_AddFile">Agregar archivo .pow</sys:String>
     <sys:String x:Key="PowerPlanView_AddFileTooltip">Agregue un nuevo archivo de plan de energía personalizado a la biblioteca personalizada</sys:String>
+    <sys:String x:Key="PowerPlanView_MorePlans">¿Más planes?</sys:String>
+    <sys:String x:Key="PowerPlanView_MorePlansTooltip">Descubre más planes de energía de la comunidad en Discord.</sys:String>
     <sys:String x:Key="PowerPlanView_Delete">Eliminar</sys:String>
     <sys:String x:Key="PowerPlanView_Active">Activo</sys:String>
 
@@ -278,8 +280,8 @@
     <sys:String x:Key="ProcessView_RealtimeBlockedHelp">La prioridad en tiempo real está bloqueada por ThreadPilot porque puede hacer que Windows sea inestable o no responda.</sys:String>
     <sys:String x:Key="ProcessView_RealtimeBlocked">Tiempo real (bloqueado)</sys:String>
 
-    <sys:String x:Key="ProcessView_DisableIdleServer">Deshabilitar el servidor inactivo</sys:String>
-    <sys:String x:Key="ProcessView_DisableIdleServerTooltip">Evita que el sistema entre en estado inactivo mientras se ejecuta este proceso. Útil para juegos y aplicaciones críticas para el rendimiento.</sys:String>
+    <sys:String x:Key="ProcessView_DisableIdleServer">Evitar suspensión durante el proceso</sys:String>
+    <sys:String x:Key="ProcessView_DisableIdleServerTooltip">Mantiene el sistema activo mientras se ejecuta el proceso. La pantalla puede apagarse y no se bloquea una suspensión explícita.</sys:String>
 
     <sys:String x:Key="ProcessView_ProfileRule">Perfil / Regla</sys:String>
     <sys:String x:Key="ProcessView_ProfileNamePlaceholder">Ingrese un nombre de perfil para guardar o cargar la configuración</sys:String>
@@ -365,6 +367,9 @@
     <sys:String x:Key="ProcessView_Rules">Reglas</sys:String>
     <sys:String x:Key="ProcessView_Name">Nombre</sys:String>
     <sys:String x:Key="ProcessView_SetMemoryPriority">Establecer prioridad de memoria</sys:String>
+    <sys:String x:Key="ProcessView_SetIoPriority">Establecer prioridad de E/S</sys:String>
+    <sys:String x:Key="ProcessSummary_IoPriorityUnavailable">Prioridad de E/S no disponible</sys:String>
+    <sys:String x:Key="ProcessSummary_IoPriorityFormat">Prioridad de E/S: {0}</sys:String>
     <sys:String x:Key="ProcessView_PriorityVeryLow">Muy bajo</sys:String>
     <sys:String x:Key="ProcessView_PriorityMedium">Medio</sys:String>
     <sys:String x:Key="ProcessView_RefreshInfo">Actualizar información del proceso</sys:String>
@@ -437,6 +442,11 @@
     <sys:String x:Key="SettingsView_DebugLogging">Habilitar el registro de depuración</sys:String>
     <sys:String x:Key="SettingsView_PerformanceCounters">Habilitar contadores de rendimiento</sys:String>
 
+    <sys:String x:Key="SettingsView_SomethingWrong">¿Algo no funciona?</sys:String>
+    <sys:String x:Key="SettingsView_DiscordDescription">Únete a la comunidad de ThreadPilot en Discord para obtener ayuda y conversar.</sys:String>
+    <sys:String x:Key="SettingsView_OpenDiscord">Abrir Discord</sys:String>
+    <sys:String x:Key="SettingsView_IssuesDescription">Informa de errores o comportamientos inesperados mediante GitHub Issues.</sys:String>
+    <sys:String x:Key="SettingsView_ReportIssue">Informar de un problema</sys:String>
     <sys:String x:Key="SettingsView_About">Acerca de</sys:String>
     <sys:String x:Key="SettingsView_Version">Versión:</sys:String>
     <sys:String x:Key="SettingsView_Copyright">Copyright © 2026 PrimeBuild</sys:String>
@@ -547,6 +557,28 @@
     <sys:String x:Key="SystemTweak_HighSchedulingCategory_Desc">Alta prioridad de programación para aplicaciones de juegos</sys:String>
     <sys:String x:Key="SystemTweak_MenuShowDelay_Name">Menú Mostrar retraso</sys:String>
     <sys:String x:Key="SystemTweak_MenuShowDelay_Desc">Retraso antes de mostrar menús contextuales</sys:String>
+    <sys:String x:Key="SystemTweak_GameMode_Name">Modo de juego</sys:String>
+    <sys:String x:Key="SystemTweak_GameMode_Desc">Optimizaciones de programación del Modo de juego de Windows</sys:String>
+    <sys:String x:Key="SystemTweak_MemoryIntegrity_Name">Integridad de memoria (HVCI)</sys:String>
+    <sys:String x:Key="SystemTweak_MemoryIntegrity_Desc">Abre Seguridad de Windows. Desactivarla reduce la seguridad y puede requerir reiniciar.</sys:String>
+    <sys:String x:Key="SystemTweak_Hags_Name">Programación de GPU acelerada por hardware</sys:String>
+    <sys:String x:Key="SystemTweak_Hags_Desc">Abre la configuración gráfica de Windows para revisar HAGS.</sys:String>
+    <sys:String x:Key="SystemTweak_WindowedOptimizations_Name">Optimizaciones para juegos en ventana</sys:String>
+    <sys:String x:Key="SystemTweak_WindowedOptimizations_Desc">Abre la configuración gráfica de Windows para administrar Flip Model.</sys:String>
+    <sys:String x:Key="SystemTweak_UsbSelectiveSuspend_Name">Suspensión selectiva USB</sys:String>
+    <sys:String x:Key="SystemTweak_UsbSelectiveSuspend_Desc">Controla la suspensión selectiva USB del plan activo cuando está conectado.</sys:String>
+    <sys:String x:Key="SystemTweak_PointerPrecision_Name">Mejorar precisión del puntero</sys:String>
+    <sys:String x:Key="SystemTweak_PointerPrecision_Desc">Controla la aceleración del ratón de Windows.</sys:String>
+    <sys:String x:Key="SystemTweak_EthernetPowerSaving_Name">Desactivar ahorro de energía Ethernet</sys:String>
+    <sys:String x:Key="SystemTweak_EthernetPowerSaving_Desc">Desactiva EEE, Green Ethernet y opciones compatibles en adaptadores Ethernet físicos.</sys:String>
+    <sys:String x:Key="SystemTweak_InterruptModeration_Name">Desactivar moderación de interrupciones</sys:String>
+    <sys:String x:Key="SystemTweak_InterruptModeration_Desc">Puede reducir la latencia Ethernet aumentando la carga de CPU e interrupciones.</sys:String>
+    <sys:String x:Key="SystemTweak_GpuMsiMode_Name">Modo MSI de GPU</sys:String>
+    <sys:String x:Key="SystemTweak_GpuMsiMode_Desc">Controla MSI solo si el controlador gráfico ya expone MSISupported. Requiere reiniciar.</sys:String>
+    <sys:String x:Key="SystemTweaks_OpenSettings">Abrir configuración</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusManagedByWindows">Administrado por Windows</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusOpenSettingsFailed">No se pudo abrir la configuración de Windows</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusSettingsOpenedFormat">Configuración abierta para {0}</sys:String>
 
     <!-- SystemTweaksViewModel Messages -->
     <sys:String x:Key="SystemTweaks_StatusReady">Listo</sys:String>

@@ -7,8 +7,6 @@ namespace ThreadPilot.Services
         Task<bool> IsGameModeEnabledAsync();
 
         Task<bool> SetGameModeAsync(bool enabled);
-
-        Task<bool> DisableGameModeForAffinityAsync();
     }
 }
 

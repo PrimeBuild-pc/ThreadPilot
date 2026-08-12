@@ -127,23 +127,10 @@
                                             </Ellipse.Style>
                                         </Ellipse>
 
-                                        <TextBlock FontSize="11"
+                                        <TextBlock Text="{Binding StatusText}"
+                                                   FontSize="11"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                                   VerticalAlignment="Center">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Text" Value="{DynamicResource SystemTweaks_StatusEnabled}"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsAvailable}" Value="False">
-                                                            <Setter Property="Text" Value="{DynamicResource SystemTweaks_StatusNotAvailable}"/>
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding IsEnabled}" Value="False">
-                                                            <Setter Property="Text" Value="{DynamicResource SystemTweaks_StatusDisabled}"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                   </Style>
-                                               </TextBlock.Style>
-                                           </TextBlock>
+                                                   VerticalAlignment="Center"/>
                                     </StackPanel>
 
                                     <ui:ToggleSwitch Grid.Column="1"
@@ -155,7 +142,37 @@
                                                      HorizontalAlignment="Right"
                                                      Margin="10,0,0,0"
                                                      AutomationProperties.Name="{Binding Name}"
-                                                     ToolTip="{DynamicResource SystemTweaksView_TweakTooltip}"/>
+                                                     ToolTip="{DynamicResource SystemTweaksView_TweakTooltip}">
+                                        <ui:ToggleSwitch.Style>
+                                            <Style TargetType="ui:ToggleSwitch">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsGuidedAction}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ui:ToggleSwitch.Style>
+                                    </ui:ToggleSwitch>
+
+                                    <Button Grid.Column="1"
+                                            Content="{DynamicResource SystemTweaks_OpenSettings}"
+                                            Command="{Binding ActionCommand}"
+                                            CommandParameter="{Binding}"
+                                            IsEnabled="{Binding IsAvailable}"
+                                            Padding="10,4"
+                                            AutomationProperties.Name="{Binding Name}">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsGuidedAction}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
                                 </Grid>
 
                                  <TextBlock Text="{Binding ErrorMessage}"

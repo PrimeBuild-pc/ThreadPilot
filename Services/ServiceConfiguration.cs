@@ -75,6 +75,7 @@ namespace ThreadPilot.Services
             services.AddSingleton<IProcessAffinityApplyCoordinator, ProcessAffinityApplyCoordinator>();
             services.AddSingleton<IProcessMemoryPriorityNativeApi>(ProcessMemoryPriorityNativeApi.Instance);
             services.AddSingleton<IProcessMemoryPriorityService, ProcessMemoryPriorityService>();
+            services.AddSingleton<ProcessPowerRequestService>();
             services.AddSingleton<IPersistentProcessRuleStore, PersistentProcessRuleJsonStore>();
             services.AddSingleton<IPersistentProcessRuleMatcher, PersistentProcessRuleMatcher>();
             services.AddSingleton<IPersistentRulesEngine, PersistentRulesEngine>();

@@ -12,8 +12,15 @@ namespace ThreadPilot.Core.Tests
         {
             var harness = new Harness();
             var status = new TweakStatus { IsEnabled = true, IsAvailable = true };
+            harness.Tweaks.Setup(service => service.GetGameModeStatusAsync()).ReturnsAsync(status);
             harness.Tweaks.Setup(service => service.GetCoreParkingStatusAsync()).ReturnsAsync(status);
             harness.Tweaks.Setup(service => service.GetCStatesStatusAsync()).ReturnsAsync(status);
+            harness.Tweaks.Setup(service => service.GetMemoryIntegrityStatusAsync()).ReturnsAsync(status);
+            harness.Tweaks.Setup(service => service.GetUsbSelectiveSuspendStatusAsync()).ReturnsAsync(status);
+            harness.Tweaks.Setup(service => service.GetPointerPrecisionStatusAsync()).ReturnsAsync(status);
+            harness.Tweaks.Setup(service => service.GetEthernetPowerSavingStatusAsync()).ReturnsAsync(status);
+            harness.Tweaks.Setup(service => service.GetInterruptModerationStatusAsync()).ReturnsAsync(status);
+            harness.Tweaks.Setup(service => service.GetGpuMsiModeStatusAsync()).ReturnsAsync(status);
             harness.Tweaks.Setup(service => service.GetSysMainStatusAsync()).ReturnsAsync(status);
             harness.Tweaks.Setup(service => service.GetPrefetchStatusAsync()).ReturnsAsync(status);
             harness.Tweaks.Setup(service => service.GetPowerThrottlingStatusAsync()).ReturnsAsync(status);
@@ -24,9 +31,17 @@ namespace ThreadPilot.Core.Tests
             await viewModel.LoadAsync();
 
             Assert.Equal(Enum.GetValues<SystemTweak>().Length, viewModel.TweakItems.Count);
-            Assert.All(viewModel.TweakItems, item => Assert.True(item.IsEnabled));
+            Assert.All(viewModel.TweakItems.Where(item => !item.IsGuidedAction), item => Assert.True(item.IsEnabled));
+            Assert.All(viewModel.TweakItems, item => Assert.True(item.IsAvailable));
+            harness.Tweaks.Verify(service => service.GetGameModeStatusAsync(), Times.Once);
             harness.Tweaks.Verify(service => service.GetCoreParkingStatusAsync(), Times.Once);
             harness.Tweaks.Verify(service => service.GetCStatesStatusAsync(), Times.Once);
+            harness.Tweaks.Verify(service => service.GetMemoryIntegrityStatusAsync(), Times.Once);
+            harness.Tweaks.Verify(service => service.GetUsbSelectiveSuspendStatusAsync(), Times.Once);
+            harness.Tweaks.Verify(service => service.GetPointerPrecisionStatusAsync(), Times.Once);
+            harness.Tweaks.Verify(service => service.GetEthernetPowerSavingStatusAsync(), Times.Once);
+            harness.Tweaks.Verify(service => service.GetInterruptModerationStatusAsync(), Times.Once);
+            harness.Tweaks.Verify(service => service.GetGpuMsiModeStatusAsync(), Times.Once);
             harness.Tweaks.Verify(service => service.GetSysMainStatusAsync(), Times.Once);
             harness.Tweaks.Verify(service => service.GetPrefetchStatusAsync(), Times.Once);
             harness.Tweaks.Verify(service => service.GetPowerThrottlingStatusAsync(), Times.Once);
@@ -35,8 +50,14 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Theory]
+        [InlineData(SystemTweak.GameMode, "Game Mode")]
         [InlineData(SystemTweak.CoreParking, "Core Parking")]
         [InlineData(SystemTweak.CStates, "C-States")]
+        [InlineData(SystemTweak.UsbSelectiveSuspend, "USB Selective Suspend")]
+        [InlineData(SystemTweak.PointerPrecision, "Enhance pointer precision")]
+        [InlineData(SystemTweak.EthernetPowerSaving, "Disable Ethernet power saving")]
+        [InlineData(SystemTweak.InterruptModeration, "Disable interrupt moderation")]
+        [InlineData(SystemTweak.GpuMsiMode, "GPU MSI Mode")]
         [InlineData(SystemTweak.SysMain, "SysMain Service")]
         [InlineData(SystemTweak.Prefetch, "Prefetch")]
         [InlineData(SystemTweak.PowerThrottling, "Power Throttling")]
@@ -109,6 +130,10 @@ namespace ThreadPilot.Core.Tests
             {
                 switch (tweakType)
                 {
+                    case SystemTweak.GameMode:
+                        this.Tweaks.Setup(service => service.SetGameModeAsync(true)).ReturnsAsync(setResult);
+                        this.Tweaks.Setup(service => service.GetGameModeStatusAsync()).ReturnsAsync(CreateEnabledStatus());
+                        break;
                     case SystemTweak.CoreParking:
                         this.Tweaks.Setup(service => service.SetCoreParkingAsync(true)).ReturnsAsync(setResult);
                         this.Tweaks.Setup(service => service.GetCoreParkingStatusAsync()).ReturnsAsync(CreateEnabledStatus());
@@ -116,6 +141,26 @@ namespace ThreadPilot.Core.Tests
                     case SystemTweak.CStates:
                         this.Tweaks.Setup(service => service.SetCStatesAsync(true)).ReturnsAsync(setResult);
                         this.Tweaks.Setup(service => service.GetCStatesStatusAsync()).ReturnsAsync(CreateEnabledStatus());
+                        break;
+                    case SystemTweak.UsbSelectiveSuspend:
+                        this.Tweaks.Setup(service => service.SetUsbSelectiveSuspendAsync(true)).ReturnsAsync(setResult);
+                        this.Tweaks.Setup(service => service.GetUsbSelectiveSuspendStatusAsync()).ReturnsAsync(CreateEnabledStatus());
+                        break;
+                    case SystemTweak.PointerPrecision:
+                        this.Tweaks.Setup(service => service.SetPointerPrecisionAsync(true)).ReturnsAsync(setResult);
+                        this.Tweaks.Setup(service => service.GetPointerPrecisionStatusAsync()).ReturnsAsync(CreateEnabledStatus());
+                        break;
+                    case SystemTweak.EthernetPowerSaving:
+                        this.Tweaks.Setup(service => service.SetEthernetPowerSavingAsync(true)).ReturnsAsync(setResult);
+                        this.Tweaks.Setup(service => service.GetEthernetPowerSavingStatusAsync()).ReturnsAsync(CreateEnabledStatus());
+                        break;
+                    case SystemTweak.InterruptModeration:
+                        this.Tweaks.Setup(service => service.SetInterruptModerationAsync(true)).ReturnsAsync(setResult);
+                        this.Tweaks.Setup(service => service.GetInterruptModerationStatusAsync()).ReturnsAsync(CreateEnabledStatus());
+                        break;
+                    case SystemTweak.GpuMsiMode:
+                        this.Tweaks.Setup(service => service.SetGpuMsiModeAsync(true)).ReturnsAsync(setResult);
+                        this.Tweaks.Setup(service => service.GetGpuMsiModeStatusAsync()).ReturnsAsync(CreateEnabledStatus());
                         break;
                     case SystemTweak.SysMain:
                         this.Tweaks.Setup(service => service.SetSysMainAsync(true)).ReturnsAsync(setResult);
@@ -146,11 +191,29 @@ namespace ThreadPilot.Core.Tests
             {
                 switch (tweakType)
                 {
+                    case SystemTweak.GameMode:
+                        this.Tweaks.Verify(service => service.SetGameModeAsync(true), Times.Once);
+                        break;
                     case SystemTweak.CoreParking:
                         this.Tweaks.Verify(service => service.SetCoreParkingAsync(true), Times.Once);
                         break;
                     case SystemTweak.CStates:
                         this.Tweaks.Verify(service => service.SetCStatesAsync(true), Times.Once);
+                        break;
+                    case SystemTweak.UsbSelectiveSuspend:
+                        this.Tweaks.Verify(service => service.SetUsbSelectiveSuspendAsync(true), Times.Once);
+                        break;
+                    case SystemTweak.PointerPrecision:
+                        this.Tweaks.Verify(service => service.SetPointerPrecisionAsync(true), Times.Once);
+                        break;
+                    case SystemTweak.EthernetPowerSaving:
+                        this.Tweaks.Verify(service => service.SetEthernetPowerSavingAsync(true), Times.Once);
+                        break;
+                    case SystemTweak.InterruptModeration:
+                        this.Tweaks.Verify(service => service.SetInterruptModerationAsync(true), Times.Once);
+                        break;
+                    case SystemTweak.GpuMsiMode:
+                        this.Tweaks.Verify(service => service.SetGpuMsiModeAsync(true), Times.Once);
                         break;
                     case SystemTweak.SysMain:
                         this.Tweaks.Verify(service => service.SetSysMainAsync(true), Times.Once);

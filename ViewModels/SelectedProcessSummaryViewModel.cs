@@ -24,12 +24,14 @@ namespace ThreadPilot.ViewModels
         private ProcessPriorityClass cpuPriority;
         private long processorAffinity;
         private ProcessMemoryPriority? memoryPriority;
+        private ProcessIoPriority? ioPriority;
         private string processTitle = "No process selected";
         private string currentProcessStatusText = "No process selected";
         private string cpuUsageText = "CPU: unavailable";
         private string memoryUsageText = "Memory: unavailable";
         private string cpuPriorityText = "CPU priority: unavailable";
         private string memoryPriorityText = "Memory priority unavailable";
+        private string ioPriorityText = "I/O priority unavailable";
         private string affinityText = "Affinity: unavailable";
         private string ruleStatusText = "No saved rule";
         private string lastOperationMessage = "No recent ThreadPilot action";
@@ -105,6 +107,12 @@ namespace ThreadPilot.ViewModels
             private set => this.SetProperty(ref this.memoryPriority, value);
         }
 
+        public ProcessIoPriority? IoPriority
+        {
+            get => this.ioPriority;
+            private set => this.SetProperty(ref this.ioPriority, value);
+        }
+
         public string ProcessTitle
         {
             get => this.processTitle;
@@ -139,6 +147,12 @@ namespace ThreadPilot.ViewModels
         {
             get => this.memoryPriorityText;
             private set => this.SetProperty(ref this.memoryPriorityText, value);
+        }
+
+        public string IoPriorityText
+        {
+            get => this.ioPriorityText;
+            private set => this.SetProperty(ref this.ioPriorityText, value);
         }
 
         public string AffinityText
@@ -214,6 +228,12 @@ namespace ThreadPilot.ViewModels
                 return;
             }
 
+            await this.UpdateIoPriorityAsync(process, version);
+            if (!this.IsCurrentVersion(version))
+            {
+                return;
+            }
+
             await this.UpdateRuleStatusAsync(process, version);
         }
 
@@ -244,6 +264,7 @@ namespace ThreadPilot.ViewModels
             this.CpuPriority = default;
             this.ProcessorAffinity = 0;
             this.MemoryPriority = null;
+            this.IoPriority = null;
             this.IsProtectedOrAccessDenied = false;
             this.HasThreadPilotRule = false;
             this.ProcessTitle = this.L("ProcessView_NoProcessSelected", "No process selected");
@@ -252,6 +273,7 @@ namespace ThreadPilot.ViewModels
             this.MemoryUsageText = this.L("ProcessSummary_MemoryUnavailable", "Memory: unavailable");
             this.CpuPriorityText = this.L("ProcessSummary_CpuPriorityUnavailable", "CPU priority: unavailable");
             this.MemoryPriorityText = this.L("ProcessSummary_MemoryPriorityUnavailable", "Memory priority unavailable");
+            this.IoPriorityText = this.L("ProcessSummary_IoPriorityUnavailable", "I/O priority unavailable");
             this.AffinityText = this.L("ProcessSummary_AffinityUnavailable", "Affinity: unavailable");
             this.RuleStatusText = this.L("ProcessSummary_NoSavedRule", "No saved rule");
             this.UpdateLastOperation(lastOperationMessage, lastOperationIsError);
@@ -292,6 +314,32 @@ namespace ThreadPilot.ViewModels
 
                 this.MemoryPriority = null;
                 this.MemoryPriorityText = this.L("ProcessSummary_MemoryPriorityUnavailable", "Memory priority unavailable");
+            }
+        }
+
+        private async Task UpdateIoPriorityAsync(ProcessModel process, int version)
+        {
+            this.IoPriority = null;
+            this.IoPriorityText = this.L("ProcessSummary_IoPriorityUnavailable", "I/O priority unavailable");
+            if (this.memoryPriorityService == null)
+            {
+                return;
+            }
+
+            try
+            {
+                var priority = await this.memoryPriorityService.GetIoPriorityAsync(process);
+                if (!this.IsCurrentVersion(version) || priority == null)
+                {
+                    return;
+                }
+
+                this.IoPriority = priority.Value;
+                this.IoPriorityText = this.L("ProcessSummary_IoPriorityFormat", "I/O priority: {0}", priority.Value);
+            }
+            catch (Exception)
+            {
+                this.IoPriority = null;
             }
         }
 

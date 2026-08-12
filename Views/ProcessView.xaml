@@ -305,6 +305,25 @@
                                                           Command="{Binding ApplyAffinityAndSaveAsRuleCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                             </MenuItem>
+                                            <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                      Header="{DynamicResource ProcessView_SetIoPriority}">
+                                                <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                          Header="{DynamicResource ProcessView_PriorityVeryLow}"
+                                                          Command="{Binding SetContextIoPriorityVeryLowCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                          Header="{DynamicResource ProcessView_PriorityLow}"
+                                                          Command="{Binding SetContextIoPriorityLowCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                          Header="{DynamicResource ProcessView_PriorityNormal}"
+                                                          Command="{Binding SetContextIoPriorityNormalCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                          Header="{DynamicResource ProcessView_PriorityHigh}"
+                                                          Command="{Binding SetContextIoPriorityHighCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                            </MenuItem>
                                             <Separator Style="{StaticResource ProcessContextMenuSeparatorStyle}"/>
                                             <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
                                                       Header="{DynamicResource ProcessView_SetCpuPriority}">
@@ -458,6 +477,9 @@
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        Margin="0,0,18,4"/>
                             <TextBlock Text="{Binding SelectedProcessSummary.MemoryPriorityText}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Margin="0,0,18,4"/>
+                            <TextBlock Text="{Binding SelectedProcessSummary.IoPriorityText}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        Margin="0,0,18,4"/>
                             <TextBlock Text="{Binding SelectedProcessSummary.AffinityText}"

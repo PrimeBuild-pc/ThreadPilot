@@ -13,9 +13,6 @@ namespace ThreadPilot.Core.Tests
         {
             var processService = new Mock<IProcessService>(MockBehavior.Loose);
             var gameModeService = new Mock<IGameModeService>(MockBehavior.Loose);
-            gameModeService
-                .Setup(service => service.DisableGameModeForAffinityAsync())
-                .ReturnsAsync(false);
             var viewModel = CreateViewModel(processService.Object, gameModeService.Object);
 
             viewModel.SelectedProcess = new ProcessModel

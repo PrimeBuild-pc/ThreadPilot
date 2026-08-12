@@ -19,6 +19,8 @@ namespace ThreadPilot.Services
 
         public static string PersistentRulesFilePath => Path.Combine(AppDataRoot, "persistent_rules.json");
 
+        public static string DeviceTweakBackupsFilePath => Path.Combine(AppDataRoot, "device_tweak_backups.json");
+
         public static string PowerPlansDirectory => Path.Combine(AppDataRoot, "Powerplans");
 
         public static void EnsureAppDataDirectories()

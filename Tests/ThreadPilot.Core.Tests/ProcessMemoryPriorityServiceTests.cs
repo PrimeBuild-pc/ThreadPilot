@@ -42,6 +42,24 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal(ProcessAccessFlags.PROCESS_QUERY_LIMITED_INFORMATION, nativeApi.LastOpenAccess);
         }
 
+        [Fact]
+        public async Task IoPriority_WithValidProcess_RoundTripsThroughNativeApi()
+        {
+            var nativeApi = new FakeProcessMemoryPriorityNativeApi
+            {
+                IoPriorityToReturn = ProcessIoPriority.Low,
+            };
+            var service = CreateService(nativeApi);
+            var process = CreateProcess();
+
+            var observed = await service.GetIoPriorityAsync(process);
+            var result = await service.SetIoPriorityAsync(process, ProcessIoPriority.High);
+
+            Assert.Equal(ProcessIoPriority.Low, observed);
+            Assert.True(result.Success);
+            Assert.Equal(ProcessIoPriority.High, nativeApi.LastSetIoPriority);
+        }
+
         [Theory]
         [InlineData(1, ProcessMemoryPriority.VeryLow)]
         [InlineData(2, ProcessMemoryPriority.Low)]
@@ -198,6 +216,10 @@ namespace ThreadPilot.Core.Tests
 
             public ProcessMemoryPriority PriorityToReturn { get; init; } = ProcessMemoryPriority.Normal;
 
+            public ProcessIoPriority IoPriorityToReturn { get; init; } = ProcessIoPriority.Normal;
+
+            public ProcessIoPriority? LastSetIoPriority { get; private set; }
+
             public Exception? OpenException { get; init; }
 
             public Exception? SetException { get; init; }
@@ -243,6 +265,19 @@ namespace ThreadPilot.Core.Tests
             }
 
             public int GetLastWin32Error() => this.LastError;
+
+            public int QueryIoPriority(SafeProcessHandle process, ref int priority, out uint returnLength)
+            {
+                priority = (int)this.IoPriorityToReturn;
+                returnLength = sizeof(int);
+                return 0;
+            }
+
+            public int SetIoPriority(SafeProcessHandle process, ref int priority)
+            {
+                this.LastSetIoPriority = (ProcessIoPriority)priority;
+                return 0;
+            }
         }
     }
 }

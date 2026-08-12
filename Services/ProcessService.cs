@@ -1106,43 +1106,6 @@ namespace ThreadPilot.Services
             }).ConfigureAwait(false);
         }
 
-        public async Task<bool> SetIdleServerStateAsync(ProcessModel process, bool enableIdleServer)
-        {
-            return await Task.Run(() =>
-            {
-                try
-                {
-                    // Get the actual process
-                    var actualProcess = Process.GetProcessById(process.ProcessId);
-
-                    // Use Windows API to set execution state for the process
-                    // This prevents the system from entering idle state while the process is running
-                    if (!enableIdleServer)
-                    {
-                        // Disable idle server by setting ES_CONTINUOUS | ES_SYSTEM_REQUIRED
-                        // This keeps the system awake while the process is running
-                        var result = NativeMethods.SetThreadExecutionState(
-                            NativeMethods.EXECUTION_STATE.ES_CONTINUOUS |
-                            NativeMethods.EXECUTION_STATE.ES_SYSTEM_REQUIRED);
-
-                        return result != 0;
-                    }
-                    else
-                    {
-                        // Re-enable idle server by clearing the execution state
-                        var result = NativeMethods.SetThreadExecutionState(
-                            NativeMethods.EXECUTION_STATE.ES_CONTINUOUS);
-
-                        return result != 0;
-                    }
-                }
-                catch (Exception)
-                {
-                    return false;
-                }
-            }).ConfigureAwait(false);
-        }
-
         public async Task<bool> SetRegistryPriorityAsync(ProcessModel process, bool enable, ProcessPriorityClass priority)
         {
             ArgumentNullException.ThrowIfNull(process);
@@ -1441,21 +1404,6 @@ namespace ThreadPilot.Services
             {
                 this.logger?.LogWarning(ex, "Failed to migrate legacy profile files");
             }
-        }
-    }
-
-    internal static class NativeMethods
-    {
-        [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto, SetLastError = true)]
-        public static extern uint SetThreadExecutionState(EXECUTION_STATE esFlags);
-
-        [System.Flags]
-        public enum EXECUTION_STATE : uint
-        {
-            ES_AWAYMODE_REQUIRED = 0x00000040,
-            ES_CONTINUOUS = 0x80000000,
-            ES_DISPLAY_REQUIRED = 0x00000002,
-            ES_SYSTEM_REQUIRED = 0x00000001,
         }
     }
 }

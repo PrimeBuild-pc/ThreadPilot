@@ -19,6 +19,8 @@ namespace ThreadPilot.Services
             IReadOnlyList<bool>? currentCoreSelection,
             ProcessMemoryPriority? currentMemoryPriority,
             CpuAssignmentMode cpuAssignmentMode = CpuAssignmentMode.Automatic,
+            ProcessIoPriority? currentIoPriority = null,
+            bool preventSystemSleepWhileRunning = false,
             CancellationToken cancellationToken = default);
     }
 
@@ -31,6 +33,10 @@ namespace ThreadPilot.Services
         public ProcessPriorityClass? Priority { get; init; }
 
         public ProcessMemoryPriority? MemoryPriority { get; init; }
+
+        public ProcessIoPriority? IoPriority { get; init; }
+
+        public bool PreventSystemSleepWhileRunning { get; init; }
 
         public CpuAssignmentMode CpuAssignmentMode { get; init; } = CpuAssignmentMode.Automatic;
     }
@@ -90,6 +96,8 @@ namespace ThreadPilot.Services
             IReadOnlyList<bool>? currentCoreSelection,
             ProcessMemoryPriority? currentMemoryPriority,
             CpuAssignmentMode cpuAssignmentMode = CpuAssignmentMode.Automatic,
+            ProcessIoPriority? currentIoPriority = null,
+            bool preventSystemSleepWhileRunning = false,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(process);
@@ -100,6 +108,8 @@ namespace ThreadPilot.Services
                     ? process.Priority
                     : null,
                 MemoryPriority = currentMemoryPriority,
+                IoPriority = currentIoPriority,
+                PreventSystemSleepWhileRunning = preventSystemSleepWhileRunning,
                 CpuAssignmentMode = cpuAssignmentMode,
             };
 
@@ -174,9 +184,12 @@ namespace ThreadPilot.Services
                 CpuAssignmentMode = payload.CpuAssignmentMode,
                 Priority = payload.Priority,
                 MemoryPriority = payload.MemoryPriority,
+                IoPriority = payload.IoPriority,
                 ApplyAffinityOnStart = HasSelectionPayload(payload.CpuSelection) || payload.LegacyAffinityMask.HasValue,
                 ApplyPriorityOnStart = payload.Priority.HasValue,
                 ApplyMemoryPriorityOnStart = payload.MemoryPriority.HasValue,
+                ApplyIoPriorityOnStart = payload.IoPriority.HasValue,
+                PreventSystemSleepWhileRunning = payload.PreventSystemSleepWhileRunning,
                 CreatedAt = existing?.CreatedAt ?? now,
                 UpdatedAt = now,
                 Description = RuleDescription,
@@ -268,7 +281,9 @@ namespace ThreadPilot.Services
             HasSelectionPayload(payload.CpuSelection) ||
             payload.LegacyAffinityMask.HasValue ||
             payload.Priority.HasValue ||
-            payload.MemoryPriority.HasValue;
+            payload.MemoryPriority.HasValue ||
+            payload.IoPriority.HasValue ||
+            payload.PreventSystemSleepWhileRunning;
 
         private static bool HasSelectionPayload(CpuSelection? selection) =>
             selection != null &&

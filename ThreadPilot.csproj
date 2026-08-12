@@ -16,10 +16,10 @@
     <TrimMode>link</TrimMode>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>CS1998;CS0067;CS0414;WFAC010;IL3000;MVVMTK0034</NoWarn>
-    <Version>1.6.0</Version>
-    <AssemblyVersion>1.6.0.0</AssemblyVersion>
-    <FileVersion>1.6.0.0</FileVersion>
-    <InformationalVersion>1.6.0</InformationalVersion>
+    <Version>1.7.0</Version>
+    <AssemblyVersion>1.7.0.0</AssemblyVersion>
+    <FileVersion>1.7.0.0</FileVersion>
+    <InformationalVersion>1.7.0</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -34,15 +34,6 @@
 
   <ItemGroup>
     <Resource Include="assets\icons\ico.ico" />
-  </ItemGroup>
-
-  <!-- Include bundled power plans in build output -->
-  <ItemGroup>
-    <Content Include="assets\Powerplans\**\*.pow">
-      <TargetPath>Powerplans\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
   </ItemGroup>
 
   <!-- Ensure XAML for ProcessPowerPlanAssociationView generates InitializeComponent -->

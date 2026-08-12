@@ -183,6 +183,119 @@ namespace ThreadPilot.Services
             }
         }
 
+        public Task<ProcessIoPriority?> GetIoPriorityAsync(ProcessModel process)
+        {
+            if (!this.nativeApi.IsSupported || !IsValidProcess(process))
+            {
+                return Task.FromResult<ProcessIoPriority?>(null);
+            }
+
+            try
+            {
+                using var handle = this.nativeApi.OpenProcess(
+                    ProcessAccessFlags.PROCESS_QUERY_LIMITED_INFORMATION,
+                    inheritHandle: false,
+                    (uint)process.ProcessId);
+                if (handle.IsInvalid)
+                {
+                    return Task.FromResult<ProcessIoPriority?>(null);
+                }
+
+                var value = 0;
+                var status = this.nativeApi.QueryIoPriority(handle, ref value, out _);
+                return Task.FromResult(status == 0 && Enum.IsDefined(typeof(ProcessIoPriority), value)
+                    ? (ProcessIoPriority?)value
+                    : null);
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogDebug(ex, "Could not read I/O priority for process {ProcessId}", process.ProcessId);
+                return Task.FromResult<ProcessIoPriority?>(null);
+            }
+        }
+
+        public Task<ProcessOperationResult> SetIoPriorityAsync(ProcessModel process, ProcessIoPriority priority)
+        {
+            if (!IsValidProcess(process))
+            {
+                return Task.FromResult(ProcessOperationResult.Failed(
+                    InvalidProcessErrorCode,
+                    ProcessOperationUserMessages.ProcessExited,
+                    "Process is null or has an invalid PID."));
+            }
+
+            if (!Enum.IsDefined(priority))
+            {
+                return Task.FromResult(ProcessOperationResult.Failed(
+                    "InvalidIoPriority",
+                    "This I/O priority value is not supported.",
+                    $"I/O priority value '{priority}' is not supported."));
+            }
+
+            try
+            {
+                using var handle = this.nativeApi.OpenProcess(
+                    ProcessAccessFlags.PROCESS_SET_INFORMATION,
+                    inheritHandle: false,
+                    (uint)process.ProcessId);
+                if (handle.IsInvalid)
+                {
+                    return Task.FromResult(this.FromLastError("OpenProcess failed before setting I/O priority."));
+                }
+
+                var value = (int)priority;
+                var status = this.nativeApi.SetIoPriority(handle, ref value);
+                if (status == 0)
+                {
+                    return Task.FromResult(ProcessOperationResult.Succeeded(
+                        "I/O priority applied.",
+                        $"Process {process.Name} (PID: {process.ProcessId}) I/O priority set to {priority}."));
+                }
+
+                return Task.FromResult(status switch
+                {
+                    unchecked((int)0xC0000022) => ProcessOperationResult.Failed(
+                        AffinityApplyErrorCodes.AccessDenied,
+                        ProcessOperationUserMessages.AccessDenied,
+                        $"NtSetInformationProcess failed with NTSTATUS 0x{status:X8}.",
+                        isAccessDenied: true),
+                    unchecked((int)0xC0000008) => ProcessOperationResult.Failed(
+                        AffinityApplyErrorCodes.ProcessExited,
+                        ProcessOperationUserMessages.ProcessExited,
+                        $"NtSetInformationProcess failed with NTSTATUS 0x{status:X8}.",
+                        isProcessExited: true),
+                    _ => ProcessOperationResult.Failed(
+                        AffinityApplyErrorCodes.NativeApplyFailed,
+                        "ThreadPilot could not apply the I/O priority change.",
+                        $"NtSetInformationProcess failed with NTSTATUS 0x{status:X8}."),
+                });
+            }
+            catch (Exception ex) when (AffinityApplyExceptionClassifier.IsProcessExited(ex))
+            {
+                return Task.FromResult(ProcessOperationResult.Failed(
+                    AffinityApplyErrorCodes.ProcessExited,
+                    ProcessOperationUserMessages.ProcessExited,
+                    ex.Message,
+                    isProcessExited: true));
+            }
+            catch (Exception ex) when (AffinityApplyExceptionClassifier.IsAccessDenied(ex))
+            {
+                return Task.FromResult(ProcessOperationResult.Failed(
+                    AffinityApplyErrorCodes.AccessDenied,
+                    ProcessOperationUserMessages.AccessDenied,
+                    ex.Message,
+                    isAccessDenied: true));
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogWarning(ex, "I/O priority apply failed for process {ProcessId}", process.ProcessId);
+                return Task.FromResult(ProcessOperationResult.Failed(
+                    AffinityApplyErrorCodes.NativeApplyFailed,
+                    "ThreadPilot could not apply the I/O priority change.",
+                    ex.Message));
+            }
+        }
+
         private static bool IsValidProcess(ProcessModel? process) =>
             process != null && process.ProcessId > 0;
 

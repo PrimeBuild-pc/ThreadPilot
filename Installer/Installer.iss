@@ -5,7 +5,7 @@
 #define MyAppPublisher "ThreadPilot"
 #define MyAppURL "https://github.com/"
 #define MyAppExeName "ThreadPilot.exe"
-#define MyAppVersion "1.6.0"
+#define MyAppVersion "1.7.0"
 
 #ifndef MyWizardStyle
   #define MyWizardStyle "modern dynamic windows11"
@@ -55,6 +55,7 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChang
 
 [UninstallRun]
 Filename: "taskkill.exe"; Parameters: "/IM ""{#MyAppExeName}"" /F"; Flags: runhidden waituntilterminated; RunOnceId: "UninstallKill"
+Filename: "schtasks.exe"; Parameters: "/Delete /TN ""ThreadPilot_Launch"" /F"; Flags: runhidden waituntilterminated; RunOnceId: "UninstallRemoveThreadPilotLaunchTask"
 Filename: "schtasks.exe"; Parameters: "/Delete /TN ""ThreadPilot_Startup"" /F"; Flags: runhidden waituntilterminated; RunOnceId: "UninstallRemoveThreadPilotStartupTask"
 Filename: "reg.exe"; Parameters: "delete ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v ""ThreadPilot"" /f"; Flags: runhidden waituntilterminated; RunOnceId: "UninstallRemoveThreadPilotRunEntry"
 

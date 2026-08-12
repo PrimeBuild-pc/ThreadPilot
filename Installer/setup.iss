@@ -11,7 +11,7 @@
 #endif
 
 #ifndef MyAppVersion
-	#define MyAppVersion "1.6.0"
+	#define MyAppVersion "1.7.0"
 #endif
 
 #ifndef MyAppSourceDir
@@ -54,7 +54,6 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "{#MyAppSourceDir}\ThreadPilot.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyAppSourceDir}\*.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "{#MyAppSourceDir}\*.pdb"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
-Source: "{#MyAppSourceDir}\Powerplans\*"; DestDir: "{app}\Powerplans"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
@@ -71,6 +70,7 @@ Filename: "{app}\{#MyAppExeName}"; Flags: nowait; Check: IsThreadPilotUpdate
 ; Per-user AppData cleanup is limited to the account context used by uninstall.
 [UninstallRun]
 Filename: "taskkill.exe"; Parameters: "/IM ""{#MyAppExeName}"" /F"; Flags: runhidden waituntilterminated; RunOnceId: "UninstallKillThreadPilot"
+Filename: "schtasks.exe"; Parameters: "/Delete /TN ""ThreadPilot_Launch"" /F"; Flags: runhidden waituntilterminated; RunOnceId: "UninstallRemoveThreadPilotLaunchTask"
 Filename: "schtasks.exe"; Parameters: "/Delete /TN ""ThreadPilot_Startup"" /F"; Flags: runhidden waituntilterminated; RunOnceId: "UninstallRemoveThreadPilotStartupTask"
 Filename: "reg.exe"; Parameters: "delete ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v ""ThreadPilot"" /f"; Flags: runhidden waituntilterminated; RunOnceId: "UninstallRemoveThreadPilotRunEntry"
 

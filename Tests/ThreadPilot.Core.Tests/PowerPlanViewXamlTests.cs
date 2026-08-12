@@ -56,5 +56,15 @@ namespace ThreadPilot.Core.Tests
             Assert.Contains("StatusPillBackgroundBrush", serialized, StringComparison.Ordinal);
             Assert.DoesNotContain("BorderThickness=\"4,1,1,1\"", serialized, StringComparison.Ordinal);
         }
+
+        [Fact]
+        public void Header_ExposesLocalizedCommunityPlansLink()
+        {
+            var document = XDocument.Load(PowerPlanViewPath, LoadOptions.PreserveWhitespace);
+            var serialized = document.ToString(SaveOptions.DisableFormatting);
+
+            Assert.Contains("OpenMorePlansCommand", serialized, StringComparison.Ordinal);
+            Assert.Contains("PowerPlanView_MorePlans", serialized, StringComparison.Ordinal);
+        }
     }
 }

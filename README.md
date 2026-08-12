@@ -129,6 +129,8 @@ Useful startup arguments:
 
 In `Power Plans > Custom Power Plans`, use `Add .pow File` to import custom power plans directly from the app.
 
+ThreadPilot does not bundle third-party `.pow` files. The Power Plans page can open the community Discord catalog on request; Settings also links to Discord support and GitHub Issues. Existing plans already imported into Windows are not removed by updates.
+
 ## 🧱 Build from Source
 
 ```powershell
@@ -161,6 +163,9 @@ Build release artifacts with the project script:
 
 - CI validates build, formatting, analyzers, vulnerability checks, and secret scanning.
 - Security disclosures are handled through private GitHub advisories. See [`docs/SECURITY.md`](docs/SECURITY.md).
+- ThreadPilot has no analytics or telemetry. See [`docs/PRIVACY.md`](docs/PRIVACY.md).
+- Release signing scope and controls are documented in [`docs/CODE_SIGNING_POLICY.md`](docs/CODE_SIGNING_POLICY.md).
+- Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org), once the pending application is approved; current artifacts are unsigned.
 - Change history is tracked in [`docs/CHANGELOG.md`](docs/CHANGELOG.md).
 - Coverage focuses on business/application code and excludes generated build artifacts.
 
@@ -170,6 +175,8 @@ Build release artifacts with the project script:
 - [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md)
 - [`docs/CODE_OF_CONDUCT.md`](docs/CODE_OF_CONDUCT.md)
 - [`docs/RELEASE_SIGNING.md`](docs/RELEASE_SIGNING.md)
+- [`docs/CODE_SIGNING_POLICY.md`](docs/CODE_SIGNING_POLICY.md)
+- [`docs/PRIVACY.md`](docs/PRIVACY.md)
 - [`docs/release/PACKAGING.md`](docs/release/PACKAGING.md)
 - [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)
 - [`docs/QUALITY_GATES.md`](docs/QUALITY_GATES.md)

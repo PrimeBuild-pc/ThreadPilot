@@ -1,11 +1,16 @@
 namespace ThreadPilot.Services
 {
     using System;
+    using System.Collections.Generic;
     using System.ComponentModel;
     using System.Diagnostics;
+    using System.Globalization;
     using System.IO;
+    using System.Linq;
+    using System.Management;
     using System.Runtime.InteropServices;
     using System.ServiceProcess;
+    using System.Text.Json;
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
@@ -19,21 +24,247 @@ namespace ThreadPilot.Services
         private static readonly Guid ProcessorSettingsSubgroupGuid = new("54533251-82be-4824-96c1-47b60b740d00");
         private static readonly Guid CoreParkingSettingGuid = new("0cc5b647-c1df-4637-891a-dec35c318583");
         private static readonly Guid ProcessorIdleDisableSettingGuid = new("5d76a2ca-e8c0-402f-a133-2158492d58ad");
+        private static readonly Guid UsbSettingsSubgroupGuid = new("2a737441-1930-4402-8d77-b2bebba308a3");
+        private static readonly Guid UsbSelectiveSuspendSettingGuid = new("48e6b7a6-50f5-4782-a5d4-53bb8f07e226");
+        private static readonly string[] EthernetPowerSavingValueNames = ["*EEE", "AdvancedEEE", "EnableGreenEthernet", "PowerSavingMode"];
+        private static readonly string[] InterruptModerationValueNames = ["*InterruptModeration"];
+        private const string NetworkAdapterClassPath = @"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}";
+        private const string MsiPropertiesSuffix = @"Device Parameters\Interrupt Management\MessageSignaledInterruptProperties";
         private const string GamesSchedulingKeyPath = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games";
         private const string SchedulingCategoryValueName = "Scheduling Category";
         internal const string HighSchedulingCategoryEnabledValue = "High";
         private const string HighSchedulingCategoryDisabledValue = "Medium";
         private readonly ILogger<SystemTweaksService> logger;
         private readonly IElevationService elevationService;
+        private readonly IGameModeService gameModeService;
 
         public event EventHandler<TweakStatusChangedEventArgs>? TweakStatusChanged;
 
         public SystemTweaksService(
             ILogger<SystemTweaksService> logger,
-            IElevationService elevationService)
+            IElevationService elevationService,
+            IGameModeService gameModeService)
         {
             this.logger = logger;
             this.elevationService = elevationService;
+            this.gameModeService = gameModeService;
+        }
+
+        public async Task<TweakStatus> GetGameModeStatusAsync() => new()
+        {
+            IsEnabled = await this.gameModeService.IsGameModeEnabledAsync(),
+            IsAvailable = true,
+        };
+
+        public async Task<bool> SetGameModeAsync(bool enabled)
+        {
+            var success = await this.gameModeService.SetGameModeAsync(enabled);
+            if (success)
+            {
+                this.RaiseStatusChanged(nameof(SystemTweak.GameMode), await this.GetGameModeStatusAsync());
+            }
+
+            return success;
+        }
+
+        public Task<TweakStatus> GetUsbSelectiveSuspendStatusAsync()
+        {
+            var available = TryReadAcPowerSetting(
+                UsbSettingsSubgroupGuid,
+                UsbSelectiveSuspendSettingGuid,
+                out var value,
+                out var error);
+            return Task.FromResult(new TweakStatus
+            {
+                IsEnabled = value != 0,
+                IsAvailable = available,
+                ErrorMessage = error,
+            });
+        }
+
+        public async Task<bool> SetUsbSelectiveSuspendAsync(bool enabled)
+        {
+            string? error = "Administrator privileges are required.";
+            if (!this.elevationService.IsRunningAsAdministrator() ||
+                !TryWriteAcPowerSetting(
+                    UsbSettingsSubgroupGuid,
+                    UsbSelectiveSuspendSettingGuid,
+                    enabled ? 1u : 0u,
+                    out error))
+            {
+                this.logger.LogWarning("Could not update USB selective suspend: {Error}", error);
+                return false;
+            }
+
+            var status = await this.GetUsbSelectiveSuspendStatusAsync();
+            this.RaiseStatusChanged(nameof(SystemTweak.UsbSelectiveSuspend), status);
+            return status.IsAvailable && status.IsEnabled == enabled;
+        }
+
+        public Task<TweakStatus> GetPointerPrecisionStatusAsync()
+        {
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(@"Control Panel\Mouse");
+                var mouseSpeed = key?.GetValue("MouseSpeed")?.ToString();
+                if (int.TryParse(mouseSpeed, NumberStyles.Integer, CultureInfo.InvariantCulture, out var speed))
+                {
+                    return Task.FromResult(new TweakStatus { IsEnabled = speed != 0, IsAvailable = true });
+                }
+
+                var values = new int[3];
+                var available = NativeMethods.SystemParametersInfo(NativeMethods.SpiGetMouse, 0, values, 0);
+                return Task.FromResult(new TweakStatus
+                {
+                    IsEnabled = available && values[2] != 0,
+                    IsAvailable = available,
+                    ErrorMessage = available ? null : new Win32Exception(Marshal.GetLastWin32Error()).Message,
+                });
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult(new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message });
+            }
+        }
+
+        public async Task<bool> SetPointerPrecisionAsync(bool enabled)
+        {
+            var values = new int[3];
+            if (!NativeMethods.SystemParametersInfo(NativeMethods.SpiGetMouse, 0, values, 0))
+            {
+                return false;
+            }
+
+            values = GetPointerPrecisionValues(enabled, values);
+            var notified = NativeMethods.SystemParametersInfo(
+                NativeMethods.SpiSetMouse,
+                0,
+                values,
+                NativeMethods.SpifUpdateIniFile | NativeMethods.SpifSendChange);
+            if (!notified)
+            {
+                this.logger.LogWarning(
+                    "Windows did not apply pointer precision immediately: {Error}",
+                    new Win32Exception(Marshal.GetLastWin32Error()).Message);
+            }
+
+            try
+            {
+                using var key = Registry.CurrentUser.CreateSubKey(@"Control Panel\Mouse", writable: true);
+                key.SetValue("MouseThreshold1", values[0].ToString(CultureInfo.InvariantCulture), RegistryValueKind.String);
+                key.SetValue("MouseThreshold2", values[1].ToString(CultureInfo.InvariantCulture), RegistryValueKind.String);
+                key.SetValue("MouseSpeed", values[2].ToString(CultureInfo.InvariantCulture), RegistryValueKind.String);
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogWarning(ex, "Could not persist pointer precision settings.");
+                return false;
+            }
+
+            var status = await this.GetPointerPrecisionStatusAsync();
+            this.RaiseStatusChanged(nameof(SystemTweak.PointerPrecision), status);
+            return status.IsAvailable && status.IsEnabled == enabled;
+        }
+
+        internal static int[] GetPointerPrecisionValues(bool enabled, IReadOnlyList<int> current)
+        {
+            if (current.Count < 3)
+            {
+                throw new ArgumentException("Three mouse parameters are required.", nameof(current));
+            }
+
+            if (!enabled)
+            {
+                // Windows may normalize acceleration back to enabled when non-zero
+                // thresholds are submitted with acceleration disabled.
+                return [0, 0, 0];
+            }
+
+            return
+            [
+                current[0] > 0 ? current[0] : 6,
+                current[1] > 0 ? current[1] : 10,
+                current[2] > 0 ? current[2] : 1,
+            ];
+        }
+
+        public Task<TweakStatus> GetEthernetPowerSavingStatusAsync() =>
+            Task.FromResult(GetRegistryTargetsStatus(FindEthernetTargets(EthernetPowerSavingValueNames), enabledValue: 0));
+
+        public Task<bool> SetEthernetPowerSavingAsync(bool enabled) =>
+            this.SetRegistryTargetsAsync(
+                SystemTweak.EthernetPowerSaving,
+                FindEthernetTargets(EthernetPowerSavingValueNames),
+                enabled,
+                enabledValue: 0,
+                disabledValue: 1);
+
+        public Task<TweakStatus> GetInterruptModerationStatusAsync() =>
+            Task.FromResult(GetRegistryTargetsStatus(FindEthernetTargets(InterruptModerationValueNames), enabledValue: 0));
+
+        public Task<bool> SetInterruptModerationAsync(bool enabled) =>
+            this.SetRegistryTargetsAsync(
+                SystemTweak.InterruptModeration,
+                FindEthernetTargets(InterruptModerationValueNames),
+                enabled,
+                enabledValue: 0,
+                disabledValue: 1);
+
+        public Task<TweakStatus> GetGpuMsiModeStatusAsync() =>
+            Task.FromResult(GetRegistryTargetsStatus(FindGpuMsiTargets(), enabledValue: 1));
+
+        public Task<bool> SetGpuMsiModeAsync(bool enabled) =>
+            this.SetRegistryTargetsAsync(
+                SystemTweak.GpuMsiMode,
+                FindGpuMsiTargets(),
+                enabled,
+                enabledValue: 1,
+                disabledValue: 0,
+                restoreOriginalWhenDisabled: false);
+
+        public Task<TweakStatus> GetMemoryIntegrityStatusAsync()
+        {
+            try
+            {
+                using var key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\CI\State");
+                var value = key == null ? null : ReadRegistryIntValue(key, "HVCIEnabled");
+                return Task.FromResult(new TweakStatus
+                {
+                    IsEnabled = value == 1,
+                    IsAvailable = value.HasValue,
+                    ErrorMessage = value.HasValue ? null : "Memory Integrity state is not exposed by Windows.",
+                });
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult(new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message });
+            }
+        }
+
+        public Task<bool> OpenSettingsAsync(SystemTweak tweak)
+        {
+            var uri = tweak switch
+            {
+                SystemTweak.MemoryIntegrity => "windowsdefender://coreisolation",
+                SystemTweak.Hags or SystemTweak.WindowedOptimizations => "ms-settings:display-advancedgraphics-default",
+                _ => null,
+            };
+
+            if (uri == null)
+            {
+                return Task.FromResult(false);
+            }
+
+            try
+            {
+                Process.Start(new ProcessStartInfo(uri) { UseShellExecute = true });
+                return Task.FromResult(true);
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogWarning(ex, "Could not open Windows settings for {Tweak}", tweak);
+                return Task.FromResult(false);
+            }
         }
 
         public Task<TweakStatus> GetCoreParkingStatusAsync()
@@ -420,7 +651,233 @@ namespace ThreadPilot.Services
         internal static string GetHighSchedulingCategoryRegistryValue(bool enabled) =>
             enabled ? HighSchedulingCategoryEnabledValue : HighSchedulingCategoryDisabledValue;
 
+        private void RaiseStatusChanged(string tweakName, TweakStatus status) =>
+            this.TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs(tweakName, status));
+
+        private static List<RegistryTarget> FindEthernetTargets(IEnumerable<string> valueNames)
+        {
+            var targets = new List<RegistryTarget>();
+            using var adapters = Registry.LocalMachine.OpenSubKey(NetworkAdapterClassPath);
+            if (adapters == null)
+            {
+                return targets;
+            }
+
+            foreach (var subKeyName in adapters.GetSubKeyNames())
+            {
+                var path = $@"{NetworkAdapterClassPath}\{subKeyName}";
+                using var adapter = Registry.LocalMachine.OpenSubKey(path);
+                var characteristics = adapter == null ? null : ReadRegistryIntValue(adapter, "Characteristics");
+                if (adapter == null ||
+                    ReadRegistryIntValue(adapter, "*IfType") != 6 ||
+                    !characteristics.HasValue ||
+                    (characteristics.Value & 0x4) == 0)
+                {
+                    continue;
+                }
+
+                foreach (var valueName in valueNames)
+                {
+                    AddRegistryTarget(targets, adapter, path, valueName);
+                }
+            }
+
+            return targets;
+        }
+
+        private static List<RegistryTarget> FindGpuMsiTargets()
+        {
+            var targets = new List<RegistryTarget>();
+            try
+            {
+                using var searcher = new ManagementObjectSearcher("SELECT PNPDeviceID FROM Win32_VideoController");
+                using var results = searcher.Get();
+                foreach (ManagementObject device in results)
+                {
+                    using (device)
+                    {
+                        var pnpDeviceId = device["PNPDeviceID"]?.ToString();
+                        if (string.IsNullOrWhiteSpace(pnpDeviceId))
+                        {
+                            continue;
+                        }
+
+                        var path = $@"SYSTEM\CurrentControlSet\Enum\{pnpDeviceId}\{MsiPropertiesSuffix}";
+                        using var key = Registry.LocalMachine.OpenSubKey(path);
+                        if (key != null)
+                        {
+                            AddRegistryTarget(targets, key, path, "MSISupported");
+                        }
+                    }
+                }
+            }
+            catch (ManagementException)
+            {
+                // No supported display adapter information is available.
+            }
+
+            return targets;
+        }
+
+        private static void AddRegistryTarget(
+            ICollection<RegistryTarget> targets,
+            RegistryKey key,
+            string path,
+            string valueName)
+        {
+            var value = ReadRegistryIntValue(key, valueName);
+            if (!value.HasValue)
+            {
+                return;
+            }
+
+            var kind = key.GetValueKind(valueName);
+            if (kind is RegistryValueKind.DWord or RegistryValueKind.QWord or RegistryValueKind.String)
+            {
+                targets.Add(new RegistryTarget(path, valueName, value.Value, kind));
+            }
+        }
+
+        private static TweakStatus GetRegistryTargetsStatus(IReadOnlyCollection<RegistryTarget> targets, int enabledValue) => new()
+        {
+            IsAvailable = targets.Count > 0,
+            IsEnabled = targets.Count > 0 && targets.All(target => target.Value == enabledValue),
+            ErrorMessage = targets.Count == 0 ? "No supported driver property was found." : null,
+        };
+
+        private async Task<bool> SetRegistryTargetsAsync(
+            SystemTweak tweak,
+            IReadOnlyCollection<RegistryTarget> targets,
+            bool enabled,
+            int enabledValue,
+            int disabledValue,
+            bool restoreOriginalWhenDisabled = true)
+        {
+            if (!this.elevationService.IsRunningAsAdministrator() || targets.Count == 0)
+            {
+                return false;
+            }
+
+            var backups = this.LoadRegistryBackups();
+            var changedBackups = false;
+            var changedTargets = new List<RegistryTarget>();
+            try
+            {
+                foreach (var target in targets)
+                {
+                    var backupKey = target.BackupKey;
+                    if (!backups.ContainsKey(backupKey))
+                    {
+                        backups[backupKey] = new RegistryValueBackup(target.Value, target.Kind);
+                        changedBackups = true;
+                    }
+                }
+
+                if (changedBackups)
+                {
+                    this.SaveRegistryBackups(backups);
+                }
+
+                foreach (var target in targets)
+                {
+                    var backupKey = target.BackupKey;
+                    var desiredValue = enabled
+                        ? enabledValue
+                        : restoreOriginalWhenDisabled && backups.TryGetValue(backupKey, out var backup)
+                            ? backup.Value
+                            : disabledValue;
+                    using var key = Registry.LocalMachine.OpenSubKey(target.Path, writable: true);
+                    if (key == null)
+                    {
+                        return false;
+                    }
+
+                    key.SetValue(
+                        target.ValueName,
+                        target.Kind == RegistryValueKind.String
+                            ? desiredValue.ToString(CultureInfo.InvariantCulture)
+                            : desiredValue,
+                        target.Kind);
+                    changedTargets.Add(target);
+                }
+
+                var status = tweak switch
+                {
+                    SystemTweak.EthernetPowerSaving => await this.GetEthernetPowerSavingStatusAsync(),
+                    SystemTweak.InterruptModeration => await this.GetInterruptModerationStatusAsync(),
+                    SystemTweak.GpuMsiMode => await this.GetGpuMsiModeStatusAsync(),
+                    _ => new TweakStatus { IsAvailable = false },
+                };
+                this.RaiseStatusChanged(tweak.ToString(), status);
+                return status.IsAvailable && status.IsEnabled == enabled;
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogWarning(ex, "Could not update driver tweak {Tweak}", tweak);
+                foreach (var target in changedTargets)
+                {
+                    try
+                    {
+                        using var key = Registry.LocalMachine.OpenSubKey(target.Path, writable: true);
+                        key?.SetValue(
+                            target.ValueName,
+                            target.Kind == RegistryValueKind.String
+                                ? target.Value.ToString(CultureInfo.InvariantCulture)
+                                : target.Value,
+                            target.Kind);
+                    }
+                    catch (Exception rollbackException)
+                    {
+                        this.logger.LogWarning(
+                            rollbackException,
+                            "Could not roll back {Path}\\{ValueName}",
+                            target.Path,
+                            target.ValueName);
+                    }
+                }
+
+                return false;
+            }
+        }
+
+        private Dictionary<string, RegistryValueBackup> LoadRegistryBackups()
+        {
+            try
+            {
+                if (!File.Exists(StoragePaths.DeviceTweakBackupsFilePath))
+                {
+                    return new Dictionary<string, RegistryValueBackup>(StringComparer.OrdinalIgnoreCase);
+                }
+
+                var stored = JsonSerializer.Deserialize<Dictionary<string, RegistryValueBackup>>(
+                    File.ReadAllText(StoragePaths.DeviceTweakBackupsFilePath));
+                return stored == null
+                    ? new Dictionary<string, RegistryValueBackup>(StringComparer.OrdinalIgnoreCase)
+                    : new Dictionary<string, RegistryValueBackup>(stored, StringComparer.OrdinalIgnoreCase);
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogWarning(ex, "Could not load device tweak backups");
+                return new Dictionary<string, RegistryValueBackup>(StringComparer.OrdinalIgnoreCase);
+            }
+        }
+
+        private void SaveRegistryBackups(Dictionary<string, RegistryValueBackup> backups)
+        {
+            StoragePaths.EnsureAppDataDirectories();
+            File.WriteAllText(
+                StoragePaths.DeviceTweakBackupsFilePath,
+                JsonSerializer.Serialize(backups, new JsonSerializerOptions { WriteIndented = true }));
+        }
+
         private static bool TryReadAcPowerSetting(Guid settingGuid, out uint value, out string? error)
+            => TryReadAcPowerSetting(ProcessorSettingsSubgroupGuid, settingGuid, out value, out error);
+
+        private static bool TryReadAcPowerSetting(
+            Guid subgroupGuid,
+            Guid settingGuid,
+            out uint value,
+            out string? error)
         {
             value = 0;
             if (!TryGetActivePowerScheme(out var schemeGuid, out error))
@@ -428,7 +885,6 @@ namespace ThreadPilot.Services
                 return false;
             }
 
-            var subgroupGuid = ProcessorSettingsSubgroupGuid;
             var result = NativeMethods.PowerReadAcValueIndex(
                 IntPtr.Zero,
                 ref schemeGuid,
@@ -446,13 +902,19 @@ namespace ThreadPilot.Services
         }
 
         private static bool TryWriteAcPowerSetting(Guid settingGuid, uint value, out string? error)
+            => TryWriteAcPowerSetting(ProcessorSettingsSubgroupGuid, settingGuid, value, out error);
+
+        private static bool TryWriteAcPowerSetting(
+            Guid subgroupGuid,
+            Guid settingGuid,
+            uint value,
+            out string? error)
         {
             if (!TryGetActivePowerScheme(out var schemeGuid, out error))
             {
                 return false;
             }
 
-            var subgroupGuid = ProcessorSettingsSubgroupGuid;
             var writeResult = NativeMethods.PowerWriteAcValueIndex(
                 IntPtr.Zero,
                 ref schemeGuid,
@@ -585,6 +1047,17 @@ namespace ThreadPilot.Services
             public string StandardError { get; }
         }
 
+        private sealed record RegistryTarget(
+            string Path,
+            string ValueName,
+            int Value,
+            RegistryValueKind Kind)
+        {
+            public string BackupKey => $"{this.Path}|{this.ValueName}";
+        }
+
+        private sealed record RegistryValueBackup(int Value, RegistryValueKind Kind);
+
         public Task<TweakStatus> GetMenuShowDelayStatusAsync()
         {
             try
@@ -645,6 +1118,15 @@ namespace ThreadPilot.Services
 
         private static class NativeMethods
         {
+            internal const uint SpiGetMouse = 0x0003;
+            internal const uint SpiSetMouse = 0x0004;
+            internal const uint SpifUpdateIniFile = 0x0001;
+            internal const uint SpifSendChange = 0x0002;
+
+            [DllImport("user32.dll", SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            internal static extern bool SystemParametersInfo(uint action, uint parameter, [In, Out] int[] values, uint flags);
+
             [DllImport("PowrProf.dll", EntryPoint = "PowerGetActiveScheme")]
             internal static extern uint PowerGetActiveScheme(IntPtr userRootPowerKey, out IntPtr activePolicyGuid);
 

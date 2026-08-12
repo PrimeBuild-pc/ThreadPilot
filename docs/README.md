@@ -19,6 +19,10 @@ This folder contains release and engineering documentation for ThreadPilot.
 - Release runbook: release/RELEASE_RUNBOOK.md
 - Release notes template: release/RELEASE_NOTES_TEMPLATE.md
 - Go/No-Go matrix: release/GO_NO_GO_MATRIX.md
+- Release signing guide: RELEASE_SIGNING.md
+- Code-signing policy: CODE_SIGNING_POLICY.md
+- Bundled power-plan licensing audit: POWER_PLAN_LICENSING.md
+- Privacy policy: PRIVACY.md
 
 ## Release and Governance
 - Gitleaks scan report: audits/GITLEAKS_REPORT_2026-04-15.json

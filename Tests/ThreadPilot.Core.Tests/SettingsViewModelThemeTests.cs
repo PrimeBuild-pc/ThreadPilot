@@ -258,6 +258,26 @@ namespace ThreadPilot.Core.Tests
             }
         }
 
+        [Fact]
+        public void SettingsView_ExposesLocalizedDiscordAndIssueActions()
+        {
+            var settingsViewPath = Path.Combine(
+                AppContext.BaseDirectory,
+                "..",
+                "..",
+                "..",
+                "..",
+                "..",
+                "Views",
+                "SettingsView.xaml");
+            var serialized = File.ReadAllText(settingsViewPath);
+
+            Assert.Contains("SettingsView_SomethingWrong", serialized, StringComparison.Ordinal);
+            Assert.Contains("OpenDiscordCommand", serialized, StringComparison.Ordinal);
+            Assert.Contains("ReportIssueCommand", serialized, StringComparison.Ordinal);
+            Assert.Contains("SettingsView_ReportIssue", serialized, StringComparison.Ordinal);
+        }
+
         private sealed class Harness
         {
             private readonly ApplicationSettingsModel settings;

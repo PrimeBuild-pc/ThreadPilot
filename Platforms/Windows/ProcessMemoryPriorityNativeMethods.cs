@@ -8,6 +8,8 @@ namespace ThreadPilot.Platforms.Windows
 
     internal static partial class ProcessMemoryPriorityNativeMethods
     {
+        internal const int ProcessIoPriority = 33;
+
         [LibraryImport("kernel32.dll", SetLastError = true)]
         public static partial SafeProcessHandle OpenProcess(
             ProcessAccessFlags access,
@@ -29,5 +31,20 @@ namespace ThreadPilot.Platforms.Windows
             ProcessInformationClass processInformationClass,
             ref MemoryPriorityInformation processInformation,
             uint processInformationSize);
+
+        [LibraryImport("ntdll.dll")]
+        public static partial int NtQueryInformationProcess(
+            SafeProcessHandle process,
+            int processInformationClass,
+            ref int processInformation,
+            int processInformationLength,
+            out uint returnLength);
+
+        [LibraryImport("ntdll.dll")]
+        public static partial int NtSetInformationProcess(
+            SafeProcessHandle process,
+            int processInformationClass,
+            ref int processInformation,
+            int processInformationLength);
     }
 }

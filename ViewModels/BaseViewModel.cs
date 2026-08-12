@@ -1,6 +1,7 @@
 namespace ThreadPilot.ViewModels
 {
     using System;
+    using System.Diagnostics;
     using System.Threading;
     using System.Threading.Tasks;
     using CommunityToolkit.Mvvm.ComponentModel;
@@ -102,6 +103,18 @@ namespace ThreadPilot.ViewModels
         {
             this.ErrorMessage = string.Empty;
             this.HasError = false;
+        }
+
+        protected void OpenExternalLink(string url)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                this.SetError("Unable to open the link.", ex);
+            }
         }
 
         protected async Task ExecuteAsync(Func<Task> operation, string? statusMessage = null, string? successMessage = null)
