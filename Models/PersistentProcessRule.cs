@@ -22,6 +22,8 @@ namespace ThreadPilot.Models
 
         public long? LegacyAffinityMask { get; init; }
 
+        public CpuAssignmentMode CpuAssignmentMode { get; init; } = CpuAssignmentMode.Automatic;
+
         public ProcessPriorityClass? Priority { get; init; }
 
         public ProcessMemoryPriority? MemoryPriority { get; init; }

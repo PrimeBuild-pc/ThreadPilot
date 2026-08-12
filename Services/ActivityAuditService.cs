@@ -143,6 +143,7 @@ namespace ThreadPilot.Services
         private static string ResolveCategory(string action)
         {
             if (action.StartsWith("ProcessAffinity", StringComparison.OrdinalIgnoreCase) ||
+                action.StartsWith("ProcessCpuAssignment", StringComparison.OrdinalIgnoreCase) ||
                 action.StartsWith("CpuSets", StringComparison.OrdinalIgnoreCase))
             {
                 return ActivityAuditCategories.Affinity;

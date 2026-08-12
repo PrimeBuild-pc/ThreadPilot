@@ -267,6 +267,15 @@ namespace ThreadPilot.Platforms.Windows
                     $"No valid CPU Set IDs resolved for CPU selection on process '{this.executableName}' (PID: {this.pid}).");
             }
 
+            var unavailableCpuSetIds = this.GetUnavailableAllocatedCpuSetIds(cpuSetIds);
+            if (unavailableCpuSetIds.Count > 0)
+            {
+                return CpuSetApplyResult.Failed(
+                    AffinityApplyErrorCodes.CpuSetsUnavailable,
+                    ProcessOperationUserMessages.CpuSetsUnavailable,
+                    $"CPU Set IDs allocated to another process cannot be used: {string.Join(", ", unavailableCpuSetIds)}.");
+            }
+
             var cpuSetIdsArray = cpuSetIds.ToArray();
             return this.ApplyCpuSetIdsDetailed(cpuSetIdsArray, (uint)cpuSetIdsArray.Length, "apply CPU Set selection");
         }
@@ -321,6 +330,14 @@ namespace ThreadPilot.Platforms.Windows
             bool success = this.nativeApi.SetProcessDefaultCpuSets(this.setLimitedInfoHandle!, cpuSetIds, cpuSetIdCount);
             if (success)
             {
+                if (!this.VerifyCpuSetIds(cpuSetIds ?? [], cpuSetIdCount))
+                {
+                    return CpuSetApplyResult.Failed(
+                        AffinityApplyErrorCodes.NativeApplyFailed,
+                        ProcessOperationUserMessages.CpuSetsUnavailable,
+                        $"Windows did not verify the requested CPU Sets for '{this.executableName}' (PID: {this.pid}).");
+                }
+
                 this.logger?.LogInformation(
                     "Completed {OperationName} for '{ExecutableName}' (PID: {ProcessId})",
                     operationName,
@@ -339,6 +356,73 @@ namespace ThreadPilot.Platforms.Windows
 
             this.logger?.LogWarning(errorMessage);
             return this.CreateNativeFailureResult(operationName, error, errorMessage);
+        }
+
+        private bool VerifyCpuSetIds(uint[] expected, uint expectedCount)
+        {
+            if (!this.nativeApi.GetProcessDefaultCpuSets(this.queryLimitedInfoHandle!, null, 0, out var requiredCount) && requiredCount == 0)
+            {
+                return false;
+            }
+
+            if (requiredCount == 0)
+            {
+                return expectedCount == 0;
+            }
+
+            var observed = new uint[requiredCount];
+            return this.nativeApi.GetProcessDefaultCpuSets(this.queryLimitedInfoHandle!, observed, requiredCount, out requiredCount) &&
+                observed.Take((int)requiredCount).OrderBy(id => id).SequenceEqual(expected.Take((int)expectedCount).OrderBy(id => id));
+        }
+
+        private List<uint> GetUnavailableAllocatedCpuSetIds(IReadOnlyList<uint> selectedIds)
+        {
+            uint bufferLength = 0;
+            if (!this.nativeApi.GetSystemCpuSetInformation(IntPtr.Zero, 0, ref bufferLength, this.queryLimitedInfoHandle!, 0) &&
+                this.nativeApi.GetLastWin32Error() != 0x7A)
+            {
+                return [];
+            }
+
+            if (bufferLength == 0)
+            {
+                return [];
+            }
+
+            var selected = selectedIds.ToHashSet();
+            var unavailable = new List<uint>();
+            var buffer = Marshal.AllocHGlobal((int)bufferLength);
+            try
+            {
+                if (!this.nativeApi.GetSystemCpuSetInformation(buffer, bufferLength, ref bufferLength, this.queryLimitedInfoHandle!, 0))
+                {
+                    return [];
+                }
+
+                for (var offset = 0; offset < bufferLength;)
+                {
+                    var item = Marshal.PtrToStructure<SYSTEM_CPU_SET_INFORMATION>(IntPtr.Add(buffer, offset));
+                    if (item.Size == 0)
+                    {
+                        break;
+                    }
+
+                    const byte allocated = 1 << 1;
+                    const byte allocatedToTarget = 1 << 2;
+                    if (selected.Contains(item.Id) && (item.AllFlags & allocated) != 0 && (item.AllFlags & allocatedToTarget) == 0)
+                    {
+                        unavailable.Add(item.Id);
+                    }
+
+                    offset += (int)item.Size;
+                }
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(buffer);
+            }
+
+            return unavailable;
         }
 
         private CpuSetApplyResult CreateNativeFailureResult(

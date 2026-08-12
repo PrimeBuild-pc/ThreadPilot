@@ -1,6 +1,7 @@
 namespace ThreadPilot.Core.Tests
 {
     using System;
+    using System.Runtime.InteropServices;
     using Microsoft.Win32.SafeHandles;
     using ThreadPilot.Models;
     using ThreadPilot.Platforms.Windows;
@@ -273,6 +274,55 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal([100U], nativeApi.LastAppliedCpuSetIds!);
         }
 
+        [Fact]
+        public void ProcessCpuSetHandler_ApplyCpuSelection_BlocksCpuSetAllocatedToAnotherProcess()
+        {
+            var nativeApi = new FakeProcessCpuSetNativeApi
+            {
+                SystemCpuSets =
+                [
+                    new SYSTEM_CPU_SET_INFORMATION { Id = 400, AllFlags = 1 << 1 },
+                ],
+            };
+            using var handler = CreateHandler(nativeApi, CpuSetMapping.Empty);
+
+            var result = handler.ApplyCpuSelectionDetailed(new CpuSelection { CpuSetIds = [400] });
+
+            Assert.False(result.Success);
+            Assert.Equal(AffinityApplyErrorCodes.CpuSetsUnavailable, result.ErrorCode);
+            Assert.False(nativeApi.WasSetProcessDefaultCpuSetsCalled);
+        }
+
+        [Fact]
+        public void ProcessCpuSetHandler_ApplyCpuSelection_AllowsCpuSetAllocatedToTargetProcess()
+        {
+            var nativeApi = new FakeProcessCpuSetNativeApi
+            {
+                SystemCpuSets =
+                [
+                    new SYSTEM_CPU_SET_INFORMATION { Id = 400, AllFlags = (1 << 1) | (1 << 2) },
+                ],
+            };
+            using var handler = CreateHandler(nativeApi, CpuSetMapping.Empty);
+
+            var result = handler.ApplyCpuSelectionDetailed(new CpuSelection { CpuSetIds = [400] });
+
+            Assert.True(result.Success);
+            Assert.True(nativeApi.WasSetProcessDefaultCpuSetsCalled);
+        }
+
+        [Fact]
+        public void ProcessCpuSetHandler_ApplyCpuSelection_FailsWhenWindowsDoesNotVerifySelection()
+        {
+            var nativeApi = new FakeProcessCpuSetNativeApi { VerifiedCpuSetIds = [401] };
+            using var handler = CreateHandler(nativeApi, CpuSetMapping.Empty);
+
+            var result = handler.ApplyCpuSelectionDetailed(new CpuSelection { CpuSetIds = [400] });
+
+            Assert.False(result.Success);
+            Assert.Equal(AffinityApplyErrorCodes.NativeApplyFailed, result.ErrorCode);
+        }
+
         private static ProcessCpuSetHandler CreateHandler(
             FakeProcessCpuSetNativeApi nativeApi,
             CpuSetMapping mapping)
@@ -292,6 +342,10 @@ namespace ThreadPilot.Core.Tests
 
             public bool SetProcessDefaultCpuSetsResult { get; init; } = true;
 
+            public uint[]? VerifiedCpuSetIds { get; init; }
+
+            public IReadOnlyList<SYSTEM_CPU_SET_INFORMATION> SystemCpuSets { get; init; } = [];
+
             public SafeProcessHandle OpenProcess(ProcessAccessFlags access, bool inheritHandle, uint processId)
             {
                 return new SafeProcessHandle(new IntPtr(1), ownsHandle: false);
@@ -303,6 +357,23 @@ namespace ThreadPilot.Core.Tests
                 this.LastAppliedCpuSetIds = cpuSetIds;
                 this.LastAppliedCpuSetCount = cpuSetIdCount;
                 return this.SetProcessDefaultCpuSetsResult;
+            }
+
+            public bool GetProcessDefaultCpuSets(
+                SafeProcessHandle process,
+                uint[]? cpuSetIds,
+                uint cpuSetIdCount,
+                out uint requiredIdCount)
+            {
+                var verified = this.VerifiedCpuSetIds ?? this.LastAppliedCpuSetIds ?? [];
+                requiredIdCount = (uint)verified.Length;
+                if (cpuSetIds == null || cpuSetIdCount < requiredIdCount)
+                {
+                    return requiredIdCount == 0;
+                }
+
+                Array.Copy(verified, cpuSetIds, requiredIdCount);
+                return true;
             }
 
             public bool GetProcessTimes(
@@ -326,8 +397,30 @@ namespace ThreadPilot.Core.Tests
                 SafeProcessHandle process,
                 uint flags)
             {
-                returnedLength = 0;
-                return false;
+                if (this.SystemCpuSets.Count == 0)
+                {
+                    returnedLength = 0;
+                    return false;
+                }
+
+                var itemSize = Marshal.SizeOf<SYSTEM_CPU_SET_INFORMATION>();
+                returnedLength = (uint)(itemSize * this.SystemCpuSets.Count);
+                if (information == IntPtr.Zero || bufferLength < returnedLength)
+                {
+                    this.LastWin32Error = 0x7A;
+                    return false;
+                }
+
+                for (var index = 0; index < this.SystemCpuSets.Count; index++)
+                {
+                    var item = this.SystemCpuSets[index];
+                    item.Size = (uint)itemSize;
+                    item.Type = CPU_SET_INFORMATION_TYPE.CpuSetInformation;
+                    Marshal.StructureToPtr(item, IntPtr.Add(information, index * itemSize), false);
+                }
+
+                this.LastWin32Error = 0;
+                return true;
             }
 
             public int GetLastWin32Error()

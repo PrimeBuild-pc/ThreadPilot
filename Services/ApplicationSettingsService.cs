@@ -273,6 +273,11 @@ namespace ThreadPilot.Services
             this.settings.Language = LocalizationService.ResolveLanguagePreference(
                 this.settings.Language,
                 this.systemUiCultureProvider());
+
+            if (!Enum.IsDefined(this.settings.DefaultCpuAssignmentMode))
+            {
+                this.settings.DefaultCpuAssignmentMode = CpuAssignmentMode.Automatic;
+            }
         }
 
         public async Task ExportSettingsAsync(string filePath)

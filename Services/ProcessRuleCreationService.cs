@@ -18,6 +18,7 @@ namespace ThreadPilot.Services
             ProcessModel process,
             IReadOnlyList<bool>? currentCoreSelection,
             ProcessMemoryPriority? currentMemoryPriority,
+            CpuAssignmentMode cpuAssignmentMode = CpuAssignmentMode.Automatic,
             CancellationToken cancellationToken = default);
     }
 
@@ -30,6 +31,8 @@ namespace ThreadPilot.Services
         public ProcessPriorityClass? Priority { get; init; }
 
         public ProcessMemoryPriority? MemoryPriority { get; init; }
+
+        public CpuAssignmentMode CpuAssignmentMode { get; init; } = CpuAssignmentMode.Automatic;
     }
 
     public sealed record ProcessRuleCreationResult
@@ -86,6 +89,7 @@ namespace ThreadPilot.Services
             ProcessModel process,
             IReadOnlyList<bool>? currentCoreSelection,
             ProcessMemoryPriority? currentMemoryPriority,
+            CpuAssignmentMode cpuAssignmentMode = CpuAssignmentMode.Automatic,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(process);
@@ -96,6 +100,7 @@ namespace ThreadPilot.Services
                     ? process.Priority
                     : null,
                 MemoryPriority = currentMemoryPriority,
+                CpuAssignmentMode = cpuAssignmentMode,
             };
 
             var affinityPayload = currentCoreSelection == null
@@ -119,6 +124,7 @@ namespace ThreadPilot.Services
                 {
                     CpuSelection = affinityPayload.Payload.CpuSelection,
                     LegacyAffinityMask = affinityPayload.Payload.LegacyAffinityMask,
+                    CpuAssignmentMode = cpuAssignmentMode,
                 };
             }
 
@@ -165,6 +171,7 @@ namespace ThreadPilot.Services
                 ExecutablePath = executablePath,
                 CpuSelection = payload.CpuSelection,
                 LegacyAffinityMask = HasSelectionPayload(payload.CpuSelection) ? null : payload.LegacyAffinityMask,
+                CpuAssignmentMode = payload.CpuAssignmentMode,
                 Priority = payload.Priority,
                 MemoryPriority = payload.MemoryPriority,
                 ApplyAffinityOnStart = HasSelectionPayload(payload.CpuSelection) || payload.LegacyAffinityMask.HasValue,
@@ -245,6 +252,9 @@ namespace ThreadPilot.Services
             {
                 CpuSelection = hasCpuSelection ? payload.CpuSelection : null,
                 LegacyAffinityMask = legacyMask,
+                CpuAssignmentMode = Enum.IsDefined(payload.CpuAssignmentMode)
+                    ? payload.CpuAssignmentMode
+                    : CpuAssignmentMode.Automatic,
             });
         }
 

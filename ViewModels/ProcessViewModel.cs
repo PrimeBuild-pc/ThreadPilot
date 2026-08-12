@@ -34,6 +34,8 @@ namespace ThreadPilot.ViewModels
         private readonly IProcessMemoryPriorityService? memoryPriorityService;
         private readonly IProcessRuleCreationService? processRuleCreationService;
         private readonly IApplicationSettingsService? settingsService;
+        private readonly IPersistentProcessRuleStore? persistentRuleStore;
+        private readonly IPersistentProcessRuleMatcher? persistentRuleMatcher;
         private readonly Action<string> clipboardSetter;
         private readonly Action<string> executableLocationOpener;
         private System.Timers.Timer? refreshTimer;
@@ -46,6 +48,8 @@ namespace ThreadPilot.ViewModels
         private bool isApplyingFilter;
         private bool filterRefreshPending;
         private bool suppressCoreSelectionEvents;
+        private bool suppressCpuAssignmentModeChanges;
+        private bool cpuAssignmentModeOverriddenByRule;
 
         [ObservableProperty]
         private bool isAutomationMonitoringEnabled = true;
@@ -102,6 +106,9 @@ namespace ThreadPilot.ViewModels
 
         [ObservableProperty]
         private bool areAdvancedFeaturesAvailable = false;
+
+        [ObservableProperty]
+        private CpuAssignmentMode selectedCpuAssignmentMode = CpuAssignmentMode.Automatic;
 
         [ObservableProperty]
         private PowerPlanModel? selectedPowerPlan;
@@ -211,6 +218,9 @@ namespace ThreadPilot.ViewModels
                 NullLogger<ProcessAffinityApplyCoordinator>.Instance);
             this.memoryPriorityService = memoryPriorityService;
             this.settingsService = settingsService;
+            this.persistentRuleStore = persistentRuleStore;
+            this.persistentRuleMatcher = persistentRuleMatcher;
+            this.SelectedCpuAssignmentMode = settingsService?.Settings.DefaultCpuAssignmentMode ?? CpuAssignmentMode.Automatic;
             this.IsAutomationMonitoringEnabled = settingsService?.Settings.EnableAutomationMonitoring ?? true;
             if (settingsService != null)
             {
@@ -256,6 +266,10 @@ namespace ThreadPilot.ViewModels
         private void OnSettingsChanged(object? sender, ApplicationSettingsChangedEventArgs e)
         {
             this.IsAutomationMonitoringEnabled = e.NewSettings.EnableAutomationMonitoring;
+            if (!this.cpuAssignmentModeOverriddenByRule)
+            {
+                this.SetCpuAssignmentMode(e.NewSettings.DefaultCpuAssignmentMode, overriddenByRule: false);
+            }
             if (!this.IsAutomationMonitoringEnabled)
             {
                 this.SetUiRefreshEnabled(false, refreshImmediately: false);

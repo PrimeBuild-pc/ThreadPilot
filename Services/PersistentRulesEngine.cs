@@ -293,12 +293,16 @@ namespace ThreadPilot.Services
         {
             if (rule.CpuSelection != null)
             {
-                return this.affinityApplyService.ApplyAsync(process, rule.CpuSelection);
+                return rule.CpuAssignmentMode == CpuAssignmentMode.Automatic
+                    ? this.affinityApplyService.ApplyAsync(process, rule.CpuSelection)
+                    : this.affinityApplyService.ApplyAsync(process, rule.CpuSelection, rule.CpuAssignmentMode);
             }
 
             if (rule.LegacyAffinityMask.HasValue)
             {
-                return this.affinityApplyService.ApplyAsync(process, rule.LegacyAffinityMask.Value);
+                return rule.CpuAssignmentMode == CpuAssignmentMode.Automatic
+                    ? this.affinityApplyService.ApplyAsync(process, rule.LegacyAffinityMask.Value)
+                    : this.affinityApplyService.ApplyAsync(process, rule.LegacyAffinityMask.Value, rule.CpuAssignmentMode);
             }
 
             return Task.FromResult(AffinityApplyResult.Succeeded(0, process.ProcessorAffinity));

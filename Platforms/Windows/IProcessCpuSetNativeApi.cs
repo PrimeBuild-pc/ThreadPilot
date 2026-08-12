@@ -10,6 +10,8 @@ namespace ThreadPilot.Platforms.Windows
 
         bool SetProcessDefaultCpuSets(SafeProcessHandle process, uint[]? cpuSetIds, uint cpuSetIdCount);
 
+        bool GetProcessDefaultCpuSets(SafeProcessHandle process, uint[]? cpuSetIds, uint cpuSetIdCount, out uint requiredIdCount);
+
         bool GetProcessTimes(
             SafeProcessHandle process,
             out FILETIME creationTime,
@@ -43,6 +45,11 @@ namespace ThreadPilot.Platforms.Windows
         public bool SetProcessDefaultCpuSets(SafeProcessHandle process, uint[]? cpuSetIds, uint cpuSetIdCount)
         {
             return CpuSetNativeMethods.SetProcessDefaultCpuSets(process, cpuSetIds, cpuSetIdCount);
+        }
+
+        public bool GetProcessDefaultCpuSets(SafeProcessHandle process, uint[]? cpuSetIds, uint cpuSetIdCount, out uint requiredIdCount)
+        {
+            return CpuSetNativeMethods.GetProcessDefaultCpuSets(process, cpuSetIds, cpuSetIdCount, out requiredIdCount);
         }
 
         public bool GetProcessTimes(

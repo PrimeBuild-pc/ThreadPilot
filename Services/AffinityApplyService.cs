@@ -1,6 +1,7 @@
 namespace ThreadPilot.Services
 {
     using System.ComponentModel;
+    using System.Diagnostics;
     using Microsoft.Extensions.Logging;
     using ThreadPilot.Models;
     using ThreadPilot.Platforms.Windows;
@@ -27,6 +28,7 @@ namespace ThreadPilot.Services
         public const string LegacyFallbackUnsafe = "LegacyFallbackUnsafe";
         public const string NativeApplyFailed = "NativeApplyFailed";
         public const string UnknownError = "UnknownError";
+        public const string ProcessRestartRequired = "ProcessRestartRequired";
     }
 
     public sealed record AffinityApplyResult
@@ -59,6 +61,14 @@ namespace ThreadPilot.Services
 
         public bool UsedLegacyAffinity { get; init; }
 
+        public bool UsedIdealProcessor { get; init; }
+
+        public CpuAssignmentMode RequestedMode { get; init; } = CpuAssignmentMode.Automatic;
+
+        public CpuAssignmentMode EffectiveMode { get; init; } = CpuAssignmentMode.Automatic;
+
+        public int AppliedThreadCount { get; init; }
+
         public static AffinityApplyResult Succeeded(long requestedMask, long verifiedMask) =>
             new()
             {
@@ -69,6 +79,7 @@ namespace ThreadPilot.Services
                 ErrorCode = AffinityApplyErrorCodes.None,
                 UserMessage = "Affinity applied successfully.",
                 TechnicalMessage = $"Affinity 0x{requestedMask:X} applied and verified as 0x{verifiedMask:X}.",
+                EffectiveMode = CpuAssignmentMode.AffinityMask,
             };
 
         public static AffinityApplyResult SucceededWithCpuSets(string technicalMessage) =>
@@ -80,6 +91,7 @@ namespace ThreadPilot.Services
                 UserMessage = "Affinity applied successfully.",
                 TechnicalMessage = technicalMessage,
                 UsedCpuSets = true,
+                EffectiveMode = CpuAssignmentMode.CpuSets,
             };
 
         public static AffinityApplyResult SucceededWithLegacyFallback(long requestedMask, long verifiedMask) =>
@@ -149,7 +161,13 @@ namespace ThreadPilot.Services
     {
         Task<AffinityApplyResult> ApplyAsync(ProcessModel process, long requestedMask);
 
+        Task<AffinityApplyResult> ApplyAsync(ProcessModel process, long requestedMask, CpuAssignmentMode mode) =>
+            this.ApplyAsync(process, requestedMask);
+
         Task<AffinityApplyResult> ApplyAsync(ProcessModel process, CpuSelection selection);
+
+        Task<AffinityApplyResult> ApplyAsync(ProcessModel process, CpuSelection selection, CpuAssignmentMode mode) =>
+            this.ApplyAsync(process, selection);
     }
 
     internal sealed class CpuSelectionAffinityApplier
@@ -436,6 +454,253 @@ namespace ThreadPilot.Services
                         isInvalidTopology: true,
                         failureReason: AffinityApplyFailureReason.InvalidMask))
                     : this.processService.SetProcessorAffinity(process, selection);
+
+        public Task<AffinityApplyResult> ApplyAsync(ProcessModel process, CpuSelection selection, CpuAssignmentMode mode)
+        {
+            if (!Enum.IsDefined(mode))
+            {
+                mode = CpuAssignmentMode.Automatic;
+            }
+
+            if (mode == CpuAssignmentMode.Automatic)
+            {
+                return this.ApplyAutomaticAsync(process, selection);
+            }
+
+            if (process == null || process.ProcessId <= 0)
+            {
+                return Task.FromResult(AffinityApplyResult.Failed(
+                    AffinityApplyErrorCodes.ProcessExited,
+                    ProcessOperationUserMessages.ProcessExited,
+                    "ProcessModel is null or no longer running.",
+                    failureReason: AffinityApplyFailureReason.ProcessTerminated) with
+                {
+                    RequestedMode = mode,
+                });
+            }
+
+            if (selection == null || (selection.CpuSetIds.Count == 0 && selection.LogicalProcessors.Count == 0))
+            {
+                return Task.FromResult(AffinityApplyResult.Failed(
+                    AffinityApplyErrorCodes.InvalidSelection,
+                    ProcessOperationUserMessages.InvalidTopology,
+                    "CpuSelection is empty.",
+                    isInvalidTopology: true,
+                    failureReason: AffinityApplyFailureReason.InvalidMask) with
+                {
+                    RequestedMode = mode,
+                });
+            }
+
+            return mode switch
+            {
+                CpuAssignmentMode.CpuSets => Task.FromResult(this.ApplyCpuSetsOnly(process, selection)),
+                CpuAssignmentMode.IdealProcessor => Task.FromResult(this.ApplyIdealProcessors(process, selection)),
+                CpuAssignmentMode.AffinityMask => this.ApplyHardAffinityAsync(process, selection),
+                _ => this.ApplyAutomaticAsync(process, selection),
+            };
+        }
+
+        public Task<AffinityApplyResult> ApplyAsync(ProcessModel process, long requestedMask, CpuAssignmentMode mode)
+        {
+            if (mode == CpuAssignmentMode.Automatic)
+            {
+                return this.ApplyAsync(process, requestedMask);
+            }
+
+            return mode == CpuAssignmentMode.AffinityMask
+                ? this.ApplyClassicAffinityOnlyAsync(process, requestedMask)
+                : Task.FromResult(InvalidThreadSelection(mode));
+        }
+
+        private async Task<AffinityApplyResult> ApplyAutomaticAsync(ProcessModel process, CpuSelection selection)
+        {
+            var result = await this.ApplyAsync(process, selection).ConfigureAwait(false);
+            return result with { RequestedMode = CpuAssignmentMode.Automatic };
+        }
+
+        private AffinityApplyResult ApplyCpuSetsOnly(ProcessModel process, CpuSelection selection)
+        {
+            if (HasConflictingHardAffinity(process, selection))
+            {
+                return RestartRequired(CpuAssignmentMode.CpuSets);
+            }
+
+            using var handler = new ProcessCpuSetHandler((uint)process.ProcessId, process.Name, this.logger);
+            var result = handler.ApplyCpuSelectionDetailed(selection);
+            return result.Success
+                ? AffinityApplyResult.SucceededWithCpuSets(result.TechnicalMessage) with
+                {
+                    RequestedMode = CpuAssignmentMode.CpuSets,
+                }
+                : AffinityApplyResult.Failed(
+                    result.ErrorCode,
+                    result.UserMessage,
+                    result.TechnicalMessage,
+                    result.IsAccessDenied,
+                    result.IsAntiCheatLikely,
+                    result.ErrorCode == AffinityApplyErrorCodes.InvalidTopology,
+                    failureReason: result.IsAccessDenied ? AffinityApplyFailureReason.AccessDenied : AffinityApplyFailureReason.ApplyFailed) with
+                {
+                    RequestedMode = CpuAssignmentMode.CpuSets,
+                    EffectiveMode = CpuAssignmentMode.CpuSets,
+                };
+        }
+
+        private AffinityApplyResult ApplyIdealProcessors(ProcessModel process, CpuSelection selection)
+        {
+            if (selection.LogicalProcessors.Count == 0)
+            {
+                return InvalidThreadSelection(CpuAssignmentMode.IdealProcessor);
+            }
+
+            if (HasConflictingHardAffinity(process, selection))
+            {
+                return RestartRequired(CpuAssignmentMode.IdealProcessor);
+            }
+
+            var result = new ProcessThreadCpuAssignmentHandler(process.ProcessId)
+                .ApplyIdealProcessors(selection.LogicalProcessors);
+            return FromThreadResult(result, CpuAssignmentMode.IdealProcessor);
+        }
+
+        private Task<AffinityApplyResult> ApplyHardAffinityAsync(ProcessModel process, CpuSelection selection)
+        {
+            if (selection.LogicalProcessors.Count == 0)
+            {
+                return Task.FromResult(InvalidThreadSelection(CpuAssignmentMode.AffinityMask));
+            }
+
+            var legacyMask = CpuSelection.ToLegacyAffinityMaskOrNull(selection);
+            if (legacyMask is > 0 && selection.LogicalProcessors.All(processor => processor.Group == 0))
+            {
+                return this.ApplyClassicAffinityOnlyAsync(process, legacyMask.Value);
+            }
+
+            var result = new ProcessThreadCpuAssignmentHandler(process.ProcessId)
+                .ApplyGroupAffinity(selection.LogicalProcessors);
+            return Task.FromResult(FromThreadResult(result, CpuAssignmentMode.AffinityMask));
+        }
+
+        private async Task<AffinityApplyResult> ApplyClassicAffinityOnlyAsync(ProcessModel process, long requestedMask)
+        {
+            try
+            {
+                var observed = await Task.Run(() =>
+                {
+                    using var target = Process.GetProcessById(process.ProcessId);
+                    target.ProcessorAffinity = new IntPtr(requestedMask);
+                    return (long)target.ProcessorAffinity;
+                }).ConfigureAwait(false);
+                process.ProcessorAffinity = observed;
+                return observed == requestedMask
+                    ? AffinityApplyResult.Succeeded(requestedMask, observed) with
+                    {
+                        RequestedMode = CpuAssignmentMode.AffinityMask,
+                        UsedLegacyAffinity = true,
+                    }
+                    : AffinityApplyResult.Failed(
+                        requestedMask,
+                        observed,
+                        AffinityApplyFailureReason.VerificationMismatch,
+                        $"Windows reported affinity 0x{observed:X} after requesting 0x{requestedMask:X}.") with
+                    {
+                        RequestedMode = CpuAssignmentMode.AffinityMask,
+                        EffectiveMode = CpuAssignmentMode.AffinityMask,
+                    };
+            }
+            catch (Exception ex) when (AffinityApplyExceptionClassifier.IsAccessDenied(ex))
+            {
+                return AffinityApplyResult.Failed(
+                    AffinityApplyErrorCodes.AccessDenied,
+                    ProcessOperationUserMessages.AccessDenied,
+                    ex.Message,
+                    isAccessDenied: true,
+                    requestedMask: requestedMask,
+                    failureReason: AffinityApplyFailureReason.AccessDenied) with
+                {
+                    RequestedMode = CpuAssignmentMode.AffinityMask,
+                    EffectiveMode = CpuAssignmentMode.AffinityMask,
+                };
+            }
+            catch (Exception ex)
+            {
+                return AffinityApplyResult.Failed(
+                    AffinityApplyErrorCodes.NativeApplyFailed,
+                    ProcessOperationUserMessages.ProcessExited,
+                    ex.Message,
+                    requestedMask: requestedMask) with
+                {
+                    RequestedMode = CpuAssignmentMode.AffinityMask,
+                    EffectiveMode = CpuAssignmentMode.AffinityMask,
+                };
+            }
+        }
+
+        private static AffinityApplyResult FromThreadResult(ThreadCpuAssignmentResult result, CpuAssignmentMode mode) =>
+            result.Success
+                ? new AffinityApplyResult
+                {
+                    Success = true,
+                    UserMessage = "CPU assignment applied successfully.",
+                    TechnicalMessage = $"{mode} applied and verified for {result.AppliedThreadCount} thread(s).",
+                    RequestedMode = mode,
+                    EffectiveMode = mode,
+                    AppliedThreadCount = result.AppliedThreadCount,
+                    UsedIdealProcessor = mode == CpuAssignmentMode.IdealProcessor,
+                    UsedLegacyAffinity = false,
+                }
+                : AffinityApplyResult.Failed(
+                    result.IsAccessDenied ? AffinityApplyErrorCodes.AccessDenied : AffinityApplyErrorCodes.NativeApplyFailed,
+                    result.IsAccessDenied ? ProcessOperationUserMessages.AccessDenied : "ThreadPilot could not apply the CPU assignment to every live thread.",
+                    result.Error,
+                    isAccessDenied: result.IsAccessDenied,
+                    failureReason: result.IsAccessDenied ? AffinityApplyFailureReason.AccessDenied : AffinityApplyFailureReason.ApplyFailed) with
+                {
+                    RequestedMode = mode,
+                    EffectiveMode = mode,
+                    AppliedThreadCount = result.AppliedThreadCount,
+                    UsedIdealProcessor = mode == CpuAssignmentMode.IdealProcessor,
+                    UsedLegacyAffinity = false,
+                };
+
+        private static bool HasConflictingHardAffinity(ProcessModel process, CpuSelection selection)
+        {
+            if (process.ProcessorAffinity <= 0 || selection.LogicalProcessors.Count == 0)
+            {
+                return false;
+            }
+
+            if (selection.LogicalProcessors.Any(processor => processor.Group != 0))
+            {
+                return true;
+            }
+
+            var desiredMask = CpuSelection.ToLegacyAffinityMaskOrNull(selection);
+            return desiredMask.HasValue && (desiredMask.Value & ~process.ProcessorAffinity) != 0;
+        }
+
+        private static AffinityApplyResult RestartRequired(CpuAssignmentMode mode) =>
+            AffinityApplyResult.Failed(
+                AffinityApplyErrorCodes.ProcessRestartRequired,
+                ProcessOperationUserMessages.ProcessRestartRequired,
+                "An existing hard affinity conflicts with the selected soft CPU assignment.") with
+            {
+                RequestedMode = mode,
+                EffectiveMode = mode,
+            };
+
+        private static AffinityApplyResult InvalidThreadSelection(CpuAssignmentMode mode) =>
+            AffinityApplyResult.Failed(
+                AffinityApplyErrorCodes.InvalidSelection,
+                ProcessOperationUserMessages.InvalidTopology,
+                $"{mode} requires logical processor coordinates.",
+                isInvalidTopology: true,
+                failureReason: AffinityApplyFailureReason.InvalidMask) with
+            {
+                RequestedMode = mode,
+                EffectiveMode = mode,
+            };
 
         public async Task<AffinityApplyResult> ApplyAsync(ProcessModel process, long requestedMask)
         {

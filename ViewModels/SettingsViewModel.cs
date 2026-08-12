@@ -32,6 +32,7 @@ namespace ThreadPilot.ViewModels
         private readonly IUpdateService updateService;
         private readonly IApplicationVersionProvider versionProvider;
         private readonly ILocalizationService localizationService;
+        private readonly ICpuTopologyProvider? cpuTopologyProvider;
         private ApplicationSettingsModel savedSettingsSnapshot;
         private bool isSyncingFromService = false;
         private bool? appliedThemePreference;
@@ -90,6 +91,9 @@ namespace ThreadPilot.ViewModels
         [ObservableProperty]
         private bool isUpdateAvailable = false;
 
+        [ObservableProperty]
+        private string reservedCpuSetsStatus = string.Empty;
+
         public bool CanDownloadAndInstallUpdate => this.IsUpdateAvailable && !this.IsLoading;
 
         public SettingsViewModel(
@@ -106,7 +110,8 @@ namespace ThreadPilot.ViewModels
             IApplicationVersionProvider versionProvider,
             ILocalizationService localizationService,
             IEnhancedLoggingService? enhancedLoggingService = null,
-            IActivityAuditService? activityAuditService = null)
+            IActivityAuditService? activityAuditService = null,
+            ICpuTopologyProvider? cpuTopologyProvider = null)
             : base(logger, enhancedLoggingService, activityAuditService)
         {
             this.settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
@@ -120,6 +125,7 @@ namespace ThreadPilot.ViewModels
             this.updateService = updateService ?? throw new ArgumentNullException(nameof(updateService));
             this.versionProvider = versionProvider ?? throw new ArgumentNullException(nameof(versionProvider));
             this.localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
+            this.cpuTopologyProvider = cpuTopologyProvider;
 
             this.ApplicationVersion = this.versionProvider.DisplayVersion;
 
@@ -128,6 +134,7 @@ namespace ThreadPilot.ViewModels
             this.savedSettingsSnapshot = (ApplicationSettingsModel)this.settings.Clone();
             this.appliedThemePreference = this.settings.UseDarkTheme;
             this.LatestUpdateVersion = this.GetLocalizedString("Settings_UpdateNotChecked", "Not checked");
+            this.ReservedCpuSetsStatus = this.GetLocalizedString("SettingsView_ReservedCpuSetsUnknown", "Reserved CPU Sets: status unavailable.");
             this.UpdateLastCheckedText();
 
             // Initialize commands
@@ -155,6 +162,31 @@ namespace ThreadPilot.ViewModels
         {
             await this.RefreshSettingsAsync();
             await this.RefreshPowerPlansAsync();
+            await this.RefreshReservedCpuSetsStatusAsync();
+        }
+
+        private async Task RefreshReservedCpuSetsStatusAsync()
+        {
+            if (this.cpuTopologyProvider == null)
+            {
+                return;
+            }
+
+            try
+            {
+                var topology = await this.cpuTopologyProvider.GetTopologySnapshotAsync();
+                this.ReservedCpuSetsStatus = topology.ReservedLogicalProcessorIndexes.Count == 0
+                    ? this.GetLocalizedString("SettingsView_ReservedCpuSetsNone", "Reserved CPU Sets: none detected.")
+                    : this.GetLocalizedString(
+                        "SettingsView_ReservedCpuSetsDetectedFormat",
+                        "Reserved CPU Sets detected on logical processors: {0}.",
+                        string.Join(", ", topology.ReservedLogicalProcessorIndexes));
+            }
+            catch (Exception ex)
+            {
+                this.Logger.LogDebug(ex, "Could not read reserved CPU Set state");
+                this.ReservedCpuSetsStatus = this.GetLocalizedString("SettingsView_ReservedCpuSetsUnknown", "Reserved CPU Sets: status unavailable.");
+            }
         }
 
         private void OnSettingsPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)

@@ -47,6 +47,37 @@ namespace ThreadPilot.Core.Tests
             affinity.Verify(s => s.ApplyAsync(It.IsAny<ProcessModel>(), It.IsAny<CpuSelection>()), Times.Never);
         }
 
+        [Theory]
+        [InlineData(CpuAssignmentMode.AffinityMask)]
+        [InlineData(CpuAssignmentMode.IdealProcessor)]
+        [InlineData(CpuAssignmentMode.CpuSets)]
+        public async Task ApplyMatchingRulesAsync_WithExplicitMode_DispatchesThatModeWithoutAutomaticPath(
+            CpuAssignmentMode mode)
+        {
+            var selection = CreateCpuSelection();
+            var rule = CreateRule(cpuSelection: selection, cpuAssignmentMode: mode, applyAffinity: true);
+            var affinity = new Mock<IAffinityApplyService>(MockBehavior.Strict);
+            affinity
+                .Setup(service => service.ApplyAsync(It.IsAny<ProcessModel>(), selection, mode))
+                .ReturnsAsync(AffinityApplyResult.Succeeded(1, 1) with
+                {
+                    RequestedMode = mode,
+                    EffectiveMode = mode,
+                });
+            var engine = CreateEngine(
+                [rule],
+                affinity.Object,
+                CreateProcessService().Object,
+                CreateMemoryPriorityService().Object);
+            var process = CreateProcess();
+
+            var result = Assert.Single(await engine.ApplyMatchingRulesAsync(process));
+
+            Assert.True(result.Success);
+            affinity.Verify(service => service.ApplyAsync(process, selection, mode), Times.Once);
+            affinity.Verify(service => service.ApplyAsync(process, selection), Times.Never);
+        }
+
         [Fact]
         public async Task ApplyPriority_ObservedPriorityMatchesRequested_ReturnsVerifiedSuccess()
         {
@@ -510,6 +541,7 @@ namespace ThreadPilot.Core.Tests
             long? legacyAffinityMask = null,
             ProcessPriorityClass? priority = null,
             ProcessMemoryPriority? memoryPriority = null,
+            CpuAssignmentMode cpuAssignmentMode = CpuAssignmentMode.Automatic,
             bool applyAffinity = false,
             bool applyPriority = false,
             bool applyMemoryPriority = false) =>
@@ -523,6 +555,7 @@ namespace ThreadPilot.Core.Tests
                 LegacyAffinityMask = legacyAffinityMask,
                 Priority = priority,
                 MemoryPriority = memoryPriority,
+                CpuAssignmentMode = cpuAssignmentMode,
                 ApplyAffinityOnStart = applyAffinity,
                 ApplyPriorityOnStart = applyPriority,
                 ApplyMemoryPriorityOnStart = applyMemoryPriority,

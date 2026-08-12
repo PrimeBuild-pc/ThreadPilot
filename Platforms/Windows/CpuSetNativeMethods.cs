@@ -19,6 +19,10 @@ namespace ThreadPilot.Platforms.Windows
 
         [LibraryImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool GetProcessDefaultCpuSets(SafeProcessHandle Process, uint[]? CpuSetIds, uint CpuSetIdCount, out uint RequiredIdCount);
+
+        [LibraryImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         public static partial bool GetProcessTimes(SafeProcessHandle hProcess, out FILETIME lpCreationTime, out FILETIME lpExitTime, out FILETIME lpKernelTime, out FILETIME lpUserTime);
     }
 

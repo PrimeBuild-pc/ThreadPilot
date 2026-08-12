@@ -159,6 +159,9 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private bool enableAutomationMonitoring = true;
 
+        [ObservableProperty]
+        private CpuAssignmentMode defaultCpuAssignmentMode = CpuAssignmentMode.Automatic;
+
         // Advanced Settings
         [ObservableProperty]
         private bool enableDebugLogging = false;
@@ -247,6 +250,9 @@ namespace ThreadPilot.Models
             this.EnableFallbackPolling = other.EnableFallbackPolling;
             this.ApplyPersistentRulesOnProcessStart = other.ApplyPersistentRulesOnProcessStart;
             this.EnableAutomationMonitoring = other.EnableAutomationMonitoring;
+            this.DefaultCpuAssignmentMode = Enum.IsDefined(other.DefaultCpuAssignmentMode)
+                ? other.DefaultCpuAssignmentMode
+                : CpuAssignmentMode.Automatic;
 
             // Advanced Settings
             this.EnableDebugLogging = other.EnableDebugLogging;
@@ -283,6 +289,11 @@ namespace ThreadPilot.Models
             if (this.FallbackPollingIntervalMs < 1000 || this.FallbackPollingIntervalMs > 60000)
             {
                 errors.Add("Fallback polling interval must be between 1 and 60 seconds");
+            }
+
+            if (!Enum.IsDefined(this.DefaultCpuAssignmentMode))
+            {
+                errors.Add("Default CPU assignment mode is invalid");
             }
 
             return errors.Count == 0 ? ValidationResult.Success() : ValidationResult.Failure(errors.ToArray());

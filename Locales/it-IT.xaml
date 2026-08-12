@@ -264,10 +264,10 @@
     <sys:String x:Key="ProcessView_SetPowerPlanTooltip">Attiva il piano di risparmio energia Windows selezionato</sys:String>
 
     <sys:String x:Key="ProcessView_PendingCoreMask">Maschera centrale in sospeso</sys:String>
-    <sys:String x:Key="ProcessView_StageMaskTooltip">Seleziona una maschera per metterla in scena. Ciò non modifica l'affinità del sistema operativo finché non si fa clic su Applica affinità.</sys:String>
-    <sys:String x:Key="ProcessView_ApplyAffinity">Applica affinità</sys:String>
-    <sys:String x:Key="ProcessView_ApplyAffinityTooltip">Applica la maschera core in sospeso al processo selezionato e verifica lo stato di affinità Windows</sys:String>
-    <sys:String x:Key="ProcessView_ApplyAffinitySaveRule">Applica affinità e Salva come regola</sys:String>
+    <sys:String x:Key="ProcessView_StageMaskTooltip">Seleziona una maschera da preparare. Nulla cambia finché non fai clic su Applica assegnazione CPU.</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinity">Applica assegnazione CPU</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinityTooltip">Applica la selezione CPU con la modalità scelta e verifica lo stato di Windows</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinitySaveRule">Applica assegnazione CPU e salva come regola</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinitySaveRuleTooltip">Salva le impostazioni del processo corrente come regola. Queste impostazioni verranno applicate automaticamente all'avvio di questo processo in futuro.</sys:String>
 
     <sys:String x:Key="ProcessView_SetCpuPriority">Imposta la priorità CPU</sys:String>
@@ -306,7 +306,7 @@
     <sys:String x:Key="ProcessView_ColCpuUsage">Utilizzo CPU</sys:String>
     <sys:String x:Key="ProcessView_ColMemory">Utilizzo della memoria</sys:String>
 
-    <sys:String x:Key="ProcessView_AffinityStagedTooltip">Affinità organizzata nell'interfaccia utente. Non viene applicato finché non si fa clic su Applica affinità.</sys:String>
+    <sys:String x:Key="ProcessView_AffinityStagedTooltip">Selezione CPU preparata nell’interfaccia. Viene applicata solo tramite Applica assegnazione CPU.</sys:String>
     <sys:String x:Key="ProcessView_AffinityCurrentTooltip">Affinità attualmente segnalata da Windows per il processo selezionato</sys:String>
     <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Anteprima di sola lettura della selezione CPU corrente o in sospeso</sys:String>
     <sys:String x:Key="ProcessView_OpenMasksTabTooltip">Apri la scheda CPU Maschere per creare una nuova maschera personalizzata</sys:String>
@@ -626,11 +626,11 @@
     <sys:String x:Key="Notification_GameBoostDeactivatedTitle">Potenziamento del gioco disattivato</sys:String>
     <sys:String x:Key="Notification_GameBoostDeactivatedFormat">Modalità Game Boost disattivata dopo {0}</sys:String>
     <sys:String x:Key="Notification_ProcessMonitorErrorTitle">Errore di monitoraggio del processo</sys:String>
-    <sys:String x:Key="Notification_AffinityBlockedTitle">Affinità bloccata</sys:String>
-    <sys:String x:Key="Notification_AffinityAppliedTitle">Affinità applicata</sys:String>
-    <sys:String x:Key="Notification_AffinityAdjustedTitle">Affinità modificata</sys:String>
-    <sys:String x:Key="Notification_AffinityFailedTitle">Affinità fallita</sys:String>
-    <sys:String x:Key="Notification_AffinityErrorTitle">Errore di affinità</sys:String>
+    <sys:String x:Key="Notification_AffinityBlockedTitle">Assegnazione CPU bloccata</sys:String>
+    <sys:String x:Key="Notification_AffinityAppliedTitle">Assegnazione CPU applicata</sys:String>
+    <sys:String x:Key="Notification_AffinityAdjustedTitle">Assegnazione CPU corretta</sys:String>
+    <sys:String x:Key="Notification_AffinityFailedTitle">Assegnazione CPU non riuscita</sys:String>
+    <sys:String x:Key="Notification_AffinityErrorTitle">Errore di assegnazione CPU</sys:String>
     <sys:String x:Key="Notification_PriorityBlockedTitle">Priorità bloccata</sys:String>
     <sys:String x:Key="Notification_PriorityWarningTitle">Avvertimento prioritario</sys:String>
     <sys:String x:Key="Notification_PriorityAppliedTitle">Priorità applicata</sys:String>
@@ -658,6 +658,28 @@
     <sys:String x:Key="Notification_SettingsErrorTitle">Errore nelle impostazioni</sys:String>
     <sys:String x:Key="Notification_SettingsSaveFailed">Impossibile salvare le impostazioni</sys:String>
     <sys:String x:Key="Notification_TestNotificationMessage">Questa è una notifica di prova per verificare che le tue impostazioni funzionino correttamente.</sys:String>
+
+    <!-- Assegnazione CPU -->
+    <sys:String x:Key="SettingsView_CpuAssignment">Assegnazione CPU</sys:String>
+    <sys:String x:Key="SettingsView_DefaultCpuAssignment">Assegnazione CPU predefinita</sys:String>
+    <sys:String x:Key="SettingsView_CpuAssignmentTooltip">Scegli come le nuove azioni manuali e le regole assegnano le CPU selezionate.</sys:String>
+    <sys:String x:Key="SettingsView_CpuAssignmentInfo">Informazioni sulla modalità di assegnazione CPU</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_AffinityMask">Maschera di affinità</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_AffinityMaskTooltip">Vincolo rigido. Le selezioni multi-group vengono applicate per thread; i nuovi thread sono coperti quando il monitoraggio automatico è attivo.</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_IdealProcessor">Processore ideale</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_IdealProcessorTooltip">Preferenza soft per thread con distribuzione round-robin stabile. I nuovi thread sono coperti quando il monitoraggio automatico è attivo.</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_CpuSets">CPU Sets</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_CpuSetsTooltip">Assegnazione soft per processo ereditata dai nuovi thread. La modalità esplicita non usa fallback affinity.</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_Automatic">ThreadPilot automatico</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_AutomaticTooltip">Comportamento compatibile con le vecchie regole: CPU Sets con fallback affinity solo quando sicuro.</sys:String>
+    <sys:String x:Key="SettingsView_CpuAssignmentDescription">Usata da nuove azioni e regole, salvo override in una regola salvata.</sys:String>
+    <sys:String x:Key="SettingsView_ReservedCpuSetsWarning">I CPU Set riservati sono qui in sola lettura. Sono globali, richiedono un riavvio e sono destinati a dispositivi Soft Real-Time dedicati; una configurazione incompleta può causare malfunzionamenti seri.</sys:String>
+    <sys:String x:Key="SettingsView_ReservedCpuSetsTooltip">ThreadPilot non modifica ReservedCpuSets. Le modalità per processo sopra indicate sono indipendenti da questa configurazione globale di Windows.</sys:String>
+    <sys:String x:Key="SettingsView_ReservedCpuSetsUnknown">CPU Set riservati: stato non disponibile.</sys:String>
+    <sys:String x:Key="SettingsView_ReservedCpuSetsNone">CPU Set riservati: nessuno rilevato.</sys:String>
+    <sys:String x:Key="SettingsView_ReservedCpuSetsDetectedFormat">CPU Set riservati rilevati sui processori logici: {0}.</sys:String>
+    <sys:String x:Key="ProcessView_CpuAssignmentMode">Modalità di assegnazione CPU</sys:String>
+    <sys:String x:Key="ProcessView_CpuAssignmentModeTooltip">Questa modalità in sospeso segue la regola corrispondente, se presente; altrimenti usa il valore predefinito globale.</sys:String>
 
     <!-- Elevation Service -->
     <sys:String x:Key="Elevation_RequestPromptText">ThreadPilot richiede privilegi di amministratore per gestire l'affinità dei processi e i piani di alimentazione.&#x0a;&#x0a;Desideri riavviare l'applicazione con privilegi di amministratore?</sys:String>

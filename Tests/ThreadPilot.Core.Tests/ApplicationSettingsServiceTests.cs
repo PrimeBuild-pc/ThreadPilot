@@ -40,6 +40,23 @@ namespace ThreadPilot.Core.Tests
             await service.LoadSettingsAsync();
 
             Assert.True(service.Settings.EnableAutomationMonitoring);
+            Assert.Equal(CpuAssignmentMode.Automatic, service.Settings.DefaultCpuAssignmentMode);
+        }
+
+        [Fact]
+        public async Task UpdateSettingsAsync_RoundTripsDefaultCpuAssignmentMode()
+        {
+            var storage = new FakeSettingsStorage();
+            var service = CreateService(storage);
+            await service.LoadSettingsAsync();
+            var settings = service.Settings;
+            settings.DefaultCpuAssignmentMode = CpuAssignmentMode.CpuSets;
+
+            await service.UpdateSettingsAsync(settings);
+
+            var reloaded = CreateService(storage);
+            await reloaded.LoadSettingsAsync();
+            Assert.Equal(CpuAssignmentMode.CpuSets, reloaded.Settings.DefaultCpuAssignmentMode);
         }
 
         [Fact]

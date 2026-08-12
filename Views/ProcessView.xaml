@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:converters="clr-namespace:ThreadPilot.Converters"
+             xmlns:models="clr-namespace:ThreadPilot.Models"
              xmlns:Diagnostics="clr-namespace:System.Diagnostics;assembly=System.Diagnostics.Process"
              xmlns:sys="clr-namespace:System;assembly=mscorlib"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -711,6 +712,24 @@
                                             </StackPanel>
                                         </DataTemplate>
                                     </ComboBox.ItemTemplate>
+                                </ComboBox>
+
+                                <DockPanel Margin="0,0,0,4">
+                                    <TextBlock Text="{DynamicResource ProcessView_CpuAssignmentMode}" FontSize="{StaticResource ProcessFontSmall}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock Text="ⓘ"
+                                               Margin="8,0,0,0"
+                                               ToolTip="{DynamicResource ProcessView_CpuAssignmentModeTooltip}"
+                                               AutomationProperties.Name="{DynamicResource SettingsView_CpuAssignmentInfo}"
+                                               AutomationProperties.HelpText="{DynamicResource ProcessView_CpuAssignmentModeTooltip}"/>
+                                </DockPanel>
+                                <ComboBox SelectedValue="{Binding SelectedCpuAssignmentMode, Mode=TwoWay}"
+                                          SelectedValuePath="Tag"
+                                          IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}"
+                                          Margin="0,0,0,8">
+                                    <ComboBoxItem Content="{DynamicResource CpuAssignmentMode_AffinityMask}" Tag="{x:Static models:CpuAssignmentMode.AffinityMask}" ToolTip="{DynamicResource CpuAssignmentMode_AffinityMaskTooltip}"/>
+                                    <ComboBoxItem Content="{DynamicResource CpuAssignmentMode_IdealProcessor}" Tag="{x:Static models:CpuAssignmentMode.IdealProcessor}" ToolTip="{DynamicResource CpuAssignmentMode_IdealProcessorTooltip}"/>
+                                    <ComboBoxItem Content="{DynamicResource CpuAssignmentMode_CpuSets}" Tag="{x:Static models:CpuAssignmentMode.CpuSets}" ToolTip="{DynamicResource CpuAssignmentMode_CpuSetsTooltip}"/>
+                                    <ComboBoxItem Content="{DynamicResource CpuAssignmentMode_Automatic}" Tag="{x:Static models:CpuAssignmentMode.Automatic}" ToolTip="{DynamicResource CpuAssignmentMode_AutomaticTooltip}"/>
                                 </ComboBox>
 
                                 <TextBlock Text="{Binding TopologyStatus}"

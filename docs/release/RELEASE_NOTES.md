@@ -1,17 +1,26 @@
-## ThreadPilot v1.5.3
+## ThreadPilot v1.6.0
 
-ThreadPilot 1.5.3 hardens persistence, monitoring, notifications, autostart, tray updates, and application shutdown.
+ThreadPilot 1.6.0 adds explicit CPU assignment strategies while keeping the established ThreadPilot automatic behavior as the persistent default.
 
 ### Highlights
 
-- Saved process rules are protected from overwrite after transient read or recovery-copy failures.
-- Pending Settings edits now merge safely with unrelated background updates.
-- CPU monitoring preserves logical processor identity and avoids overlapping callbacks after rapid stop/start cycles.
-- Notification quiet hours, retries, default hotkeys, autostart ordering, tray refreshes, and shutdown disposal are more reliable.
-- Process Management now shows a clean disabled state when automation monitoring is off.
+- Choose between ThreadPilot automatic, Affinity Mask, Ideal Processor, and CPU Sets.
+- Save a global default or override the strategy for individual process rules.
+- Apply topology-aware affinity across processor groups and processor indexes above 63.
+- Distribute Ideal Processor preferences deterministically across existing process threads.
+- Inspect reserved CPU Sets without changing global Windows configuration.
+- Use the new controls and explanations in all seven supported languages.
+
+### Compatibility and safety
+
+- Existing settings and rules remain compatible and continue in ThreadPilot automatic mode.
+- Explicit CPU Sets and Ideal Processor modes do not silently fall back to affinity.
+- ThreadPilot never widens an existing hard affinity restriction; switching to a soft mode can require restarting the target process.
+- With automation monitoring disabled, Ideal Processor and multi-group Affinity apply only to threads that exist at apply time.
+- Reserved CPU Sets remain read-only in this release.
 
 ### Validation
 
-- 675 automated Release tests passed before release preparation.
-- CI DevSecOps and CodeQL passed on the merged reliability changes.
-- The elevated Windows UI and disabled-monitoring state were manually validated.
+- 689 automated tests passed in Debug and Release configurations.
+- All four strategies passed hardware smoke tests on a Windows 11 Hyper-V guest with four logical processors.
+- Multi-group and processor indexes above 63 passed synthetic topology tests.

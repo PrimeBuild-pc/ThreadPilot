@@ -58,7 +58,7 @@ namespace ThreadPilot.Core.Tests
             Assert.True(viewModel.HasPendingAffinityEdits);
             Assert.Equal("Current OS affinity: 0x3", viewModel.CurrentAffinityText);
             Assert.Equal("Pending core mask: 0x1", viewModel.PendingAffinityText);
-            Assert.Equal("Core mask staged. Use Apply Affinity to change Windows affinity.", viewModel.AffinityEditStateText);
+            Assert.Equal("CPU selection staged. Use Apply CPU Assignment to apply it.", viewModel.AffinityEditStateText);
         }
 
         [Fact]

@@ -18,6 +18,7 @@ namespace ThreadPilot.Core.Tests
             Assert.True(settings.EnableAutomaticUpdateChecks);
             Assert.False(settings.IncludePrereleaseUpdates);
             Assert.Null(settings.LastUpdateCheckUtc);
+            Assert.Equal(CpuAssignmentMode.Automatic, settings.DefaultCpuAssignmentMode);
         }
 
         [Fact]
@@ -27,6 +28,7 @@ namespace ThreadPilot.Core.Tests
             {
                 Language = "zh-CN",
                 EnableAutomationMonitoring = false,
+                DefaultCpuAssignmentMode = CpuAssignmentMode.IdealProcessor,
             };
             var target = new ApplicationSettingsModel();
 
@@ -34,6 +36,7 @@ namespace ThreadPilot.Core.Tests
 
             Assert.Equal("zh-CN", target.Language);
             Assert.False(target.EnableAutomationMonitoring);
+            Assert.Equal(CpuAssignmentMode.IdealProcessor, target.DefaultCpuAssignmentMode);
         }
 
         [Fact]
