@@ -23,6 +23,7 @@ namespace ThreadPilot.Core.Tests
         [InlineData("CpuSetsClearFailed", "The process exited before ThreadPilot could apply the change.", "Affinity", ActivityAuditSeverity.Error)]
         [InlineData("ProcessAffinityApplied", "Affinity applied successfully to Game.exe", "Affinity", ActivityAuditSeverity.Success)]
         [InlineData("ProcessAffinityFailed", "The process appears protected by anti-cheat or process protection.", "Affinity", ActivityAuditSeverity.Warning)]
+        [InlineData("ProcessCpuAssignmentApplied", "CPU assignment applied with IdealProcessor", "Affinity", ActivityAuditSeverity.Success)]
         [InlineData("PersistentRuleSaved", "Saved rule for Game.exe.", "Rules", ActivityAuditSeverity.Success)]
         [InlineData("PersistentRuleSaveFailed", "Failed to save rule for Game.exe.", "Rules", ActivityAuditSeverity.Error)]
         [InlineData("PersistentRuleAutoApplied", "Auto-applied saved rule for Game.exe.", "Rules", ActivityAuditSeverity.Success)]

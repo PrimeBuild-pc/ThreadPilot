@@ -67,11 +67,12 @@ namespace ThreadPilot.Core.Tests
                     rowProcess,
                     It.Is<IReadOnlyList<bool>>(mask => mask.Count == 2 && mask[0] && !mask[1]),
                     "Manual Process tab context menu CPU selection",
+                    CpuAssignmentMode.Automatic,
                     default),
                 Times.Once);
             enhancedLoggingService.Verify(
                 service => service.LogUserActionAsync(
-                    "ProcessAffinityApplied",
+                    "ProcessCpuAssignmentApplied",
                     It.IsAny<string>(),
                     It.Is<string>(context => context.Contains("Process: Game.exe") && context.Contains("PID: 100"))),
                 Times.Once);
@@ -105,6 +106,7 @@ namespace ThreadPilot.Core.Tests
                     rowProcess,
                     It.IsAny<IReadOnlyList<bool>>(),
                     "Manual Process tab context menu CPU selection",
+                    CpuAssignmentMode.Automatic,
                     default),
                 Times.Once);
             coordinator.Verify(
@@ -112,6 +114,7 @@ namespace ThreadPilot.Core.Tests
                     oldSelectedProcess,
                     It.IsAny<IReadOnlyList<bool>>(),
                     It.IsAny<string>(),
+                    It.IsAny<CpuAssignmentMode>(),
                     default),
                 Times.Never);
             Assert.Same(rowProcess, viewModel.SelectedProcess);
@@ -138,6 +141,7 @@ namespace ThreadPilot.Core.Tests
                     rowProcess,
                     It.IsAny<IReadOnlyList<bool>>(),
                     "Manual Process tab context menu CPU selection",
+                    CpuAssignmentMode.Automatic,
                     default),
                 Times.Once);
             processService.Verify(
@@ -604,6 +608,7 @@ namespace ThreadPilot.Core.Tests
                     process,
                     It.Is<IReadOnlyList<bool>>(mask => mask.Count == 2 && mask[0] && !mask[1]),
                     "Manual Process tab context menu CPU selection",
+                    CpuAssignmentMode.Automatic,
                     default),
                 Times.Once);
             var rule = Assert.Single(ruleStore.SavedRules);
@@ -621,6 +626,7 @@ namespace ThreadPilot.Core.Tests
                     It.IsAny<ProcessModel>(),
                     It.IsAny<IReadOnlyList<bool>>(),
                     It.IsAny<string>(),
+                    It.IsAny<CpuAssignmentMode>(),
                     default))
                 .ReturnsAsync(AffinityApplyResult.Failed(
                     AffinityApplyErrorCodes.AccessDenied,
@@ -674,6 +680,7 @@ namespace ThreadPilot.Core.Tests
                     rowProcess,
                     It.IsAny<IReadOnlyList<bool>>(),
                     It.IsAny<string>(),
+                    CpuAssignmentMode.Automatic,
                     default),
                 Times.Once);
             var rule = Assert.Single(ruleStore.SavedRules);
@@ -748,6 +755,7 @@ namespace ThreadPilot.Core.Tests
                     It.IsAny<ProcessModel>(),
                     It.IsAny<IReadOnlyList<bool>>(),
                     It.IsAny<string>(),
+                    It.IsAny<CpuAssignmentMode>(),
                     default))
                 .ReturnsAsync(AffinityApplyResult.Succeeded(1, 1));
             return coordinator;

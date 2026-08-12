@@ -18,6 +18,14 @@ namespace ThreadPilot.Services
             IReadOnlyList<bool> boolMask,
             string selectionReason,
             CancellationToken cancellationToken = default);
+
+        Task<AffinityApplyResult> ApplyCoreSelectionAsync(
+            ProcessModel process,
+            IReadOnlyList<bool> boolMask,
+            string selectionReason,
+            CpuAssignmentMode mode,
+            CancellationToken cancellationToken = default) =>
+            this.ApplyCoreSelectionAsync(process, boolMask, selectionReason, cancellationToken);
     }
 
     public sealed class ProcessAffinityApplyCoordinator : IProcessAffinityApplyCoordinator
@@ -64,6 +72,21 @@ namespace ThreadPilot.Services
             string selectionReason,
             CancellationToken cancellationToken = default)
         {
+            return await this.ApplyCoreSelectionAsync(
+                process,
+                boolMask,
+                selectionReason,
+                CpuAssignmentMode.Automatic,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        public async Task<AffinityApplyResult> ApplyCoreSelectionAsync(
+            ProcessModel process,
+            IReadOnlyList<bool> boolMask,
+            string selectionReason,
+            CpuAssignmentMode mode,
+            CancellationToken cancellationToken = default)
+        {
             ArgumentNullException.ThrowIfNull(process);
             ArgumentNullException.ThrowIfNull(boolMask);
 
@@ -83,7 +106,7 @@ namespace ThreadPilot.Services
                 cancellationToken).ConfigureAwait(false);
             if (migratedSelection != null)
             {
-                return await this.affinityApplyService.ApplyAsync(process, migratedSelection).ConfigureAwait(false);
+                return await this.affinityApplyService.ApplyAsync(process, migratedSelection, mode).ConfigureAwait(false);
             }
 
             if (!TryBuildSafeLegacyMask(boolMask, out var legacyMask, out var legacyFailure))
@@ -91,7 +114,20 @@ namespace ThreadPilot.Services
                 return legacyFailure;
             }
 
-            return await this.affinityApplyService.ApplyAsync(process, legacyMask).ConfigureAwait(false);
+            if (mode == CpuAssignmentMode.Automatic)
+            {
+                return await this.affinityApplyService.ApplyAsync(process, legacyMask).ConfigureAwait(false);
+            }
+
+            var processors = boolMask
+                .Select((selected, index) => (selected, index))
+                .Where(item => item.selected)
+                .Select(item => new ProcessorRef(0, (byte)item.index, item.index))
+                .ToList();
+            return await this.affinityApplyService.ApplyAsync(
+                process,
+                new CpuSelection { LogicalProcessors = processors },
+                mode).ConfigureAwait(false);
         }
 
         private async Task<CpuSelection?> TryMigrateToCpuSelectionAsync(

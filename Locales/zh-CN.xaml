@@ -264,10 +264,10 @@
     <sys:String x:Key="ProcessView_SetPowerPlanTooltip">激活所选的 Windows 电源计划</sys:String>
     
     <sys:String x:Key="ProcessView_PendingCoreMask">待处理的核心掩码</sys:String>
-    <sys:String x:Key="ProcessView_StageMaskTooltip">选择一个掩码来暂存它。在点击“应用关联性”之前，这不会更改操作系统关联性。</sys:String>
-    <sys:String x:Key="ProcessView_ApplyAffinity">应用关联性</sys:String>
-    <sys:String x:Key="ProcessView_ApplyAffinityTooltip">将待处理的核心掩码应用于选定的进程，并验证 Windows 关联性状态</sys:String>
-    <sys:String x:Key="ProcessView_ApplyAffinitySaveRule">应用关联性并保存为规则</sys:String>
+    <sys:String x:Key="ProcessView_StageMaskTooltip">选择并暂存掩码。点击“应用 CPU 分配”前不会发生更改。</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinity">应用 CPU 分配</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinityTooltip">使用所选模式应用待处理 CPU 选择，并验证 Windows 状态</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinitySaveRule">应用 CPU 分配并保存为规则</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinitySaveRuleTooltip">将当前进程设置保存为规则。以后此进程启动时将自动应用这些设置。</sys:String>
     
     <sys:String x:Key="ProcessView_SetCpuPriority">设置 CPU 优先级</sys:String>
@@ -306,7 +306,7 @@
     <sys:String x:Key="ProcessView_ColCpuUsage">CPU 使用率</sys:String>
     <sys:String x:Key="ProcessView_ColMemory">内存使用</sys:String>
     
-    <sys:String x:Key="ProcessView_AffinityStagedTooltip">关联性已暂存在 UI 中。在点击“应用关联性”之前不会应用。</sys:String>
+    <sys:String x:Key="ProcessView_AffinityStagedTooltip">CPU 选择已暂存，仅通过“应用 CPU 分配”应用。</sys:String>
     <sys:String x:Key="ProcessView_AffinityCurrentTooltip">Windows 当前报告的所选进程的关联性</sys:String>
     <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">当前或待处理 CPU 选择的只读预览</sys:String>
     <sys:String x:Key="ProcessView_OpenMasksTabTooltip">打开 CPU 掩码选项卡以创建新的自定义掩码</sys:String>
@@ -626,11 +626,11 @@
     <sys:String x:Key="Notification_GameBoostDeactivatedTitle">游戏加速已关闭</sys:String>
     <sys:String x:Key="Notification_GameBoostDeactivatedFormat">游戏加速模式已关闭，持续时间: {0}</sys:String>
     <sys:String x:Key="Notification_ProcessMonitorErrorTitle">进程监控器错误</sys:String>
-    <sys:String x:Key="Notification_AffinityBlockedTitle">关联性应用被阻止</sys:String>
-    <sys:String x:Key="Notification_AffinityAppliedTitle">关联性已应用</sys:String>
-    <sys:String x:Key="Notification_AffinityAdjustedTitle">关联性已调整</sys:String>
-    <sys:String x:Key="Notification_AffinityFailedTitle">关联性应用失败</sys:String>
-    <sys:String x:Key="Notification_AffinityErrorTitle">关联性错误</sys:String>
+    <sys:String x:Key="Notification_AffinityBlockedTitle">CPU 分配被阻止</sys:String>
+    <sys:String x:Key="Notification_AffinityAppliedTitle">CPU 分配已应用</sys:String>
+    <sys:String x:Key="Notification_AffinityAdjustedTitle">CPU 分配已调整</sys:String>
+    <sys:String x:Key="Notification_AffinityFailedTitle">CPU 分配失败</sys:String>
+    <sys:String x:Key="Notification_AffinityErrorTitle">CPU 分配错误</sys:String>
     <sys:String x:Key="Notification_PriorityBlockedTitle">优先级应用被阻止</sys:String>
     <sys:String x:Key="Notification_PriorityWarningTitle">优先级警告</sys:String>
     <sys:String x:Key="Notification_PriorityAppliedTitle">优先级已应用</sys:String>
@@ -658,6 +658,28 @@
     <sys:String x:Key="Notification_SettingsErrorTitle">设置错误</sys:String>
     <sys:String x:Key="Notification_SettingsSaveFailed">无法保存设置</sys:String>
     <sys:String x:Key="Notification_TestNotificationMessage">这是一条用于验证您的设置是否正常工作的测试通知。</sys:String>
+
+    <!-- CPU 分配 -->
+    <sys:String x:Key="SettingsView_CpuAssignment">CPU 分配</sys:String>
+    <sys:String x:Key="SettingsView_DefaultCpuAssignment">默认 CPU 分配</sys:String>
+    <sys:String x:Key="SettingsView_CpuAssignmentTooltip">选择新手动操作和规则如何分配所选 CPU。</sys:String>
+    <sys:String x:Key="SettingsView_CpuAssignmentInfo">CPU 分配模式信息</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_AffinityMask">关联掩码</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_AffinityMaskTooltip">硬性限制。多处理器组选择按线程应用；启用自动监控时会覆盖新线程。</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_IdealProcessor">理想处理器</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_IdealProcessorTooltip">按线程的软偏好，采用稳定轮询分配。启用自动监控时会覆盖新线程。</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_CpuSets">CPU 集</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_CpuSetsTooltip">进程级软分配，新线程会继承。显式模式绝不会回退到关联性。</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_Automatic">ThreadPilot 自动</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_AutomaticTooltip">兼容旧规则：先使用 CPU 集，仅在安全时回退到关联性。</sys:String>
+    <sys:String x:Key="SettingsView_CpuAssignmentDescription">用于新操作和规则，除非保存的规则指定了覆盖模式。</sys:String>
+    <sys:String x:Key="SettingsView_ReservedCpuSetsWarning">此处仅显示保留 CPU 集。它是全局设置、需要重启，并面向专用 Soft Real-Time 设备；配置不完整可能导致严重故障。</sys:String>
+    <sys:String x:Key="SettingsView_ReservedCpuSetsTooltip">ThreadPilot 不会修改 ReservedCpuSets。上面的进程级模式独立于此 Windows 全局配置。</sys:String>
+    <sys:String x:Key="SettingsView_ReservedCpuSetsUnknown">保留 CPU 集：状态不可用。</sys:String>
+    <sys:String x:Key="SettingsView_ReservedCpuSetsNone">保留 CPU 集：未检测到。</sys:String>
+    <sys:String x:Key="SettingsView_ReservedCpuSetsDetectedFormat">在以下逻辑处理器上检测到保留 CPU 集：{0}。</sys:String>
+    <sys:String x:Key="ProcessView_CpuAssignmentMode">CPU 分配模式</sys:String>
+    <sys:String x:Key="ProcessView_CpuAssignmentModeTooltip">若有匹配规则，此暂存模式遵循该规则；否则使用全局默认值。</sys:String>
 
     <!-- Elevation Service -->
     <sys:String x:Key="Elevation_RequestPromptText">ThreadPilot 需要管理员权限来管理进程关联性和电源计划。&#x0a;&#x0a;您想以管理员权限重新启动应用程序吗？</sys:String>

@@ -299,6 +299,39 @@
                     </Border>
                 </StackPanel>
 
+                <!-- CPU assignment Section -->
+                <StackPanel Width="372" Margin="0,0,16,16">
+                    <TextBlock Text="{DynamicResource SettingsView_CpuAssignment}" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
+                    <Border Style="{StaticResource SettingsCardStyle}">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,5">
+                                <TextBlock Text="{DynamicResource SettingsView_DefaultCpuAssignment}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <TextBlock Text="ⓘ"
+                                           Margin="8,0,0,0"
+                                           VerticalAlignment="Center"
+                                           ToolTip="{DynamicResource SettingsView_CpuAssignmentTooltip}"
+                                           AutomationProperties.Name="{DynamicResource SettingsView_CpuAssignmentInfo}"
+                                           AutomationProperties.HelpText="{DynamicResource SettingsView_CpuAssignmentTooltip}"/>
+                            </DockPanel>
+                            <ComboBox SelectedValue="{Binding Settings.DefaultCpuAssignmentMode}"
+                                      SelectedValuePath="Tag"
+                                      Margin="0,0,0,6">
+                                <ComboBoxItem Content="{DynamicResource CpuAssignmentMode_AffinityMask}" Tag="{x:Static models:CpuAssignmentMode.AffinityMask}" ToolTip="{DynamicResource CpuAssignmentMode_AffinityMaskTooltip}"/>
+                                <ComboBoxItem Content="{DynamicResource CpuAssignmentMode_IdealProcessor}" Tag="{x:Static models:CpuAssignmentMode.IdealProcessor}" ToolTip="{DynamicResource CpuAssignmentMode_IdealProcessorTooltip}"/>
+                                <ComboBoxItem Content="{DynamicResource CpuAssignmentMode_CpuSets}" Tag="{x:Static models:CpuAssignmentMode.CpuSets}" ToolTip="{DynamicResource CpuAssignmentMode_CpuSetsTooltip}"/>
+                                <ComboBoxItem Content="{DynamicResource CpuAssignmentMode_Automatic}" Tag="{x:Static models:CpuAssignmentMode.Automatic}" ToolTip="{DynamicResource CpuAssignmentMode_AutomaticTooltip}"/>
+                            </ComboBox>
+                            <TextBlock Text="{DynamicResource SettingsView_CpuAssignmentDescription}" Style="{StaticResource DescriptionStyle}"/>
+                            <Separator Margin="0,12"/>
+                            <TextBlock Text="{Binding ReservedCpuSetsStatus}" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                            <TextBlock Text="{DynamicResource SettingsView_ReservedCpuSetsWarning}"
+                                       Style="{StaticResource DescriptionStyle}"
+                                       ToolTip="{DynamicResource SettingsView_ReservedCpuSetsTooltip}"
+                                       AutomationProperties.HelpText="{DynamicResource SettingsView_ReservedCpuSetsTooltip}"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
                 <!-- Advanced Section -->
                 <StackPanel Width="372" Margin="0,0,16,16">
                     <TextBlock Text="{DynamicResource SettingsView_Advanced}" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>

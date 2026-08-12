@@ -2,6 +2,40 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.6.0 - CPU assignment strategies
+
+### Added
+
+- Added four explicit CPU assignment modes: ThreadPilot automatic, Affinity Mask, Ideal Processor, and CPU Sets.
+- Added a persistent global default and per-rule overrides. ThreadPilot automatic is the default and preserves the established CPU Sets with safe affinity fallback behavior.
+- Added topology-aware, per-thread affinity for multi-group selections and processors above CPU 63.
+- Added deterministic round-robin Ideal Processor assignment with per-thread verification.
+- Added read-only visibility for reserved CPU Sets and availability checks scoped to the target process.
+- Added localized mode descriptions and guidance in English, Italian, French, German, Spanish, Russian, and Simplified Chinese.
+
+### Changed
+
+- Process actions, notifications, and audit entries now report the requested and effective CPU assignment strategy.
+- Explicit CPU Sets and Ideal Processor modes never use a hidden affinity fallback.
+- Existing rules remain in ThreadPilot automatic mode and retain their historical behavior without rewriting stored data.
+
+### Fixed
+
+- Corrected the native `GetProcessDefaultCpuSets` call contract, preventing invalid memory access while verifying process CPU Sets.
+- Thread enumeration now handles threads that exit during assignment without reporting a false success.
+
+### Safety and compatibility
+
+- ThreadPilot does not write the global Windows `ReservedCpuSets` registry configuration.
+- Existing restrictive affinity is not broadened automatically when selecting a soft strategy; restarting the target process may be required.
+- Ideal Processor and multi-group Affinity cover newly created threads through the existing automation monitor. With monitoring disabled, only threads present at apply time are affected.
+
+### Validation
+
+- 689 automated tests passed in both Debug and Release configurations.
+- All four strategies passed hardware smoke tests on a Windows 11 Hyper-V guest with four logical processors.
+- Multi-group and processor indexes above 63 are covered by synthetic topology tests pending access to suitable hardware.
+
 ## v1.5.3 - Reliability, lifecycle and threading hardening
 
 ### Fixed

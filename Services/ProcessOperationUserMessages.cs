@@ -25,6 +25,9 @@ namespace ThreadPilot.Services
         public const string CpuSetsUnavailable =
             "Windows CPU Sets are unavailable or rejected this selection. ThreadPilot will use a safe fallback only when possible.";
 
+        public const string ProcessRestartRequired =
+            "This process has a conflicting hard affinity. Restart it before applying a soft CPU assignment; ThreadPilot will not widen external restrictions automatically.";
+
         public const string HighPriorityWarning =
             "High priority can improve responsiveness for some workloads but may reduce system responsiveness.";
 

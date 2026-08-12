@@ -4,6 +4,14 @@ namespace ThreadPilot.Models
     using System.Collections.Generic;
     using System.Linq;
 
+    public enum CpuAssignmentMode
+    {
+        Automatic = 0,
+        AffinityMask,
+        IdealProcessor,
+        CpuSets,
+    }
+
     public readonly record struct ProcessorRef(ushort Group, byte LogicalProcessorNumber, int GlobalIndex);
 
     public sealed record CpuTopologySignature
@@ -61,7 +69,8 @@ namespace ThreadPilot.Models
             IReadOnlyDictionary<ProcessorRef, int> lastLevelCacheIndexesByProcessor,
             IReadOnlyDictionary<ProcessorRef, int> packageIndexesByProcessor,
             IReadOnlyDictionary<ProcessorRef, IReadOnlyList<int>> smtSiblingGlobalIndexesByProcessor,
-            CpuTopologySignature signature)
+            CpuTopologySignature signature,
+            IReadOnlyList<int> reservedLogicalProcessorIndexes)
         {
             this.LogicalProcessors = logicalProcessors;
             this.cpuSetIdsByProcessor = cpuSetIdsByProcessor;
@@ -72,11 +81,14 @@ namespace ThreadPilot.Models
             this.packageIndexesByProcessor = packageIndexesByProcessor;
             this.smtSiblingGlobalIndexesByProcessor = smtSiblingGlobalIndexesByProcessor;
             this.Signature = signature;
+            this.ReservedLogicalProcessorIndexes = reservedLogicalProcessorIndexes;
         }
 
         public IReadOnlyList<ProcessorRef> LogicalProcessors { get; }
 
         public CpuTopologySignature Signature { get; }
+
+        public IReadOnlyList<int> ReservedLogicalProcessorIndexes { get; }
 
         public static CpuTopologySnapshot Create(
             IEnumerable<ProcessorRef> logicalProcessors,
@@ -87,7 +99,8 @@ namespace ThreadPilot.Models
             IReadOnlyDictionary<ProcessorRef, int>? numaNodeIndexes = null,
             IReadOnlyDictionary<ProcessorRef, int>? lastLevelCacheIndexes = null,
             IReadOnlyDictionary<ProcessorRef, int>? packageIndexes = null,
-            IReadOnlyDictionary<ProcessorRef, IReadOnlyList<int>>? smtSiblingGlobalIndexes = null)
+            IReadOnlyDictionary<ProcessorRef, IReadOnlyList<int>>? smtSiblingGlobalIndexes = null,
+            IEnumerable<int>? reservedLogicalProcessorIndexes = null)
         {
             ArgumentNullException.ThrowIfNull(logicalProcessors);
 
@@ -159,7 +172,12 @@ namespace ThreadPilot.Models
                 lastLevelCacheIndexMap,
                 packageIndexMap,
                 smtSiblingMap,
-                resolvedSignature);
+                resolvedSignature,
+                (reservedLogicalProcessorIndexes ?? [])
+                    .Where(knownGlobalIndexes.Contains)
+                    .Distinct()
+                    .OrderBy(index => index)
+                    .ToList());
         }
 
         public bool TryGetCpuSetId(ProcessorRef processor, out uint cpuSetId) =>

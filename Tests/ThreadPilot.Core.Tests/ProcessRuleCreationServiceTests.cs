@@ -137,12 +137,14 @@ namespace ThreadPilot.Core.Tests
             await service.SaveCurrentSettingsAsRuleAsync(
                 CreateProcess(priority: ProcessPriorityClass.RealTime, affinity: 0),
                 currentCoreSelection: [true, false],
-                currentMemoryPriority: null);
+                currentMemoryPriority: null,
+                cpuAssignmentMode: CpuAssignmentMode.IdealProcessor);
 
             var rule = Assert.Single(store.SavedRules);
             Assert.NotNull(rule.CpuSelection);
             Assert.Null(rule.LegacyAffinityMask);
             Assert.True(rule.ApplyAffinityOnStart);
+            Assert.Equal(CpuAssignmentMode.IdealProcessor, rule.CpuAssignmentMode);
             Assert.Equal(0, rule.CpuSelection.GlobalLogicalProcessorIndexes.Single());
         }
 

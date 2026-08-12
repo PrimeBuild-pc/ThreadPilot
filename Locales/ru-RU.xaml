@@ -264,10 +264,10 @@
     <sys:String x:Key="ProcessView_SetPowerPlanTooltip">Активируйте выбранный план электропитания Windows.</sys:String>
 
     <sys:String x:Key="ProcessView_PendingCoreMask">Ожидаемая основная маска</sys:String>
-    <sys:String x:Key="ProcessView_StageMaskTooltip">Выберите маску для ее создания. Привязка ОС не изменится до тех пор, пока не будет нажата кнопка Применить привязку.</sys:String>
-    <sys:String x:Key="ProcessView_ApplyAffinity">Применить привязку</sys:String>
-    <sys:String x:Key="ProcessView_ApplyAffinityTooltip">Примените ожидающую основную маску к выбранному процессу и проверьте состояние привязки Windows.</sys:String>
-    <sys:String x:Key="ProcessView_ApplyAffinitySaveRule">Применить привязку и сохранить как правило</sys:String>
+    <sys:String x:Key="ProcessView_StageMaskTooltip">Подготовьте маску. Изменения вступят в силу только после нажатия «Применить назначение ЦП».</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinity">Применить назначение ЦП</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinityTooltip">Применяет выбор ЦП в выбранном режиме и проверяет состояние Windows.</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinitySaveRule">Применить назначение ЦП и сохранить правило</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinitySaveRuleTooltip">Сохраните текущие настройки процесса как правило. Эти настройки будут автоматически применены при запуске этого процесса в будущем.</sys:String>
 
     <sys:String x:Key="ProcessView_SetCpuPriority">Установить приоритет CPU</sys:String>
@@ -306,7 +306,7 @@
     <sys:String x:Key="ProcessView_ColCpuUsage">Загрузка CPU</sys:String>
     <sys:String x:Key="ProcessView_ColMemory">Использование памяти</sys:String>
 
-    <sys:String x:Key="ProcessView_AffinityStagedTooltip">Привязка подготовлена в интерфейсе и будет применена только после нажатия кнопки «Применить привязку».</sys:String>
+    <sys:String x:Key="ProcessView_AffinityStagedTooltip">Выбор ЦП подготовлен и применяется только командой «Применить назначение ЦП».</sys:String>
     <sys:String x:Key="ProcessView_AffinityCurrentTooltip">Текущая привязка выбранного процесса по данным Windows</sys:String>
     <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Предварительный просмотр текущего или ожидающего выбора CPU только для чтения</sys:String>
     <sys:String x:Key="ProcessView_OpenMasksTabTooltip">Откройте вкладку «Маски» CPU, чтобы создать новую пользовательскую маску.</sys:String>
@@ -626,11 +626,11 @@
     <sys:String x:Key="Notification_GameBoostDeactivatedTitle">Ускорение игры отключено</sys:String>
     <sys:String x:Key="Notification_GameBoostDeactivatedFormat">Режим Game Boost отключен после {0}</sys:String>
     <sys:String x:Key="Notification_ProcessMonitorErrorTitle">Ошибка монитора процесса</sys:String>
-    <sys:String x:Key="Notification_AffinityBlockedTitle">Родственность заблокирована</sys:String>
-    <sys:String x:Key="Notification_AffinityAppliedTitle">Привязка применена</sys:String>
-    <sys:String x:Key="Notification_AffinityAdjustedTitle">Привязка скорректирована</sys:String>
-    <sys:String x:Key="Notification_AffinityFailedTitle">Не удалось применить привязку</sys:String>
-    <sys:String x:Key="Notification_AffinityErrorTitle">Ошибка привязки</sys:String>
+    <sys:String x:Key="Notification_AffinityBlockedTitle">Назначение ЦП заблокировано</sys:String>
+    <sys:String x:Key="Notification_AffinityAppliedTitle">Назначение ЦП применено</sys:String>
+    <sys:String x:Key="Notification_AffinityAdjustedTitle">Назначение ЦП скорректировано</sys:String>
+    <sys:String x:Key="Notification_AffinityFailedTitle">Не удалось назначить ЦП</sys:String>
+    <sys:String x:Key="Notification_AffinityErrorTitle">Ошибка назначения ЦП</sys:String>
     <sys:String x:Key="Notification_PriorityBlockedTitle">Приоритет заблокирован</sys:String>
     <sys:String x:Key="Notification_PriorityWarningTitle">Приоритетное предупреждение</sys:String>
     <sys:String x:Key="Notification_PriorityAppliedTitle">Приоритет применен</sys:String>
@@ -658,6 +658,28 @@
     <sys:String x:Key="Notification_SettingsErrorTitle">Ошибка настроек</sys:String>
     <sys:String x:Key="Notification_SettingsSaveFailed">Не удалось сохранить настройки.</sys:String>
     <sys:String x:Key="Notification_TestNotificationMessage">Это тестовое уведомление, позволяющее убедиться, что ваши настройки работают правильно.</sys:String>
+
+    <!-- Назначение ЦП -->
+    <sys:String x:Key="SettingsView_CpuAssignment">Назначение ЦП</sys:String>
+    <sys:String x:Key="SettingsView_DefaultCpuAssignment">Назначение ЦП по умолчанию</sys:String>
+    <sys:String x:Key="SettingsView_CpuAssignmentTooltip">Выберите, как новые ручные действия и правила назначают выбранные ЦП.</sys:String>
+    <sys:String x:Key="SettingsView_CpuAssignmentInfo">Сведения о режиме назначения ЦП</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_AffinityMask">Маска привязки</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_AffinityMaskTooltip">Жёсткое ограничение. Выбор нескольких групп применяется к потокам; новые потоки охватываются при включённом автоматическом мониторинге.</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_IdealProcessor">Идеальный процессор</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_IdealProcessorTooltip">Мягкое предпочтение для потоков со стабильным циклическим распределением. Новые потоки охватываются при включённом мониторинге.</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_CpuSets">Наборы ЦП</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_CpuSetsTooltip">Мягкое назначение всему процессу, наследуемое новыми потоками. Явный режим не использует привязку как запасной вариант.</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_Automatic">ThreadPilot автоматически</sys:String>
+    <sys:String x:Key="CpuAssignmentMode_AutomaticTooltip">Совместимость со старыми правилами: CPU Sets с переходом к привязке только когда это безопасно.</sys:String>
+    <sys:String x:Key="SettingsView_CpuAssignmentDescription">Используется новыми действиями и правилами, если сохранённое правило не задаёт другой режим.</sys:String>
+    <sys:String x:Key="SettingsView_ReservedCpuSetsWarning">Зарезервированные CPU Sets здесь доступны только для чтения. Они действуют глобально, требуют перезагрузки и предназначены для выделенных устройств Soft Real-Time; неполная настройка может вызвать серьёзные сбои.</sys:String>
+    <sys:String x:Key="SettingsView_ReservedCpuSetsTooltip">ThreadPilot не изменяет ReservedCpuSets. Режимы для процессов выше не зависят от этой глобальной настройки Windows.</sys:String>
+    <sys:String x:Key="SettingsView_ReservedCpuSetsUnknown">Зарезервированные CPU Sets: состояние недоступно.</sys:String>
+    <sys:String x:Key="SettingsView_ReservedCpuSetsNone">Зарезервированные CPU Sets: не обнаружены.</sys:String>
+    <sys:String x:Key="SettingsView_ReservedCpuSetsDetectedFormat">Зарезервированные CPU Sets обнаружены на логических процессорах: {0}.</sys:String>
+    <sys:String x:Key="ProcessView_CpuAssignmentMode">Режим назначения ЦП</sys:String>
+    <sys:String x:Key="ProcessView_CpuAssignmentModeTooltip">Этот подготовленный режим берётся из подходящего правила, а при его отсутствии — из глобальной настройки.</sys:String>
 
     <!-- Elevation Service -->
     <sys:String x:Key="Elevation_RequestPromptText">ThreadPilot требуются права администратора для управления привязкой процессов и планами электропитания.&#x0a;&#x0a;Хотите перезапустить приложение с правами администратора?</sys:String>

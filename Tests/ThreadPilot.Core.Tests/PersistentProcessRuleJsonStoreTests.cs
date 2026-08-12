@@ -37,6 +37,7 @@ namespace ThreadPilot.Core.Tests
                     GlobalLogicalProcessorIndexes = [0],
                 },
                 LegacyAffinityMask = 3,
+                CpuAssignmentMode = CpuAssignmentMode.IdealProcessor,
                 Priority = ProcessPriorityClass.AboveNormal,
                 MemoryPriority = ProcessMemoryPriority.BelowNormal,
                 ApplyAffinityOnStart = true,
@@ -56,11 +57,35 @@ namespace ThreadPilot.Core.Tests
                 var loadedRule = Assert.Single(loaded);
                 Assert.Equal("rule-a", loadedRule.Id);
                 Assert.Equal(3, loadedRule.LegacyAffinityMask);
+                Assert.Equal(CpuAssignmentMode.IdealProcessor, loadedRule.CpuAssignmentMode);
                 Assert.Equal(ProcessPriorityClass.AboveNormal, loadedRule.Priority);
                 Assert.Equal(ProcessMemoryPriority.BelowNormal, loadedRule.MemoryPriority);
                 Assert.True(loadedRule.ApplyMemoryPriorityOnStart);
                 Assert.NotNull(loadedRule.CpuSelection);
                 Assert.Equal(0, loadedRule.CpuSelection.GlobalLogicalProcessorIndexes.Single());
+            }
+            finally
+            {
+                DeleteFile(filePath);
+            }
+        }
+
+        [Fact]
+        public async Task LoadAsync_OldRuleWithoutCpuAssignmentMode_DefaultsToAutomatic()
+        {
+            var filePath = CreateTemporaryFilePath();
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+            await File.WriteAllTextAsync(
+                filePath,
+                """
+                [{"Id":"legacy","Name":"Legacy","IsEnabled":true,"ProcessName":"game.exe","LegacyAffinityMask":3,"ApplyAffinityOnStart":true}]
+                """);
+
+            try
+            {
+                var rule = Assert.Single(await new PersistentProcessRuleJsonStore(() => filePath).LoadAsync());
+                Assert.Equal(CpuAssignmentMode.Automatic, rule.CpuAssignmentMode);
+                Assert.Equal(3, rule.LegacyAffinityMask);
             }
             finally
             {

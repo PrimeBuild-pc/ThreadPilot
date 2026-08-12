@@ -218,6 +218,26 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void SettingsView_ExposesDefaultCpuAssignmentAndReadOnlyReservedState()
+        {
+            var settingsViewPath = Path.Combine(
+                AppContext.BaseDirectory,
+                "..",
+                "..",
+                "..",
+                "..",
+                "..",
+                "Views",
+                "SettingsView.xaml");
+            var serialized = File.ReadAllText(settingsViewPath);
+
+            Assert.Contains("SelectedValue=\"{Binding Settings.DefaultCpuAssignmentMode}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("Text=\"{Binding ReservedCpuSetsStatus}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("AutomationProperties.HelpText=\"{DynamicResource SettingsView_ReservedCpuSetsTooltip}\"", serialized, StringComparison.Ordinal);
+            Assert.DoesNotContain("ReservedCpuSetsStatus, Mode=TwoWay", serialized, StringComparison.Ordinal);
+        }
+
+        [Fact]
         public void SettingsView_ExposesAllSupportedLanguageSelections()
         {
             var settingsViewPath = Path.Combine(

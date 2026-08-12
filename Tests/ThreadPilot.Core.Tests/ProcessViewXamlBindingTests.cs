@@ -65,6 +65,20 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void CpuAssignmentMode_IsStagedTwoWayAndHasAccessibleHelp()
+        {
+            var serialized = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace)
+                .ToString(SaveOptions.DisableFormatting);
+
+            Assert.Contains("SelectedValue=\"{Binding SelectedCpuAssignmentMode, Mode=TwoWay}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("CpuAssignmentMode.AffinityMask", serialized, StringComparison.Ordinal);
+            Assert.Contains("CpuAssignmentMode.IdealProcessor", serialized, StringComparison.Ordinal);
+            Assert.Contains("CpuAssignmentMode.CpuSets", serialized, StringComparison.Ordinal);
+            Assert.Contains("CpuAssignmentMode.Automatic", serialized, StringComparison.Ordinal);
+            Assert.Contains("AutomationProperties.HelpText=\"{DynamicResource ProcessView_CpuAssignmentModeTooltip}\"", serialized, StringComparison.Ordinal);
+        }
+
+        [Fact]
         public void ProcessGridRowStyle_HighlightsSelectedRowsWithNeutralTheme()
         {
             var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);

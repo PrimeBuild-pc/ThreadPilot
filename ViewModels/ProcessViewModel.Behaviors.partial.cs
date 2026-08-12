@@ -147,6 +147,9 @@ namespace ThreadPilot.ViewModels
 
         partial void OnSelectedProcessChanged(ProcessModel? value)
         {
+            this.SetCpuAssignmentMode(
+                this.settingsService?.Settings.DefaultCpuAssignmentMode ?? CpuAssignmentMode.Automatic,
+                overriddenByRule: false);
             this.UpdateSelectedProcessSummary(value);
 
             if (value != null && CpuTopology != null)
@@ -158,6 +161,8 @@ namespace ThreadPilot.ViewModels
                 {
                     this.Logger.LogWarning(ex, "Failed while handling selected process change for {ProcessName}", value.Name);
                 });
+                TaskSafety.FireAndForget(this.ResolveCpuAssignmentModeAsync(value), ex =>
+                    this.Logger.LogDebug(ex, "Could not resolve saved CPU assignment mode for {ProcessName}", value.Name));
             }
             else if (value == null)
             {
@@ -167,6 +172,38 @@ namespace ThreadPilot.ViewModels
 
             // Update system tray context menu
             this.systemTrayService.UpdateContextMenu(value?.Name, value != null);
+        }
+
+        partial void OnSelectedCpuAssignmentModeChanged(CpuAssignmentMode value)
+        {
+            if (!this.suppressCpuAssignmentModeChanges && this.SelectedProcess != null)
+            {
+                this.HasPendingAffinityEdits = true;
+                this.cpuAssignmentModeOverriddenByRule = true;
+            }
+        }
+
+        private async Task ResolveCpuAssignmentModeAsync(ProcessModel process)
+        {
+            if (this.persistentRuleStore == null || this.persistentRuleMatcher == null)
+            {
+                return;
+            }
+
+            var rules = await this.persistentRuleStore.LoadAsync().ConfigureAwait(false);
+            var rule = rules.FirstOrDefault(candidate => candidate.IsEnabled && this.persistentRuleMatcher.IsMatch(candidate, process));
+            if (rule != null && this.SelectedProcess?.ProcessId == process.ProcessId)
+            {
+                await InvokeOnUiAsync(() => this.SetCpuAssignmentMode(rule.CpuAssignmentMode, overriddenByRule: true));
+            }
+        }
+
+        private void SetCpuAssignmentMode(CpuAssignmentMode mode, bool overriddenByRule)
+        {
+            this.suppressCpuAssignmentModeChanges = true;
+            this.SelectedCpuAssignmentMode = Enum.IsDefined(mode) ? mode : CpuAssignmentMode.Automatic;
+            this.suppressCpuAssignmentModeChanges = false;
+            this.cpuAssignmentModeOverriddenByRule = overriddenByRule;
         }
 
         private void UpdateSelectedProcessSummary(ProcessModel? process)
@@ -509,7 +546,7 @@ namespace ThreadPilot.ViewModels
             this.PendingAffinityText = pendingMask > 0
                 ? $"Pending core mask: 0x{pendingMask:X}"
                 : "Pending core mask: no cores selected";
-            this.AffinityEditStateText = "Core mask staged. Use Apply Affinity to change Windows affinity.";
+            this.AffinityEditStateText = "CPU selection staged. Use Apply CPU Assignment to apply it.";
         }
 
         [RelayCommand]
@@ -779,7 +816,8 @@ namespace ThreadPilot.ViewModels
             var result = await this.processRuleCreationService.SaveCurrentSettingsAsRuleAsync(
                 targetProcess,
                 currentCoreSelection,
-                this.SelectedProcessSummary.MemoryPriority);
+                this.SelectedProcessSummary.MemoryPriority,
+                this.SelectedCpuAssignmentMode);
 
             this.ApplyRuleCreationResultStatus(result);
             await this.LogUserActionAsync(
@@ -813,20 +851,21 @@ namespace ThreadPilot.ViewModels
             var applyResult = await this.processAffinityApplyCoordinator.ApplyCoreSelectionAsync(
                 process,
                 pendingSelection,
-                "Manual Process tab context menu CPU selection");
+                "Manual Process tab context menu CPU selection",
+                this.SelectedCpuAssignmentMode);
 
             if (!applyResult.Success)
             {
                 this.SetContextError(applyResult.Message);
                 await this.LogUserActionAsync(
-                    "ProcessAffinityFailed",
+                    "ProcessCpuAssignmentFailed",
                     applyResult.Message,
-                    $"Process: {process.Name}, PID: {process.ProcessId}, RequestedMask: 0x{applyResult.RequestedMask:X}");
+                    $"Process: {process.Name}, PID: {process.ProcessId}, RequestedMode: {applyResult.RequestedMode}, EffectiveMode: {applyResult.EffectiveMode}, RequestedMask: 0x{applyResult.RequestedMask:X}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
                 return;
             }
 
-            if (!applyResult.UsedCpuSets)
+            if (applyResult.EffectiveMode == CpuAssignmentMode.AffinityMask)
             {
                 this.UpdateCoreSelections(process.ProcessorAffinity, true);
             }
@@ -836,19 +875,11 @@ namespace ThreadPilot.ViewModels
             this.HasPendingAffinityEdits = false;
             this.UpdateAffinityDisplayState();
 
-            var saveResult = applyResult.UsedCpuSets
-                ? await this.processRuleCreationService.SaveCurrentSettingsAsRuleAsync(
-                    process,
-                    pendingSelection,
-                    currentMemoryPriority: null)
-                : await this.processRuleCreationService.SaveRuleAsync(
-                    process,
-                    new ProcessRuleCreationPayload
-                    {
-                        LegacyAffinityMask = applyResult.VerifiedMask == 0
-                            ? applyResult.RequestedMask
-                            : applyResult.VerifiedMask,
-                    });
+            var saveResult = await this.processRuleCreationService.SaveCurrentSettingsAsRuleAsync(
+                process,
+                pendingSelection,
+                currentMemoryPriority: null,
+                cpuAssignmentMode: this.SelectedCpuAssignmentMode);
 
             this.ApplyRuleCreationResultStatus(saveResult);
             await this.LogUserActionAsync(
@@ -885,11 +916,12 @@ namespace ThreadPilot.ViewModels
                 var result = await this.processAffinityApplyCoordinator.ApplyCoreSelectionAsync(
                     selectedProcess,
                     pendingSelection,
-                    selectionReason);
+                    selectionReason,
+                    this.SelectedCpuAssignmentMode);
 
                 await InvokeOnUiAsync(() =>
                 {
-                    if (!result.UsedCpuSets)
+                    if (result.EffectiveMode == CpuAssignmentMode.AffinityMask)
                     {
                         this.UpdateCoreSelections(selectedProcess.ProcessorAffinity, true);
                     }
@@ -901,58 +933,58 @@ namespace ThreadPilot.ViewModels
                     {
                         this.HasPendingAffinityEdits = false;
                         this.UpdateAffinityDisplayState();
-                        this.SetStatus($"Affinity applied successfully to {selectedProcess.Name} (0x{result.VerifiedMask:X}).", false);
-                        _ = this.notificationService.ShowNotificationAsync("Affinity applied", $"{selectedProcess.Name}: 0x{result.VerifiedMask:X}", NotificationType.Success);
+                        this.SetStatus($"CPU assignment applied successfully to {selectedProcess.Name} using {result.EffectiveMode}.", false);
+                        _ = this.notificationService.ShowNotificationAsync("CPU assignment applied", $"{selectedProcess.Name}: {result.EffectiveMode}", NotificationType.Success);
                     }
                     else if (result.FailureReason == AffinityApplyFailureReason.VerificationMismatch)
                     {
                         this.HasPendingAffinityEdits = false;
                         this.UpdateAffinityDisplayState();
                         this.SetStatus(result.Message, false);
-                        _ = this.notificationService.ShowNotificationAsync("Affinity adjusted", result.Message, NotificationType.Warning);
+                        _ = this.notificationService.ShowNotificationAsync("CPU assignment adjusted", result.Message, NotificationType.Warning);
                     }
                     else if (result.FailureReason == AffinityApplyFailureReason.ProcessTerminated)
                     {
                         this.SelectedProcess = null;
                         this.ClearProcessSelection();
                         this.SetCriticalStatus(result.Message);
-                        _ = this.notificationService.ShowNotificationAsync("Affinity failed", result.Message, NotificationType.Warning);
+                        _ = this.notificationService.ShowNotificationAsync("CPU assignment failed", result.Message, NotificationType.Warning);
                     }
                     else if (result.FailureReason == AffinityApplyFailureReason.AccessDenied)
                     {
                         this.SetCriticalStatus(result.Message);
-                        _ = this.notificationService.ShowNotificationAsync("Affinity blocked", result.Message, NotificationType.Warning);
+                        _ = this.notificationService.ShowNotificationAsync("CPU assignment blocked", result.Message, NotificationType.Warning);
                     }
                     else if (result.IsInvalidTopology || result.IsLegacyFallbackBlocked)
                     {
                         this.SetCriticalStatus(result.Message);
-                        _ = this.notificationService.ShowNotificationAsync("Affinity blocked", result.Message, NotificationType.Warning);
+                        _ = this.notificationService.ShowNotificationAsync("CPU assignment blocked", result.Message, NotificationType.Warning);
                     }
                     else
                     {
                         this.SetStatus(result.Message, false);
-                        _ = this.notificationService.ShowNotificationAsync("Affinity error", result.Message, NotificationType.Error);
+                        _ = this.notificationService.ShowNotificationAsync("CPU assignment error", result.Message, NotificationType.Error);
                     }
                 });
 
                 await this.LogUserActionAsync(
-                    result.Success ? "ProcessAffinityApplied" : "ProcessAffinityFailed",
+                    result.Success ? "ProcessCpuAssignmentApplied" : "ProcessCpuAssignmentFailed",
                     result.Message,
-                    $"Process: {selectedProcess.Name}, PID: {selectedProcess.ProcessId}, RequestedMask: 0x{result.RequestedMask:X}, VerifiedMask: 0x{result.VerifiedMask:X}");
+                    $"Process: {selectedProcess.Name}, PID: {selectedProcess.ProcessId}, RequestedMode: {result.RequestedMode}, EffectiveMode: {result.EffectiveMode}, Threads: {result.AppliedThreadCount}, RequestedMask: 0x{result.RequestedMask:X}, VerifiedMask: 0x{result.VerifiedMask:X}");
                 await this.UpdateSelectedProcessSummaryAsync(selectedProcess);
             }
             catch (Exception ex)
             {
                 var friendly = ex.Message;
-                _ = this.notificationService.ShowNotificationAsync("Affinity error", friendly, NotificationType.Error);
+                _ = this.notificationService.ShowNotificationAsync("CPU assignment error", friendly, NotificationType.Error);
                 await this.LogUserActionAsync(
-                    "ProcessAffinityFailed",
+                    "ProcessCpuAssignmentFailed",
                     friendly,
-                    $"Process: {selectedProcess.Name}, PID: {selectedProcess.ProcessId}");
+                    $"Process: {selectedProcess.Name}, PID: {selectedProcess.ProcessId}, Mode: {this.SelectedCpuAssignmentMode}");
 
                 await InvokeOnUiAsync(() =>
                 {
-                    this.SetCriticalStatus($"Error setting affinity: {friendly}");
+                    this.SetCriticalStatus($"Error applying CPU assignment: {friendly}");
                 });
 
                 // Try to refresh process info even if setting failed, to show current state
@@ -1199,7 +1231,7 @@ namespace ThreadPilot.ViewModels
 
             try
             {
-                var affinityAppliedWithCpuSets = false;
+                var affinityModeChangedOsAffinity = false;
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
@@ -1213,12 +1245,13 @@ namespace ThreadPilot.ViewModels
                     var result = await this.processAffinityApplyCoordinator.ApplyCoreSelectionAsync(
                         selectedProcess,
                         pendingSelection,
-                        "Manual Process tab quick apply CPU selection");
+                        "Manual Process tab quick apply CPU selection",
+                        this.SelectedCpuAssignmentMode);
                     if (!result.Success)
                     {
                         await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                         {
-                            if (!result.UsedCpuSets)
+                            if (result.EffectiveMode == CpuAssignmentMode.AffinityMask)
                             {
                                 this.UpdateCoreSelections(selectedProcess.ProcessorAffinity, true);
                             }
@@ -1232,7 +1265,7 @@ namespace ThreadPilot.ViewModels
 
                     this.HasPendingAffinityEdits = false;
                     this.UpdateAffinityDisplayState();
-                    affinityAppliedWithCpuSets = result.UsedCpuSets;
+                    affinityModeChangedOsAffinity = result.EffectiveMode == CpuAssignmentMode.AffinityMask;
                 }
 
                 // Apply power plan if selected
@@ -1245,7 +1278,7 @@ namespace ThreadPilot.ViewModels
 
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    if (!affinityAppliedWithCpuSets)
+                    if (affinityModeChangedOsAffinity)
                     {
                         this.UpdateCoreSelections(selectedProcess.ProcessorAffinity, true);
                     }

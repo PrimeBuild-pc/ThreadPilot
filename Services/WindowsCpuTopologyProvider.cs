@@ -93,6 +93,7 @@ namespace ThreadPilot.Services
             var lastLevelCacheIndexes = new Dictionary<ProcessorRef, int>();
             var packageIndexes = new Dictionary<ProcessorRef, int>();
             var smtSiblingGlobalIndexes = new Dictionary<ProcessorRef, IReadOnlyList<int>>();
+            var reservedLogicalProcessorIndexes = new HashSet<int>();
 
             this.ReadCpuSetInformation(
                 logicalProcessors,
@@ -101,6 +102,7 @@ namespace ThreadPilot.Services
                 coreIndexes,
                 numaNodeIndexes,
                 lastLevelCacheIndexes,
+                reservedLogicalProcessorIndexes,
                 cancellationToken);
 
             this.ReadLogicalProcessorRelationships(
@@ -156,7 +158,8 @@ namespace ThreadPilot.Services
                 numaNodeIndexes,
                 lastLevelCacheIndexes,
                 packageIndexes,
-                smtSiblingGlobalIndexes);
+                smtSiblingGlobalIndexes,
+                reservedLogicalProcessorIndexes);
         }
 
         private void ReadCpuSetInformation(
@@ -166,6 +169,7 @@ namespace ThreadPilot.Services
             IDictionary<ProcessorRef, int> coreIndexes,
             IDictionary<ProcessorRef, int> numaNodeIndexes,
             IDictionary<ProcessorRef, int> lastLevelCacheIndexes,
+            HashSet<int> reservedLogicalProcessorIndexes,
             CancellationToken cancellationToken)
         {
             uint requiredLength = 0;
@@ -211,6 +215,10 @@ namespace ThreadPilot.Services
                         coreIndexes.TryAdd(processor, info.CoreIndex);
                         numaNodeIndexes[processor] = info.NumaNodeIndex;
                         lastLevelCacheIndexes[processor] = info.LastLevelCacheIndex;
+                        if ((info.AllFlags & (1 << 1)) != 0)
+                        {
+                            reservedLogicalProcessorIndexes.Add(processor.GlobalIndex);
+                        }
                     }
 
                     offset += (int)info.Size;
