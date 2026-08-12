@@ -473,7 +473,10 @@ namespace ThreadPilot.Services
                     AffinityApplyErrorCodes.ProcessExited,
                     ProcessOperationUserMessages.ProcessExited,
                     "ProcessModel is null or no longer running.",
-                    failureReason: AffinityApplyFailureReason.ProcessTerminated) with { RequestedMode = mode });
+                    failureReason: AffinityApplyFailureReason.ProcessTerminated) with
+                {
+                    RequestedMode = mode,
+                });
             }
 
             if (selection == null || (selection.CpuSetIds.Count == 0 && selection.LogicalProcessors.Count == 0))
@@ -483,7 +486,10 @@ namespace ThreadPilot.Services
                     ProcessOperationUserMessages.InvalidTopology,
                     "CpuSelection is empty.",
                     isInvalidTopology: true,
-                    failureReason: AffinityApplyFailureReason.InvalidMask) with { RequestedMode = mode });
+                    failureReason: AffinityApplyFailureReason.InvalidMask) with
+                {
+                    RequestedMode = mode,
+                });
             }
 
             return mode switch
