@@ -40,9 +40,12 @@ namespace ThreadPilot.Core.Tests
                 CpuAssignmentMode = CpuAssignmentMode.IdealProcessor,
                 Priority = ProcessPriorityClass.AboveNormal,
                 MemoryPriority = ProcessMemoryPriority.BelowNormal,
+                IoPriority = ProcessIoPriority.Low,
                 ApplyAffinityOnStart = true,
                 ApplyPriorityOnStart = true,
                 ApplyMemoryPriorityOnStart = true,
+                ApplyIoPriorityOnStart = true,
+                PreventSystemSleepWhileRunning = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 Description = ProcessOperationUserMessages.PersistentRulesDescription,
@@ -61,6 +64,9 @@ namespace ThreadPilot.Core.Tests
                 Assert.Equal(ProcessPriorityClass.AboveNormal, loadedRule.Priority);
                 Assert.Equal(ProcessMemoryPriority.BelowNormal, loadedRule.MemoryPriority);
                 Assert.True(loadedRule.ApplyMemoryPriorityOnStart);
+                Assert.Equal(ProcessIoPriority.Low, loadedRule.IoPriority);
+                Assert.True(loadedRule.ApplyIoPriorityOnStart);
+                Assert.True(loadedRule.PreventSystemSleepWhileRunning);
                 Assert.NotNull(loadedRule.CpuSelection);
                 Assert.Equal(0, loadedRule.CpuSelection.GlobalLogicalProcessorIndexes.Single());
             }

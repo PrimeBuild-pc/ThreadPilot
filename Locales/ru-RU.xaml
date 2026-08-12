@@ -172,6 +172,8 @@
     <sys:String x:Key="PowerPlanView_ImportSelectedTooltip">Импортируйте выбранный пользовательский файл .pow в Windows.</sys:String>
     <sys:String x:Key="PowerPlanView_AddFile">Добавить файл .pow</sys:String>
     <sys:String x:Key="PowerPlanView_AddFileTooltip">Добавьте новый файл пользовательского плана электропитания в пользовательскую библиотеку.</sys:String>
+    <sys:String x:Key="PowerPlanView_MorePlans">Нужны другие планы?</sys:String>
+    <sys:String x:Key="PowerPlanView_MorePlansTooltip">Найдите дополнительные планы электропитания сообщества в Discord.</sys:String>
     <sys:String x:Key="PowerPlanView_Delete">Удалить</sys:String>
     <sys:String x:Key="PowerPlanView_Active">Активный</sys:String>
 
@@ -278,8 +280,8 @@
     <sys:String x:Key="ProcessView_RealtimeBlockedHelp">Приоритет реального времени блокируется ThreadPilot, поскольку это может сделать Windows нестабильным или перестать отвечать на запросы.</sys:String>
     <sys:String x:Key="ProcessView_RealtimeBlocked">В реальном времени (заблокировано)</sys:String>
 
-    <sys:String x:Key="ProcessView_DisableIdleServer">Отключить простаивающий сервер</sys:String>
-    <sys:String x:Key="ProcessView_DisableIdleServerTooltip">Предотвращает переход системы в состояние ожидания во время выполнения этого процесса. Полезно для игр и приложений, критичных к производительности.</sys:String>
+    <sys:String x:Key="ProcessView_DisableIdleServer">Не переходить в сон во время процесса</sys:String>
+    <sys:String x:Key="ProcessView_DisableIdleServerTooltip">Поддерживает работу системы, пока процесс запущен. Экран может выключиться, а явный переход в сон не блокируется.</sys:String>
 
     <sys:String x:Key="ProcessView_ProfileRule">Профиль/Правило</sys:String>
     <sys:String x:Key="ProcessView_ProfileNamePlaceholder">Введите имя профиля, чтобы сохранить или загрузить настройки.</sys:String>
@@ -365,6 +367,9 @@
     <sys:String x:Key="ProcessView_Rules">Правила</sys:String>
     <sys:String x:Key="ProcessView_Name">Имя</sys:String>
     <sys:String x:Key="ProcessView_SetMemoryPriority">Установить приоритет памяти</sys:String>
+    <sys:String x:Key="ProcessView_SetIoPriority">Установить приоритет ввода-вывода</sys:String>
+    <sys:String x:Key="ProcessSummary_IoPriorityUnavailable">Приоритет ввода-вывода недоступен</sys:String>
+    <sys:String x:Key="ProcessSummary_IoPriorityFormat">Приоритет ввода-вывода: {0}</sys:String>
     <sys:String x:Key="ProcessView_PriorityVeryLow">Очень низкий</sys:String>
     <sys:String x:Key="ProcessView_PriorityMedium">Средний</sys:String>
     <sys:String x:Key="ProcessView_RefreshInfo">Обновить информацию о процессе</sys:String>
@@ -437,6 +442,11 @@
     <sys:String x:Key="SettingsView_DebugLogging">Включить ведение журнала отладки</sys:String>
     <sys:String x:Key="SettingsView_PerformanceCounters">Включить счетчики производительности</sys:String>
 
+    <sys:String x:Key="SettingsView_SomethingWrong">Что-то не работает?</sys:String>
+    <sys:String x:Key="SettingsView_DiscordDescription">Присоединяйтесь к сообществу ThreadPilot в Discord для помощи и общения.</sys:String>
+    <sys:String x:Key="SettingsView_OpenDiscord">Открыть Discord</sys:String>
+    <sys:String x:Key="SettingsView_IssuesDescription">Сообщайте об ошибках и неожиданном поведении через GitHub Issues.</sys:String>
+    <sys:String x:Key="SettingsView_ReportIssue">Сообщить о проблеме</sys:String>
     <sys:String x:Key="SettingsView_About">О</sys:String>
     <sys:String x:Key="SettingsView_Version">Версия:</sys:String>
     <sys:String x:Key="SettingsView_Copyright">© 2026 PrimeBuild.</sys:String>
@@ -547,6 +557,28 @@
     <sys:String x:Key="SystemTweak_HighSchedulingCategory_Desc">Высокий приоритет планирования для игровых приложений</sys:String>
     <sys:String x:Key="SystemTweak_MenuShowDelay_Name">Задержка показа меню</sys:String>
     <sys:String x:Key="SystemTweak_MenuShowDelay_Desc">Задержка перед показом контекстных меню</sys:String>
+    <sys:String x:Key="SystemTweak_GameMode_Name">Игровой режим</sys:String>
+    <sys:String x:Key="SystemTweak_GameMode_Desc">Оптимизации планирования игрового режима Windows</sys:String>
+    <sys:String x:Key="SystemTweak_MemoryIntegrity_Name">Целостность памяти (HVCI)</sys:String>
+    <sys:String x:Key="SystemTweak_MemoryIntegrity_Desc">Открывает Безопасность Windows. Отключение снижает безопасность и может потребовать перезагрузки.</sys:String>
+    <sys:String x:Key="SystemTweak_Hags_Name">Аппаратное планирование GPU</sys:String>
+    <sys:String x:Key="SystemTweak_Hags_Desc">Открывает параметры графики Windows для проверки HAGS.</sys:String>
+    <sys:String x:Key="SystemTweak_WindowedOptimizations_Name">Оптимизация оконных игр</sys:String>
+    <sys:String x:Key="SystemTweak_WindowedOptimizations_Desc">Открывает параметры графики Windows для управления Flip Model.</sys:String>
+    <sys:String x:Key="SystemTweak_UsbSelectiveSuspend_Name">Выборочная приостановка USB</sys:String>
+    <sys:String x:Key="SystemTweak_UsbSelectiveSuspend_Desc">Управляет приостановкой USB в активном плане при питании от сети.</sys:String>
+    <sys:String x:Key="SystemTweak_PointerPrecision_Name">Повышенная точность указателя</sys:String>
+    <sys:String x:Key="SystemTweak_PointerPrecision_Desc">Управляет ускорением мыши Windows.</sys:String>
+    <sys:String x:Key="SystemTweak_EthernetPowerSaving_Name">Отключить энергосбережение Ethernet</sys:String>
+    <sys:String x:Key="SystemTweak_EthernetPowerSaving_Desc">Отключает поддерживаемые EEE, Green Ethernet и энергосбережение физических Ethernet-адаптеров.</sys:String>
+    <sys:String x:Key="SystemTweak_InterruptModeration_Name">Отключить модерацию прерываний</sys:String>
+    <sys:String x:Key="SystemTweak_InterruptModeration_Desc">Может снизить задержку Ethernet ценой повышенной нагрузки CPU и прерываний.</sys:String>
+    <sys:String x:Key="SystemTweak_GpuMsiMode_Name">Режим MSI для GPU</sys:String>
+    <sys:String x:Key="SystemTweak_GpuMsiMode_Desc">Управляет MSI, только если видеодрайвер уже предоставляет MSISupported. Требуется перезагрузка.</sys:String>
+    <sys:String x:Key="SystemTweaks_OpenSettings">Открыть параметры</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusManagedByWindows">Управляется Windows</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusOpenSettingsFailed">Не удалось открыть параметры Windows</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusSettingsOpenedFormat">Открыты параметры для {0}</sys:String>
 
     <!-- SystemTweaksViewModel Messages -->
     <sys:String x:Key="SystemTweaks_StatusReady">Готово</sys:String>

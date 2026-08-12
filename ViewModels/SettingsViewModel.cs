@@ -21,6 +21,8 @@ namespace ThreadPilot.ViewModels
 
     public partial class SettingsViewModel : BaseViewModel
     {
+        internal const string DiscordUrl = "https://discord.gg/VYwkCbr4vH";
+        internal const string IssuesUrl = "https://github.com/PrimeBuild-pc/ThreadPilot/issues";
         private readonly IApplicationSettingsService settingsService;
         private readonly INotificationService notificationService;
         private readonly IAutostartService autostartService;
@@ -164,6 +166,12 @@ namespace ThreadPilot.ViewModels
             await this.RefreshPowerPlansAsync();
             await this.RefreshReservedCpuSetsStatusAsync();
         }
+
+        [RelayCommand]
+        private void OpenDiscord() => this.OpenExternalLink(DiscordUrl);
+
+        [RelayCommand]
+        private void ReportIssue() => this.OpenExternalLink(IssuesUrl);
 
         private async Task RefreshReservedCpuSetsStatusAsync()
         {

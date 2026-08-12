@@ -172,6 +172,8 @@
     <sys:String x:Key="PowerPlanView_ImportSelectedTooltip">将所选的自定义 .pow 文件导入 Windows</sys:String>
     <sys:String x:Key="PowerPlanView_AddFile">添加 .pow 文件</sys:String>
     <sys:String x:Key="PowerPlanView_AddFileTooltip">向自定义库添加新的自定义电源计划文件</sys:String>
+    <sys:String x:Key="PowerPlanView_MorePlans">需要更多计划？</sys:String>
+    <sys:String x:Key="PowerPlanView_MorePlansTooltip">在 Discord 中获取更多社区电源计划。</sys:String>
     <sys:String x:Key="PowerPlanView_Delete">删除</sys:String>
     <sys:String x:Key="PowerPlanView_Active">活动</sys:String>
 
@@ -278,8 +280,8 @@
     <sys:String x:Key="ProcessView_RealtimeBlockedHelp">实时优先级已被 ThreadPilot 阻止，因为它可能会使 Windows 不稳定或无响应。</sys:String>
     <sys:String x:Key="ProcessView_RealtimeBlocked">实时 (已阻止)</sys:String>
     
-    <sys:String x:Key="ProcessView_DisableIdleServer">禁用空闲服务</sys:String>
-    <sys:String x:Key="ProcessView_DisableIdleServerTooltip">在此进程运行时阻止系统进入空闲状态。适用于游戏和对性能要求严苛的应用程序。</sys:String>
+    <sys:String x:Key="ProcessView_DisableIdleServer">进程运行时阻止睡眠</sys:String>
+    <sys:String x:Key="ProcessView_DisableIdleServerTooltip">进程运行时保持系统唤醒。显示器仍可关闭，并且不会阻止用户明确请求的睡眠。</sys:String>
     
     <sys:String x:Key="ProcessView_ProfileRule">配置文件 / 规则</sys:String>
     <sys:String x:Key="ProcessView_ProfileNamePlaceholder">输入配置文件名称以保存或加载设置</sys:String>
@@ -365,6 +367,9 @@
     <sys:String x:Key="ProcessView_Rules">规则</sys:String>
     <sys:String x:Key="ProcessView_Name">名称</sys:String>
     <sys:String x:Key="ProcessView_SetMemoryPriority">设置内存优先级</sys:String>
+    <sys:String x:Key="ProcessView_SetIoPriority">设置 I/O 优先级</sys:String>
+    <sys:String x:Key="ProcessSummary_IoPriorityUnavailable">I/O 优先级不可用</sys:String>
+    <sys:String x:Key="ProcessSummary_IoPriorityFormat">I/O 优先级：{0}</sys:String>
     <sys:String x:Key="ProcessView_PriorityVeryLow">极低</sys:String>
     <sys:String x:Key="ProcessView_PriorityMedium">中</sys:String>
     <sys:String x:Key="ProcessView_RefreshInfo">刷新进程信息</sys:String>
@@ -437,6 +442,11 @@
     <sys:String x:Key="SettingsView_DebugLogging">开启调试诊断日志记录</sys:String>
     <sys:String x:Key="SettingsView_PerformanceCounters">启用内部性能计数器</sys:String>
     
+    <sys:String x:Key="SettingsView_SomethingWrong">遇到问题？</sys:String>
+    <sys:String x:Key="SettingsView_DiscordDescription">加入 ThreadPilot Discord 社区以获取帮助并参与讨论。</sys:String>
+    <sys:String x:Key="SettingsView_OpenDiscord">打开 Discord</sys:String>
+    <sys:String x:Key="SettingsView_IssuesDescription">通过 GitHub Issues 报告错误或异常行为。</sys:String>
+    <sys:String x:Key="SettingsView_ReportIssue">报告问题</sys:String>
     <sys:String x:Key="SettingsView_About">关于应用</sys:String>
     <sys:String x:Key="SettingsView_Version">软件版本:</sys:String>
     <sys:String x:Key="SettingsView_Copyright">版权所有 © 2026 PrimeBuild</sys:String>
@@ -547,6 +557,28 @@
     <sys:String x:Key="SystemTweak_HighSchedulingCategory_Desc">为游戏应用程序提供高调度优先级</sys:String>
     <sys:String x:Key="SystemTweak_MenuShowDelay_Name">菜单显示延迟</sys:String>
     <sys:String x:Key="SystemTweak_MenuShowDelay_Desc">显示上下文菜单之前的延迟时间</sys:String>
+    <sys:String x:Key="SystemTweak_GameMode_Name">游戏模式</sys:String>
+    <sys:String x:Key="SystemTweak_GameMode_Desc">Windows 游戏模式调度优化</sys:String>
+    <sys:String x:Key="SystemTweak_MemoryIntegrity_Name">内存完整性 (HVCI)</sys:String>
+    <sys:String x:Key="SystemTweak_MemoryIntegrity_Desc">打开 Windows 安全中心。关闭此保护会降低系统安全性，并且可能需要重启。</sys:String>
+    <sys:String x:Key="SystemTweak_Hags_Name">硬件加速 GPU 计划</sys:String>
+    <sys:String x:Key="SystemTweak_Hags_Desc">打开 Windows 图形设置以查看 HAGS。</sys:String>
+    <sys:String x:Key="SystemTweak_WindowedOptimizations_Name">窗口化游戏优化</sys:String>
+    <sys:String x:Key="SystemTweak_WindowedOptimizations_Desc">打开 Windows 图形设置以管理 Flip Model 优化。</sys:String>
+    <sys:String x:Key="SystemTweak_UsbSelectiveSuspend_Name">USB 选择性暂停</sys:String>
+    <sys:String x:Key="SystemTweak_UsbSelectiveSuspend_Desc">控制接通电源时当前电源计划的 USB 选择性暂停。</sys:String>
+    <sys:String x:Key="SystemTweak_PointerPrecision_Name">提高指针精确度</sys:String>
+    <sys:String x:Key="SystemTweak_PointerPrecision_Desc">控制 Windows 鼠标加速。</sys:String>
+    <sys:String x:Key="SystemTweak_EthernetPowerSaving_Name">禁用以太网节能</sys:String>
+    <sys:String x:Key="SystemTweak_EthernetPowerSaving_Desc">禁用物理以太网适配器支持的 EEE、Green Ethernet 和节能属性。</sys:String>
+    <sys:String x:Key="SystemTweak_InterruptModeration_Name">禁用中断调节</sys:String>
+    <sys:String x:Key="SystemTweak_InterruptModeration_Desc">可以降低以太网延迟，但会增加 CPU 和中断负载。</sys:String>
+    <sys:String x:Key="SystemTweak_GpuMsiMode_Name">GPU MSI 模式</sys:String>
+    <sys:String x:Key="SystemTweak_GpuMsiMode_Desc">仅当显示驱动已公开 MSISupported 时控制 MSI。需要重启。</sys:String>
+    <sys:String x:Key="SystemTweaks_OpenSettings">打开设置</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusManagedByWindows">由 Windows 管理</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusOpenSettingsFailed">无法打开 Windows 设置</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusSettingsOpenedFormat">已打开 {0} 的设置</sys:String>
 
     <!-- SystemTweaksViewModel Messages -->
     <sys:String x:Key="SystemTweaks_StatusReady">就绪</sys:String>

@@ -16,6 +16,7 @@ namespace ThreadPilot.ViewModels
 
     public partial class PowerPlanViewModel : BaseViewModel
     {
+        internal const string MorePlansUrl = "https://discord.gg/EmPfb57Kfr";
         private readonly IPowerPlanService powerPlanService;
         private System.Timers.Timer? refreshTimer;
         private bool isAutoRefreshPaused = true;
@@ -132,6 +133,9 @@ namespace ThreadPilot.ViewModels
                 }
             });
         }
+
+        [RelayCommand]
+        private void OpenMorePlans() => this.OpenExternalLink(MorePlansUrl);
 
         [RelayCommand]
         public async Task LoadPowerPlans()

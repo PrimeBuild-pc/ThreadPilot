@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "1.6.0"
+    [string]$Version = "1.7.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -35,6 +35,7 @@ echo [1/4] Closing running ThreadPilot processes...
 taskkill /IM "ThreadPilot.exe" /F >nul 2>&1
 
 echo [2/4] Removing startup task and startup registry entry...
+schtasks /Delete /TN "ThreadPilot_Launch" /F >nul 2>&1
 schtasks /Delete /TN "ThreadPilot_Startup" /F >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "ThreadPilot" /f >nul 2>&1
 

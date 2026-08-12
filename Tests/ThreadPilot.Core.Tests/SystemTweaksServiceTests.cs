@@ -19,5 +19,29 @@ namespace ThreadPilot.Core.Tests
 
             Assert.Equal("Medium", value);
         }
+
+        [Fact]
+        public void GetPointerPrecisionValues_WhenDisabled_ClearsAccelerationAndThresholds()
+        {
+            var values = SystemTweaksService.GetPointerPrecisionValues(enabled: false, [6, 10, 1]);
+
+            Assert.Equal([0, 0, 0], values);
+        }
+
+        [Fact]
+        public void GetPointerPrecisionValues_WhenEnabled_RestoresWindowsDefaultsAfterDisable()
+        {
+            var values = SystemTweaksService.GetPointerPrecisionValues(enabled: true, [0, 0, 0]);
+
+            Assert.Equal([6, 10, 1], values);
+        }
+
+        [Fact]
+        public void GetPointerPrecisionValues_WhenEnabled_PreservesExistingNonZeroValues()
+        {
+            var values = SystemTweaksService.GetPointerPrecisionValues(enabled: true, [4, 8, 2]);
+
+            Assert.Equal([4, 8, 2], values);
+        }
     }
 }

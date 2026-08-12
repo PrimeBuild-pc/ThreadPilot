@@ -32,6 +32,7 @@ namespace ThreadPilot.ViewModels
         private readonly IAffinityApplyService affinityApplyService;
         private readonly IProcessAffinityApplyCoordinator processAffinityApplyCoordinator;
         private readonly IProcessMemoryPriorityService? memoryPriorityService;
+        private readonly ProcessPowerRequestService? powerRequestService;
         private readonly IProcessRuleCreationService? processRuleCreationService;
         private readonly IApplicationSettingsService? settingsService;
         private readonly IPersistentProcessRuleStore? persistentRuleStore;
@@ -194,7 +195,8 @@ namespace ThreadPilot.ViewModels
             Action<string>? clipboardSetter = null,
             Action<string>? executableLocationOpener = null,
             ILocalizationService? localizationService = null,
-            IApplicationSettingsService? settingsService = null)
+            IApplicationSettingsService? settingsService = null,
+            ProcessPowerRequestService? powerRequestService = null)
             : base(logger, enhancedLoggingService, activityAuditService)
         {
             this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
@@ -217,6 +219,7 @@ namespace ThreadPilot.ViewModels
                 new CpuSelectionMigrationService(),
                 NullLogger<ProcessAffinityApplyCoordinator>.Instance);
             this.memoryPriorityService = memoryPriorityService;
+            this.powerRequestService = powerRequestService;
             this.settingsService = settingsService;
             this.persistentRuleStore = persistentRuleStore;
             this.persistentRuleMatcher = persistentRuleMatcher;

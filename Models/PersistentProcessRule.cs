@@ -28,11 +28,17 @@ namespace ThreadPilot.Models
 
         public ProcessMemoryPriority? MemoryPriority { get; init; }
 
+        public ProcessIoPriority? IoPriority { get; init; }
+
         public bool ApplyAffinityOnStart { get; init; }
 
         public bool ApplyPriorityOnStart { get; init; }
 
         public bool ApplyMemoryPriorityOnStart { get; init; }
+
+        public bool ApplyIoPriorityOnStart { get; init; }
+
+        public bool PreventSystemSleepWhileRunning { get; init; }
 
         public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
 
@@ -66,6 +72,10 @@ namespace ThreadPilot.Models
         public string? PriorityVerificationPhase { get; init; }
 
         public bool MemoryPriorityApplied { get; init; }
+
+        public bool IoPriorityApplied { get; init; }
+
+        public bool PreventSleepApplied { get; init; }
 
         public string? ErrorCode { get; init; }
 

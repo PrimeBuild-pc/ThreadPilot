@@ -26,6 +26,14 @@ namespace ThreadPilot.Platforms.Windows
             uint processInformationSize);
 
         int GetLastWin32Error();
+
+        int QueryIoPriority(SafeProcessHandle process, ref int priority, out uint returnLength)
+        {
+            returnLength = 0;
+            return unchecked((int)0xC0000002);
+        }
+
+        int SetIoPriority(SafeProcessHandle process, ref int priority) => unchecked((int)0xC0000002);
     }
 
     public sealed class ProcessMemoryPriorityNativeApi : IProcessMemoryPriorityNativeApi
@@ -73,6 +81,21 @@ namespace ThreadPilot.Platforms.Windows
         {
             return Marshal.GetLastWin32Error();
         }
+
+        public int QueryIoPriority(SafeProcessHandle process, ref int priority, out uint returnLength) =>
+            ProcessMemoryPriorityNativeMethods.NtQueryInformationProcess(
+                process,
+                ProcessMemoryPriorityNativeMethods.ProcessIoPriority,
+                ref priority,
+                sizeof(int),
+                out returnLength);
+
+        public int SetIoPriority(SafeProcessHandle process, ref int priority) =>
+            ProcessMemoryPriorityNativeMethods.NtSetInformationProcess(
+                process,
+                ProcessMemoryPriorityNativeMethods.ProcessIoPriority,
+                ref priority,
+                sizeof(int));
     }
 
     public enum ProcessInformationClass

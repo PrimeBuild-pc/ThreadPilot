@@ -817,7 +817,9 @@ namespace ThreadPilot.ViewModels
                 targetProcess,
                 currentCoreSelection,
                 this.SelectedProcessSummary.MemoryPriority,
-                this.SelectedCpuAssignmentMode);
+                this.SelectedCpuAssignmentMode,
+                this.SelectedProcessSummary.IoPriority,
+                this.IsIdleServerDisabled);
 
             this.ApplyRuleCreationResultStatus(result);
             await this.LogUserActionAsync(
@@ -879,7 +881,9 @@ namespace ThreadPilot.ViewModels
                 process,
                 pendingSelection,
                 currentMemoryPriority: null,
-                cpuAssignmentMode: this.SelectedCpuAssignmentMode);
+                cpuAssignmentMode: this.SelectedCpuAssignmentMode,
+                currentIoPriority: null,
+                preventSystemSleepWhileRunning: this.IsIdleServerDisabled);
 
             this.ApplyRuleCreationResultStatus(saveResult);
             await this.LogUserActionAsync(
@@ -1147,10 +1151,6 @@ namespace ThreadPilot.ViewModels
                 this.Logger.LogInformation(
                     "Applying mask '{MaskName}' to process {ProcessName} (PID: {ProcessId})",
                     mask.Name, selectedProcess.Name, selectedProcess.ProcessId);
-
-                // Disable Windows Game Mode for better CPU affinity control
-                // Game Mode can interfere with CPU Sets, particularly on AMD systems
-                await this.gameModeService.DisableGameModeForAffinityAsync();
 
                 var result = await this.processAffinityApplyCoordinator.ApplyCoreMaskAsync(selectedProcess, mask);
 
@@ -1532,6 +1532,22 @@ namespace ThreadPilot.ViewModels
             this.SetContextMemoryPriorityAsync(process, ProcessMemoryPriority.Normal);
 
         [RelayCommand]
+        private Task SetContextIoPriorityVeryLow(ProcessModel? process) =>
+            this.SetContextIoPriorityAsync(process, ProcessIoPriority.VeryLow);
+
+        [RelayCommand]
+        private Task SetContextIoPriorityLow(ProcessModel? process) =>
+            this.SetContextIoPriorityAsync(process, ProcessIoPriority.Low);
+
+        [RelayCommand]
+        private Task SetContextIoPriorityNormal(ProcessModel? process) =>
+            this.SetContextIoPriorityAsync(process, ProcessIoPriority.Normal);
+
+        [RelayCommand]
+        private Task SetContextIoPriorityHigh(ProcessModel? process) =>
+            this.SetContextIoPriorityAsync(process, ProcessIoPriority.High);
+
+        [RelayCommand]
         private async Task ClearContextCpuSets(ProcessModel? process)
         {
             if (process == null)
@@ -1665,6 +1681,7 @@ namespace ThreadPilot.ViewModels
                 .AppendLine($"Path: {path}")
                 .AppendLine($"CPU priority: {process.Priority}")
                 .AppendLine($"Memory priority: {this.SelectedProcessSummary.MemoryPriority?.ToString() ?? "unavailable"}")
+                .AppendLine($"I/O priority: {this.SelectedProcessSummary.IoPriority?.ToString() ?? "unavailable"}")
                 .AppendLine($"Affinity: 0x{process.ProcessorAffinity:X}")
                 .AppendLine($"Rule status: {this.SelectedProcessSummary.RuleStatusText}");
 
@@ -1792,6 +1809,33 @@ namespace ThreadPilot.ViewModels
                     $"Process: {process.Name}, PID: {process.ProcessId}, Priority: {priority}");
                 await this.UpdateSelectedProcessSummaryAsync(process);
             }
+        }
+
+        private async Task SetContextIoPriorityAsync(ProcessModel? process, ProcessIoPriority priority)
+        {
+            if (process == null || this.memoryPriorityService == null)
+            {
+                return;
+            }
+
+            var result = await this.memoryPriorityService.SetIoPriorityAsync(process, priority);
+            if (!result.Success)
+            {
+                this.SetContextError(result.UserMessage);
+                await this.LogUserActionAsync(
+                    "ProcessIoPriorityFailed",
+                    result.UserMessage,
+                    $"Process: {process.Name}, PID: {process.ProcessId}, Priority: {priority}");
+                await this.UpdateSelectedProcessSummaryAsync(process);
+                return;
+            }
+
+            this.SetStatus($"I/O priority applied successfully to {process.Name}: {priority}.", false);
+            await this.LogUserActionAsync(
+                "ProcessIoPriorityChanged",
+                $"I/O priority changed for {process.Name}: {priority}",
+                $"PID: {process.ProcessId}");
+            await this.UpdateSelectedProcessSummaryAsync(process);
         }
 
         private async Task TryRefreshContextProcessSummaryAsync(ProcessModel process)
@@ -2230,32 +2274,30 @@ namespace ThreadPilot.ViewModels
 
             try
             {
-                this.SetStatus($"{(disable ? "Disabling" : "Enabling")} idle server for {this.SelectedProcess.Name}...");
-
-                // Implementation for disabling/enabling idle server
-                // This typically involves setting process execution state or power management settings
-                var success = await this.processService.SetIdleServerStateAsync(this.SelectedProcess, !disable);
+                this.SetStatus($"{(disable ? "Enabling" : "Disabling")} sleep prevention for {this.SelectedProcess.Name}...");
+                var success = this.powerRequestService != null &&
+                    await this.powerRequestService.SetPreventSleepAsync(this.SelectedProcess, disable);
 
                 if (success)
                 {
                     this.SelectedProcess.IsIdleServerDisabled = disable;
-                    this.SetStatus($"Idle server {(disable ? "disabled" : "enabled")} for {this.SelectedProcess.Name}");
+                    this.SetStatus($"Sleep prevention {(disable ? "enabled" : "disabled")} for {this.SelectedProcess.Name}");
 
                     await this.LogUserActionAsync(
-                        "IdleServer",
-                        $"Idle server {(disable ? "disabled" : "enabled")} for process {this.SelectedProcess.Name}",
+                        "ProcessSleepPrevention",
+                        $"Sleep prevention {(disable ? "enabled" : "disabled")} for process {this.SelectedProcess.Name}",
                         $"PID: {this.SelectedProcess.ProcessId}");
                 }
                 else
                 {
-                    this.SetStatus($"Failed to {(disable ? "disable" : "enable")} idle server for {this.SelectedProcess.Name}", false);
+                    this.SetStatus($"Failed to {(disable ? "enable" : "disable")} sleep prevention for {this.SelectedProcess.Name}", false);
                     // Revert the UI state
                     this.IsIdleServerDisabled = !disable;
                 }
             }
             catch (Exception ex)
             {
-                this.Logger.LogError(ex, "Error toggling idle server for process {ProcessName}", this.SelectedProcess.Name);
+                this.Logger.LogError(ex, "Error toggling sleep prevention for process {ProcessName}", this.SelectedProcess.Name);
                 this.SetStatus($"Error: {ex.Message}", false);
                 // Revert the UI state
                 this.IsIdleServerDisabled = !disable;

@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.7.0 - Gaming and device tuning
+
+### Added
+
+- Added Game Mode, USB selective suspend, pointer precision, Ethernet power saving, interrupt moderation, and supported GPU MSI Mode controls.
+- Added guided links for Memory Integrity, hardware-accelerated GPU scheduling, and windowed-game optimizations so Windows retains control over security-sensitive settings.
+- Added per-process I/O priority and persistent-rule support for memory priority, I/O priority, and preventing system sleep while a process is running.
+- Added device-driver registry backups before supported Ethernet or GPU properties are changed.
+
+### Changed
+
+- Replaced the previous process idle-server action with a real Windows power request that is released automatically when the process exits or ThreadPilot closes.
+- Game Mode is now an explicit system tweak and is no longer changed implicitly when affinity is applied.
+- Removed unverified third-party `.pow` files from the repository and release packages while preserving local imports and previously installed Windows plans.
+- Added user-initiated Discord links for community power plans and support, plus a direct GitHub Issues link.
+
+### Safety and compatibility
+
+- ThreadPilot changes only driver properties already exposed by the installed Ethernet or display driver; it does not create unsupported properties.
+- Device-level tweaks require administrator privileges. Driver and firmware behavior varies, and some changes require a restart.
+- Disabling Memory Integrity is intentionally left to the user in Windows Security because it reduces system protection.
+
 ## v1.6.0 - CPU assignment strategies
 
 ### Added

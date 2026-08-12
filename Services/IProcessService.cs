@@ -38,8 +38,6 @@ namespace ThreadPilot.Services
 
         Task<bool> IsProcessStillRunning(ProcessModel process);
 
-        Task<bool> SetIdleServerStateAsync(ProcessModel process, bool enableIdleServer);
-
         Task<bool> SetRegistryPriorityAsync(ProcessModel process, bool enable, ProcessPriorityClass priority);
 
         void SetUseCpuSets(bool useCpuSets);

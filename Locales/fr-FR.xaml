@@ -172,6 +172,8 @@
     <sys:String x:Key="PowerPlanView_ImportSelectedTooltip">Importez le fichier .pow personnalisé sélectionné dans Windows</sys:String>
     <sys:String x:Key="PowerPlanView_AddFile">Ajouter un fichier .pow</sys:String>
     <sys:String x:Key="PowerPlanView_AddFileTooltip">Ajouter un nouveau fichier de plan d'alimentation personnalisé à la bibliothèque personnalisée</sys:String>
+    <sys:String x:Key="PowerPlanView_MorePlans">Plus de modes ?</sys:String>
+    <sys:String x:Key="PowerPlanView_MorePlansTooltip">Découvrez d'autres modes d'alimentation de la communauté sur Discord.</sys:String>
     <sys:String x:Key="PowerPlanView_Delete">Supprimer</sys:String>
     <sys:String x:Key="PowerPlanView_Active">Actif</sys:String>
 
@@ -278,8 +280,8 @@
     <sys:String x:Key="ProcessView_RealtimeBlockedHelp">La priorité en temps réel est bloquée par ThreadPilot car elle peut rendre Windows instable ou ne pas répondre.</sys:String>
     <sys:String x:Key="ProcessView_RealtimeBlocked">Temps réel (bloqué)</sys:String>
 
-    <sys:String x:Key="ProcessView_DisableIdleServer">Désactiver le serveur inactif</sys:String>
-    <sys:String x:Key="ProcessView_DisableIdleServerTooltip">Empêche le système d'entrer en état d'inactivité pendant l'exécution de ce processus. Utile pour les jeux et les applications critiques en termes de performances.</sys:String>
+    <sys:String x:Key="ProcessView_DisableIdleServer">Empêcher la veille pendant le processus</sys:String>
+    <sys:String x:Key="ProcessView_DisableIdleServerTooltip">Maintient le système éveillé pendant l'exécution du processus. L'écran peut s'éteindre et une veille explicite n'est pas bloquée.</sys:String>
 
     <sys:String x:Key="ProcessView_ProfileRule">Profil / Règle</sys:String>
     <sys:String x:Key="ProcessView_ProfileNamePlaceholder">Entrez un nom de profil pour enregistrer ou charger les paramètres</sys:String>
@@ -365,6 +367,9 @@
     <sys:String x:Key="ProcessView_Rules">Règles</sys:String>
     <sys:String x:Key="ProcessView_Name">Nom</sys:String>
     <sys:String x:Key="ProcessView_SetMemoryPriority">Définir la priorité de la mémoire</sys:String>
+    <sys:String x:Key="ProcessView_SetIoPriority">Définir la priorité E/S</sys:String>
+    <sys:String x:Key="ProcessSummary_IoPriorityUnavailable">Priorité E/S indisponible</sys:String>
+    <sys:String x:Key="ProcessSummary_IoPriorityFormat">Priorité E/S : {0}</sys:String>
     <sys:String x:Key="ProcessView_PriorityVeryLow">Très faible</sys:String>
     <sys:String x:Key="ProcessView_PriorityMedium">Moyen</sys:String>
     <sys:String x:Key="ProcessView_RefreshInfo">Actualiser les informations sur le processus</sys:String>
@@ -437,6 +442,11 @@
     <sys:String x:Key="SettingsView_DebugLogging">Activer la journalisation du débogage</sys:String>
     <sys:String x:Key="SettingsView_PerformanceCounters">Activer les compteurs de performances</sys:String>
 
+    <sys:String x:Key="SettingsView_SomethingWrong">Un problème ?</sys:String>
+    <sys:String x:Key="SettingsView_DiscordDescription">Rejoignez la communauté Discord de ThreadPilot pour obtenir de l'aide et échanger.</sys:String>
+    <sys:String x:Key="SettingsView_OpenDiscord">Ouvrir Discord</sys:String>
+    <sys:String x:Key="SettingsView_IssuesDescription">Signalez les bugs ou comportements inattendus via GitHub Issues.</sys:String>
+    <sys:String x:Key="SettingsView_ReportIssue">Signaler un problème</sys:String>
     <sys:String x:Key="SettingsView_About">À propos</sys:String>
     <sys:String x:Key="SettingsView_Version">Version :</sys:String>
     <sys:String x:Key="SettingsView_Copyright">Copyright © 2026 PrimeBuild</sys:String>
@@ -547,6 +557,28 @@
     <sys:String x:Key="SystemTweak_HighSchedulingCategory_Desc">Priorité de planification élevée pour les applications de jeux</sys:String>
     <sys:String x:Key="SystemTweak_MenuShowDelay_Name">Menu Afficher le délai</sys:String>
     <sys:String x:Key="SystemTweak_MenuShowDelay_Desc">Délai avant l'affichage des menus contextuels</sys:String>
+    <sys:String x:Key="SystemTweak_GameMode_Name">Mode Jeu</sys:String>
+    <sys:String x:Key="SystemTweak_GameMode_Desc">Optimisations de planification du Mode Jeu Windows</sys:String>
+    <sys:String x:Key="SystemTweak_MemoryIntegrity_Name">Intégrité de la mémoire (HVCI)</sys:String>
+    <sys:String x:Key="SystemTweak_MemoryIntegrity_Desc">Ouvre Sécurité Windows. La désactivation réduit la sécurité et peut nécessiter un redémarrage.</sys:String>
+    <sys:String x:Key="SystemTweak_Hags_Name">Planification GPU à accélération matérielle</sys:String>
+    <sys:String x:Key="SystemTweak_Hags_Desc">Ouvre les paramètres graphiques Windows pour vérifier HAGS.</sys:String>
+    <sys:String x:Key="SystemTweak_WindowedOptimizations_Name">Optimisations des jeux fenêtrés</sys:String>
+    <sys:String x:Key="SystemTweak_WindowedOptimizations_Desc">Ouvre les paramètres graphiques Windows pour gérer les optimisations Flip Model.</sys:String>
+    <sys:String x:Key="SystemTweak_UsbSelectiveSuspend_Name">Suspension sélective USB</sys:String>
+    <sys:String x:Key="SystemTweak_UsbSelectiveSuspend_Desc">Contrôle la suspension sélective USB du mode d'alimentation actif sur secteur.</sys:String>
+    <sys:String x:Key="SystemTweak_PointerPrecision_Name">Améliorer la précision du pointeur</sys:String>
+    <sys:String x:Key="SystemTweak_PointerPrecision_Desc">Contrôle l'accélération de la souris Windows.</sys:String>
+    <sys:String x:Key="SystemTweak_EthernetPowerSaving_Name">Désactiver l'économie d'énergie Ethernet</sys:String>
+    <sys:String x:Key="SystemTweak_EthernetPowerSaving_Desc">Désactive EEE, Green Ethernet et les options d'économie prises en charge sur les adaptateurs Ethernet physiques.</sys:String>
+    <sys:String x:Key="SystemTweak_InterruptModeration_Name">Désactiver la modération des interruptions</sys:String>
+    <sys:String x:Key="SystemTweak_InterruptModeration_Desc">Peut réduire la latence Ethernet au prix d'une charge CPU et d'interruptions supérieure.</sys:String>
+    <sys:String x:Key="SystemTweak_GpuMsiMode_Name">Mode MSI du GPU</sys:String>
+    <sys:String x:Key="SystemTweak_GpuMsiMode_Desc">Contrôle MSI uniquement si le pilote graphique expose déjà MSISupported. Redémarrage requis.</sys:String>
+    <sys:String x:Key="SystemTweaks_OpenSettings">Ouvrir les paramètres</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusManagedByWindows">Géré par Windows</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusOpenSettingsFailed">Impossible d'ouvrir les paramètres Windows</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusSettingsOpenedFormat">Paramètres ouverts pour {0}</sys:String>
 
     <!-- SystemTweaksViewModel Messages -->
     <sys:String x:Key="SystemTweaks_StatusReady">Prêt</sys:String>

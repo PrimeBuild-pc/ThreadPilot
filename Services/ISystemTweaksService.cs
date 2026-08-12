@@ -7,6 +7,10 @@ namespace ThreadPilot.Services
     {
         event EventHandler<TweakStatusChangedEventArgs>? TweakStatusChanged;
 
+        Task<TweakStatus> GetGameModeStatusAsync();
+
+        Task<bool> SetGameModeAsync(bool enabled);
+
         Task<TweakStatus> GetCoreParkingStatusAsync();
 
         Task<bool> SetCoreParkingAsync(bool enabled);
@@ -34,6 +38,30 @@ namespace ThreadPilot.Services
         Task<TweakStatus> GetMenuShowDelayStatusAsync();
 
         Task<bool> SetMenuShowDelayAsync(bool enabled);
+
+        Task<TweakStatus> GetUsbSelectiveSuspendStatusAsync();
+
+        Task<bool> SetUsbSelectiveSuspendAsync(bool enabled);
+
+        Task<TweakStatus> GetPointerPrecisionStatusAsync();
+
+        Task<bool> SetPointerPrecisionAsync(bool enabled);
+
+        Task<TweakStatus> GetEthernetPowerSavingStatusAsync();
+
+        Task<bool> SetEthernetPowerSavingAsync(bool enabled);
+
+        Task<TweakStatus> GetInterruptModerationStatusAsync();
+
+        Task<bool> SetInterruptModerationAsync(bool enabled);
+
+        Task<TweakStatus> GetGpuMsiModeStatusAsync();
+
+        Task<bool> SetGpuMsiModeAsync(bool enabled);
+
+        Task<TweakStatus> GetMemoryIntegrityStatusAsync();
+
+        Task<bool> OpenSettingsAsync(SystemTweak tweak);
     }
 
     public class TweakStatus
@@ -43,6 +71,8 @@ namespace ThreadPilot.Services
         public bool IsAvailable { get; set; }
 
         public string? ErrorMessage { get; set; }
+
+        public string? StatusText { get; set; }
     }
 
     public class TweakStatusChangedEventArgs : EventArgs
@@ -63,8 +93,17 @@ namespace ThreadPilot.Services
 
     public enum SystemTweak
     {
+        GameMode,
         CoreParking,
         CStates,
+        MemoryIntegrity,
+        Hags,
+        WindowedOptimizations,
+        UsbSelectiveSuspend,
+        PointerPrecision,
+        EthernetPowerSaving,
+        InterruptModeration,
+        GpuMsiMode,
         SysMain,
         Prefetch,
         PowerThrottling,

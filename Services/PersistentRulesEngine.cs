@@ -32,6 +32,7 @@ namespace ThreadPilot.Services
         private readonly IAffinityApplyService affinityApplyService;
         private readonly IProcessService processService;
         private readonly IProcessMemoryPriorityService memoryPriorityService;
+        private readonly ProcessPowerRequestService? powerRequestService;
         private readonly ILogger<PersistentRulesEngine> logger;
 
         public PersistentRulesEngine(
@@ -40,7 +41,8 @@ namespace ThreadPilot.Services
             IAffinityApplyService affinityApplyService,
             IProcessService processService,
             IProcessMemoryPriorityService memoryPriorityService,
-            ILogger<PersistentRulesEngine> logger)
+            ILogger<PersistentRulesEngine> logger,
+            ProcessPowerRequestService? powerRequestService = null)
         {
             this.ruleStore = ruleStore ?? throw new ArgumentNullException(nameof(ruleStore));
             this.matcher = matcher ?? throw new ArgumentNullException(nameof(matcher));
@@ -48,6 +50,7 @@ namespace ThreadPilot.Services
             this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
             this.memoryPriorityService = memoryPriorityService ?? throw new ArgumentNullException(nameof(memoryPriorityService));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.powerRequestService = powerRequestService;
         }
 
         public async Task<IReadOnlyList<PersistentRuleApplyResult>> ApplyMatchingRulesAsync(
@@ -79,7 +82,11 @@ namespace ThreadPilot.Services
             var result = CreateSuccessResult(rule, process);
             var success = true;
 
-            if (!rule.ApplyAffinityOnStart && !rule.ApplyPriorityOnStart && !rule.ApplyMemoryPriorityOnStart)
+            if (!rule.ApplyAffinityOnStart &&
+                !rule.ApplyPriorityOnStart &&
+                !rule.ApplyMemoryPriorityOnStart &&
+                !rule.ApplyIoPriorityOnStart &&
+                !rule.PreventSystemSleepWhileRunning)
             {
                 return MarkRuleConfigurationFailure(
                     result,
@@ -169,6 +176,50 @@ namespace ThreadPilot.Services
                         success = false;
                         result = this.MergeMemoryPriorityFailure(result, memoryPriorityResult);
                     }
+                }
+            }
+
+            if (rule.ApplyIoPriorityOnStart && !result.IsProcessExited)
+            {
+                if (!rule.IoPriority.HasValue)
+                {
+                    success = false;
+                    result = MarkRuleConfigurationFailure(
+                        result,
+                        rule,
+                        "PersistentRuleMissingIoPriority",
+                        "This saved rule has no I/O priority value to apply.");
+                }
+                else
+                {
+                    var ioResult = await this.memoryPriorityService
+                        .SetIoPriorityAsync(process, rule.IoPriority.Value)
+                        .ConfigureAwait(false);
+                    if (ioResult.Success)
+                    {
+                        result = result with { IoPriorityApplied = true };
+                    }
+                    else
+                    {
+                        success = false;
+                        result = this.MergeMemoryPriorityFailure(result, ioResult);
+                    }
+                }
+            }
+
+            if (rule.PreventSystemSleepWhileRunning && !result.IsProcessExited)
+            {
+                var applied = this.powerRequestService != null &&
+                    await this.powerRequestService.SetPreventSleepAsync(process, enabled: true).ConfigureAwait(false);
+                result = result with { PreventSleepApplied = applied };
+                success = success && applied;
+                if (!applied)
+                {
+                    result = result with
+                    {
+                        ErrorCode = "PowerRequestFailed",
+                        UserMessage = "ThreadPilot could not prevent system sleep for this process.",
+                    };
                 }
             }
 

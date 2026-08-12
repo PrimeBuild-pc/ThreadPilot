@@ -53,7 +53,7 @@ namespace ThreadPilot.Services
 
             try
             {
-                using var key = Registry.CurrentUser.OpenSubKey(GameBarKeyPath, writable: true);
+                using var key = Registry.CurrentUser.CreateSubKey(GameBarKeyPath, writable: true);
                 if (key == null)
                 {
                     this.logger.LogWarning("GameBar registry key not found, cannot modify Game Mode");
@@ -72,38 +72,6 @@ namespace ThreadPilot.Services
             catch (Exception ex)
             {
                 this.logger.LogError(ex, "Failed to set Game Mode to {State}", enabled ? "enabled" : "disabled");
-                return false;
-            }
-        }
-
-        public async Task<bool> DisableGameModeForAffinityAsync()
-        {
-            try
-            {
-                bool isEnabled = await this.IsGameModeEnabledAsync();
-                if (!isEnabled)
-                {
-                    this.logger.LogDebug("Game Mode already disabled, no action needed");
-                    return false;
-                }
-
-                this.logger.LogInformation("Game Mode is enabled, disabling for better CPU affinity control");
-                bool success = await this.SetGameModeAsync(false);
-
-                if (success)
-                {
-                    this.logger.LogInformation("Successfully disabled Windows Game Mode for CPU affinity optimization");
-                }
-                else
-                {
-                    this.logger.LogWarning("Failed to disable Game Mode, CPU affinity may be affected");
-                }
-
-                return success;
-            }
-            catch (Exception ex)
-            {
-                this.logger.LogError(ex, "Error disabling Game Mode for affinity");
                 return false;
             }
         }

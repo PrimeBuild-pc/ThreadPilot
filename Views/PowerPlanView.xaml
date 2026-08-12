@@ -15,10 +15,26 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Margin="0,0,0,16">
-            <TextBlock Text="{DynamicResource PowerPlanView_Title}" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
-            <TextBlock Text="{DynamicResource PowerPlanView_Subtitle}" Style="{StaticResource PageSubtitleTextStyle}"/>
-        </StackPanel>
+        <Grid Grid.Row="0" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="{DynamicResource PowerPlanView_Title}" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
+                <TextBlock Text="{DynamicResource PowerPlanView_Subtitle}" Style="{StaticResource PageSubtitleTextStyle}"/>
+            </StackPanel>
+            <Button Grid.Column="1"
+                    Command="{Binding OpenMorePlansCommand}"
+                    Padding="12,7"
+                    ToolTip="{DynamicResource PowerPlanView_MorePlansTooltip}"
+                    AutomationProperties.Name="{DynamicResource PowerPlanView_MorePlans}">
+                <StackPanel Orientation="Horizontal">
+                    <ui:SymbolIcon Symbol="Chat32" Margin="0,0,7,0"/>
+                    <TextBlock Text="{DynamicResource PowerPlanView_MorePlans}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </Grid>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>

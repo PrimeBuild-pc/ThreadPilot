@@ -4,8 +4,8 @@ namespace ThreadPilot.Core.Tests
 
     public sealed partial class PackagingMetadataTests
     {
-        private const string ReleaseVersion = "1.6.0";
-        private const string ReleaseAssemblyVersion = "1.6.0.0";
+        private const string ReleaseVersion = "1.7.0";
+        private const string ReleaseAssemblyVersion = "1.7.0.0";
 
         [Fact]
         public void InnoInstallers_UseStableDisplayNameAndSeparateVersionMetadata()
@@ -38,8 +38,29 @@ namespace ThreadPilot.Core.Tests
             Assert.Contains("[UninstallDelete]", script, StringComparison.Ordinal);
             Assert.Contains("Name: \"{userappdata}\\ThreadPilot\"", script, StringComparison.Ordinal);
             Assert.Contains("ThreadPilot user data is preserved during install/update", script, StringComparison.Ordinal);
+            Assert.Contains("ThreadPilot_Launch", script, StringComparison.Ordinal);
+            Assert.Contains("ThreadPilot_Startup", script, StringComparison.Ordinal);
             Assert.DoesNotContain("[InstallDelete]", script, StringComparison.Ordinal);
             Assert.DoesNotContain("Name: \"{userappdata}\"", script, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void PortableUninstallers_RemoveCurrentAndLegacyStartupTasks()
+        {
+            var root = FindRepositoryRoot();
+            var paths = new[]
+            {
+                Path.Combine(root, "build", "build-release.ps1"),
+                Path.Combine(root, "build", "package-release-zips.ps1"),
+                Path.Combine(root, ".github", "workflows", "release.yml"),
+            };
+
+            foreach (var path in paths)
+            {
+                var script = File.ReadAllText(path);
+                Assert.Contains("ThreadPilot_Launch", script, StringComparison.Ordinal);
+                Assert.Contains("ThreadPilot_Startup", script, StringComparison.Ordinal);
+            }
         }
 
         [Fact]
@@ -99,7 +120,7 @@ namespace ThreadPilot.Core.Tests
             throw new InvalidOperationException("Repository root could not be located.");
         }
 
-        [GeneratedRegex("#define MyAppVersion \"1\\.6\\.0\"", RegexOptions.CultureInvariant)]
+        [GeneratedRegex("#define MyAppVersion \"1\\.7\\.0\"", RegexOptions.CultureInvariant)]
         private static partial Regex MyAppVersionRegex();
     }
 }
