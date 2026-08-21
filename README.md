@@ -1,24 +1,25 @@
 <div align="center">
-
-# ThreadPilot ✈️
-
-**A free and open-source Windows process control center for deterministic CPU, priority, memory, and power-plan workflows.**
-
-[![Build](https://github.com/PrimeBuild-pc/ThreadPilot/actions/workflows/ci-devsecops.yml/badge.svg)](https://github.com/PrimeBuild-pc/ThreadPilot/actions/workflows/ci-devsecops.yml)
-[![codecov](https://codecov.io/gh/PrimeBuild-pc/ThreadPilot/branch/main/graph/badge.svg)](https://codecov.io/gh/PrimeBuild-pc/ThreadPilot)
-[![Release](https://img.shields.io/github/v/release/PrimeBuild-pc/ThreadPilot?sort=semver)](https://github.com/PrimeBuild-pc/ThreadPilot/releases)
-[![Latest Downloads](https://img.shields.io/github/downloads/PrimeBuild-pc/ThreadPilot/latest/total?label=latest%20downloads&logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest)
-[![Total Downloads](https://img.shields.io/github/downloads/PrimeBuild-pc/ThreadPilot/total?label=total%20downloads&logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases)
-[![winget](https://img.shields.io/winget/v/PrimeBuild.ThreadPilot?label=winget&color=1F2937)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/p/PrimeBuild/ThreadPilot)
-[![Chocolatey](https://img.shields.io/chocolatey/v/threadpilot?label=chocolatey)](https://community.chocolatey.org/packages/threadpilot)
-[![Windows](https://img.shields.io/badge/Windows-11-blue?logo=windows)](https://www.microsoft.com/windows)
-[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
-[![Languages](https://img.shields.io/badge/Languages-EN%20%7C%20ZH%20%7C%20IT%20%7C%20FR%20%7C%20DE%20%7C%20ES%20%7C%20RU-5B5FC7?logo=googletranslate&logoColor=white)](Locales/)
-[![License](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE)
-[![Issues](https://img.shields.io/github/issues/PrimeBuild-pc/ThreadPilot)](https://github.com/PrimeBuild-pc/ThreadPilot/issues)
-[![Discussions](https://img.shields.io/badge/Discussions-GitHub-6f42c1?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/discussions)
-
-[Install](#-install) • [Features](#-features) • [Screenshots](#-screenshots) • [Build](#-build-from-source) • [Support](#-support-the-project)
+  <img src="readme-banner.svg" alt="ThreadPilot — Windows process and power-plan control center" width="100%">
+  <p><strong>A free, open-source Windows process control center for deterministic CPU, priority, memory and power-plan workflows.</strong></p>
+  <p>
+    <a href="https://github.com/PrimeBuild-pc/ThreadPilot/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/PrimeBuild-pc/ThreadPilot?style=plastic&amp;logo=git&amp;logoColor=white"></a>
+    <a href="https://github.com/PrimeBuild-pc/ThreadPilot/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/PrimeBuild-pc/ThreadPilot?style=plastic&amp;logo=github"></a>
+    <a href="https://github.com/PrimeBuild-pc/ThreadPilot/issues"><img alt="Open issues" src="https://img.shields.io/github/issues/PrimeBuild-pc/ThreadPilot?style=plastic&amp;logo=github"></a>
+  </p>
+  <p>
+    <a href="https://github.com/PrimeBuild-pc/ThreadPilot/actions/workflows/ci-devsecops.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/PrimeBuild-pc/ThreadPilot/ci-devsecops.yml?branch=main&amp;style=plastic&amp;logo=githubactions&amp;label=build"></a>
+    <a href="https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/PrimeBuild-pc/ThreadPilot?style=plastic&amp;logo=github"></a>
+    <a href="https://github.com/PrimeBuild-pc/ThreadPilot/releases"><img alt="Total downloads" src="https://img.shields.io/github/downloads/PrimeBuild-pc/ThreadPilot/total?style=plastic&amp;logo=github&amp;label=downloads&amp;color=2ea44f"></a>
+    <a href="https://github.com/microsoft/winget-pkgs/tree/master/manifests/p/PrimeBuild/ThreadPilot"><img alt="WinGet version" src="https://img.shields.io/winget/v/PrimeBuild.ThreadPilot?style=plastic&amp;label=winget"></a>
+    <a href="https://community.chocolatey.org/packages/threadpilot"><img alt="Chocolatey version" src="https://img.shields.io/chocolatey/v/threadpilot?style=plastic&amp;label=chocolatey"></a>
+  </p>
+  <p>
+    <img alt="Windows 11" src="https://img.shields.io/badge/Windows-11-0078D4?style=plastic&amp;logo=windows&amp;logoColor=white">
+    <img alt=".NET 8" src="https://img.shields.io/badge/.NET-8-512BD4?style=plastic&amp;logo=dotnet&amp;logoColor=white">
+    <a href="Locales/"><img alt="Seven interface languages" src="https://img.shields.io/badge/UI%20languages-7-5B5FC7?style=plastic&amp;logo=googletranslate&amp;logoColor=white"></a>
+    <a href="LICENSE"><img alt="AGPL v3 license" src="https://img.shields.io/badge/license-AGPLv3-2ea44f?style=plastic"></a>
+  </p>
+  <p><a href="#-install">Install</a> · <a href="#-features">Features</a> · <a href="#-screenshots">Screenshots</a> · <a href="#-build-from-source">Build</a> · <a href="#-support-the-project">Support</a></p>
 
 </div>
 
