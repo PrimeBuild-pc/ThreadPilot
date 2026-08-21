@@ -1,5 +1,6 @@
 <div align="center">
-  <img src="readme-banner.svg" alt="ThreadPilot — Windows process and power-plan control center" width="100%">
+  <img src="assets/icons/ico.ico" alt="ThreadPilot app icon" width="128">
+  <h1>ThreadPilot ✈️</h1>
   <p><strong>A free, open-source Windows process control center for deterministic CPU, priority, memory and power-plan workflows.</strong></p>
   <p>
     <a href="https://github.com/PrimeBuild-pc/ThreadPilot/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/PrimeBuild-pc/ThreadPilot?style=plastic&amp;logo=git&amp;logoColor=white"></a>
