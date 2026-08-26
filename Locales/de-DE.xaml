@@ -26,6 +26,10 @@
 
     <!-- MainWindow Overlays -->
     <sys:String x:Key="MainWindow_StartupMinimizedSuggestionTitle">Start minimiert</sys:String>
+    <sys:String x:Key="MainWindow_WhatsNew">Neuerungen</sys:String>
+    <sys:String x:Key="MainWindow_GotIt">Verstanden</sys:String>
+    <sys:String x:Key="MainWindow_CpuAssignmentModeChangedTitle">Ihr CPU-Zuweisungsmodus wurde geändert</sys:String>
+    <sys:String x:Key="MainWindow_CpuAssignmentModeChangedDescription">Sie haben „ThreadPilot automatisch“ verwendet. Dieser Modus setzt Windows-CPU-Sets: eine Planungspräferenz, die die Affinitätsmaske im Task-Manager unverändert lässt. ThreadPilot hat auf „Affinitätsmaske“ umgestellt, was eine echte, sichtbare Affinität setzt. Sie können dies jederzeit in den Einstellungen zurückstellen.</sys:String>
     <sys:String x:Key="MainWindow_StartupMinimizedSuggestionDescription">Aktivieren Sie „Start minimiert“, wenn ThreadPilot bei zukünftigen Windows-Anmeldungen automatisch in der Taskleiste gestartet werden soll.</sys:String>
     <sys:String x:Key="MainWindow_Recommended">Empfohlen</sys:String>
     <sys:String x:Key="MainWindow_DontShowAgain">Nicht mehr anzeigen</sys:String>

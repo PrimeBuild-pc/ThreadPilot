@@ -26,6 +26,10 @@
 
     <!-- MainWindow Overlays -->
     <sys:String x:Key="MainWindow_StartupMinimizedSuggestionTitle">Запуск свернут</sys:String>
+    <sys:String x:Key="MainWindow_WhatsNew">Что нового</sys:String>
+    <sys:String x:Key="MainWindow_GotIt">Понятно</sys:String>
+    <sys:String x:Key="MainWindow_CpuAssignmentModeChangedTitle">Режим назначения ЦП изменён</sys:String>
+    <sys:String x:Key="MainWindow_CpuAssignmentModeChangedDescription">Вы использовали режим «ThreadPilot автоматически», который применяет CPU Sets Windows: это предпочтение планировщика, которое не меняет маску привязки в Диспетчере задач. ThreadPilot переключил вас на «Маску привязки», которая задаёт реальную и видимую привязку. Вернуть прежний режим можно в Настройках.</sys:String>
     <sys:String x:Key="MainWindow_StartupMinimizedSuggestionDescription">Включите свертывание запуска, если вы хотите, чтобы ThreadPilot автоматически запускался в области уведомлений при последующих входах в систему Windows.</sys:String>
     <sys:String x:Key="MainWindow_Recommended">Рекомендуется</sys:String>
     <sys:String x:Key="MainWindow_DontShowAgain">Больше не показывать</sys:String>

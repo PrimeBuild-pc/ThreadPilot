@@ -423,6 +423,65 @@
                 </Border>
             </Grid>
 
+            <Grid x:Name="CpuAssignmentModeChangedOverlay"
+                  Visibility="Collapsed"
+                  Panel.ZIndex="956"
+                  Background="{DynamicResource OverlayBrush}"
+                  AutomationProperties.Name="{DynamicResource MainWindow_CpuAssignmentModeChangedTitle}">
+                <Border Background="{DynamicResource CardSurfaceBrush}"
+                        BorderBrush="{DynamicResource BorderSubtleBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{DynamicResource StandardCardCornerRadius}"
+                        Padding="20"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Top"
+                        Margin="0,56,0,0"
+                        MinWidth="420"
+                        MaxWidth="560"
+                        IsHitTestVisible="True">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity="0.16"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <Border Background="{DynamicResource StatusPillBackgroundBrush}"
+                                BorderBrush="{DynamicResource StatusPillBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{DynamicResource StandardCardCornerRadius}"
+                                Padding="8,3"
+                                HorizontalAlignment="Left"
+                                Margin="0,0,0,10">
+                            <TextBlock Text="{DynamicResource MainWindow_WhatsNew}"
+                                       FontSize="{DynamicResource CaptionFontSize}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        </Border>
+                        <TextBlock Text="{DynamicResource MainWindow_CpuAssignmentModeChangedTitle}"
+                                   FontSize="20"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                   Margin="0,0,0,8"/>
+                        <TextBlock Text="{DynamicResource MainWindow_CpuAssignmentModeChangedDescription}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Margin="0,0,0,16"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button x:Name="CpuAssignmentModeChangedGotItButton"
+                                    Content="{DynamicResource MainWindow_GotIt}"
+                                    Click="CpuAssignmentModeChangedGotIt_Click"
+                                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                    Padding="14,7"
+                                    Margin="0,0,10,0"/>
+                            <Button Content="{DynamicResource MainWindow_OpenSettings}"
+                                    Click="CpuAssignmentModeChangedOpenSettings_Click"
+                                    Background="{DynamicResource ControlFillColorTertiaryBrush}"
+                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                    Padding="14,7"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
             <Grid x:Name="UnsavedSettingsOverlay"
                   Visibility="Collapsed"
                   Panel.ZIndex="960"

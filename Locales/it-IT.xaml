@@ -26,6 +26,10 @@
 
     <!-- MainWindow Overlays -->
     <sys:String x:Key="MainWindow_StartupMinimizedSuggestionTitle">Avvio ridotto a icona</sys:String>
+    <sys:String x:Key="MainWindow_WhatsNew">Novità</sys:String>
+    <sys:String x:Key="MainWindow_GotIt">Ho capito</sys:String>
+    <sys:String x:Key="MainWindow_CpuAssignmentModeChangedTitle">La modalità di assegnazione CPU è cambiata</sys:String>
+    <sys:String x:Key="MainWindow_CpuAssignmentModeChangedDescription">Stavi usando “ThreadPilot automatico”, che applica i CPU Sets di Windows: una preferenza di scheduling che lascia invariata la maschera di affinità in Gestione attività. ThreadPilot è passato a “Maschera di affinità”, che imposta un’affinità reale e visibile. Puoi tornare indietro quando vuoi dalle Impostazioni.</sys:String>
     <sys:String x:Key="MainWindow_StartupMinimizedSuggestionDescription">Abilita Avvio ridotto a icona quando desideri che ThreadPilot venga avviato in modalità silenziosa nella barra delle applicazioni agli accessi futuri di Windows.</sys:String>
     <sys:String x:Key="MainWindow_Recommended">Consigliato</sys:String>
     <sys:String x:Key="MainWindow_DontShowAgain">Non mostrare più</sys:String>

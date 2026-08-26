@@ -26,6 +26,10 @@
     
     <!-- MainWindow Overlays -->
     <sys:String x:Key="MainWindow_StartupMinimizedSuggestionTitle">Startup minimized</sys:String>
+    <sys:String x:Key="MainWindow_WhatsNew">What's new</sys:String>
+    <sys:String x:Key="MainWindow_GotIt">Got it</sys:String>
+    <sys:String x:Key="MainWindow_CpuAssignmentModeChangedTitle">Your CPU assignment mode changed</sys:String>
+    <sys:String x:Key="MainWindow_CpuAssignmentModeChangedDescription">You were using “ThreadPilot automatic”, which applies Windows CPU Sets: a scheduling preference that leaves the affinity mask in Task Manager unchanged. ThreadPilot has switched you to “Affinity Mask”, which sets a real, visible affinity. You can change this back at any time in Settings.</sys:String>
     <sys:String x:Key="MainWindow_StartupMinimizedSuggestionDescription">Enable Startup minimized when you want ThreadPilot to start silently in the tray on future Windows sign-ins.</sys:String>
     <sys:String x:Key="MainWindow_Recommended">Recommended</sys:String>
     <sys:String x:Key="MainWindow_DontShowAgain">Don't show again</sys:String>

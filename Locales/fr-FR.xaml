@@ -26,6 +26,10 @@
 
     <!-- MainWindow Overlays -->
     <sys:String x:Key="MainWindow_StartupMinimizedSuggestionTitle">Démarrage minimisé</sys:String>
+    <sys:String x:Key="MainWindow_WhatsNew">Nouveautés</sys:String>
+    <sys:String x:Key="MainWindow_GotIt">J’ai compris</sys:String>
+    <sys:String x:Key="MainWindow_CpuAssignmentModeChangedTitle">Votre mode d’affectation CPU a changé</sys:String>
+    <sys:String x:Key="MainWindow_CpuAssignmentModeChangedDescription">Vous utilisiez « ThreadPilot automatique », qui applique les CPU Sets de Windows : une préférence de planification qui laisse inchangé le masque d’affinité du Gestionnaire des tâches. ThreadPilot est passé à « Masque d’affinité », qui définit une affinité réelle et visible. Vous pouvez revenir en arrière à tout moment dans les Paramètres.</sys:String>
     <sys:String x:Key="MainWindow_StartupMinimizedSuggestionDescription">Activez le démarrage réduit lorsque vous souhaitez que ThreadPilot démarre silencieusement dans la barre d'état lors des futures connexions Windows.</sys:String>
     <sys:String x:Key="MainWindow_Recommended">Recommandé</sys:String>
     <sys:String x:Key="MainWindow_DontShowAgain">Ne plus montrer</sys:String>
