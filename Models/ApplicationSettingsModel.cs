@@ -160,7 +160,7 @@ namespace ThreadPilot.Models
         private bool enableAutomationMonitoring = true;
 
         [ObservableProperty]
-        private CpuAssignmentMode defaultCpuAssignmentMode = CpuAssignmentMode.Automatic;
+        private CpuAssignmentMode defaultCpuAssignmentMode = CpuAssignmentMode.AffinityMask;
 
         // Advanced Settings
         [ObservableProperty]

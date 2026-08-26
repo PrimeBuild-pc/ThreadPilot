@@ -22,6 +22,9 @@ namespace ThreadPilot.Services
         public const string ProcessExited =
             "The process exited before ThreadPilot could apply the change.";
 
+        public const string CpuSetsApplied =
+            "CPU Sets assignment applied. This is a soft scheduling preference: the affinity mask shown in Task Manager stays unchanged. Use the Affinity Mask mode for a hard, visible restriction.";
+
         public const string CpuSetsUnavailable =
             "Windows CPU Sets are unavailable or rejected this selection. ThreadPilot will use a safe fallback only when possible.";
 

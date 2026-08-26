@@ -15,6 +15,48 @@ namespace ThreadPilot.Core.Tests
     public sealed class ProcessServiceTests
     {
         [Fact]
+        public async Task SetProcessorAffinity_ActuallyChangesTheHardAffinityMask()
+        {
+            // Regression guard: this overload must write the mask Windows reports back through
+            // GetProcessAffinityMask. Applying CPU Sets here instead is a soft scheduling hint that
+            // leaves the mask untouched, which made every caller report a VerificationMismatch.
+            if (Environment.ProcessorCount < 2)
+            {
+                return;
+            }
+
+            using var child = Process.Start(new ProcessStartInfo("cmd.exe", "/c pause")
+            {
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            })!;
+
+            try
+            {
+                var model = new ProcessModel
+                {
+                    ProcessId = child.Id,
+                    Name = child.ProcessName,
+                    ProcessorAffinity = (long)child.ProcessorAffinity,
+                };
+
+                var service = new ProcessService(Mock.Of<ILogger<ProcessService>>());
+
+                await service.SetProcessorAffinity(model, 0x3);
+
+                child.Refresh();
+                Assert.Equal(0x3, (long)child.ProcessorAffinity);
+                Assert.Equal(0x3, model.ProcessorAffinity);
+            }
+            finally
+            {
+                child.Kill();
+            }
+        }
+
+        [Fact]
         public async Task SaveProcessProfile_WritesExpectedJson()
         {
             var profilesDirectory = CreateTemporaryDirectory();
