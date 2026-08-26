@@ -68,6 +68,46 @@ namespace ThreadPilot.Platforms.Windows
             });
         }
 
+        public IReadOnlyList<int>? GetIdealProcessorIndexes()
+        {
+            try
+            {
+                using var process = Process.GetProcessById(this.processId);
+                var indexes = new HashSet<int>();
+                foreach (var threadId in process.Threads.Cast<ProcessThread>().Select(thread => thread.Id))
+                {
+                    using var handle = NativeMethods.OpenThread(ThreadQueryLimitedInformation, false, (uint)threadId);
+                    if (handle.IsInvalid)
+                    {
+                        if (Marshal.GetLastWin32Error() == ErrorInvalidParameter)
+                        {
+                            continue;
+                        }
+
+                        return null;
+                    }
+
+                    if (!NativeMethods.GetThreadIdealProcessorEx(handle, out var processor))
+                    {
+                        if (Marshal.GetLastWin32Error() == ErrorInvalidParameter)
+                        {
+                            continue;
+                        }
+
+                        return null;
+                    }
+
+                    indexes.Add((processor.Group * 64) + processor.Number);
+                }
+
+                return indexes.Count == 0 ? null : indexes.OrderBy(index => index).ToList();
+            }
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or Win32Exception)
+            {
+                return null;
+            }
+        }
+
         internal static IReadOnlyList<GroupAffinity> BuildGroupAffinities(IEnumerable<ProcessorRef> processors) =>
             processors
                 .Distinct()

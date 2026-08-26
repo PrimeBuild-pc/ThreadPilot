@@ -51,6 +51,7 @@ namespace ThreadPilot.ViewModels
         private bool suppressCoreSelectionEvents;
         private bool suppressCpuAssignmentModeChanges;
         private bool cpuAssignmentModeOverriddenByRule;
+        private string? currentSoftCpuAssignmentText;
 
         [ObservableProperty]
         private bool isAutomationMonitoringEnabled = true;
@@ -269,6 +270,11 @@ namespace ThreadPilot.ViewModels
         private void OnSettingsChanged(object? sender, ApplicationSettingsChangedEventArgs e)
         {
             this.IsAutomationMonitoringEnabled = e.NewSettings.EnableAutomationMonitoring;
+            if (this.refreshTimer != null)
+            {
+                this.refreshTimer.Interval = Math.Clamp(e.NewSettings.PollingIntervalMs, 1000, 60000);
+            }
+
             if (!this.cpuAssignmentModeOverriddenByRule)
             {
                 this.SetCpuAssignmentMode(e.NewSettings.DefaultCpuAssignmentMode, overriddenByRule: false);

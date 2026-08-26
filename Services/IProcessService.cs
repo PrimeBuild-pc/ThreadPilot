@@ -24,6 +24,10 @@ namespace ThreadPilot.Services
 
         Task RefreshProcessInfo(ProcessModel process);
 
+        Task<IReadOnlyList<int>?> GetCpuAssignmentLogicalProcessorIndexesAsync(
+            ProcessModel process,
+            CpuAssignmentMode mode);
+
         Task<ProcessModel?> GetProcessByIdAsync(int processId);
 
         Task<IEnumerable<ProcessModel>> GetProcessesByNameAsync(string executableName);

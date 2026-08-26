@@ -295,6 +295,8 @@
     <sys:String x:Key="ProcessView_LoadProfileTooltip">Load a previously saved profile</sys:String>
     <sys:String x:Key="ProcessView_SaveCurrentRule">Save Current Settings as Rule</sys:String>
     <sys:String x:Key="ProcessView_SaveRuleTooltip">Saves a per-process rule that ThreadPilot re-applies automatically the next time this process starts, while automation monitoring is enabled. These rules are separate from the Rules tab, which manages process-to-power-plan associations.</sys:String>
+    <sys:String x:Key="ProcessView_DeleteSavedRule">Delete Saved Rule</sys:String>
+    <sys:String x:Key="ProcessView_DeleteSavedRuleTooltip">Removes the saved rule for this process, so ThreadPilot stops re-applying it when the process starts.</sys:String>
     
     <sys:String x:Key="ProcessView_LastAction">Last ThreadPilot action:</sys:String>
     <sys:String x:Key="ProcessView_Refresh">Refresh</sys:String>
@@ -407,6 +409,8 @@
     <sys:String x:Key="SettingsView_MinimizeToTray">Minimize to tray</sys:String>
     <sys:String x:Key="SettingsView_CloseToTray">Close to tray (instead of exit)</sys:String>
     <sys:String x:Key="SettingsView_StartMinimized">Start minimized</sys:String>
+    <sys:String x:Key="SettingsView_ResetProcessChangesOnExit">Reset process changes on exit</sys:String>
+    <sys:String x:Key="SettingsView_ResetProcessChangesOnExitDescription">Restores CPU assignments and priorities changed by ThreadPilot when the app exits.</sys:String>
     <sys:String x:Key="SettingsView_QuickApply">Enable pending settings apply from tray</sys:String>
     <sys:String x:Key="SettingsView_MonitoringControl">Enable automation monitoring controls from tray</sys:String>
     <sys:String x:Key="SettingsView_DetailedTooltips">Show detailed tooltips</sys:String>

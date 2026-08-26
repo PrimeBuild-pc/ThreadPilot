@@ -344,6 +344,24 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal(AffinityApplyErrorCodes.NativeApplyFailed, result.ErrorCode);
         }
 
+        [Fact]
+        public void ProcessCpuSetHandler_ReadsCurrentSelectionAsLogicalProcessorIndexes()
+        {
+            var first = new ProcessorRef(0, 0, 0);
+            var third = new ProcessorRef(0, 2, 2);
+            var mapping = CpuSetMapping.Create(new Dictionary<ProcessorRef, uint>
+            {
+                [first] = 100,
+                [third] = 300,
+            });
+            var nativeApi = new FakeProcessCpuSetNativeApi { VerifiedCpuSetIds = [300, 100] };
+            using var handler = CreateHandler(nativeApi, mapping);
+
+            var indexes = handler.GetDefaultCpuSetLogicalProcessorIndexes();
+
+            Assert.Equal(new[] { 0, 2 }, indexes);
+        }
+
         private static ProcessCpuSetHandler CreateHandler(
             FakeProcessCpuSetNativeApi nativeApi,
             CpuSetMapping mapping)

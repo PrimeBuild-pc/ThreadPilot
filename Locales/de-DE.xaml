@@ -295,6 +295,8 @@
     <sys:String x:Key="ProcessView_LoadProfileTooltip">Laden Sie ein zuvor gespeichertes Profil</sys:String>
     <sys:String x:Key="ProcessView_SaveCurrentRule">Aktuelle Einstellungen als Regel speichern</sys:String>
     <sys:String x:Key="ProcessView_SaveRuleTooltip">Speichert eine prozessbezogene Regel, die ThreadPilot beim nächsten Start dieses Prozesses automatisch erneut anwendet, solange die Automatisierungsüberwachung aktiviert ist. Diese Regeln sind unabhängig von der Registerkarte „Regeln“, der Zuordnungen von Prozessen zu Energiesparplänen verwaltet.</sys:String>
+    <sys:String x:Key="ProcessView_DeleteSavedRule">Gespeicherte Regel löschen</sys:String>
+    <sys:String x:Key="ProcessView_DeleteSavedRuleTooltip">Entfernt die gespeicherte Regel für diesen Prozess, damit ThreadPilot sie beim Start des Prozesses nicht mehr anwendet.</sys:String>
 
     <sys:String x:Key="ProcessView_LastAction">Letzte ThreadPilot-Aktion:</sys:String>
     <sys:String x:Key="ProcessView_Refresh">Aktualisieren</sys:String>
@@ -407,6 +409,8 @@
     <sys:String x:Key="SettingsView_MinimizeToTray">Auf das Fach minimieren</sys:String>
     <sys:String x:Key="SettingsView_CloseToTray">In der Nähe des Fachs (anstelle des Ausgangs)</sys:String>
     <sys:String x:Key="SettingsView_StartMinimized">Minimiert starten</sys:String>
+    <sys:String x:Key="SettingsView_ResetProcessChangesOnExit">Prozessänderungen beim Beenden zurücksetzen</sys:String>
+    <sys:String x:Key="SettingsView_ResetProcessChangesOnExitDescription">Stellt von ThreadPilot geänderte CPU-Zuweisungen und Prioritäten beim Beenden der App wieder her.</sys:String>
     <sys:String x:Key="SettingsView_QuickApply">Ausstehende Einstellungen aktivieren, die aus dem Fach übernommen werden</sys:String>
     <sys:String x:Key="SettingsView_MonitoringControl">Aktivieren Sie die Steuerelemente für die Automatisierungsüberwachung in der Taskleiste</sys:String>
     <sys:String x:Key="SettingsView_DetailedTooltips">Detaillierte Tooltips anzeigen</sys:String>

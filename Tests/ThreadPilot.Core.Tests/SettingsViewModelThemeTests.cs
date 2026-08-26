@@ -153,6 +153,21 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task SaveSettingsCommand_WhenStartMinimizedIsDisabled_UpdatesEnabledAutostart()
+        {
+            var harness = new Harness(initialStartMinimized: true);
+            harness.Autostart
+                .Setup(service => service.UpdateAutostartAsync(false))
+                .ReturnsAsync(true);
+            var viewModel = harness.CreateViewModel();
+            viewModel.Settings.StartMinimized = false;
+
+            await ((IAsyncRelayCommand)viewModel.SaveSettingsCommand).ExecuteAsync(null);
+
+            harness.Autostart.Verify(service => service.UpdateAutostartAsync(false), Times.Once);
+        }
+
+        [Fact]
         public async Task SaveSettingsCommand_MergesPendingEditWithExternalUpdate()
         {
             var harness = new Harness();
@@ -215,6 +230,24 @@ namespace ThreadPilot.Core.Tests
             Assert.Contains("TextWrapping=\"Wrap\"", serialized, StringComparison.Ordinal);
             Assert.Contains("IsChecked=\"{Binding Settings.ApplyPersistentRulesOnProcessStart}\"", serialized, StringComparison.Ordinal);
             Assert.Contains("Text=\"{DynamicResource SettingsView_ApplyOnStartDescription}\"", serialized, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void SettingsView_ExposesResetProcessChangesOnExitToggle()
+        {
+            var settingsViewPath = Path.Combine(
+                AppContext.BaseDirectory,
+                "..",
+                "..",
+                "..",
+                "..",
+                "..",
+                "Views",
+                "SettingsView.xaml");
+            var serialized = File.ReadAllText(settingsViewPath);
+
+            Assert.Contains("IsChecked=\"{Binding Settings.ClearMasksOnClose}\"", serialized, StringComparison.Ordinal);
+            Assert.Contains("SettingsView_ResetProcessChangesOnExitDescription", serialized, StringComparison.Ordinal);
         }
 
         [Fact]
@@ -310,12 +343,13 @@ namespace ThreadPilot.Core.Tests
 
             public ApplicationSettingsModel PersistedSettings => this.settings;
 
-            public Harness(bool initialDarkTheme = false)
+            public Harness(bool initialDarkTheme = false, bool initialStartMinimized = false)
             {
                 this.settings = new ApplicationSettingsModel
                 {
                     UseDarkTheme = initialDarkTheme,
                     HasUserThemePreference = initialDarkTheme,
+                    StartMinimized = initialStartMinimized,
                 };
                 this.SettingsService.SetupGet(service => service.Settings).Returns(this.settings);
                 this.Autostart

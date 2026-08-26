@@ -295,6 +295,8 @@
     <sys:String x:Key="ProcessView_LoadProfileTooltip">Cargar un perfil previamente guardado</sys:String>
     <sys:String x:Key="ProcessView_SaveCurrentRule">Guardar la configuración actual como regla</sys:String>
     <sys:String x:Key="ProcessView_SaveRuleTooltip">Guarda una regla por proceso que ThreadPilot vuelve a aplicar automáticamente la próxima vez que se inicie este proceso, mientras la supervisión de automatización esté activada. Estas reglas son independientes de la pestaña Reglas, que gestiona las asociaciones entre procesos y planes de energía.</sys:String>
+    <sys:String x:Key="ProcessView_DeleteSavedRule">Eliminar la regla guardada</sys:String>
+    <sys:String x:Key="ProcessView_DeleteSavedRuleTooltip">Elimina la regla guardada para este proceso, para que ThreadPilot deje de aplicarla cuando el proceso se inicia.</sys:String>
 
     <sys:String x:Key="ProcessView_LastAction">Última acción ThreadPilot:</sys:String>
     <sys:String x:Key="ProcessView_Refresh">Actualizar</sys:String>
@@ -407,6 +409,8 @@
     <sys:String x:Key="SettingsView_MinimizeToTray">Minimizar a bandeja</sys:String>
     <sys:String x:Key="SettingsView_CloseToTray">Cerca de la bandeja (en lugar de salir)</sys:String>
     <sys:String x:Key="SettingsView_StartMinimized">Empezar minimizado</sys:String>
+    <sys:String x:Key="SettingsView_ResetProcessChangesOnExit">Restablecer cambios de procesos al salir</sys:String>
+    <sys:String x:Key="SettingsView_ResetProcessChangesOnExitDescription">Restaura las asignaciones de CPU y prioridades modificadas por ThreadPilot al cerrar la aplicación.</sys:String>
     <sys:String x:Key="SettingsView_QuickApply">Habilitar configuración pendiente aplicar desde la bandeja</sys:String>
     <sys:String x:Key="SettingsView_MonitoringControl">Habilite los controles de monitoreo de automatización desde la bandeja</sys:String>
     <sys:String x:Key="SettingsView_DetailedTooltips">Mostrar información sobre herramientas detallada</sys:String>

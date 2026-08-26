@@ -295,6 +295,8 @@
     <sys:String x:Key="ProcessView_LoadProfileTooltip">加载以前保存的配置文件</sys:String>
     <sys:String x:Key="ProcessView_SaveCurrentRule">保存当前设置为规则</sys:String>
     <sys:String x:Key="ProcessView_SaveRuleTooltip">保存针对该进程的规则；只要启用了自动化监视，ThreadPilot 会在此进程下次启动时自动重新应用它。这些规则与“自动化规则”选项卡相互独立，后者管理进程与电源计划的关联。</sys:String>
+    <sys:String x:Key="ProcessView_DeleteSavedRule">删除已保存的规则</sys:String>
+    <sys:String x:Key="ProcessView_DeleteSavedRuleTooltip">删除此进程的已保存规则，ThreadPilot 将不再在该进程启动时应用它。</sys:String>
     
     <sys:String x:Key="ProcessView_LastAction">最后一次 ThreadPilot 操作:</sys:String>
     <sys:String x:Key="ProcessView_Refresh">刷新</sys:String>
@@ -407,6 +409,8 @@
     <sys:String x:Key="SettingsView_MinimizeToTray">最小化到托盘</sys:String>
     <sys:String x:Key="SettingsView_CloseToTray">关闭主窗口时最小化到托盘</sys:String>
     <sys:String x:Key="SettingsView_StartMinimized">开机启动时最小化</sys:String>
+    <sys:String x:Key="SettingsView_ResetProcessChangesOnExit">退出时重置进程更改</sys:String>
+    <sys:String x:Key="SettingsView_ResetProcessChangesOnExitDescription">退出应用时恢复 ThreadPilot 更改的 CPU 分配和优先级。</sys:String>
     <sys:String x:Key="SettingsView_QuickApply">允许从托盘菜单应用待处理设置</sys:String>
     <sys:String x:Key="SettingsView_MonitoringControl">允许从托盘菜单控制自动化监控</sys:String>
     <sys:String x:Key="SettingsView_DetailedTooltips">托盘图标显示详细鼠标提示</sys:String>

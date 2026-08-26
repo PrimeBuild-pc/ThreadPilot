@@ -295,6 +295,8 @@
     <sys:String x:Key="ProcessView_LoadProfileTooltip">Charger un profil précédemment enregistré</sys:String>
     <sys:String x:Key="ProcessView_SaveCurrentRule">Enregistrer les paramètres actuels en tant que règle</sys:String>
     <sys:String x:Key="ProcessView_SaveRuleTooltip">Enregistre une règle propre au processus que ThreadPilot réapplique automatiquement au prochain démarrage de ce processus, tant que la surveillance de l'automatisation est activée. Ces règles sont distinctes de l'onglet Règles, qui gère les associations entre processus et modes d'alimentation.</sys:String>
+    <sys:String x:Key="ProcessView_DeleteSavedRule">Supprimer la règle enregistrée</sys:String>
+    <sys:String x:Key="ProcessView_DeleteSavedRuleTooltip">Supprime la règle enregistrée pour ce processus, afin que ThreadPilot cesse de l'appliquer au démarrage du processus.</sys:String>
 
     <sys:String x:Key="ProcessView_LastAction">Dernière action ThreadPilot :</sys:String>
     <sys:String x:Key="ProcessView_Refresh">Actualiser</sys:String>
@@ -407,6 +409,8 @@
     <sys:String x:Key="SettingsView_MinimizeToTray">Réduire dans le bac</sys:String>
     <sys:String x:Key="SettingsView_CloseToTray">Près du plateau (au lieu de la sortie)</sys:String>
     <sys:String x:Key="SettingsView_StartMinimized">Démarrer réduit</sys:String>
+    <sys:String x:Key="SettingsView_ResetProcessChangesOnExit">Réinitialiser les modifications des processus à la fermeture</sys:String>
+    <sys:String x:Key="SettingsView_ResetProcessChangesOnExitDescription">Restaure les affectations CPU et les priorités modifiées par ThreadPilot à la fermeture de l'application.</sys:String>
     <sys:String x:Key="SettingsView_QuickApply">Activer l'application des paramètres en attente à partir du bac</sys:String>
     <sys:String x:Key="SettingsView_MonitoringControl">Activer les contrôles de surveillance de l'automatisation à partir du bac</sys:String>
     <sys:String x:Key="SettingsView_DetailedTooltips">Afficher des info-bulles détaillées</sys:String>

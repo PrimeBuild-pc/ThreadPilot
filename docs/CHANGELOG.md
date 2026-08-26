@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.7.3 - Rule integrity and verifiable CPU assignment
+
+### Fixed
+
+- Saved rules created before v1.7.3 now receive the same one-time CPU assignment migration as profiles: rules that still use `ThreadPilot automatic` with a topology-aware CPU selection move to `Affinity Mask`. Deliberate assignment modes, legacy affinity masks, and rules without a CPU selection are left unchanged.
+- Updating a rule through **Apply CPU Assignment and Save as Rule** preserves its memory priority, I/O priority, identity, creation time, and other settings instead of silently replacing the full rule with affinity-only data.
+- CPU Sets and Ideal Processor assignments are read back from Windows and shown in the Advanced Affinity Picker. Explicit process CPU Sets are detected even when the global default or saved rule says `Affinity Mask`, so changing process selection or restarting ThreadPilot no longer makes a successful soft assignment appear to have disappeared.
+- Successful CPU assignment messages remain visible in the process status instead of being cleared immediately after the operation.
+- The Process Management polling interval now controls the actual process-list refresh timer and updates it when settings are saved.
+- Changing **Start minimized** now refreshes the existing Windows autostart task, preventing a stale `--start-minimized` argument from overriding the new setting.
+- Built-in CPU masks are regenerated when the detected logical-processor count changes. User-created masks are preserved.
+
+### Added
+
+- **Reset process changes on exit** is now exposed in Settings and localized in all seven supported languages. The existing safe default remains enabled, but users can now choose whether closing ThreadPilot restores applied CPU masks and priorities.
+- A saved rule can now be removed from the selected process's **Rules** context submenu, with immediate status and summary feedback.
+
+### Validation
+
+- 739 automated tests pass in Release configuration.
+- Elevated Windows 11 UI smoke testing covered startup, navigation, settings save and restore, polling persistence, process refresh, CPU Sets, Ideal Processor, rule creation and deletion, status feedback, and CPU Sets read-back after a full ThreadPilot restart.
+- Test-created processes, rules, settings, and UI automation files were removed after verification.
+
 ## v1.7.2 - CPU assignment mode migration
 
 ### Fixed

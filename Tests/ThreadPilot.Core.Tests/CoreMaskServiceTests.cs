@@ -94,6 +94,26 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task InitializeAsync_AfterCpuChange_RebuildsBuiltInsButPreservesUserMask()
+        {
+            var masksFilePath = CreateTempMasksPath();
+            await WriteMasksAsync(
+                masksFilePath,
+                CreateStoredMask("all-cores", "All Cores", [true, true, true, true], isDefault: true),
+                CreateStoredMask("custom-mask", "My Game Mask", [true, false, true, false]));
+            var service = CreateService(CreateTopology(logicalCoreCount: 8), masksFilePath);
+
+            await service.InitializeAsync();
+
+            var allCores = Assert.Single(service.AvailableMasks, mask => mask.Name == "All Cores");
+            Assert.Equal("all-cores", allCores.Id);
+            Assert.Equal(8, allCores.BoolMask.Count);
+            Assert.All(allCores.BoolMask, Assert.True);
+            var customMask = Assert.Single(service.AvailableMasks, mask => mask.Id == "custom-mask");
+            Assert.Equal(new[] { true, false, true, false }, customMask.BoolMask);
+        }
+
+        [Fact]
         public async Task TopologyDetected_AfterInitialLoad_BackfillsSmtDefaults()
         {
             var masksFilePath = CreateTempMasksPath();
