@@ -1,5 +1,6 @@
 namespace ThreadPilot.Core.Tests
 {
+    using System.Linq;
     using ThreadPilot.Helpers;
     using ThreadPilot.Models;
 
@@ -103,6 +104,7 @@ namespace ThreadPilot.Core.Tests
             {
                 HasMigratedCpuAssignmentModeDefault = true,
                 HasSeenCpuAssignmentModeChangeNotice = true,
+                HasMigratedPersistentRuleCpuAssignmentModes = true,
             };
             var target = new ApplicationSettingsModel();
 
@@ -110,6 +112,86 @@ namespace ThreadPilot.Core.Tests
 
             Assert.True(target.HasMigratedCpuAssignmentModeDefault);
             Assert.True(target.HasSeenCpuAssignmentModeChangeNotice);
+            Assert.True(target.HasMigratedPersistentRuleCpuAssignmentModes);
         }
+
+        [Fact]
+        public void ApplyToRules_MovesASavedRuleWithACpuSelectionOffAutomatic()
+        {
+            // A rule saved before 1.7.1 keeps applying CPU Sets on every process start: nothing the
+            // user can see changes, so the rule is indistinguishable from one that never runs.
+            var rules = new[] { RuleWithSelection(CpuAssignmentMode.Automatic) };
+
+            var migrated = CpuAssignmentModeMigrationPolicy.ApplyToRules(rules);
+
+            Assert.NotNull(migrated);
+            Assert.Equal(CpuAssignmentMode.AffinityMask, migrated!.Single().CpuAssignmentMode);
+            Assert.Equal(rules[0].Id, migrated.Single().Id);
+            Assert.Equal(rules[0].CpuSelection, migrated.Single().CpuSelection);
+        }
+
+        [Fact]
+        public void ApplyToRules_IsIdempotent()
+        {
+            var rules = new[] { RuleWithSelection(CpuAssignmentMode.Automatic) };
+
+            var migrated = CpuAssignmentModeMigrationPolicy.ApplyToRules(rules);
+
+            Assert.Null(CpuAssignmentModeMigrationPolicy.ApplyToRules(migrated!));
+        }
+
+        [Theory]
+        [InlineData(CpuAssignmentMode.AffinityMask)]
+        [InlineData(CpuAssignmentMode.IdealProcessor)]
+        [InlineData(CpuAssignmentMode.CpuSets)]
+        public void ApplyToRules_LeavesADeliberateModeAlone(CpuAssignmentMode mode)
+        {
+            var rules = new[] { RuleWithSelection(mode) };
+
+            Assert.Null(CpuAssignmentModeMigrationPolicy.ApplyToRules(rules));
+        }
+
+        [Fact]
+        public void ApplyToRules_LeavesALegacyMaskRuleAlone()
+        {
+            // Automatic with a legacy mask already applies a real affinity, so there is nothing to
+            // repair - and rewriting it would change a working rule for no reason.
+            var rules = new[]
+            {
+                new PersistentProcessRule
+                {
+                    ProcessName = "cs2",
+                    IsEnabled = true,
+                    LegacyAffinityMask = 0b1111,
+                    ApplyAffinityOnStart = true,
+                    CpuAssignmentMode = CpuAssignmentMode.Automatic,
+                },
+            };
+
+            Assert.Null(CpuAssignmentModeMigrationPolicy.ApplyToRules(rules));
+        }
+
+        [Fact]
+        public void ApplyToRules_LeavesARuleThatDoesNotApplyAffinityAlone()
+        {
+            var rules = new[] { RuleWithSelection(CpuAssignmentMode.Automatic) with { ApplyAffinityOnStart = false } };
+
+            Assert.Null(CpuAssignmentModeMigrationPolicy.ApplyToRules(rules));
+        }
+
+        private static PersistentProcessRule RuleWithSelection(CpuAssignmentMode mode) =>
+            new()
+            {
+                ProcessName = "cs2",
+                IsEnabled = true,
+                ApplyAffinityOnStart = true,
+                CpuAssignmentMode = mode,
+                CpuSelection = new CpuSelection
+                {
+                    CpuSetIds = { 256u },
+                    LogicalProcessors = { new ProcessorRef(0, 0, 0) },
+                    GlobalLogicalProcessorIndexes = { 0 },
+                },
+            };
     }
 }

@@ -1,6 +1,7 @@
 namespace ThreadPilot.Helpers
 {
     using System;
+    using System.Collections.Generic;
     using ThreadPilot.Models;
 
     /// <summary>
@@ -41,6 +42,48 @@ namespace ThreadPilot.Helpers
             settings.HasSeenCpuAssignmentModeChangeNotice = false;
             return true;
         }
+
+        /// <summary>
+        /// The profile migration above does not reach rules already written to persistent_rules.json:
+        /// a rule stores the mode it was saved with, so a rule captured before 1.7.1 keeps applying
+        /// CPU Sets on every process start - invisible in Task Manager, and indistinguishable from a
+        /// rule that never runs. Move those once too. Only rules carrying a CpuSelection are affected;
+        /// with a legacy mask, Automatic already applies a real affinity.
+        /// Returns the migrated rules, or null when nothing needed changing.
+        /// </summary>
+        public static IReadOnlyList<PersistentProcessRule>? ApplyToRules(
+            IReadOnlyList<PersistentProcessRule> rules)
+        {
+            ArgumentNullException.ThrowIfNull(rules);
+
+            var migrated = new List<PersistentProcessRule>(rules.Count);
+            var changed = false;
+            var now = DateTime.UtcNow;
+
+            foreach (var rule in rules)
+            {
+                if (rule.CpuAssignmentMode != CpuAssignmentMode.Automatic ||
+                    !rule.ApplyAffinityOnStart ||
+                    !HasSelection(rule.CpuSelection))
+                {
+                    migrated.Add(rule);
+                    continue;
+                }
+
+                migrated.Add(rule with
+                {
+                    CpuAssignmentMode = CpuAssignmentMode.AffinityMask,
+                    UpdatedAt = now,
+                });
+                changed = true;
+            }
+
+            return changed ? migrated : null;
+        }
+
+        private static bool HasSelection(CpuSelection? selection) =>
+            selection != null &&
+            (selection.CpuSetIds.Count > 0 || selection.LogicalProcessors.Count > 0);
 
         /// <summary>
         /// True while the migration has moved this profile but the user has not acknowledged it yet.
