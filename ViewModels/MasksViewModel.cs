@@ -78,6 +78,9 @@ namespace ThreadPilot.ViewModels
             _ = this.InitializeAsync();
         }
 
+        [ObservableProperty]
+        private string topologyReviewMessage = string.Empty;
+
         private async Task InitializeAsync()
         {
             try
@@ -89,6 +92,14 @@ namespace ThreadPilot.ViewModels
 
                 // Select the default mask
                 this.SelectedCoreMask = this.coreMaskService.DefaultMask;
+
+                // A CPU change leaves custom masks describing a machine that no longer exists.
+                // ThreadPilot will not redraw them for the user, so it has to say so where they
+                // would go to fix them.
+                var needingReview = this.coreMaskService.MasksNeedingTopologyReview;
+                this.TopologyReviewMessage = needingReview.Count == 0
+                    ? string.Empty
+                    : $"These custom masks were built for a different CPU and no longer cover every logical processor on this machine: {string.Join(", ", needingReview)}. Open each one, check the cores, and save it again.";
 
                 this.logger.LogInformation("MasksViewModel initialized with {Count} masks", this.CoreMasks.Count);
             }
