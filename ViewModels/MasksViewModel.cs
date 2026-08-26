@@ -93,13 +93,14 @@ namespace ThreadPilot.ViewModels
                 // Select the default mask
                 this.SelectedCoreMask = this.coreMaskService.DefaultMask;
 
-                // A CPU change leaves custom masks describing a machine that no longer exists.
-                // ThreadPilot will not redraw them for the user, so it has to say so where they
-                // would go to fix them.
+                // Custom masks built for a different CPU are resized automatically where that is
+                // unambiguous. What lands here is what ThreadPilot refused to decide: a mask that
+                // would be left selecting nothing, or one an automation rule is using, where a
+                // silent resize would quietly change what that rule does.
                 var needingReview = this.coreMaskService.MasksNeedingTopologyReview;
                 this.TopologyReviewMessage = needingReview.Count == 0
                     ? string.Empty
-                    : $"These custom masks were built for a different CPU and no longer cover every logical processor on this machine: {string.Join(", ", needingReview)}. Open each one, check the cores, and save it again.";
+                    : $"This CPU has a different number of logical processors than when these custom masks were made, and ThreadPilot did not change them on its own - either an automation rule is using them, or they would be left selecting no CPU that still exists: {string.Join(", ", needingReview)}. Open each one, check the cores, and save it again.";
 
                 this.logger.LogInformation("MasksViewModel initialized with {Count} masks", this.CoreMasks.Count);
             }

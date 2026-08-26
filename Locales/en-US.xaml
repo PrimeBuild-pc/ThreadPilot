@@ -246,12 +246,14 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleUpdated">Updated</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleDelete">Delete</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditor">Edit rule</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleCores">Cores</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleApplyMask">Set cores from this mask</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleCpuPriority">CPU priority</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMemoryPriority">Memory priority</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleIoPriority">I/O priority</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleModeLabel">CPU assignment mode</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulePreventSleep">Keep the system awake while this process runs</sys:String>
-    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">The cores this rule pins to are edited from the Process tab, where the core picker lives.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">Pick a saved CPU mask to set which cores this rule pins to. The per-core picker lives in the Process tab.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleSave">Save changes</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_NoSavedRules">No saved process rules yet. Right-click a process in the Process tab and choose Rules to save one.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">Executable</sys:String>

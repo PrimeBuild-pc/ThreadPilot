@@ -242,6 +242,32 @@ namespace ThreadPilot.ViewModels
             this.SavedRuleCpuAssignmentMode = rule.CpuAssignmentMode.ToString();
         }
 
+        // The cores of a rule can now be set without the process running: the Process tab needs a
+        // live process to hang its picker on, and a rule for a game you are not currently playing
+        // was the one thing you could not change. The vocabulary here is the saved CPU masks, which
+        // is what the Masks tab exists to define, rather than a second per-core picker.
+        [ObservableProperty]
+        private CoreMask? savedRuleCoreMask;
+
+        [RelayCommand]
+        private async Task ApplySavedRuleCoreMaskAsync()
+        {
+            var selected = this.SelectedSavedProcessRule;
+            var mask = this.SavedRuleCoreMask;
+            if (selected == null || mask == null || this.ruleCreationService == null)
+            {
+                return;
+            }
+
+            var result = await this.ruleCreationService
+                .UpdateRuleCoreSelectionAsync(selected.Id, mask.BoolMask)
+                .ConfigureAwait(true);
+            this.SetStatus(result.UserMessage, false);
+            await this.RefreshSavedProcessRulesAsync().ConfigureAwait(true);
+            this.SelectedSavedProcessRule = this.SavedProcessRules
+                .FirstOrDefault(row => string.Equals(row.Id, selected.Id, StringComparison.Ordinal));
+        }
+
         [RelayCommand]
         private async Task SaveSavedProcessRuleAsync()
         {
@@ -283,6 +309,7 @@ namespace ThreadPilot.ViewModels
             string Mode,
             bool IsEnabled,
             DateTime UpdatedAt,
+            string Cores,
             PersistentProcessRule Source)
         {
             public static SavedProcessRule From(PersistentProcessRule rule)
@@ -320,7 +347,52 @@ namespace ThreadPilot.ViewModels
                     rule.ApplyAffinityOnStart ? rule.CpuAssignmentMode.ToString() : "-",
                     rule.IsEnabled,
                     rule.UpdatedAt.ToLocalTime(),
+                    DescribeCores(rule),
                     rule);
+            }
+
+            // "0-7, 16" reads better than a 64-bit mask or a list of every index.
+            private static string DescribeCores(PersistentProcessRule rule)
+            {
+                if (!rule.ApplyAffinityOnStart)
+                {
+                    return "-";
+                }
+
+                IReadOnlyList<int>? indexes = rule.CpuSelection?.GlobalLogicalProcessorIndexes;
+                if (indexes == null || indexes.Count == 0)
+                {
+                    if (!rule.LegacyAffinityMask.HasValue)
+                    {
+                        return "-";
+                    }
+
+                    var mask = unchecked((ulong)rule.LegacyAffinityMask.Value);
+                    indexes = Enumerable.Range(0, 64).Where(bit => (mask & (1UL << bit)) != 0).ToList();
+                }
+
+                var ordered = indexes.Distinct().OrderBy(index => index).ToList();
+                if (ordered.Count == 0)
+                {
+                    return "-";
+                }
+
+                var parts = new List<string>();
+                var start = ordered[0];
+                var previous = start;
+                foreach (var index in ordered.Skip(1))
+                {
+                    if (index != previous + 1)
+                    {
+                        parts.Add(start == previous ? $"{start}" : $"{start}-{previous}");
+                        start = index;
+                    }
+
+                    previous = index;
+                }
+
+                parts.Add(start == previous ? $"{start}" : $"{start}-{previous}");
+                return string.Join(", ", parts);
             }
         }
 

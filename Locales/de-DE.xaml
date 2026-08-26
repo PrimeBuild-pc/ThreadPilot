@@ -246,12 +246,14 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleUpdated">Aktualisiert</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleDelete">Löschen</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditor">Regel bearbeiten</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleCores">Kerne</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleApplyMask">Kerne aus dieser Maske übernehmen</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleCpuPriority">CPU-Priorität</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMemoryPriority">Speicherpriorität</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleIoPriority">E/A-Priorität</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleModeLabel">CPU-Zuweisungsmodus</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulePreventSleep">System wach halten, solange dieser Prozess läuft</sys:String>
-    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">Die Kerne, an die diese Regel bindet, werden auf der Registerkarte Prozesse bearbeitet, wo die Kernauswahl liegt.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">Wählen Sie eine gespeicherte CPU-Maske, um die Kerne dieser Regel festzulegen. Die Auswahl einzelner Kerne finden Sie auf der Registerkarte Prozesse.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleSave">Änderungen speichern</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_NoSavedRules">Noch keine gespeicherten Prozessregeln. Klicken Sie auf der Registerkarte Prozesse mit der rechten Maustaste auf einen Prozess und wählen Sie Regeln.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">Ausführbar</sys:String>

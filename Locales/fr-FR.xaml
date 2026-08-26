@@ -246,12 +246,14 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleUpdated">Mise à jour</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleDelete">Supprimer</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditor">Modifier la règle</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleCores">Cœurs</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleApplyMask">Définir les cœurs depuis ce masque</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleCpuPriority">Priorité CPU</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMemoryPriority">Priorité mémoire</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleIoPriority">Priorité E/S</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleModeLabel">Mode d'affectation CPU</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulePreventSleep">Empêcher la mise en veille pendant l'exécution de ce processus</sys:String>
-    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">Les cœurs auxquels cette règle est liée se modifient dans l'onglet Processus, où se trouve le sélecteur de cœurs.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">Choisissez un masque CPU enregistré pour définir les cœurs de cette règle. Le sélecteur cœur par cœur se trouve dans l'onglet Processus.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleSave">Enregistrer les modifications</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_NoSavedRules">Aucune règle de processus enregistrée. Faites un clic droit sur un processus dans l'onglet Processus et choisissez Règles pour en enregistrer une.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">Exécutable</sys:String>
