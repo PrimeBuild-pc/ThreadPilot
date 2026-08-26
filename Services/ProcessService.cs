@@ -429,30 +429,11 @@ namespace ThreadPilot.Services
                         throw new InvalidOperationException("Affinity mask cannot be zero.");
                     }
 
-                    // Try using CPU Sets first (Windows 10+)
-                    if (this.useCpuSets)
-                    {
-                        bool cpuSetSuccess = this.TrySetAffinityViaCpuSets(process, affinityMask);
-                        if (cpuSetSuccess)
-                        {
-                            this.logger?.LogInformation(
-                                "Successfully applied CPU Sets affinity 0x{AffinityMask:X} to process {ProcessName} (PID: {ProcessId})",
-                                affinityMask, process.Name, process.ProcessId);
-
-                            // Update the model with the new affinity
-                            process.ProcessorAffinity = affinityMask;
-                            this.AuditProcessOperation("SetProcessAffinity", process.Name, success: true);
-                            return;
-                        }
-                        else
-                        {
-                            this.logger?.LogDebug(
-                                "CPU Sets failed for process {ProcessName} (PID: {ProcessId}), falling back to classic ProcessorAffinity",
-                                process.Name, process.ProcessId);
-                        }
-                    }
-
-                    // Fallback to classic ProcessorAffinity method
+                    // This overload means "hard affinity mask": callers verify the result against
+                    // GetProcessAffinityMask. CPU Sets (SetProcessDefaultCpuSets) are only a soft
+                    // scheduling hint and leave that mask untouched, so applying them here made every
+                    // caller report a VerificationMismatch failure. Soft assignment keeps its own
+                    // entry points (CpuAssignmentMode.CpuSets / CpuSelectionAffinityApplier).
                     using var targetProcess = Process.GetProcessById(process.ProcessId);
 
                     targetProcess.ProcessorAffinity = new IntPtr(affinityMask);
@@ -525,47 +506,6 @@ namespace ThreadPilot.Services
             }
 
             return await this.cpuSelectionAffinityApplier.ApplyAsync(process, selection).ConfigureAwait(false);
-        }
-
-        private bool TrySetAffinityViaCpuSets(ProcessModel process, long affinityMask)
-        {
-            try
-            {
-                // Get or create CPU Set handler for this process
-                var handler = this.GetOrCreateCpuSetHandler(process);
-
-                // Check if handler is valid
-                if (!handler.IsValid)
-                {
-                    this.logger?.LogDebug(
-                        "CPU Set handler for process {ProcessName} (PID: {ProcessId}) is invalid",
-                        process.Name, process.ProcessId);
-
-                    // Remove invalid handler
-                    this.cpuSetHandlers.TryRemove(process.ProcessId, out _);
-                    return false;
-                }
-
-                // Apply the CPU Set mask
-                bool success = handler.ApplyCpuSetMask(affinityMask, clearMask: false);
-
-                if (!success)
-                {
-                    // Remove failed handler so we can try again later if needed
-                    this.cpuSetHandlers.TryRemove(process.ProcessId, out _);
-                }
-
-                return success;
-            }
-            catch (Exception ex)
-            {
-                this.logger?.LogWarning(ex, "Exception while applying CPU Sets to process {ProcessName} (PID: {ProcessId})",
-                    process.Name, process.ProcessId);
-
-                // Remove handler on exception
-                this.cpuSetHandlers.TryRemove(process.ProcessId, out _);
-                return false;
-            }
         }
 
         private IProcessCpuSetHandler GetOrCreateCpuSetHandler(ProcessModel process) =>

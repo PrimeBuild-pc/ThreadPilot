@@ -810,7 +810,10 @@ namespace ThreadPilot.ViewModels
 
             await this.UpdateSelectedProcessSummaryAsync(targetProcess);
 
-            var currentCoreSelection = this.HasPendingAffinityEdits && this.CpuCores.Count > 0
+            // Capture what the core checkboxes currently show, not only staged edits: soft modes
+            // (CPU Sets / Ideal Processor) leave ProcessorAffinity untouched, so falling back to it
+            // saved a rule pinned to every CPU - a rule that does nothing when applied.
+            var currentCoreSelection = this.CpuCores.Count > 0
                 ? this.GetPendingCoreSelectionMask()
                 : null;
             var result = await this.processRuleCreationService.SaveCurrentSettingsAsRuleAsync(

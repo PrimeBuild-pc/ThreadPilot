@@ -18,7 +18,7 @@ namespace ThreadPilot.Core.Tests
             Assert.True(settings.EnableAutomaticUpdateChecks);
             Assert.False(settings.IncludePrereleaseUpdates);
             Assert.Null(settings.LastUpdateCheckUtc);
-            Assert.Equal(CpuAssignmentMode.Automatic, settings.DefaultCpuAssignmentMode);
+            Assert.Equal(CpuAssignmentMode.AffinityMask, settings.DefaultCpuAssignmentMode);
         }
 
         [Fact]

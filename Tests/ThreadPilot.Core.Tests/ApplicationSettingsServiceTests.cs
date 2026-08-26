@@ -40,7 +40,7 @@ namespace ThreadPilot.Core.Tests
             await service.LoadSettingsAsync();
 
             Assert.True(service.Settings.EnableAutomationMonitoring);
-            Assert.Equal(CpuAssignmentMode.Automatic, service.Settings.DefaultCpuAssignmentMode);
+            Assert.Equal(CpuAssignmentMode.AffinityMask, service.Settings.DefaultCpuAssignmentMode);
         }
 
         [Fact]

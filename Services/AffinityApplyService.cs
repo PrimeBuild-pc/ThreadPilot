@@ -88,7 +88,7 @@ namespace ThreadPilot.Services
                 Success = true,
                 FailureReason = AffinityApplyFailureReason.None,
                 ErrorCode = AffinityApplyErrorCodes.None,
-                UserMessage = "Affinity applied successfully.",
+                UserMessage = ProcessOperationUserMessages.CpuSetsApplied,
                 TechnicalMessage = technicalMessage,
                 UsedCpuSets = true,
                 EffectiveMode = CpuAssignmentMode.CpuSets,
