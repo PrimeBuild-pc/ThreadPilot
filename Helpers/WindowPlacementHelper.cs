@@ -34,11 +34,17 @@ namespace ThreadPilot.Helpers
         private const double DefaultWindowWidth = 1280;
         private const double DefaultWindowHeight = 864;
         private const double MinimumVisibleAreaRatio = 0.25;
+
+        // A window this close to filling its monitor's working area is treated as having no
+        // usable windowed bounds (e.g. restored from maximised without a smaller size to go back to).
+        private const double FillsWorkingAreaRatio = 0.98;
+        private const double FallbackWorkingAreaRatio = 0.9;
         private const double Epsilon = 0.001;
 
         public static WindowPlacementCorrection CorrectWindowBounds(
             WindowBounds currentBounds,
-            IReadOnlyCollection<MonitorWorkingArea> workingAreas)
+            IReadOnlyCollection<MonitorWorkingArea> workingAreas,
+            bool shrinkWhenFillingWorkingArea = false)
         {
             var validWorkingAreas = workingAreas
                 .Where(IsValidWorkingArea)
@@ -56,6 +62,20 @@ namespace ThreadPilot.Helpers
             }
 
             var targetArea = SelectTargetWorkingArea(currentBounds, validWorkingAreas);
+
+            // The target monitor is resolved from the original bounds first, so the fallback size
+            // stays centred on the monitor the window was already on.
+            if (shrinkWhenFillingWorkingArea && FillsWorkingArea(currentBounds, targetArea))
+            {
+                currentBounds = currentBounds with
+                {
+                    Left = double.NaN,
+                    Top = double.NaN,
+                    Width = Math.Min(DefaultWindowWidth, targetArea.Width * FallbackWorkingAreaRatio),
+                    Height = Math.Min(DefaultWindowHeight, targetArea.Height * FallbackWorkingAreaRatio),
+                };
+            }
+
             var correctedWidth = Math.Min(ResolveDimension(currentBounds.Width, DefaultWindowWidth), targetArea.Width);
             var correctedHeight = Math.Min(ResolveDimension(currentBounds.Height, DefaultWindowHeight), targetArea.Height);
             var sanitizedBounds = new WindowBounds(
@@ -88,7 +108,7 @@ namespace ThreadPilot.Helpers
             return new WindowPlacementCorrection(correctedBounds, !BoundsAreEquivalent(currentBounds, correctedBounds));
         }
 
-        public static bool TryCorrectWindowPlacement(Window window)
+        public static bool TryCorrectWindowPlacement(Window window, bool shrinkWhenFillingWorkingArea = false)
         {
             ArgumentNullException.ThrowIfNull(window);
 
@@ -106,7 +126,7 @@ namespace ThreadPilot.Helpers
                     ResolveWindowDimension(window.ActualWidth, window.Width, DefaultWindowWidth),
                     ResolveWindowDimension(window.ActualHeight, window.Height, DefaultWindowHeight));
 
-                var correction = CorrectWindowBounds(currentBounds, workingAreas);
+                var correction = CorrectWindowBounds(currentBounds, workingAreas, shrinkWhenFillingWorkingArea);
                 if (!correction.WasCorrected)
                 {
                     return false;
@@ -217,6 +237,14 @@ namespace ThreadPilot.Helpers
             var deltaY = y - nearestY;
 
             return (deltaX * deltaX) + (deltaY * deltaY);
+        }
+
+        private static bool FillsWorkingArea(WindowBounds bounds, MonitorWorkingArea area)
+        {
+            return IsFinite(bounds.Width)
+                && IsFinite(bounds.Height)
+                && bounds.Width >= area.Width * FillsWorkingAreaRatio
+                && bounds.Height >= area.Height * FillsWorkingAreaRatio;
         }
 
         private static bool HasSufficientIntersection(WindowBounds bounds, MonitorWorkingArea area)

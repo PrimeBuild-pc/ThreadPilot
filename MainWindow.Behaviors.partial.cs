@@ -1400,8 +1400,13 @@ namespace ThreadPilot
             }
         }
 
+        private WindowState lastObservedWindowState = WindowState.Normal;
+
         protected override void OnStateChanged(EventArgs e)
         {
+            var previousWindowState = this.lastObservedWindowState;
+            this.lastObservedWindowState = this.WindowState;
+
             try
             {
                 if (this.WindowState == WindowState.Minimized)
@@ -1420,7 +1425,15 @@ namespace ThreadPilot
                 else if (this.WindowState == WindowState.Normal || this.WindowState == WindowState.Maximized)
                 {
                     this.ShowInTaskbar = true;
-                    this.EnsureDashboardVisibleOnScreen();
+
+                    // While StateChanged runs, ActualWidth/ActualHeight/Left/Top still describe the
+                    // pre-transition window, so correcting placement here would write the maximised
+                    // size back into Width/Height and destroy the restore bounds. Let it settle first.
+                    var restoredFromMaximized = this.WindowState == WindowState.Normal
+                        && previousWindowState == WindowState.Maximized;
+                    _ = this.Dispatcher.BeginInvoke(
+                        new Action(() => this.EnsureDashboardVisibleOnScreen(restoredFromMaximized)),
+                        System.Windows.Threading.DispatcherPriority.Background);
 
                     this.ApplyAppRefreshPolicy(this.GetForegroundActivityState());
                 }
@@ -1625,10 +1638,11 @@ namespace ThreadPilot
 
             if (this.WindowState == WindowState.Minimized)
             {
+                // OnStateChanged schedules the placement correction once the restore has settled;
+                // doing it here would read the pre-restore metrics.
                 this.WindowState = WindowState.Normal;
             }
 
-            this.EnsureDashboardVisibleOnScreen();
             this.ShowInTaskbar = true;
 
             if (tabTag != null)
@@ -1653,9 +1667,9 @@ namespace ThreadPilot
                 : AppActivityState.ForegroundOtherTab);
         }
 
-        internal bool EnsureDashboardVisibleOnScreen()
+        internal bool EnsureDashboardVisibleOnScreen(bool shrinkWhenFillingWorkingArea = false)
         {
-            return WindowPlacementHelper.TryCorrectWindowPlacement(this);
+            return WindowPlacementHelper.TryCorrectWindowPlacement(this, shrinkWhenFillingWorkingArea);
         }
 
         private void SelectMainTab(string tag)
