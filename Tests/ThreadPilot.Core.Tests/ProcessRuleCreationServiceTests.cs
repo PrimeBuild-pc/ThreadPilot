@@ -698,6 +698,78 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal("NoSavedRuleToUpdate", result.ErrorCode);
         }
 
+        [Fact]
+        public async Task GetRulesNeedingTopologyReviewAsync_NamesARuleSavedOnADifferentCpu()
+        {
+            var topology = CpuTopologySnapshot.Create(
+                [new ProcessorRef(0, 0, 0), new ProcessorRef(0, 1, 1)],
+                signature: new CpuTopologySignature { CpuBrand = "AMD Ryzen 7 5800X3D", LogicalProcessorCount = 2 });
+            var store = new CapturingRuleStore(
+            [
+                new PersistentProcessRule
+                {
+                    Id = "rule-1",
+                    ProcessName = "cs2",
+                    IsEnabled = true,
+                    ApplyAffinityOnStart = true,
+                    CpuSelection = new CpuSelection
+                    {
+                        LogicalProcessors = [new ProcessorRef(0, 0, 0)],
+                        GlobalLogicalProcessorIndexes = [0],
+                        Metadata = new CpuSelectionMetadata
+                        {
+                            TopologySignature = new CpuTopologySignature { CpuBrand = "AMD Ryzen 7 5800X", LogicalProcessorCount = 2 },
+                        },
+                    },
+                },
+            ]);
+            var service = CreateService(store, new FakeTopologyProvider(topology));
+
+            var needingReview = await service.GetRulesNeedingTopologyReviewAsync();
+
+            Assert.Equal(new[] { "cs2" }, needingReview);
+        }
+
+        [Fact]
+        public async Task GetRulesNeedingTopologyReviewAsync_SaysNothingWhenTheCpuIsTheSame()
+        {
+            var signature = new CpuTopologySignature { CpuBrand = "AMD Ryzen 7 5800X", LogicalProcessorCount = 2 };
+            var topology = CpuTopologySnapshot.Create(
+                [new ProcessorRef(0, 0, 0), new ProcessorRef(0, 1, 1)],
+                signature: signature);
+            var store = new CapturingRuleStore(
+            [
+                new PersistentProcessRule
+                {
+                    Id = "rule-1",
+                    ProcessName = "cs2",
+                    IsEnabled = true,
+                    ApplyAffinityOnStart = true,
+                    CpuSelection = new CpuSelection
+                    {
+                        LogicalProcessors = [new ProcessorRef(0, 0, 0)],
+                        GlobalLogicalProcessorIndexes = [0],
+                        Metadata = new CpuSelectionMetadata { TopologySignature = signature },
+                    },
+                },
+            ]);
+            var service = CreateService(store, new FakeTopologyProvider(topology));
+
+            Assert.Empty(await service.GetRulesNeedingTopologyReviewAsync());
+        }
+
+        [Fact]
+        public async Task GetRulesNeedingTopologyReviewAsync_SaysNothingWithoutATopologyProvider()
+        {
+            var store = new CapturingRuleStore(
+            [
+                new PersistentProcessRule { Id = "rule-1", ProcessName = "cs2", IsEnabled = true, ApplyAffinityOnStart = true },
+            ]);
+            var service = CreateService(store);
+
+            Assert.Empty(await service.GetRulesNeedingTopologyReviewAsync());
+        }
+
         private static ProcessModel CreateProcess(
             string name = "Game.exe",
             string path = @"C:\Games\Game.exe",

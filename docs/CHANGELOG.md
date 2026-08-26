@@ -9,6 +9,11 @@ All notable changes to this project are documented in this file.
 - Custom CPU masks are resized when the logical-processor count changes instead of being left describing a machine that no longer exists. Growing a mask leaves the new CPUs unselected; shrinking one keeps the selected CPUs that still exist.
 - A mask is deliberately **not** resized when the result would select no CPU at all, or when a power plan association is using it - a silent resize there would change what that automation does. Those masks are named in the Masks tab for manual review.
 - Custom masks built on a different CPU with the same thread count are now detected by comparing the topology signature stored with the mask's selection, a case the logical-processor count alone cannot see.
+- Saved rules are checked against the CPU they are running on. A rule whose cores came from a different chip is named in the **Saved process rules** tab instead of failing at apply time with a message about the process having exited.
+
+### Removed
+
+- `ReviewRequired`, a flag persisted in mask and preset metadata, written in three places and read in none. A stored "needs review" bit answers at save time a question that can only be answered at load time, against whatever CPU is present then; the check is now made live where it is shown.
 
 ### Added
 

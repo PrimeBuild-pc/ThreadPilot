@@ -1,5 +1,6 @@
 namespace ThreadPilot.Core.Tests
 {
+    using System;
     using System.Diagnostics;
     using System.Text.Json;
     using ThreadPilot.Models;
@@ -24,7 +25,7 @@ namespace ThreadPilot.Core.Tests
 
             Assert.Equal([0, 2], result.Selection.GlobalLogicalProcessorIndexes);
             Assert.True(result.Metadata.CreatedFromLegacyAffinityMask);
-            Assert.False(result.Metadata.ReviewRequired);
+            Assert.False(service.ShouldRequireReview(result.Selection, result.Metadata.TopologySignature, topology));
             Assert.Equal(0b0101, service.BuildLegacyAffinityMaskIfRepresentable(result.Selection));
         }
 
@@ -67,7 +68,7 @@ namespace ThreadPilot.Core.Tests
 
             Assert.Equal([0], result.Selection.GlobalLogicalProcessorIndexes);
             Assert.True(result.Metadata.CreatedFromLegacyCoreMask);
-            Assert.True(result.Metadata.ReviewRequired);
+            Assert.Contains("length differs", result.Metadata.Reason, StringComparison.Ordinal);
         }
 
         [Fact]
@@ -79,7 +80,7 @@ namespace ThreadPilot.Core.Tests
             var result = service.MigrateFromLegacyCoreMask([false, true, true, true], topology);
 
             Assert.Equal([1], result.Selection.GlobalLogicalProcessorIndexes);
-            Assert.True(result.Metadata.ReviewRequired);
+            Assert.Contains("length differs", result.Metadata.Reason, StringComparison.Ordinal);
         }
 
         [Fact]

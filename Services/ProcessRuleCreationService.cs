@@ -39,6 +39,9 @@ namespace ThreadPilot.Services
             string ruleId,
             IReadOnlyList<bool> coreSelection,
             CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyList<string>> GetRulesNeedingTopologyReviewAsync(
+            CancellationToken cancellationToken = default);
     }
 
     public sealed record ProcessRuleCreationPayload
@@ -321,6 +324,49 @@ namespace ThreadPilot.Services
                 Rule = updated,
                 UserMessage = $"Updated the cores of the saved rule for {processName}.",
             };
+        }
+
+        // Nothing checked saved rules against the machine they are running on. A rule that pins
+        // cores which no longer exist does not announce itself: it fails at apply time, inside a
+        // path that reports it as the process having exited. Ask the question where the rules are
+        // listed instead, once, at load.
+        public async Task<IReadOnlyList<string>> GetRulesNeedingTopologyReviewAsync(
+            CancellationToken cancellationToken = default)
+        {
+            if (this.topologyProvider == null)
+            {
+                return [];
+            }
+
+            var rules = await this.ruleStore.LoadAsync().ConfigureAwait(false);
+            if (rules.Count == 0)
+            {
+                return [];
+            }
+
+            CpuTopologySnapshot topology;
+            try
+            {
+                topology = await this.topologyProvider.GetTopologySnapshotAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // Without a trustworthy topology the honest answer is to say nothing rather than
+                // accuse every rule of being stale.
+                this.logger.LogDebug(ex, "Could not read the CPU topology to review saved rules");
+                return [];
+            }
+
+            return rules
+                .Where(rule => rule.ApplyAffinityOnStart
+                    && HasSelectionPayload(rule.CpuSelection)
+                    && this.migrationService.ShouldRequireReview(
+                        rule.CpuSelection!,
+                        rule.CpuSelection!.Metadata.TopologySignature,
+                        topology))
+                .Select(rule => string.IsNullOrWhiteSpace(rule.ProcessName) ? "(unnamed)" : rule.ProcessName!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
         private async Task<ProcessRuleCreationResult> RemoveAtAsync(

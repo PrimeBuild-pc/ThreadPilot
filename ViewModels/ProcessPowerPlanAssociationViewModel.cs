@@ -142,6 +142,9 @@ namespace ThreadPilot.ViewModels
         [ObservableProperty]
         private bool hasSavedProcessRules;
 
+        [ObservableProperty]
+        private string savedRulesReviewMessage = string.Empty;
+
         public async Task RefreshSavedProcessRulesAsync()
         {
             if (this.persistentRuleStore == null)
@@ -159,6 +162,13 @@ namespace ThreadPilot.ViewModels
                 }
 
                 this.HasSavedProcessRules = this.SavedProcessRules.Count > 0;
+
+                var needingReview = this.ruleCreationService == null
+                    ? []
+                    : await this.ruleCreationService.GetRulesNeedingTopologyReviewAsync().ConfigureAwait(true);
+                this.SavedRulesReviewMessage = needingReview.Count == 0
+                    ? string.Empty
+                    : $"These rules pin cores from a different CPU than the one running now, so what they select may not mean what it did when they were saved: {string.Join(", ", needingReview)}. Set their cores again from a saved mask below.";
             }
             catch (Exception ex)
             {

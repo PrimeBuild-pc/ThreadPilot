@@ -279,6 +279,7 @@
                 <Grid Margin="10">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
@@ -288,7 +289,26 @@
                                TextWrapping="Wrap"
                                Margin="0,0,0,10"/>
 
-                    <Grid Grid.Row="1">
+                    <Border Grid.Row="1"
+                            Background="{DynamicResource CardSurfaceBrush}"
+                            BorderBrush="{DynamicResource BorderSubtleBrush}"
+                            BorderThickness="1"
+                            Padding="12,8"
+                            Margin="0,0,0,10">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SavedRulesReviewMessage}" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Text="{Binding SavedRulesReviewMessage}" TextWrapping="Wrap" FontSize="12"/>
+                    </Border>
+
+                    <Grid Grid.Row="2">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="2*"/>
                             <ColumnDefinition Width="10"/>
