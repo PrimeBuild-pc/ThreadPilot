@@ -14,6 +14,7 @@ All notable changes to this project are documented in this file.
 ### Removed
 
 - `ReviewRequired`, a flag persisted in mask and preset metadata, written in three places and read in none. A stored "needs review" bit answers at save time a question that can only be answered at load time, against whatever CPU is present then; the check is now made live where it is shown.
+- `CpuPresetGenerator`, `ICpuPresetGenerator`, `CpuPresetGenerationOptions` and `CpuPreset` - around 700 lines, including tests, that were registered in dependency injection and never resolved by anything.
 
 ### Added
 
