@@ -293,7 +293,6 @@ namespace ThreadPilot.Services
                 GeneratedByTopologySignature = topology.Signature,
                 IsUserEditable = true,
                 IsGenerated = true,
-                ReviewRequired = reviewRequired,
             };
         }
 

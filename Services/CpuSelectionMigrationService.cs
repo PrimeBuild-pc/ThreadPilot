@@ -1,5 +1,6 @@
 namespace ThreadPilot.Services
 {
+    using System;
     using ThreadPilot.Models;
 
     public sealed class CpuSelectionMigrationService
@@ -19,7 +20,6 @@ namespace ThreadPilot.Services
                 new CpuSelectionMigrationMetadata
                 {
                     CreatedFromLegacyAffinityMask = true,
-                    ReviewRequired = reviewRequired,
                     MigrationConfidence = reviewRequired ? "Medium" : "High",
                     Reason = reviewRequired
                         ? "Migrated from a legacy affinity mask on a topology that may not be fully represented by legacy masks."
@@ -56,7 +56,6 @@ namespace ThreadPilot.Services
                 new CpuSelectionMigrationMetadata
                 {
                     CreatedFromLegacyCoreMask = true,
-                    ReviewRequired = reviewRequired,
                     MigrationConfidence = reviewRequired ? "Medium" : "High",
                     Reason = reviewRequired
                         ? "Migrated from a legacy core mask whose length differs from the current topology."
@@ -76,7 +75,15 @@ namespace ThreadPilot.Services
             ArgumentNullException.ThrowIfNull(selection);
             ArgumentNullException.ThrowIfNull(currentTopology);
 
-            if (savedSignature == null || savedSignature != currentTopology.Signature)
+            // Deliberately not full record equality: the signature carries fields that can differ
+            // between two readings of the same machine, and flagging every saved selection on one
+            // of those would train the user to ignore the warning. What actually changes the
+            // meaning of "core 9" is a different chip or a different shape of one.
+            if (savedSignature != null &&
+                (!string.Equals(savedSignature.CpuBrand, currentTopology.Signature.CpuBrand, StringComparison.OrdinalIgnoreCase) ||
+                 savedSignature.LogicalProcessorCount != currentTopology.Signature.LogicalProcessorCount ||
+                 savedSignature.PhysicalCoreCount != currentTopology.Signature.PhysicalCoreCount ||
+                 savedSignature.ProcessorGroupCount != currentTopology.Signature.ProcessorGroupCount))
             {
                 return true;
             }
@@ -97,10 +104,6 @@ namespace ThreadPilot.Services
                 profile.ProfileSchemaVersion = CpuAffinityProfileSchemaVersions.CpuSelection;
                 profile.CpuSelectionMigration ??= new CpuSelectionMigrationMetadata
                 {
-                    ReviewRequired = this.ShouldRequireReview(
-                        profile.CpuSelection,
-                        profile.CpuSelection.Metadata.TopologySignature,
-                        topology),
                     MigrationConfidence = "High",
                     Reason = "Profile already contains a CpuSelection.",
                     TopologySignature = profile.CpuSelection.Metadata.TopologySignature,

@@ -6,8 +6,6 @@ namespace ThreadPilot.Models
 
         public bool CreatedFromLegacyCoreMask { get; init; }
 
-        public bool ReviewRequired { get; init; }
-
         public string MigrationConfidence { get; init; } = string.Empty;
 
         public string Reason { get; init; } = string.Empty;

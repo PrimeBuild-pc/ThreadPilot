@@ -22,6 +22,5 @@ namespace ThreadPilot.Models
 
         public bool IsGenerated { get; init; } = true;
 
-        public bool ReviewRequired { get; init; }
     }
 }

@@ -13,6 +13,10 @@ Two cases are still yours to decide, and ThreadPilot says so in the Masks tab ra
 
 A different CPU with the same thread count is also detected now, by comparing the topology signature stored with the mask against the running machine - a swap that the logical-processor count alone cannot reveal.
 
+### Saved rules are checked against the CPU you are running
+
+A rule that pins cores which no longer exist was not flagged anywhere; it failed when it was applied, through a path that reported it as the process having exited. The **Saved process rules** tab now names the rules whose cores came from a different chip, and you can set them again from a saved mask without leaving the page.
+
 ### A rule's cores can be edited from the Rules page
 
 The per-core picker lives in the Process tab and needs the process to be running, so the cores of a rule for an application you were not currently running were the one thing about that rule you could not change.
