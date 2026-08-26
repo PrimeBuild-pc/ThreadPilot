@@ -9,6 +9,7 @@ namespace ThreadPilot.Services
     using System.Linq;
     using System.Management;
     using System.Runtime.InteropServices;
+    using System.Security;
     using System.ServiceProcess;
     using System.Text.Json;
     using System.Text.RegularExpressions;
@@ -224,20 +225,32 @@ namespace ThreadPilot.Services
 
         public Task<TweakStatus> GetMemoryIntegrityStatusAsync()
         {
+            // CI\State is only populated on some builds. DeviceGuard\Scenarios is where the
+            // running HVCI state actually lives on current Windows, so read that first and keep
+            // CI\State as the fallback - checking only the latter reported "not exposed" on
+            // machines where Memory Integrity is plainly on.
+            var value =
+                ReadRegistryIntValueOrNull(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", "Enabled")
+                ?? ReadRegistryIntValueOrNull(@"SYSTEM\CurrentControlSet\Control\CI\State", "HVCIEnabled");
+
+            return Task.FromResult(new TweakStatus
+            {
+                IsEnabled = value == 1,
+                IsAvailable = value.HasValue,
+                ErrorMessage = value.HasValue ? null : "Memory Integrity state is not exposed by Windows.",
+            });
+        }
+
+        private static int? ReadRegistryIntValueOrNull(string path, string valueName)
+        {
             try
             {
-                using var key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\CI\State");
-                var value = key == null ? null : ReadRegistryIntValue(key, "HVCIEnabled");
-                return Task.FromResult(new TweakStatus
-                {
-                    IsEnabled = value == 1,
-                    IsAvailable = value.HasValue,
-                    ErrorMessage = value.HasValue ? null : "Memory Integrity state is not exposed by Windows.",
-                });
+                using var key = Registry.LocalMachine.OpenSubKey(path);
+                return key == null ? null : ReadRegistryIntValue(key, valueName);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is SecurityException or UnauthorizedAccessException or IOException)
             {
-                return Task.FromResult(new TweakStatus { IsAvailable = false, ErrorMessage = ex.Message });
+                return null;
             }
         }
 
@@ -657,15 +670,42 @@ namespace ThreadPilot.Services
         private static List<RegistryTarget> FindEthernetTargets(IEnumerable<string> valueNames)
         {
             var targets = new List<RegistryTarget>();
-            using var adapters = Registry.LocalMachine.OpenSubKey(NetworkAdapterClassPath);
-            if (adapters == null)
+            var names = valueNames.ToList();
+
+            try
+            {
+                using var adapters = Registry.LocalMachine.OpenSubKey(NetworkAdapterClassPath);
+                if (adapters == null)
+                {
+                    return targets;
+                }
+
+                foreach (var subKeyName in adapters.GetSubKeyNames())
+                {
+                    // One adapter subkey the current user cannot read - VPN and vendor virtual
+                    // adapters ship with tighter ACLs - used to throw out of the whole scan, so the
+                    // tweak reported itself unavailable with a raw framework message even though
+                    // every real Ethernet adapter on the machine was readable. Skip that key only.
+                    CollectEthernetTargetsFromAdapter(targets, subKeyName, names);
+                }
+            }
+            catch (Exception ex) when (ex is SecurityException or UnauthorizedAccessException or IOException)
             {
                 return targets;
             }
 
-            foreach (var subKeyName in adapters.GetSubKeyNames())
+            return targets;
+        }
+
+        private static void CollectEthernetTargetsFromAdapter(
+            ICollection<RegistryTarget> targets,
+            string subKeyName,
+            IReadOnlyCollection<string> valueNames)
+        {
+            var path = $@"{NetworkAdapterClassPath}\{subKeyName}";
+
+            try
             {
-                var path = $@"{NetworkAdapterClassPath}\{subKeyName}";
                 using var adapter = Registry.LocalMachine.OpenSubKey(path);
                 var characteristics = adapter == null ? null : ReadRegistryIntValue(adapter, "Characteristics");
                 if (adapter == null ||
@@ -673,7 +713,7 @@ namespace ThreadPilot.Services
                     !characteristics.HasValue ||
                     (characteristics.Value & 0x4) == 0)
                 {
-                    continue;
+                    return;
                 }
 
                 foreach (var valueName in valueNames)
@@ -681,8 +721,9 @@ namespace ThreadPilot.Services
                     AddRegistryTarget(targets, adapter, path, valueName);
                 }
             }
-
-            return targets;
+            catch (Exception ex) when (ex is SecurityException or UnauthorizedAccessException or IOException)
+            {
+            }
         }
 
         private static List<RegistryTarget> FindGpuMsiTargets()

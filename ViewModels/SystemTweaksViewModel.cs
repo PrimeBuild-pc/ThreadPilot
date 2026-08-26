@@ -138,7 +138,12 @@ namespace ThreadPilot.ViewModels
             {
                 this.Logger.LogError(ex, "Error updating status for tweak {TweakName}", item.Name);
                 item.IsAvailable = false;
-                item.ErrorMessage = ex.Message;
+
+                // The exception text belongs in the log, not on the card: "Requested registry access
+                // is not allowed." is a framework string that tells the user nothing they can act on.
+                item.ErrorMessage = this.Localize(
+                    "SystemTweaks_StatusDetectionFailed",
+                    "ThreadPilot could not read this setting on this system.");
             }
         }
 

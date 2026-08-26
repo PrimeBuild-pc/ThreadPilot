@@ -226,7 +226,7 @@
                                             Padding="10,4"
                                             AutomationProperties.Name="{Binding Name}">
                                         <Button.Style>
-                                            <Style TargetType="Button">
+                                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsGuidedAction}" Value="True">
