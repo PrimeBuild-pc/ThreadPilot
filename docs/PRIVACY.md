@@ -10,4 +10,4 @@ ThreadPilot does not transmit the local process list, executable paths, hardware
 
 The Power Plans and Settings pages contain links to Discord and GitHub Issues. ThreadPilot opens these links only after an explicit user click; the destination then receives ordinary connection information under its own privacy terms. ThreadPilot does not automatically download community power plans.
 
-This policy describes ThreadPilot 1.7.1. Material changes to data collection or network behavior will be documented before release.
+This policy describes ThreadPilot 1.7.2. Material changes to data collection or network behavior will be documented before release.

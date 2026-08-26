@@ -26,6 +26,10 @@
     
     <!-- MainWindow Overlays -->
     <sys:String x:Key="MainWindow_StartupMinimizedSuggestionTitle">启动时最小化</sys:String>
+    <sys:String x:Key="MainWindow_WhatsNew">新功能</sys:String>
+    <sys:String x:Key="MainWindow_GotIt">知道了</sys:String>
+    <sys:String x:Key="MainWindow_CpuAssignmentModeChangedTitle">您的 CPU 分配模式已更改</sys:String>
+    <sys:String x:Key="MainWindow_CpuAssignmentModeChangedDescription">您之前使用的是“ThreadPilot 自动”，它应用 Windows CPU Sets：这是一种调度偏好，不会改变任务管理器中的关联掩码。ThreadPilot 已为您切换到“关联掩码”，它会设置真实且可见的关联。您可以随时在设置中改回。</sys:String>
     <sys:String x:Key="MainWindow_StartupMinimizedSuggestionDescription">开启此项后，ThreadPilot 会在 Windows 登录时静默启动至系统托盘。</sys:String>
     <sys:String x:Key="MainWindow_Recommended">推荐</sys:String>
     <sys:String x:Key="MainWindow_DontShowAgain">不再显示</sys:String>

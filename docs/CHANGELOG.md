@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.7.2 - CPU assignment mode migration
+
+### Fixed
+
+- Upgrading now actually moves you off `ThreadPilot automatic`. v1.7.1 changed the shipped default to `Affinity Mask`, but a persisted setting always wins over a new default, so everyone upgrading kept the mode that made the affinity feature look like it did nothing. A one-time migration moves a stored `Automatic` to `Affinity Mask`.
+
+### Added
+
+- A one-time notice, in the app's own style and in the selected language, tells you that your CPU assignment mode was changed and why, with a shortcut to Settings if you want it back. It is shown only to profiles the migration actually moved, and only until you acknowledge it.
+
+### Notes
+
+- The migration runs once per profile and is recorded, so choosing `ThreadPilot automatic` again afterwards is respected and never overridden.
+- Fresh installations are unaffected: they already ship with `Affinity Mask` and see no notice.
+
 ## v1.7.1 - CPU affinity apply fixes
 
 ### Fixed

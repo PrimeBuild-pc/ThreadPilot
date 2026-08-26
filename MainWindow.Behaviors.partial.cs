@@ -289,6 +289,7 @@ namespace ThreadPilot
                         // Show elevation warning if needed
                         this.TryShowElevationWarning();
                         this.TryShowStartupMinimizedSuggestion();
+                        this.TryShowCpuAssignmentModeChangedNotice();
                     };
                     fadeOutAnimation.Begin();
                 }
@@ -308,6 +309,7 @@ namespace ThreadPilot
                     // Show elevation warning if needed
                     this.TryShowElevationWarning();
                     this.TryShowStartupMinimizedSuggestion();
+                    this.TryShowCpuAssignmentModeChangedNotice();
                 }
             }
             catch (Exception ex)
@@ -328,6 +330,7 @@ namespace ThreadPilot
                     // Show elevation warning if needed
                     this.TryShowElevationWarning();
                     this.TryShowStartupMinimizedSuggestion();
+                    this.TryShowCpuAssignmentModeChangedNotice();
                 }
                 catch (Exception fallbackEx)
                 {
@@ -1650,6 +1653,73 @@ namespace ThreadPilot
             }
         }
 
+        private void TryShowCpuAssignmentModeChangedNotice()
+        {
+            if (this.isSilentStartupMode
+                || !this.isInitializationComplete
+                || this.isElevationWarningVisible
+
+                // One blocking overlay at a time. The startup suggestion sits below this one, so
+                // stacking them would hide it behind a card the user did not ask for; it queues
+                // this notice again when it is dismissed.
+                || this.StartupMinimizedSuggestionOverlay.Visibility == Visibility.Visible)
+            {
+                return;
+            }
+
+            try
+            {
+                if (!CpuAssignmentModeMigrationPolicy.ShouldShowNotice(this.settingsService.Settings))
+                {
+                    return;
+                }
+
+                this.CpuAssignmentModeChangedOverlay.Visibility = Visibility.Visible;
+                this.CpuAssignmentModeChangedGotItButton.Focus();
+            }
+            catch (Exception ex)
+            {
+                this.LogDebug($"Failed to show CPU assignment mode change notice: {ex.Message}");
+            }
+        }
+
+        private async Task PersistCpuAssignmentModeNoticeSeenAsync()
+        {
+            try
+            {
+                var settings = this.settingsService.Settings;
+                if (settings.HasSeenCpuAssignmentModeChangeNotice)
+                {
+                    return;
+                }
+
+                settings.HasSeenCpuAssignmentModeChangeNotice = true;
+                await this.settingsService.UpdateSettingsAsync(settings);
+            }
+            catch (Exception ex)
+            {
+                this.LogDebug($"Failed to persist CPU assignment mode notice state: {ex.Message}");
+            }
+        }
+
+        private void HideCpuAssignmentModeChangedNotice()
+        {
+            this.CpuAssignmentModeChangedOverlay.Visibility = Visibility.Collapsed;
+        }
+
+        private async void CpuAssignmentModeChangedOpenSettings_Click(object sender, RoutedEventArgs e)
+        {
+            await this.PersistCpuAssignmentModeNoticeSeenAsync();
+            this.HideCpuAssignmentModeChangedNotice();
+            this.SelectMainTab("Settings");
+        }
+
+        private async void CpuAssignmentModeChangedGotIt_Click(object sender, RoutedEventArgs e)
+        {
+            await this.PersistCpuAssignmentModeNoticeSeenAsync();
+            this.HideCpuAssignmentModeChangedNotice();
+        }
+
         private void TryShowStartupMinimizedSuggestion()
         {
             if (!this.showStartupMinimizedSuggestionOnReady
@@ -1707,12 +1777,14 @@ namespace ThreadPilot
             await this.PersistStartupMinimizedSuggestionSeenAsync();
             this.HideStartupMinimizedSuggestion();
             this.SelectMainTab("Settings");
+            this.TryShowCpuAssignmentModeChangedNotice();
         }
 
         private async void StartupSuggestionDontShowAgain_Click(object sender, RoutedEventArgs e)
         {
             await this.PersistStartupMinimizedSuggestionSeenAsync();
             this.HideStartupMinimizedSuggestion();
+            this.TryShowCpuAssignmentModeChangedNotice();
         }
 
         private void HidePerformanceIntro()
@@ -1855,6 +1927,7 @@ namespace ThreadPilot
             }
 
             this.TryShowStartupMinimizedSuggestion();
+            this.TryShowCpuAssignmentModeChangedNotice();
         }
 
         private void ElevationWarningDismiss_Click(object sender, RoutedEventArgs e)

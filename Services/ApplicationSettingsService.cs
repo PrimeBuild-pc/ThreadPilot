@@ -7,6 +7,7 @@ namespace ThreadPilot.Services
     using System.Text.Json;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
+    using ThreadPilot.Helpers;
     using ThreadPilot.Models;
     using ThreadPilot.Services.Abstractions;
 
@@ -130,9 +131,26 @@ namespace ThreadPilot.Services
                     this.settings.CopyFrom(loadedSettings);
                     this.ValidateAndFixSettings();
 
-                    if (requiresLanguageRepair)
+                    var migrationChangedSettings = CpuAssignmentModeMigrationPolicy.Apply(this.settings);
+                    if (CpuAssignmentModeMigrationPolicy.ShouldShowNotice(this.settings))
                     {
-                        await this.SaveSettingsAsync();
+                        this.logger.LogInformation(
+                            "Migrated the default CPU assignment mode from Automatic to AffinityMask. Automatic applies CPU Sets only, which does not change the affinity mask Windows enforces.");
+                    }
+
+                    if (requiresLanguageRepair || migrationChangedSettings)
+                    {
+                        try
+                        {
+                            await this.SaveSettingsAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            // Losing the write is recoverable - it is retried on the next launch.
+                            // Falling into the outer catch is not: it would replace the profile we
+                            // just loaded with defaults and swallow the pending migration notice.
+                            this.logger.LogWarning(ex, "Could not persist repaired or migrated settings; keeping the loaded profile for this session");
+                        }
                     }
 
                     this.logger.LogInformation("Settings loaded successfully");
@@ -276,7 +294,8 @@ namespace ThreadPilot.Services
 
             if (!Enum.IsDefined(this.settings.DefaultCpuAssignmentMode))
             {
-                this.settings.DefaultCpuAssignmentMode = CpuAssignmentMode.Automatic;
+                // Repair to the shipped default rather than Automatic; see CopyFrom.
+                this.settings.DefaultCpuAssignmentMode = CpuAssignmentMode.AffinityMask;
             }
         }
 
@@ -357,6 +376,11 @@ namespace ThreadPilot.Services
             var defaults = new ApplicationSettingsModel
             {
                 Language = LocalizationService.ResolveSystemLanguage(this.systemUiCultureProvider()),
+
+                // A brand new profile already ships with AffinityMask, so there is nothing to
+                // migrate and nothing to announce.
+                HasMigratedCpuAssignmentModeDefault = true,
+                HasSeenCpuAssignmentModeChangeNotice = true,
             };
             return defaults;
         }

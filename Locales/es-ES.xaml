@@ -26,6 +26,10 @@
 
     <!-- MainWindow Overlays -->
     <sys:String x:Key="MainWindow_StartupMinimizedSuggestionTitle">Inicio minimizado</sys:String>
+    <sys:String x:Key="MainWindow_WhatsNew">Novedades</sys:String>
+    <sys:String x:Key="MainWindow_GotIt">Entendido</sys:String>
+    <sys:String x:Key="MainWindow_CpuAssignmentModeChangedTitle">Ha cambiado su modo de asignación de CPU</sys:String>
+    <sys:String x:Key="MainWindow_CpuAssignmentModeChangedDescription">Estaba usando “ThreadPilot automático”, que aplica CPU Sets de Windows: una preferencia de planificación que deja sin cambios la máscara de afinidad del Administrador de tareas. ThreadPilot ha cambiado a “Máscara de afinidad”, que establece una afinidad real y visible. Puede volver a cambiarlo cuando quiera en Configuración.</sys:String>
     <sys:String x:Key="MainWindow_StartupMinimizedSuggestionDescription">Habilite Inicio minimizado cuando desee que ThreadPilot se inicie silenciosamente en la bandeja en futuros inicios de sesión de Windows.</sys:String>
     <sys:String x:Key="MainWindow_Recommended">Recomendado</sys:String>
     <sys:String x:Key="MainWindow_DontShowAgain">No volver a mostrar</sys:String>

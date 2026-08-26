@@ -162,6 +162,14 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private CpuAssignmentMode defaultCpuAssignmentMode = CpuAssignmentMode.AffinityMask;
 
+        // Set on a profile that has been through CpuAssignmentModeMigrationPolicy, so the one-time
+        // move off Automatic never runs twice and never overrides a later deliberate choice.
+        [ObservableProperty]
+        private bool hasMigratedCpuAssignmentModeDefault;
+
+        [ObservableProperty]
+        private bool hasSeenCpuAssignmentModeChangeNotice;
+
         // Advanced Settings
         [ObservableProperty]
         private bool enableDebugLogging = false;
@@ -250,9 +258,11 @@ namespace ThreadPilot.Models
             this.EnableFallbackPolling = other.EnableFallbackPolling;
             this.ApplyPersistentRulesOnProcessStart = other.ApplyPersistentRulesOnProcessStart;
             this.EnableAutomationMonitoring = other.EnableAutomationMonitoring;
+            // Repair to the shipped default, not to Automatic: a corrupt value is not a choice the
+            // user made, and treating it as one would tell them their Automatic setting was changed.
             this.DefaultCpuAssignmentMode = Enum.IsDefined(other.DefaultCpuAssignmentMode)
                 ? other.DefaultCpuAssignmentMode
-                : CpuAssignmentMode.Automatic;
+                : CpuAssignmentMode.AffinityMask;
 
             // Advanced Settings
             this.EnableDebugLogging = other.EnableDebugLogging;
@@ -260,6 +270,8 @@ namespace ThreadPilot.Models
             this.HasSeenPerformanceIntro = other.HasSeenPerformanceIntro;
             this.HasSeenElevationWarning = other.HasSeenElevationWarning;
             this.HasSeenStartupMinimizedSuggestion = other.HasSeenStartupMinimizedSuggestion;
+            this.HasMigratedCpuAssignmentModeDefault = other.HasMigratedCpuAssignmentModeDefault;
+            this.HasSeenCpuAssignmentModeChangeNotice = other.HasSeenCpuAssignmentModeChangeNotice;
             this.EnableSelfLowImpactMode = other.EnableSelfLowImpactMode;
             this.EnableSelfAffinityLimit = other.EnableSelfAffinityLimit;
             this.MaxLogFileSizeMb = other.MaxLogFileSizeMb;

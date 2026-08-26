@@ -44,6 +44,114 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task LoadSettingsAsync_PersistsCompletionForANonAutomaticProfile()
+        {
+            // Without this the policy re-runs on every launch, and a later deliberate switch back
+            // to Automatic would be silently undone by a second migration.
+            var storage = new FakeSettingsStorage();
+            storage.Files[TestPaths.SettingsFilePath] =
+                "{\"defaultCpuAssignmentMode\": 3, \"language\": \"en-US\"}";
+            var service = CreateService(storage);
+
+            await service.LoadSettingsAsync();
+
+            Assert.Equal(CpuAssignmentMode.CpuSets, service.Settings.DefaultCpuAssignmentMode);
+            Assert.True(service.Settings.HasMigratedCpuAssignmentModeDefault);
+            Assert.True(service.Settings.HasSeenCpuAssignmentModeChangeNotice);
+            Assert.True(storage.Writes.ContainsKey(TestPaths.SettingsFilePath));
+
+            var reloaded = CreateService(storage);
+            await reloaded.LoadSettingsAsync();
+            Assert.Equal(CpuAssignmentMode.CpuSets, reloaded.Settings.DefaultCpuAssignmentMode);
+            Assert.True(reloaded.Settings.HasMigratedCpuAssignmentModeDefault);
+        }
+
+        [Fact]
+        public async Task LoadSettingsAsync_RepairsACorruptModeWithoutAnnouncingAChange()
+        {
+            // A value out of the enum range is not a choice the user made, so telling them their
+            // Automatic setting was changed would be a lie.
+            var storage = new FakeSettingsStorage();
+            storage.Files[TestPaths.SettingsFilePath] =
+                "{\"defaultCpuAssignmentMode\": 99, \"language\": \"en-US\"}";
+            var service = CreateService(storage);
+
+            await service.LoadSettingsAsync();
+
+            Assert.Equal(CpuAssignmentMode.AffinityMask, service.Settings.DefaultCpuAssignmentMode);
+            Assert.True(service.Settings.HasSeenCpuAssignmentModeChangeNotice);
+        }
+
+        [Fact]
+        public async Task LoadSettingsAsync_KeepsTheMigratedProfileWhenPersistingItFails()
+        {
+            // Falling into the outer catch would replace everything the user configured with
+            // defaults and mark the notice seen, hiding the change entirely.
+            var storage = new FakeSettingsStorage { FailWrites = true };
+            storage.Files[TestPaths.SettingsFilePath] =
+                "{\"defaultCpuAssignmentMode\": 0, \"maxNotificationHistoryItems\": 42, \"language\": \"en-US\"}";
+            var service = CreateService(storage);
+
+            await service.LoadSettingsAsync();
+
+            Assert.Equal(CpuAssignmentMode.AffinityMask, service.Settings.DefaultCpuAssignmentMode);
+            Assert.Equal(42, service.Settings.MaxNotificationHistoryItems);
+            Assert.False(service.Settings.HasSeenCpuAssignmentModeChangeNotice);
+        }
+
+        [Fact]
+        public async Task LoadSettingsAsync_MigratesAnUpgradedProfileOffAutomaticAndPersistsIt()
+        {
+            // A profile written by 1.7.0 or earlier: Automatic was the shipped default then, and the
+            // persisted value kept winning over the new one after the 1.7.1 upgrade.
+            var storage = new FakeSettingsStorage();
+            storage.Files[TestPaths.SettingsFilePath] =
+                "{\"defaultCpuAssignmentMode\": 0, \"language\": \"en-US\"}";
+            var service = CreateService(storage);
+
+            await service.LoadSettingsAsync();
+
+            Assert.Equal(CpuAssignmentMode.AffinityMask, service.Settings.DefaultCpuAssignmentMode);
+            Assert.True(service.Settings.HasMigratedCpuAssignmentModeDefault);
+            Assert.False(service.Settings.HasSeenCpuAssignmentModeChangeNotice);
+
+            // Must be written back, or the migration would run again on every launch.
+            Assert.True(storage.Writes.ContainsKey(TestPaths.SettingsFilePath));
+            var reloaded = CreateService(storage);
+            await reloaded.LoadSettingsAsync();
+            Assert.Equal(CpuAssignmentMode.AffinityMask, reloaded.Settings.DefaultCpuAssignmentMode);
+            Assert.True(reloaded.Settings.HasMigratedCpuAssignmentModeDefault);
+            Assert.False(reloaded.Settings.HasSeenCpuAssignmentModeChangeNotice);
+        }
+
+        [Fact]
+        public async Task LoadSettingsAsync_DoesNotAnnounceAnythingToAFreshProfile()
+        {
+            var storage = new FakeSettingsStorage();
+            var service = CreateService(storage);
+
+            await service.LoadSettingsAsync();
+
+            Assert.Equal(CpuAssignmentMode.AffinityMask, service.Settings.DefaultCpuAssignmentMode);
+            Assert.True(service.Settings.HasMigratedCpuAssignmentModeDefault);
+            Assert.True(service.Settings.HasSeenCpuAssignmentModeChangeNotice);
+        }
+
+        [Fact]
+        public async Task LoadSettingsAsync_KeepsAutomaticChosenAfterTheMigration()
+        {
+            var storage = new FakeSettingsStorage();
+            storage.Files[TestPaths.SettingsFilePath] =
+                "{\"defaultCpuAssignmentMode\": 0, \"hasMigratedCpuAssignmentModeDefault\": true, " +
+                "\"hasSeenCpuAssignmentModeChangeNotice\": true, \"language\": \"en-US\"}";
+            var service = CreateService(storage);
+
+            await service.LoadSettingsAsync();
+
+            Assert.Equal(CpuAssignmentMode.Automatic, service.Settings.DefaultCpuAssignmentMode);
+        }
+
+        [Fact]
         public async Task UpdateSettingsAsync_RoundTripsDefaultCpuAssignmentMode()
         {
             var storage = new FakeSettingsStorage();
@@ -391,8 +499,15 @@ namespace ThreadPilot.Core.Tests
                 return Task.FromResult<string?>(content);
             }
 
+            public bool FailWrites { get; init; }
+
             public Task WriteAsync(string path, string content)
             {
+                if (this.FailWrites)
+                {
+                    throw new IOException("Simulated write failure.");
+                }
+
                 this.Files[path] = content;
                 this.Writes[path] = content;
                 return Task.CompletedTask;
