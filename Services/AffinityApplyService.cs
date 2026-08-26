@@ -98,7 +98,7 @@ namespace ThreadPilot.Services
             Succeeded(requestedMask, verifiedMask) with
             {
                 UsedLegacyAffinity = true,
-                TechnicalMessage = $"CPU Sets failed; legacy affinity 0x{requestedMask:X} applied and verified as 0x{verifiedMask:X}.",
+                TechnicalMessage = $"CPU Sets not used; legacy affinity 0x{requestedMask:X} applied and verified as 0x{verifiedMask:X}.",
             };
 
         public static AffinityApplyResult Failed(
@@ -222,7 +222,14 @@ namespace ThreadPilot.Services
                     failureReason: AffinityApplyFailureReason.InvalidMask);
             }
 
-            var cpuSetsResult = this.TryApplyCpuSets(process, selection);
+            // A pre-existing hard affinity defeats CPU Sets: Windows never schedules the process
+            // outside that mask, whatever default CPU Sets we install, yet the CPU Set read-back
+            // still "verifies" and we would report success on an assignment that cannot take
+            // effect. When the selection is expressible as a legacy mask, go straight to the hard
+            // affinity path, which can actually replace the existing restriction.
+            var cpuSetsResult = CpuSetsWouldBeDefeatedByHardAffinity(process, selection)
+                ? null
+                : this.TryApplyCpuSets(process, selection);
             if (cpuSetsResult != null)
             {
                 return cpuSetsResult;
@@ -231,7 +238,7 @@ namespace ThreadPilot.Services
             this.cpuSetFailureCallback?.Invoke(process);
 
             var legacyMask = CpuSelection.ToLegacyAffinityMaskOrNull(selection);
-            if (!legacyMask.HasValue || legacyMask.Value <= 0)
+            if (!legacyMask.HasValue || legacyMask.Value == 0)
             {
                 this.Audit(process, success: false);
                 return AffinityApplyResult.Failed(
@@ -348,6 +355,24 @@ namespace ThreadPilot.Services
                     process.ProcessId);
                 return null;
             }
+        }
+
+        private static bool CpuSetsWouldBeDefeatedByHardAffinity(ProcessModel process, CpuSelection selection)
+        {
+            // ponytail: trusts ProcessModel.ProcessorAffinity rather than re-reading the live
+            // mask. A stale zero just falls back to the previous CPU-Sets-first behaviour; re-read
+            // through IProcessService here if that turns out to matter.
+            if (process.ProcessorAffinity == 0)
+            {
+                return false;
+            }
+
+            // Null for multi-group or beyond-CPU-63 selections, where CPU Sets are the only option.
+            // Compare bit patterns, not magnitudes: a mask including CPU 63 is a negative long.
+            var desiredMask = CpuSelection.ToLegacyAffinityMaskOrNull(selection);
+            return desiredMask.HasValue &&
+                desiredMask.Value != 0 &&
+                (desiredMask.Value & ~process.ProcessorAffinity) != 0;
         }
 
         private void Audit(ProcessModel process, bool success) =>
@@ -572,7 +597,7 @@ namespace ThreadPilot.Services
             }
 
             var legacyMask = CpuSelection.ToLegacyAffinityMaskOrNull(selection);
-            if (legacyMask is > 0 && selection.LogicalProcessors.All(processor => processor.Group == 0))
+            if (legacyMask is not (null or 0) && selection.LogicalProcessors.All(processor => processor.Group == 0))
             {
                 return this.ApplyClassicAffinityOnlyAsync(process, legacyMask.Value);
             }
@@ -666,7 +691,7 @@ namespace ThreadPilot.Services
 
         private static bool HasConflictingHardAffinity(ProcessModel process, CpuSelection selection)
         {
-            if (process.ProcessorAffinity <= 0 || selection.LogicalProcessors.Count == 0)
+            if (process.ProcessorAffinity == 0 || selection.LogicalProcessors.Count == 0)
             {
                 return false;
             }

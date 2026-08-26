@@ -265,7 +265,7 @@
     <sys:String x:Key="ProcessView_SetPowerPlan">Imposta il piano di risparmio energia</sys:String>
     <sys:String x:Key="ProcessView_SetPowerPlanTooltip">Attiva il piano di risparmio energia Windows selezionato</sys:String>
 
-    <sys:String x:Key="ProcessView_PendingCoreMask">Maschera centrale in sospeso</sys:String>
+    <sys:String x:Key="ProcessView_PendingCoreMask">Maschera core in sospeso</sys:String>
     <sys:String x:Key="ProcessView_StageMaskTooltip">Seleziona una maschera da preparare. Nulla cambia finché non fai clic su Applica assegnazione CPU.</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinity">Applica assegnazione CPU</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinityTooltip">Applica la selezione CPU con la modalità scelta e verifica lo stato di Windows</sys:String>
@@ -290,6 +290,7 @@
     <sys:String x:Key="ProcessView_LoadProfile">Carica profilo</sys:String>
     <sys:String x:Key="ProcessView_LoadProfileTooltip">Carica un profilo salvato in precedenza</sys:String>
     <sys:String x:Key="ProcessView_SaveCurrentRule">Salva le impostazioni correnti come regola</sys:String>
+    <sys:String x:Key="ProcessView_SaveRuleTooltip">Salva una regola per processo che ThreadPilot riapplica automaticamente al successivo avvio di questo processo, finché il monitoraggio dell'automazione è attivo. Queste regole sono separate dalla scheda Regole, che gestisce le associazioni tra processi e combinazioni di risparmio energia.</sys:String>
 
     <sys:String x:Key="ProcessView_LastAction">Ultima azione ThreadPilot:</sys:String>
     <sys:String x:Key="ProcessView_Refresh">Aggiorna</sys:String>
@@ -310,7 +311,8 @@
 
     <sys:String x:Key="ProcessView_AffinityStagedTooltip">Selezione CPU preparata nell’interfaccia. Viene applicata solo tramite Applica assegnazione CPU.</sys:String>
     <sys:String x:Key="ProcessView_AffinityCurrentTooltip">Affinità attualmente segnalata da Windows per il processo selezionato</sys:String>
-    <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Anteprima di sola lettura della selezione CPU corrente o in sospeso</sys:String>
+    <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Anteprima di sola lettura della selezione CPU — scegli una maschera in 'Maschera core in sospeso' per modificarla.</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">Solo anteprima — queste caselle mostrano la selezione CPU, non sono cliccabili. Scegli una maschera in 'Maschera core in sospeso' qui sopra per preparare una selezione diversa (le maschere si creano nella scheda Maschere CPU).</sys:String>
     <sys:String x:Key="ProcessView_OpenMasksTabTooltip">Apri la scheda CPU Maschere per creare una nuova maschera personalizzata</sys:String>
     <sys:String x:Key="ProcessView_HyperThreadingTooltip">Mostra se Hyper-Threading (Intel) o SMT (AMD) è presente e attivo su questo sistema</sys:String>
 

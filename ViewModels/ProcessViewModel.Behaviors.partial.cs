@@ -1140,62 +1140,6 @@ namespace ThreadPilot.ViewModels
             UpdateCoreSelectionsFromMask(newValue);
         }
 
-        private async Task ApplyCoreMaskToProcessAsync(CoreMask mask)
-        {
-            var selectedProcess = this.SelectedProcess;
-            if (selectedProcess == null || mask == null)
-            {
-                return;
-            }
-
-            this.IsBusy = true;
-            try
-            {
-                this.Logger.LogInformation(
-                    "Applying mask '{MaskName}' to process {ProcessName} (PID: {ProcessId})",
-                    mask.Name, selectedProcess.Name, selectedProcess.ProcessId);
-
-                var result = await this.processAffinityApplyCoordinator.ApplyCoreMaskAsync(selectedProcess, mask);
-
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                {
-                    selectedProcess.ForceNotifyProcessorAffinityChanged();
-                    if (!result.UsedCpuSets)
-                    {
-                        this.UpdateCoreSelections(selectedProcess.ProcessorAffinity, true);
-                    }
-
-                    this.OnPropertyChanged(nameof(this.SelectedProcess));
-                });
-
-                if (!result.Success)
-                {
-                    this.SetStatus(result.Message);
-                    this.Logger.LogWarning(
-                        "Failed to apply mask '{MaskName}' to process {ProcessName}: {Message}",
-                        mask.Name,
-                        selectedProcess.Name,
-                        result.Message);
-                    return;
-                }
-
-                this.HasPendingAffinityEdits = false;
-                this.UpdateAffinityDisplayState();
-                this.SetStatus($"Applied mask '{mask.Name}' to {selectedProcess.Name}");
-                this.Logger.LogInformation("Successfully applied mask '{MaskName}' to {ProcessName}", mask.Name, selectedProcess.Name);
-            }
-            catch (Exception ex)
-            {
-                this.Logger.LogError(ex, "Failed to apply mask '{MaskName}' to process {ProcessName}",
-                    mask.Name, selectedProcess.Name);
-                this.SetStatus($"Error applying mask: {ex.Message}");
-            }
-            finally
-            {
-                this.IsBusy = false;
-            }
-        }
-
         private void UpdateCoreSelectionsFromMask(CoreMask mask)
         {
             if (mask == null || this.CpuCores.Count == 0)

@@ -265,7 +265,7 @@
     <sys:String x:Key="ProcessView_SetPowerPlan">Establecer plan de energía</sys:String>
     <sys:String x:Key="ProcessView_SetPowerPlanTooltip">Activar el plan de energía Windows seleccionado</sys:String>
 
-    <sys:String x:Key="ProcessView_PendingCoreMask">Máscara central pendiente</sys:String>
+    <sys:String x:Key="ProcessView_PendingCoreMask">Máscara de núcleos pendiente</sys:String>
     <sys:String x:Key="ProcessView_StageMaskTooltip">Selecciona una máscara pendiente. Nada cambia hasta pulsar Aplicar asignación de CPU.</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinity">Aplicar asignación de CPU</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinityTooltip">Aplica la selección de CPU con el modo elegido y verifica el estado de Windows</sys:String>
@@ -290,6 +290,7 @@
     <sys:String x:Key="ProcessView_LoadProfile">Perfil de carga</sys:String>
     <sys:String x:Key="ProcessView_LoadProfileTooltip">Cargar un perfil previamente guardado</sys:String>
     <sys:String x:Key="ProcessView_SaveCurrentRule">Guardar la configuración actual como regla</sys:String>
+    <sys:String x:Key="ProcessView_SaveRuleTooltip">Guarda una regla por proceso que ThreadPilot vuelve a aplicar automáticamente la próxima vez que se inicie este proceso, mientras la supervisión de automatización esté activada. Estas reglas son independientes de la pestaña Reglas, que gestiona las asociaciones entre procesos y planes de energía.</sys:String>
 
     <sys:String x:Key="ProcessView_LastAction">Última acción ThreadPilot:</sys:String>
     <sys:String x:Key="ProcessView_Refresh">Actualizar</sys:String>
@@ -310,7 +311,8 @@
 
     <sys:String x:Key="ProcessView_AffinityStagedTooltip">Selección de CPU pendiente. Solo se aplica mediante Aplicar asignación de CPU.</sys:String>
     <sys:String x:Key="ProcessView_AffinityCurrentTooltip">Afinidad reportada actualmente por Windows para el proceso seleccionado</sys:String>
-    <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Vista previa de solo lectura de la selección CPU actual o pendiente</sys:String>
+    <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Vista previa de solo lectura de la selección de CPU — cámbiela en 'Máscara de núcleos pendiente'.</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">Solo vista previa — estas casillas muestran la selección de CPU, no se pueden pulsar. Elija una máscara en 'Máscara de núcleos pendiente' más arriba para preparar una selección distinta (las máscaras se crean en la pestaña Máscaras de CPU).</sys:String>
     <sys:String x:Key="ProcessView_OpenMasksTabTooltip">Abra la pestaña Máscaras CPU para crear una nueva máscara personalizada</sys:String>
     <sys:String x:Key="ProcessView_HyperThreadingTooltip">Muestra si Hyper-Threading (Intel) o SMT (AMD) está presente y activo en este sistema.</sys:String>
 

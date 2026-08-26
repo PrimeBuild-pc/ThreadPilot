@@ -265,7 +265,7 @@
     <sys:String x:Key="ProcessView_SetPowerPlan">Установить план электропитания</sys:String>
     <sys:String x:Key="ProcessView_SetPowerPlanTooltip">Активируйте выбранный план электропитания Windows.</sys:String>
 
-    <sys:String x:Key="ProcessView_PendingCoreMask">Ожидаемая основная маска</sys:String>
+    <sys:String x:Key="ProcessView_PendingCoreMask">Ожидающая маска ядер</sys:String>
     <sys:String x:Key="ProcessView_StageMaskTooltip">Подготовьте маску. Изменения вступят в силу только после нажатия «Применить назначение ЦП».</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinity">Применить назначение ЦП</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinityTooltip">Применяет выбор ЦП в выбранном режиме и проверяет состояние Windows.</sys:String>
@@ -290,6 +290,7 @@
     <sys:String x:Key="ProcessView_LoadProfile">Загрузить профиль</sys:String>
     <sys:String x:Key="ProcessView_LoadProfileTooltip">Загрузите ранее сохраненный профиль</sys:String>
     <sys:String x:Key="ProcessView_SaveCurrentRule">Сохранить текущие настройки как правило</sys:String>
+    <sys:String x:Key="ProcessView_SaveRuleTooltip">Сохраняет правило для этого процесса, которое ThreadPilot автоматически применяет снова при следующем запуске процесса, пока включён мониторинг автоматизации. Эти правила не связаны с вкладкой Правила, где настраиваются сопоставления процессов и схем электропитания.</sys:String>
 
     <sys:String x:Key="ProcessView_LastAction">Последнее действие ThreadPilot:</sys:String>
     <sys:String x:Key="ProcessView_Refresh">Обновить</sys:String>
@@ -310,7 +311,8 @@
 
     <sys:String x:Key="ProcessView_AffinityStagedTooltip">Выбор ЦП подготовлен и применяется только командой «Применить назначение ЦП».</sys:String>
     <sys:String x:Key="ProcessView_AffinityCurrentTooltip">Текущая привязка выбранного процесса по данным Windows</sys:String>
-    <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Предварительный просмотр текущего или ожидающего выбора CPU только для чтения</sys:String>
+    <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Предварительный просмотр выбора ЦП только для чтения — измените его в списке 'Ожидающая маска ядер'.</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">Только предварительный просмотр — эти флажки показывают выбор ЦП и не нажимаются. Выберите маску в списке 'Ожидающая маска ядер' выше, чтобы подготовить другой выбор (маски создаются на вкладке Маски CPU).</sys:String>
     <sys:String x:Key="ProcessView_OpenMasksTabTooltip">Откройте вкладку «Маски» CPU, чтобы создать новую пользовательскую маску.</sys:String>
     <sys:String x:Key="ProcessView_HyperThreadingTooltip">Показывает, присутствует ли и активен ли Hyper-Threading (Intel) или SMT (AMD) в этой системе.</sys:String>
 
