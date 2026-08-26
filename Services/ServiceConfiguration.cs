@@ -90,7 +90,6 @@ namespace ThreadPilot.Services
             services.AddSingleton<ICpuTopologyService, CpuTopologyService>();
             services.AddSingleton<ICpuTopologyProvider, WindowsCpuTopologyProvider>();
             services.AddSingleton<CpuSelectionMigrationService>();
-            services.AddSingleton<ICpuPresetGenerator, CpuPresetGenerator>();
 
             // CoreMaskService needs IServiceProvider for checking profile references
             services.AddSingleton<ICoreMaskService>(sp =>
