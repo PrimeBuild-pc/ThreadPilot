@@ -312,7 +312,10 @@
     <sys:String x:Key="ProcessView_AffinityStagedTooltip">CPU-Auswahl vorgemerkt. Sie wird erst über CPU-Zuweisung anwenden übernommen.</sys:String>
     <sys:String x:Key="ProcessView_AffinityCurrentTooltip">Affinität, die derzeit von Windows für den ausgewählten Prozess gemeldet wird</sys:String>
     <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Schreibgeschützte Vorschau der CPU-Auswahl — ändern Sie sie oben unter 'Ausstehende Kernmaske'.</sys:String>
-    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">Nur Vorschau — diese Kästchen zeigen die CPU-Auswahl an, sie sind nicht anklickbar. Wählen Sie oben unter 'Ausstehende Kernmaske' eine Maske aus, um eine andere Auswahl vorzubereiten (Masken werden im Tab CPU-Masken erstellt).</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">Nur Vorschau — diese Markierungen zeigen die ausgewählten CPUs an, sie sind nicht anklickbar. Wählen Sie oben unter 'Ausstehende Kernmaske' eine Maske aus, um eine andere Auswahl vorzubereiten (Masken werden im Tab CPU-Masken erstellt).</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreSelected">Ausgewählt</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreNotSelected">Nicht ausgewählt</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreUnavailable">Nicht verfügbar</sys:String>
     <sys:String x:Key="ProcessView_OpenMasksTabTooltip">Öffnen Sie die Registerkarte CPU Masken, um eine neue benutzerdefinierte Maske zu erstellen</sys:String>
     <sys:String x:Key="ProcessView_HyperThreadingTooltip">Zeigt an, ob Hyper-Threading (Intel) oder SMT (AMD) auf diesem System vorhanden und aktiv ist</sys:String>
 
@@ -578,6 +581,8 @@
     <sys:String x:Key="SystemTweak_GpuMsiMode_Name">GPU-MSI-Modus</sys:String>
     <sys:String x:Key="SystemTweak_GpuMsiMode_Desc">Steuert MSI nur, wenn der Grafiktreiber MSISupported bereits bereitstellt. Neustart erforderlich.</sys:String>
     <sys:String x:Key="SystemTweaks_OpenSettings">Einstellungen öffnen</sys:String>
+    <sys:String x:Key="SystemTweaks_ToggleOn">EIN</sys:String>
+    <sys:String x:Key="SystemTweaks_ToggleOff">AUS</sys:String>
     <sys:String x:Key="SystemTweaks_StatusManagedByWindows">Von Windows verwaltet</sys:String>
     <sys:String x:Key="SystemTweaks_StatusOpenSettingsFailed">Windows-Einstellungen konnten nicht geöffnet werden</sys:String>
     <sys:String x:Key="SystemTweaks_StatusSettingsOpenedFormat">Einstellungen für {0} geöffnet</sys:String>

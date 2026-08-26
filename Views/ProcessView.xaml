@@ -579,15 +579,49 @@
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <CheckBox Content="{Binding Label}"
-                                                          IsChecked="{Binding IsSelected, Mode=OneWay}"
-                                                          IsHitTestVisible="False"
-                                                          Focusable="False"
-                                                          IsEnabled="{Binding IsEnabled}"
-                                                          Margin="2"
-                                                          FontSize="{StaticResource ProcessFontSmall}"
-                                                          Foreground="{DynamicResource TextPrimaryBrush}"
-                                                          ToolTip="{DynamicResource ProcessView_CpuSelectionPreviewTooltip}"/>
+                                                <Border Margin="2"
+                                                        Padding="7,3"
+                                                        CornerRadius="4"
+                                                        IsHitTestVisible="False"
+                                                        IsEnabled="{Binding IsEnabled}"
+                                                        AutomationProperties.Name="{Binding Label}"
+                                                        AutomationProperties.HelpText="{DynamicResource ProcessView_CpuCoresReadOnlyHint}"
+                                                        ToolTip="{DynamicResource ProcessView_CpuSelectionPreviewTooltip}">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="AutomationProperties.ItemStatus" Value="{DynamicResource ProcessView_CpuCoreNotSelected}"/>
+                                                            <Setter Property="Background" Value="{DynamicResource QuietRowBackgroundBrush}"/>
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+                                                            <Setter Property="BorderThickness" Value="1"/>
+                                                            <Setter Property="Opacity" Value="1"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                    <Setter Property="Background" Value="{DynamicResource MaskSelectedBackgroundBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource MaskSelectedBorderBrush}"/>
+                                                                    <Setter Property="AutomationProperties.ItemStatus" Value="{DynamicResource ProcessView_CpuCoreSelected}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                                                                    <Setter Property="Opacity" Value="0.45"/>
+                                                                    <Setter Property="AutomationProperties.ItemStatus" Value="{DynamicResource ProcessView_CpuCoreUnavailable}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock Text="{Binding Label}"
+                                                               FontSize="{StaticResource ProcessFontSmall}">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
+                                                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Border>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>

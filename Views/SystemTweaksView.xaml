@@ -7,6 +7,69 @@
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="800">
 
+    <UserControl.Resources>
+        <!-- Larger, labelled pill toggle. The native ui:ToggleSwitch is 40x20 with no text,
+             which reads as a decoration rather than a switch on this dense list. -->
+        <Style x:Key="PillToggleButtonStyle" TargetType="ToggleButton">
+            <Setter Property="MinWidth" Value="56"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Track"
+                                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="14"
+                                Padding="3"
+                                SnapsToDevicePixels="True">
+                            <!-- Thumb and label are docked, never stacked, so a long localized
+                                 label (ru "ВЫКЛ") pushes the pill wider instead of colliding with
+                                 the thumb. MinWidth keeps the common case at the intended size. -->
+                            <DockPanel LastChildFill="True">
+                                <Ellipse x:Name="Thumb"
+                                         DockPanel.Dock="Left"
+                                         Width="20"
+                                         Height="20"
+                                         Fill="{DynamicResource TextSecondaryBrush}"/>
+                                <TextBlock x:Name="StateLabel"
+                                           Text="{DynamicResource SystemTweaks_ToggleOff}"
+                                           FontSize="10"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"
+                                           TextAlignment="Center"
+                                           Margin="3,0,4,0"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            </DockPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Track" Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+                                <Setter TargetName="Thumb" Property="DockPanel.Dock" Value="Right"/>
+                                <Setter TargetName="Thumb" Property="Fill" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
+                                <Setter TargetName="StateLabel" Property="Text" Value="{DynamicResource SystemTweaks_ToggleOn}"/>
+                                <Setter TargetName="StateLabel" Property="Margin" Value="4,0,3,0"/>
+                                <Setter TargetName="StateLabel" Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource SoftSelectionBorderBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Track" Property="Background" Value="{DynamicResource ControlFillColorDisabledBrush}"/>
+                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+                                <Setter TargetName="Track" Property="Opacity" Value="0.6"/>
+                                <Setter TargetName="Thumb" Property="Fill" Value="{DynamicResource TextSecondaryBrush}"/>
+                                <Setter TargetName="StateLabel" Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -133,18 +196,18 @@
                                                    VerticalAlignment="Center"/>
                                     </StackPanel>
 
-                                    <ui:ToggleSwitch Grid.Column="1"
-                                                     IsChecked="{Binding IsEnabled, Mode=OneWay}"
-                                                     IsEnabled="{Binding IsAvailable}"
-                                                     Command="{Binding ToggleCommand}"
-                                                     CommandParameter="{Binding}"
-                                                     VerticalAlignment="Center"
-                                                     HorizontalAlignment="Right"
-                                                     Margin="10,0,0,0"
-                                                     AutomationProperties.Name="{Binding Name}"
-                                                     ToolTip="{DynamicResource SystemTweaksView_TweakTooltip}">
-                                        <ui:ToggleSwitch.Style>
-                                            <Style TargetType="ui:ToggleSwitch">
+                                    <ToggleButton Grid.Column="1"
+                                                  IsChecked="{Binding IsEnabled, Mode=OneWay}"
+                                                  IsEnabled="{Binding IsAvailable}"
+                                                  Command="{Binding ToggleCommand}"
+                                                  CommandParameter="{Binding}"
+                                                  VerticalAlignment="Center"
+                                                  HorizontalAlignment="Right"
+                                                  Margin="10,0,0,0"
+                                                  AutomationProperties.Name="{Binding Name}"
+                                                  ToolTip="{DynamicResource SystemTweaksView_TweakTooltip}">
+                                        <ToggleButton.Style>
+                                            <Style TargetType="ToggleButton" BasedOn="{StaticResource PillToggleButtonStyle}">
                                                 <Setter Property="Visibility" Value="Visible"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsGuidedAction}" Value="True">
@@ -152,8 +215,8 @@
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
-                                        </ui:ToggleSwitch.Style>
-                                    </ui:ToggleSwitch>
+                                        </ToggleButton.Style>
+                                    </ToggleButton>
 
                                     <Button Grid.Column="1"
                                             Content="{DynamicResource SystemTweaks_OpenSettings}"

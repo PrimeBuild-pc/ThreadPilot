@@ -1,42 +1,44 @@
-## ThreadPilot v1.7.0
+## ThreadPilot v1.7.1
 
-ThreadPilot 1.7.0 expands Windows gaming and device controls, adds persistent per-process I/O and power behavior, and prepares the release pipeline for trusted Authenticode signing.
+A patch release that makes the CPU affinity feature do what its name says. A user reported that applying a rule did nothing to a process's affinity. They were right, for several independent reasons.
 
-### Highlights
+### The headline fix
 
-- Control Game Mode, CPU Core Parking, supported CPU C-State behavior, USB selective suspend, pointer precision, supported Ethernet power-saving properties, interrupt moderation, and GPU MSI Mode.
-- Open the correct Windows pages for Memory Integrity, HAGS, and windowed-game optimizations without silently weakening Windows security.
-- Set memory and I/O priority per process and preserve them in persistent rules.
-- Prevent system sleep while a selected process is running through a Windows power request that is released automatically.
-- Restore backed-up device-driver values when supported tweaks are turned off.
-- Open community power-plan and support links on demand, or report a problem directly through GitHub Issues.
-- Use every new control and support action in all seven supported languages: English, Italian, German, Spanish, French, Russian, and Simplified Chinese.
+Applying a saved rule, or a core mask from the Rules tab, now changes the affinity mask Windows actually enforces.
 
-### Power-plan distribution change
+Two defects combined to hide this. `SetProcessorAffinity` silently substituted a Windows CPU Sets hint for the hard affinity write it was asked to perform, while the caller read the affinity back and compared it — so the apply always reported a verification failure and the affinity was never changed. Separately, the shipped default assignment mode was `ThreadPilot automatic`, which applies only CPU Sets: a soft scheduling preference that leaves the affinity mask in Task Manager untouched, reported to the user as "Affinity applied successfully".
 
-ThreadPilot no longer bundles the 89 third-party `.pow` files previously shipped with the application. Those files were publicly available, but no reliable per-file license or redistribution permission could be verified. Removing them keeps the signed release payload compatible with the SignPath Foundation requirement that distributed components have clear open-source redistribution rights.
+The default is now `Affinity Mask`, and a CPU Sets result says plainly that it is a soft preference and that Task Manager will not reflect it. Rules saved before this release keep the mode they were saved with; open the rule and pick `Affinity Mask` if you want a hard, visible restriction.
 
-This does not remove functionality or user data:
+### The controls were not on screen
 
-- Power plans already imported into Windows remain installed and active.
-- An upgrade does not delete `.pow` files left by an earlier ThreadPilot installation.
-- Manual `.pow` import remains available.
-- The new **More plans?** action opens the ThreadPilot community Discord only when the user clicks it; no plan is downloaded automatically or included in the signed package.
+The CPU assignment mode picker and the Apply CPU Assignment button, both added in v1.6.0, were placed in a side panel that had been collapsed since v1.2.0. Neither had ever been reachable in a shipped build: the only way to apply affinity was the process-list context menu, and the only way to change the assignment mode was the default in Settings. That is why the reporting user had no way to reach the control that would have fixed their problem.
 
-### Compatibility and safety
+Both now live in the Advanced Affinity Picker, which opens expanded. The collapsed legacy panel is removed.
 
-- Existing rules remain compatible; all new persistent options default to off.
-- Ethernet and GPU controls only modify properties already exposed by the installed driver and require administrator privileges.
-- Hardware and driver behavior varies. GPU MSI Mode and some Windows graphics or security changes may require a restart.
-- Memory Integrity remains a user-controlled Windows Security setting.
+### Also fixed
 
-### Validation
+- "Save Current Settings as Rule" no longer saves a rule pinned to every CPU. It captured the core selection only while edits were staged, and otherwise fell back to a process affinity that the soft modes never changed.
+- `Automatic` mode no longer installs CPU Sets that a pre-existing hard affinity prevents Windows from honouring. Windows never schedules a process outside its affinity mask, whatever CPU Sets are set, yet the read-back still verified. It now applies the hard affinity, which can replace the restriction.
+- Saved rules resolve CPU Sets against the current topology instead of trusting the CPU Set IDs stored when the rule was created. Those IDs are opaque and can name a different processor after a hardware change; a stale rule now reports an invalid topology instead of silently pinning the wrong CPUs.
+- Affinity masks that include CPU 63 are no longer discarded. They are negative as signed 64-bit values and were being rejected by magnitude comparisons.
 
-- 701 automated Release tests pass, including XAML compilation and localization-key coverage for all seven languages.
-- The final portable and installer artifacts contain zero `.pow` files.
-- A Windows 11 Hyper-V gate passed portable launch, clean install, normal launch, system-tweak apply/restore, upgrade, and uninstall checks without ThreadPilot application errors.
-- A real 1.6.0 to 1.7.0 installer upgrade preserved all 89 legacy `.pow` files byte-for-byte and did not change the active Windows power plan.
+### Interface
 
-### Signing status
+- The per-CPU cells in the Advanced Affinity Picker are read-only chips instead of checkboxes, with a hint explaining that a selection is staged through the pending core mask. They were never clickable; they only looked it. The chips keep their accessible name and report selected, not selected, or unavailable.
+- System tweak toggles are larger and state ON or OFF inside the track, replacing the unlabelled 40x20 switch. The label is localized and widens the control rather than being clipped.
+- Saving a rule from the process context menu now explains that the rule is re-applied automatically when the process next starts, and that these rules are separate from the Rules tab, which manages process-to-power-plan associations.
 
-Release artifacts remain unsigned while the SignPath Foundation application is pending. The automated build, test, packaging, checksum, SBOM, and publishing flow remains in place, including its existing optional Authenticode path. The SignPath-specific integration will be added and tested separately after approval.
+### Localization
+
+- Corrected "core mask" mistranslations in the Italian, Spanish, French and Russian locales, and German phrasing for the Rules tab and power plans.
+
+### Notes
+
+- Memory Integrity, hardware-accelerated GPU scheduling, and windowed-game optimizations still show a link to the relevant Windows page instead of a toggle. They are deliberately left to Windows.
+- Applying affinity to a process protected by anti-cheat still fails, by design. ThreadPilot reports it and does not attempt to bypass protection.
+
+### Verification
+
+- 707 unit tests, including new regression tests that fail against the previous implementation.
+- The affinity fix was verified end to end against a live process: requesting cores 0-1 now moves the process from `0xFFFF` to `0x3`, where it previously reported a failure and stayed at `0xFFFF`.

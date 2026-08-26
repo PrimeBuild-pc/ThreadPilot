@@ -312,7 +312,10 @@
     <sys:String x:Key="ProcessView_AffinityStagedTooltip">Selección de CPU pendiente. Solo se aplica mediante Aplicar asignación de CPU.</sys:String>
     <sys:String x:Key="ProcessView_AffinityCurrentTooltip">Afinidad reportada actualmente por Windows para el proceso seleccionado</sys:String>
     <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Vista previa de solo lectura de la selección de CPU — cámbiela en 'Máscara de núcleos pendiente'.</sys:String>
-    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">Solo vista previa — estas casillas muestran la selección de CPU, no se pueden pulsar. Elija una máscara en 'Máscara de núcleos pendiente' más arriba para preparar una selección distinta (las máscaras se crean en la pestaña Máscaras de CPU).</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">Solo vista previa — estas etiquetas muestran qué CPU están seleccionadas, no se pueden pulsar. Elija una máscara en 'Máscara de núcleos pendiente' más arriba para preparar una selección distinta (las máscaras se crean en la pestaña Máscaras de CPU).</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreSelected">Seleccionada</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreNotSelected">No seleccionada</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreUnavailable">No disponible</sys:String>
     <sys:String x:Key="ProcessView_OpenMasksTabTooltip">Abra la pestaña Máscaras CPU para crear una nueva máscara personalizada</sys:String>
     <sys:String x:Key="ProcessView_HyperThreadingTooltip">Muestra si Hyper-Threading (Intel) o SMT (AMD) está presente y activo en este sistema.</sys:String>
 
@@ -578,6 +581,8 @@
     <sys:String x:Key="SystemTweak_GpuMsiMode_Name">Modo MSI de GPU</sys:String>
     <sys:String x:Key="SystemTweak_GpuMsiMode_Desc">Controla MSI solo si el controlador gráfico ya expone MSISupported. Requiere reiniciar.</sys:String>
     <sys:String x:Key="SystemTweaks_OpenSettings">Abrir configuración</sys:String>
+    <sys:String x:Key="SystemTweaks_ToggleOn">SÍ</sys:String>
+    <sys:String x:Key="SystemTweaks_ToggleOff">NO</sys:String>
     <sys:String x:Key="SystemTweaks_StatusManagedByWindows">Administrado por Windows</sys:String>
     <sys:String x:Key="SystemTweaks_StatusOpenSettingsFailed">No se pudo abrir la configuración de Windows</sys:String>
     <sys:String x:Key="SystemTweaks_StatusSettingsOpenedFormat">Configuración abierta para {0}</sys:String>

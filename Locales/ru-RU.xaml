@@ -312,7 +312,10 @@
     <sys:String x:Key="ProcessView_AffinityStagedTooltip">Выбор ЦП подготовлен и применяется только командой «Применить назначение ЦП».</sys:String>
     <sys:String x:Key="ProcessView_AffinityCurrentTooltip">Текущая привязка выбранного процесса по данным Windows</sys:String>
     <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Предварительный просмотр выбора ЦП только для чтения — измените его в списке 'Ожидающая маска ядер'.</sys:String>
-    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">Только предварительный просмотр — эти флажки показывают выбор ЦП и не нажимаются. Выберите маску в списке 'Ожидающая маска ядер' выше, чтобы подготовить другой выбор (маски создаются на вкладке Маски CPU).</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">Только предварительный просмотр — эти метки показывают выбранные ЦП и не нажимаются. Выберите маску в списке 'Ожидающая маска ядер' выше, чтобы подготовить другой выбор (маски создаются на вкладке Маски CPU).</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreSelected">Выбрано</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreNotSelected">Не выбрано</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreUnavailable">Недоступно</sys:String>
     <sys:String x:Key="ProcessView_OpenMasksTabTooltip">Откройте вкладку «Маски» CPU, чтобы создать новую пользовательскую маску.</sys:String>
     <sys:String x:Key="ProcessView_HyperThreadingTooltip">Показывает, присутствует ли и активен ли Hyper-Threading (Intel) или SMT (AMD) в этой системе.</sys:String>
 
@@ -578,6 +581,8 @@
     <sys:String x:Key="SystemTweak_GpuMsiMode_Name">Режим MSI для GPU</sys:String>
     <sys:String x:Key="SystemTweak_GpuMsiMode_Desc">Управляет MSI, только если видеодрайвер уже предоставляет MSISupported. Требуется перезагрузка.</sys:String>
     <sys:String x:Key="SystemTweaks_OpenSettings">Открыть параметры</sys:String>
+    <sys:String x:Key="SystemTweaks_ToggleOn">ВКЛ</sys:String>
+    <sys:String x:Key="SystemTweaks_ToggleOff">ВЫКЛ</sys:String>
     <sys:String x:Key="SystemTweaks_StatusManagedByWindows">Управляется Windows</sys:String>
     <sys:String x:Key="SystemTweaks_StatusOpenSettingsFailed">Не удалось открыть параметры Windows</sys:String>
     <sys:String x:Key="SystemTweaks_StatusSettingsOpenedFormat">Открыты параметры для {0}</sys:String>
