@@ -4,8 +4,8 @@ namespace ThreadPilot.Core.Tests
 
     public sealed partial class PackagingMetadataTests
     {
-        private const string ReleaseVersion = "1.7.3";
-        private const string ReleaseAssemblyVersion = "1.7.3.0";
+        private const string ReleaseVersion = "1.7.4";
+        private const string ReleaseAssemblyVersion = "1.7.4.0";
 
         [Fact]
         public void InnoInstallers_UseStableDisplayNameAndSeparateVersionMetadata()
@@ -120,7 +120,7 @@ namespace ThreadPilot.Core.Tests
             throw new InvalidOperationException("Repository root could not be located.");
         }
 
-        [GeneratedRegex("#define MyAppVersion \"1\\.7\\.3\"", RegexOptions.CultureInvariant)]
+        [GeneratedRegex("#define MyAppVersion \"1\\.7\\.4\"", RegexOptions.CultureInvariant)]
         private static partial Regex MyAppVersionRegex();
     }
 }
