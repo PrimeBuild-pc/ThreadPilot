@@ -55,8 +55,10 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public void CpuSetMapping_ResolveSelection_UsesExplicitCpuSetIds()
+        public void CpuSetMapping_ResolveSelection_PrefersCurrentTopologyOverSavedCpuSetIds()
         {
+            // 300 is a CPU Set ID captured when the rule was saved and no longer present in the
+            // current mapping. Applying it would pin the process to whatever CPU now owns that ID.
             var mapping = CpuSetMapping.Create(new Dictionary<ProcessorRef, uint>
             {
                 [new ProcessorRef(0, 0, 0)] = 100,
@@ -69,7 +71,26 @@ namespace ThreadPilot.Core.Tests
 
             var cpuSetIds = mapping.ResolveCpuSetIds(selection);
 
-            Assert.Equal([100U, 300U], cpuSetIds);
+            Assert.Equal([100U], cpuSetIds);
+        }
+
+        [Fact]
+        public void CpuSetMapping_ResolveSelection_ReturnsEmptyWhenAProcessorNoLongerExists()
+        {
+            var mapping = CpuSetMapping.Create(new Dictionary<ProcessorRef, uint>
+            {
+                [new ProcessorRef(0, 0, 0)] = 100,
+            });
+            var selection = new CpuSelection
+            {
+                CpuSetIds = [100, 101],
+                LogicalProcessors = [new ProcessorRef(0, 0, 0), new ProcessorRef(0, 1, 1)],
+            };
+
+            var cpuSetIds = mapping.ResolveCpuSetIds(selection);
+
+            // Better an InvalidTopology error the user can act on than silently pinning a subset.
+            Assert.Empty(cpuSetIds);
         }
 
         [Fact]

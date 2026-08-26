@@ -290,6 +290,7 @@
     <sys:String x:Key="ProcessView_LoadProfile">Load Profile</sys:String>
     <sys:String x:Key="ProcessView_LoadProfileTooltip">Load a previously saved profile</sys:String>
     <sys:String x:Key="ProcessView_SaveCurrentRule">Save Current Settings as Rule</sys:String>
+    <sys:String x:Key="ProcessView_SaveRuleTooltip">Saves a per-process rule that ThreadPilot re-applies automatically the next time this process starts, while automation monitoring is enabled. These rules are separate from the Rules tab, which manages process-to-power-plan associations.</sys:String>
     
     <sys:String x:Key="ProcessView_LastAction">Last ThreadPilot action:</sys:String>
     <sys:String x:Key="ProcessView_Refresh">Refresh</sys:String>
@@ -310,7 +311,8 @@
     
     <sys:String x:Key="ProcessView_AffinityStagedTooltip">CPU selection staged in the UI. It is applied only through Apply CPU Assignment.</sys:String>
     <sys:String x:Key="ProcessView_AffinityCurrentTooltip">Affinity currently reported by Windows for the selected process</sys:String>
-    <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Read-only preview of current or pending CPU selection</sys:String>
+    <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Read-only preview of the CPU selection — choose a mask under 'Pending core mask' to change it.</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">Preview only — these boxes show the CPU selection, they are not clickable. Choose a mask from 'Pending core mask' above to stage a different selection (create masks in the CPU Masks tab).</sys:String>
     <sys:String x:Key="ProcessView_OpenMasksTabTooltip">Open CPU Masks tab to create a new custom mask</sys:String>
     <sys:String x:Key="ProcessView_HyperThreadingTooltip">Shows whether Hyper-Threading (Intel) or SMT (AMD) is present and active on this system</sys:String>
     

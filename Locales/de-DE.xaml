@@ -290,6 +290,7 @@
     <sys:String x:Key="ProcessView_LoadProfile">Profil laden</sys:String>
     <sys:String x:Key="ProcessView_LoadProfileTooltip">Laden Sie ein zuvor gespeichertes Profil</sys:String>
     <sys:String x:Key="ProcessView_SaveCurrentRule">Aktuelle Einstellungen als Regel speichern</sys:String>
+    <sys:String x:Key="ProcessView_SaveRuleTooltip">Speichert eine prozessbezogene Regel, die ThreadPilot beim nächsten Start dieses Prozesses automatisch erneut anwendet, solange die Automatisierungsüberwachung aktiviert ist. Diese Regeln sind unabhängig von der Registerkarte „Regeln“, der Zuordnungen von Prozessen zu Energiesparplänen verwaltet.</sys:String>
 
     <sys:String x:Key="ProcessView_LastAction">Letzte ThreadPilot-Aktion:</sys:String>
     <sys:String x:Key="ProcessView_Refresh">Aktualisieren</sys:String>
@@ -310,7 +311,8 @@
 
     <sys:String x:Key="ProcessView_AffinityStagedTooltip">CPU-Auswahl vorgemerkt. Sie wird erst über CPU-Zuweisung anwenden übernommen.</sys:String>
     <sys:String x:Key="ProcessView_AffinityCurrentTooltip">Affinität, die derzeit von Windows für den ausgewählten Prozess gemeldet wird</sys:String>
-    <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Schreibgeschützte Vorschau der aktuellen oder ausstehenden CPU-Auswahl</sys:String>
+    <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Schreibgeschützte Vorschau der CPU-Auswahl — ändern Sie sie oben unter 'Ausstehende Kernmaske'.</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">Nur Vorschau — diese Kästchen zeigen die CPU-Auswahl an, sie sind nicht anklickbar. Wählen Sie oben unter 'Ausstehende Kernmaske' eine Maske aus, um eine andere Auswahl vorzubereiten (Masken werden im Tab CPU-Masken erstellt).</sys:String>
     <sys:String x:Key="ProcessView_OpenMasksTabTooltip">Öffnen Sie die Registerkarte CPU Masken, um eine neue benutzerdefinierte Maske zu erstellen</sys:String>
     <sys:String x:Key="ProcessView_HyperThreadingTooltip">Zeigt an, ob Hyper-Threading (Intel) oder SMT (AMD) auf diesem System vorhanden und aktiv ist</sys:String>
 

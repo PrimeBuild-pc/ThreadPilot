@@ -394,6 +394,79 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task CpuSelectionApply_WhenHardAffinityWouldDefeatCpuSets_UsesHardAffinityInstead()
+        {
+            // The process is already pinned to CPUs 0-1, so default CPU Sets naming CPUs 2-3 would
+            // read back as applied while Windows keeps refusing to schedule it there.
+            var process = new ProcessModel { ProcessId = 42, Name = "Game", ProcessorAffinity = 0x3 };
+            var cpuSets = new FakeCpuSetHandler { ApplyCpuSelectionResult = true };
+            var legacy = new RecordingLegacyAffinityApplier();
+            var service = CreateCpuSelectionApplier(cpuSets, legacy);
+            var selection = CreateSelection(new ProcessorRef(0, 2, 2), new ProcessorRef(0, 3, 3));
+
+            var result = await service.ApplyAsync(process, selection);
+
+            Assert.True(result.Success);
+            Assert.False(result.UsedCpuSets);
+            Assert.True(result.UsedLegacyAffinity);
+            Assert.Equal(0, cpuSets.ApplyCpuSelectionCalls);
+            Assert.Equal(0xC, legacy.LastMask);
+        }
+
+        [Fact]
+        public async Task CpuSelectionApply_WhenMasksUseBit63_StillDetectsTheHardAffinityConflict()
+        {
+            // CPU 63 sets the sign bit, so these masks are negative longs. Comparing them as
+            // magnitudes ("> 0") silently skipped the guard on 64-CPU single-group systems.
+            var process = new ProcessModel { ProcessId = 42, Name = "Game", ProcessorAffinity = 1L << 62 };
+            var cpuSets = new FakeCpuSetHandler { ApplyCpuSelectionResult = true };
+            var legacy = new RecordingLegacyAffinityApplier();
+            var service = CreateCpuSelectionApplier(cpuSets, legacy);
+            var selection = CreateSelection(new ProcessorRef(0, 63, 63));
+
+            var result = await service.ApplyAsync(process, selection);
+
+            Assert.True(result.Success);
+            Assert.False(result.UsedCpuSets);
+            Assert.True(result.UsedLegacyAffinity);
+            Assert.Equal(0, cpuSets.ApplyCpuSelectionCalls);
+            Assert.Equal(1L << 63, legacy.LastMask);
+        }
+
+        [Fact]
+        public async Task CpuSelectionApply_WhenModelAffinityIsUnknown_KeepsPreferringCpuSets()
+        {
+            // A ProcessModel whose affinity could not be read reports 0; the guard must not treat
+            // that as "everything conflicts" and force hard affinity on every apply.
+            var process = new ProcessModel { ProcessId = 42, Name = "Game", ProcessorAffinity = 0 };
+            var cpuSets = new FakeCpuSetHandler { ApplyCpuSelectionResult = true };
+            var legacy = new RecordingLegacyAffinityApplier();
+            var service = CreateCpuSelectionApplier(cpuSets, legacy);
+            var selection = CreateSelection(new ProcessorRef(0, 2, 2));
+
+            var result = await service.ApplyAsync(process, selection);
+
+            Assert.True(result.UsedCpuSets);
+            Assert.Equal(0, legacy.CallCount);
+        }
+
+        [Fact]
+        public async Task CpuSelectionApply_WhenSelectionFitsInsideExistingHardAffinity_StillUsesCpuSets()
+        {
+            var process = new ProcessModel { ProcessId = 42, Name = "Game", ProcessorAffinity = 0xF };
+            var cpuSets = new FakeCpuSetHandler { ApplyCpuSelectionResult = true };
+            var legacy = new RecordingLegacyAffinityApplier();
+            var service = CreateCpuSelectionApplier(cpuSets, legacy);
+            var selection = CreateSelection(new ProcessorRef(0, 2, 2), new ProcessorRef(0, 3, 3));
+
+            var result = await service.ApplyAsync(process, selection);
+
+            Assert.True(result.Success);
+            Assert.True(result.UsedCpuSets);
+            Assert.Equal(0, legacy.CallCount);
+        }
+
+        [Fact]
         public async Task CpuSelectionApply_WhenCpuSetsThrowAccessDenied_ReturnsAccessDenied()
         {
             var process = new ProcessModel { ProcessId = 42, Name = "Game" };

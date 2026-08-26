@@ -265,7 +265,7 @@
     <sys:String x:Key="ProcessView_SetPowerPlan">Définir le plan d'alimentation</sys:String>
     <sys:String x:Key="ProcessView_SetPowerPlanTooltip">Activer le plan d'alimentation Windows sélectionné</sys:String>
 
-    <sys:String x:Key="ProcessView_PendingCoreMask">Masque de base en attente</sys:String>
+    <sys:String x:Key="ProcessView_PendingCoreMask">Masque de cœurs en attente</sys:String>
     <sys:String x:Key="ProcessView_StageMaskTooltip">Sélectionnez un masque à préparer. Rien ne change avant Appliquer l’affectation CPU.</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinity">Appliquer l’affectation CPU</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinityTooltip">Applique la sélection CPU avec le mode choisi et vérifie l’état Windows</sys:String>
@@ -290,6 +290,7 @@
     <sys:String x:Key="ProcessView_LoadProfile">Charger le profil</sys:String>
     <sys:String x:Key="ProcessView_LoadProfileTooltip">Charger un profil précédemment enregistré</sys:String>
     <sys:String x:Key="ProcessView_SaveCurrentRule">Enregistrer les paramètres actuels en tant que règle</sys:String>
+    <sys:String x:Key="ProcessView_SaveRuleTooltip">Enregistre une règle propre au processus que ThreadPilot réapplique automatiquement au prochain démarrage de ce processus, tant que la surveillance de l'automatisation est activée. Ces règles sont distinctes de l'onglet Règles, qui gère les associations entre processus et modes d'alimentation.</sys:String>
 
     <sys:String x:Key="ProcessView_LastAction">Dernière action ThreadPilot :</sys:String>
     <sys:String x:Key="ProcessView_Refresh">Actualiser</sys:String>
@@ -310,7 +311,8 @@
 
     <sys:String x:Key="ProcessView_AffinityStagedTooltip">Sélection CPU préparée dans l’interface. Elle est appliquée uniquement via Appliquer l’affectation CPU.</sys:String>
     <sys:String x:Key="ProcessView_AffinityCurrentTooltip">Affinité actuellement signalée par Windows pour le processus sélectionné</sys:String>
-    <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Aperçu en lecture seule de la sélection CPU actuelle ou en attente</sys:String>
+    <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Aperçu en lecture seule de la sélection CPU — modifiez-la via 'Masque de cœurs en attente'.</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">Aperçu uniquement — ces cases indiquent la sélection CPU, elles ne sont pas cliquables. Choisissez un masque dans 'Masque de cœurs en attente' ci-dessus pour préparer une autre sélection (créez les masques dans l'onglet Masques CPU).</sys:String>
     <sys:String x:Key="ProcessView_OpenMasksTabTooltip">Ouvrez l'onglet CPU Masques pour créer un nouveau masque personnalisé.</sys:String>
     <sys:String x:Key="ProcessView_HyperThreadingTooltip">Indique si Hyper-Threading (Intel) ou SMT (AMD) est présent et actif sur ce système</sys:String>
 

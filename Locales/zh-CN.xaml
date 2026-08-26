@@ -290,6 +290,7 @@
     <sys:String x:Key="ProcessView_LoadProfile">加载配置文件</sys:String>
     <sys:String x:Key="ProcessView_LoadProfileTooltip">加载以前保存的配置文件</sys:String>
     <sys:String x:Key="ProcessView_SaveCurrentRule">保存当前设置为规则</sys:String>
+    <sys:String x:Key="ProcessView_SaveRuleTooltip">保存针对该进程的规则；只要启用了自动化监视，ThreadPilot 会在此进程下次启动时自动重新应用它。这些规则与“自动化规则”选项卡相互独立，后者管理进程与电源计划的关联。</sys:String>
     
     <sys:String x:Key="ProcessView_LastAction">最后一次 ThreadPilot 操作:</sys:String>
     <sys:String x:Key="ProcessView_Refresh">刷新</sys:String>
@@ -310,7 +311,8 @@
     
     <sys:String x:Key="ProcessView_AffinityStagedTooltip">CPU 选择已暂存，仅通过“应用 CPU 分配”应用。</sys:String>
     <sys:String x:Key="ProcessView_AffinityCurrentTooltip">Windows 当前报告的所选进程的关联性</sys:String>
-    <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">当前或待处理 CPU 选择的只读预览</sys:String>
+    <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">CPU 选择的只读预览 — 请在“待处理的核心掩码”中更改。</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">仅供预览 — 这些复选框显示 CPU 选择，不可点击。请在上方的“待处理的核心掩码”中选择一个掩码以准备其他选择（掩码在“CPU 掩码”选项卡中创建）。</sys:String>
     <sys:String x:Key="ProcessView_OpenMasksTabTooltip">打开 CPU 掩码选项卡以创建新的自定义掩码</sys:String>
     <sys:String x:Key="ProcessView_HyperThreadingTooltip">显示此系统上是否具有并启用了超线程 (Intel) 或 SMT (AMD)</sys:String>
     

@@ -298,10 +298,12 @@
                                                       Header="{DynamicResource ProcessView_Rules}">
                                                 <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
                                                           Header="{DynamicResource ProcessView_SaveCurrentRule}"
+                                                          ToolTip="{DynamicResource ProcessView_SaveRuleTooltip}"
                                                           Command="{Binding SaveCurrentSettingsAsRuleCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                 <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
                                                           Header="{DynamicResource ProcessView_ApplyAffinitySaveRule}"
+                                                          ToolTip="{DynamicResource ProcessView_SaveRuleTooltip}"
                                                           Command="{Binding ApplyAffinityAndSaveAsRuleCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                             </MenuItem>
@@ -573,7 +575,8 @@
 
                                 <ScrollViewer MaxHeight="88"
                                               VerticalScrollBarVisibility="Auto"
-                                              HorizontalScrollBarVisibility="Disabled">
+                                              HorizontalScrollBarVisibility="Disabled"
+                                              ToolTip="{DynamicResource ProcessView_CpuCoresReadOnlyHint}">
                                     <ItemsControl ItemsSource="{Binding CpuCores}">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
@@ -589,11 +592,18 @@
                                                           IsEnabled="{Binding IsEnabled}"
                                                           Margin="2"
                                                           FontSize="{StaticResource ProcessFontSmall}"
-                                                          Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                          Foreground="{DynamicResource TextPrimaryBrush}"
+                                                          ToolTip="{DynamicResource ProcessView_CpuSelectionPreviewTooltip}"/>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
                                 </ScrollViewer>
+
+                                <TextBlock Text="{DynamicResource ProcessView_CpuCoresReadOnlyHint}"
+                                           FontSize="{StaticResource ProcessFontSmall}"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,6,0,0"/>
                             </StackPanel>
                         </Expander>
                     </StackPanel>
@@ -788,6 +798,7 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
                                 </ScrollViewer>
+
 
                                 <Grid>
                                     <Grid.ColumnDefinitions>

@@ -67,18 +67,31 @@ namespace ThreadPilot.Platforms.Windows
         {
             ArgumentNullException.ThrowIfNull(selection);
 
-            if (selection.CpuSetIds.Count > 0)
+            // Logical processor coordinates survive a topology change; the raw CPU Set IDs stored
+            // with a saved rule do not - after a reboot or a CPU change the same opaque ID can name
+            // a different processor. Resolve coordinates against the current mapping whenever we
+            // have them, and require every one to resolve so a stale selection surfaces as an
+            // invalid topology instead of silently pinning a subset of the wrong CPUs.
+            if (selection.LogicalProcessors.Count > 0)
             {
-                return selection.CpuSetIds
+                var resolved = new List<uint>(selection.LogicalProcessors.Count);
+                foreach (var processor in selection.LogicalProcessors)
+                {
+                    if (!this.TryGetCpuSetId(processor, out var cpuSetId))
+                    {
+                        return [];
+                    }
+
+                    resolved.Add(cpuSetId);
+                }
+
+                return resolved
                     .Distinct()
                     .OrderBy(cpuSetId => cpuSetId)
                     .ToList();
             }
 
-            return selection.LogicalProcessors
-                .Select(processor => this.TryGetCpuSetId(processor, out var cpuSetId) ? (uint?)cpuSetId : null)
-                .Where(cpuSetId => cpuSetId.HasValue)
-                .Select(cpuSetId => cpuSetId!.Value)
+            return selection.CpuSetIds
                 .Distinct()
                 .OrderBy(cpuSetId => cpuSetId)
                 .ToList();
