@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.7.4 - Masks that follow the CPU, rules you can finish editing
+
+### Fixed
+
+- Custom CPU masks are resized when the logical-processor count changes instead of being left describing a machine that no longer exists. Growing a mask leaves the new CPUs unselected; shrinking one keeps the selected CPUs that still exist.
+- A mask is deliberately **not** resized when the result would select no CPU at all, or when a power plan association is using it - a silent resize there would change what that automation does. Those masks are named in the Masks tab for manual review.
+- Custom masks built on a different CPU with the same thread count are now detected by comparing the topology signature stored with the mask's selection, a case the logical-processor count alone cannot see.
+
+### Added
+
+- The cores a saved rule pins to can be set from the **Saved process rules** editor, using any saved CPU mask. Previously they could only be changed from the Process tab, which requires the process to be running - so a rule for an application that was not currently open could not be fully edited.
+- The saved-rules editor shows the rule's current cores as readable ranges.
+
+### Validation
+
+- 758 automated tests pass.
+- Windows 11 UI verification covered the saved-rules editor populating from a real rule, the mask picker listing the available masks, and the core ranges shown for an existing rule.
+
 ## v1.7.3 - Rule integrity and verifiable CPU assignment
 
 ### Fixed

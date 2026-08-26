@@ -1,3 +1,24 @@
+## ThreadPilot v1.7.4
+
+A follow-up to 1.7.3, closing the three items left open in its review.
+
+### Custom masks follow a CPU change
+
+Built-in masks were already re-derived when the logical-processor count changed; masks you drew yourself were only flagged. They are now resized too, because most of the decision is not a judgement call: CPUs that appear were not part of a selection made before they existed, so they stay unselected, and removing CPUs is safe while something is still selected.
+
+Two cases are still yours to decide, and ThreadPilot says so in the Masks tab rather than guessing:
+
+- the mask would be left selecting no CPU that still exists;
+- a power plan association is using the mask, where a silent resize would change what that automation does.
+
+A different CPU with the same thread count is also detected now, by comparing the topology signature stored with the mask against the running machine - a swap that the logical-processor count alone cannot reveal.
+
+### A rule's cores can be edited from the Rules page
+
+The per-core picker lives in the Process tab and needs the process to be running, so the cores of a rule for an application you were not currently running were the one thing about that rule you could not change.
+
+The **Saved process rules** editor now shows those cores as readable ranges and can set them from any saved CPU mask, through the same conversion the Process tab uses. The per-core picker stays where it is rather than being duplicated.
+
 ## ThreadPilot v1.7.3
 
 ThreadPilot 1.7.3 focuses on trust: an operation that reports success must remain visible, survive a UI refresh, and preserve the rest of the user's configuration.
