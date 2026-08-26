@@ -238,6 +238,14 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_DescriptionLabel">Descriptif :</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_AutomationService">Service d'automatisation</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_RulesHeader">Règles</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulesHeader">Règles de processus enregistrées</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulesDescription">Règles enregistrées depuis l'onglet Processus. ThreadPilot les réapplique à ce processus à chaque démarrage, tant que la surveillance automatique est active. Elles sont distinctes des règles de mode d'alimentation ci-dessus, qui changent le mode d'alimentation global de Windows.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleProcess">Processus</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleApplies">Applique</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMode">Mode</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleUpdated">Mise à jour</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleDelete">Supprimer</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_NoSavedRules">Aucune règle de processus enregistrée. Faites un clic droit sur un processus dans l'onglet Processus et choisissez Règles pour en enregistrer une.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">Exécutable</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_PowerPlan">Plan d'alimentation</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_CpuMask">CPU Masque</sys:String>

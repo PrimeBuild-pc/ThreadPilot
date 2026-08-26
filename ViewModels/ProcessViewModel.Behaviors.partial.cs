@@ -1171,44 +1171,14 @@ namespace ThreadPilot.ViewModels
         }
 
 
+        // Was hunting for a TabControl in the visual tree and setting SelectedIndex; the window has
+        // been a NavigationView for several versions, so the lookup returned null and the button did
+        // nothing at all. Navigation belongs to the window, which already owns this exact pattern
+        // for the Rules tab.
         [RelayCommand]
         private void CreateCustomMask()
         {
-            // Request to switch to Core Masks tab
-            System.Windows.Application.Current.Dispatcher.Invoke(() =>
-            {
-                var mainWindow = System.Windows.Application.Current.MainWindow;
-                if (mainWindow != null)
-                {
-                    // Find the TabControl in MainWindow
-                    var tabControl = FindVisualChild<System.Windows.Controls.TabControl>(mainWindow);
-                    if (tabControl != null)
-                    {
-                        // Switch to Core Masks tab (index 1)
-                        tabControl.SelectedIndex = 1;
-                    }
-                }
-            });
-        }
-
-        private static T? FindVisualChild<T>(System.Windows.DependencyObject obj)
-            where T : System.Windows.DependencyObject
-        {
-            for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(obj); i++)
-            {
-                var child = System.Windows.Media.VisualTreeHelper.GetChild(obj, i);
-                if (child is T typedChild)
-                {
-                    return typedChild;
-                }
-
-                var childOfChild = FindVisualChild<T>(child);
-                if (childOfChild != null)
-                {
-                    return childOfChild;
-                }
-            }
-            return null;
+            this.OpenMasksRequested?.Invoke(this, EventArgs.Empty);
         }
 
         partial void OnSelectedCoreMaskChanged(CoreMask? oldValue, CoreMask? newValue)
@@ -1604,6 +1574,15 @@ namespace ThreadPilot.ViewModels
                 }
 
                 await this.processService.RefreshProcessInfo(process);
+                if (ReferenceEquals(this.SelectedProcess, process))
+                {
+                    // The chips were showing the soft assignment that has just been removed. Without
+                    // this they keep advertising cores the process is no longer pinned to until it
+                    // happens to be reselected - and a rule saved in between would capture them.
+                    this.UpdateCoreSelections(process.ProcessorAffinity, true);
+                    this.UpdateAffinityDisplayState();
+                }
+
                 this.SetStatus($"CPU Sets cleared for {process.Name}.", false);
                 await this.LogUserActionAsync(
                     "CpuSetsCleared",

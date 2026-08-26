@@ -26,6 +26,10 @@ namespace ThreadPilot.Services
         Task<ProcessRuleCreationResult> DeleteRuleAsync(
             ProcessModel process,
             CancellationToken cancellationToken = default);
+
+        Task<ProcessRuleCreationResult> DeleteRuleByIdAsync(
+            string ruleId,
+            CancellationToken cancellationToken = default);
     }
 
     public sealed record ProcessRuleCreationPayload
@@ -164,15 +168,44 @@ namespace ThreadPilot.Services
                 return ProcessRuleCreationResult.Failed("NoSavedRuleToDelete", NoSavedRuleMessage);
             }
 
-            var removed = rules[existingIndex];
-            rules.RemoveAt(existingIndex);
+            return await this.RemoveAtAsync(rules, existingIndex, cancellationToken).ConfigureAwait(false);
+        }
+
+        // The saved-rules list in the Rules tab holds rules, not processes: it can address a rule
+        // whose process is not running, which is exactly when a stale rule needs removing.
+        public async Task<ProcessRuleCreationResult> DeleteRuleByIdAsync(
+            string ruleId,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(ruleId))
+            {
+                return ProcessRuleCreationResult.Failed("NoSavedRuleToDelete", NoSavedRuleMessage);
+            }
+
+            var rules = (await this.ruleStore.LoadAsync().ConfigureAwait(false)).ToList();
+            var existingIndex = rules.FindIndex(rule => string.Equals(rule.Id, ruleId, StringComparison.Ordinal));
+            if (existingIndex < 0)
+            {
+                return ProcessRuleCreationResult.Failed("NoSavedRuleToDelete", NoSavedRuleMessage);
+            }
+
+            return await this.RemoveAtAsync(rules, existingIndex, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task<ProcessRuleCreationResult> RemoveAtAsync(
+            List<PersistentProcessRule> rules,
+            int index,
+            CancellationToken cancellationToken)
+        {
+            var removed = rules[index];
+            rules.RemoveAt(index);
 
             cancellationToken.ThrowIfCancellationRequested();
             await this.ruleStore.SaveAsync(rules).ConfigureAwait(false);
 
-            var processName = string.IsNullOrWhiteSpace(process.Name)
+            var processName = string.IsNullOrWhiteSpace(removed.ProcessName)
                 ? "process"
-                : process.Name.Trim();
+                : removed.ProcessName.Trim();
             this.logger.LogInformation(
                 "Deleted saved rule {RuleId} for process {ProcessName}",
                 removed.Id,

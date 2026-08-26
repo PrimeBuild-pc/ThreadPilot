@@ -131,6 +131,7 @@ namespace ThreadPilot
                 this.securityService = securityService;
 
                 this.processViewModel.OpenRulesRequested += this.OnOpenRulesRequested;
+                this.processViewModel.OpenMasksRequested += this.OnOpenMasksRequested;
 
                 System.Diagnostics.Debug.WriteLine("Dependencies assigned");
 

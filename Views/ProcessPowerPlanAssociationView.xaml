@@ -274,6 +274,81 @@
                 </Grid>
             </TabItem>
 
+            <!-- Saved Process Rules Tab -->
+            <TabItem Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRulesHeader}">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRulesDescription}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,10"/>
+
+                    <Grid Grid.Row="1">
+                        <DataGrid ItemsSource="{Binding SavedProcessRules}"
+                                  AutoGenerateColumns="False"
+                                  CanUserAddRows="False"
+                                  IsReadOnly="True"
+                                  GridLinesVisibility="Horizontal"
+                                  HeadersVisibility="Column"
+                                  BorderThickness="1">
+                            <DataGrid.Columns>
+                                <DataGridCheckBoxColumn Header="{DynamicResource MasksView_Enabled}"
+                                                       Binding="{Binding IsEnabled}"
+                                                       Width="60"/>
+                                <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleProcess}"
+                                                   Binding="{Binding ProcessName}"
+                                                   Width="150"/>
+                                <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleApplies}"
+                                                   Binding="{Binding Applies}"
+                                                   Width="*"/>
+                                <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleMode}"
+                                                   Binding="{Binding Mode}"
+                                                   Width="110"/>
+                                <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleUpdated}"
+                                                   Binding="{Binding UpdatedAt}"
+                                                   Width="140"/>
+                                <DataGridTemplateColumn Width="90">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleDelete}"
+                                                    Padding="8,2"
+                                                    Margin="2"
+                                                    Command="{Binding DataContext.DeleteSavedProcessRuleCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    CommandParameter="{Binding}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <Border Padding="18"
+                                IsHitTestVisible="False"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SavedProcessRules.Count}" Value="0">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_NoSavedRules}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextWrapping="Wrap"
+                                       TextAlignment="Center"/>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
             <!-- Automation Monitoring Tab -->
             <TabItem Header="{DynamicResource ProcessPowerPlanAssociationView_AutomationMonitoring}">
                 <ScrollViewer Margin="10">
