@@ -11,6 +11,9 @@ namespace ThreadPilot.Services
 
         CoreMask? DefaultMask { get; }
 
+        // Custom masks whose stored bit count no longer matches this machine's logical CPU count.
+        IReadOnlyList<string> MasksNeedingTopologyReview => [];
+
         Task InitializeAsync();
 
         Task<CoreMask> CreateMaskAsync(string name, string description, IEnumerable<bool> boolMask);

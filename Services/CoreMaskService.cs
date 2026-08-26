@@ -38,6 +38,8 @@ namespace ThreadPilot.Services
 
         public ObservableCollection<CoreMask> AvailableMasks { get; private set; } = new();
 
+        public IReadOnlyList<string> MasksNeedingTopologyReview { get; private set; } = [];
+
         public CoreMask? DefaultMask => this.AvailableMasks.FirstOrDefault(m => m.IsDefault);
 
         private const string ALLCORESMASKNAME = "All Cores";
@@ -699,6 +701,8 @@ namespace ThreadPilot.Services
                 changed |= this.AddOrReconcileBuiltInMask(mask, canReconcileLengths);
             }
 
+            this.CollectMasksNeedingTopologyReview(coreCount, canReconcileLengths);
+
             await Task.CompletedTask;
             return changed;
         }
@@ -711,6 +715,34 @@ namespace ThreadPilot.Services
             }
 
             return Environment.ProcessorCount;
+        }
+
+        // A built-in mask can be re-derived, because ThreadPilot knows what it is supposed to mean.
+        // A mask the user drew cannot: only they know whether the CPUs that appeared should be part
+        // of it. So flag those and let the Masks tab ask, rather than resize them behind their back
+        // or leave them quietly selecting the wrong cores.
+        private void CollectMasksNeedingTopologyReview(int coreCount, bool topologyIsTrustworthy)
+        {
+            if (!topologyIsTrustworthy)
+            {
+                return;
+            }
+
+            var stale = this.AvailableMasks
+                .Where(mask => !mask.IsDefault && mask.BoolMask.Count > 0 && mask.BoolMask.Count != coreCount)
+                .Select(mask => mask.Name)
+                .ToList();
+
+            this.MasksNeedingTopologyReview = stale;
+
+            if (stale.Count > 0)
+            {
+                this.logger.LogInformation(
+                    "{Count} custom core mask(s) were built for a different CPU ({Names}): stored bit count does not match the {CoreCount} logical CPUs on this machine",
+                    stale.Count,
+                    string.Join(", ", stale),
+                    coreCount);
+            }
         }
 
         private bool AddOrReconcileBuiltInMask(CoreMask mask, bool reconcileLength)

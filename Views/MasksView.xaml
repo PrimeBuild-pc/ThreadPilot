@@ -50,6 +50,7 @@
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -62,7 +63,30 @@
             </TextBlock>
         </StackPanel>
 
-        <Grid Grid.Row="1">
+        <Border Grid.Row="1"
+                Background="{DynamicResource CardSurfaceBrush}"
+                BorderBrush="{DynamicResource BorderSubtleBrush}"
+                BorderThickness="1"
+                CornerRadius="{DynamicResource StandardCardCornerRadius}"
+                Padding="12,8"
+                Margin="0,0,0,10"
+                VerticalAlignment="Top">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Visible"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding TopologyReviewMessage}" Value="">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <TextBlock Text="{Binding TopologyReviewMessage}"
+                       TextWrapping="Wrap"
+                       FontSize="12"/>
+        </Border>
+
+        <Grid Grid.Row="2">
              <Grid.ColumnDefinitions>
                  <ColumnDefinition Width="2*" MinWidth="200"/>
                  <ColumnDefinition Width="Auto"/>
@@ -240,7 +264,7 @@
         </Grid>
 
         <!-- Status Bar -->
-        <Border Grid.Row="2"
+        <Border Grid.Row="3"
                 Background="{DynamicResource StatusPillBackgroundBrush}"
                 BorderBrush="{DynamicResource StatusPillBorderBrush}"
                 BorderThickness="1"
