@@ -77,6 +77,7 @@ namespace ThreadPilot.Core.Tests
                     It.Is<string>(context => context.Contains("Process: Game.exe") && context.Contains("PID: 100"))),
                 Times.Once);
             Assert.Same(rowProcess, viewModel.SelectedProcess);
+            Assert.Equal("CPU assignment applied successfully to Game.exe using AffinityMask.", viewModel.StatusMessage);
             var entry = Assert.Single(await audit.GetEntriesAsync());
             Assert.Equal("Affinity", entry.Category);
             Assert.Equal(ActivityAuditSeverity.Success, entry.Severity);

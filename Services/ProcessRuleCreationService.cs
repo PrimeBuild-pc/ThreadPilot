@@ -22,6 +22,10 @@ namespace ThreadPilot.Services
             ProcessIoPriority? currentIoPriority = null,
             bool preventSystemSleepWhileRunning = false,
             CancellationToken cancellationToken = default);
+
+        Task<ProcessRuleCreationResult> DeleteRuleAsync(
+            ProcessModel process,
+            CancellationToken cancellationToken = default);
     }
 
     public sealed record ProcessRuleCreationPayload
@@ -68,6 +72,9 @@ namespace ThreadPilot.Services
     {
         public const string NoCurrentSettingsMessage =
             "There are no current settings to save as a rule.";
+
+        public const string NoSavedRuleMessage =
+            "There is no saved rule for this process.";
 
         public const string UnsafeAffinityMessage =
             "The current affinity selection cannot be saved safely on this CPU topology.";
@@ -141,6 +148,44 @@ namespace ThreadPilot.Services
             return await this.SaveRuleAsync(process, payload, cancellationToken).ConfigureAwait(false);
         }
 
+        // Deliberately matched with the same FindExistingRuleIndex that saving uses: if delete and
+        // save disagreed on which rule belongs to a process, a rule could become impossible to
+        // remove from the UI that created it.
+        public async Task<ProcessRuleCreationResult> DeleteRuleAsync(
+            ProcessModel process,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(process);
+
+            var rules = (await this.ruleStore.LoadAsync().ConfigureAwait(false)).ToList();
+            var existingIndex = FindExistingRuleIndex(rules, process);
+            if (existingIndex < 0)
+            {
+                return ProcessRuleCreationResult.Failed("NoSavedRuleToDelete", NoSavedRuleMessage);
+            }
+
+            var removed = rules[existingIndex];
+            rules.RemoveAt(existingIndex);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            await this.ruleStore.SaveAsync(rules).ConfigureAwait(false);
+
+            var processName = string.IsNullOrWhiteSpace(process.Name)
+                ? "process"
+                : process.Name.Trim();
+            this.logger.LogInformation(
+                "Deleted saved rule {RuleId} for process {ProcessName}",
+                removed.Id,
+                processName);
+
+            return new ProcessRuleCreationResult
+            {
+                Success = true,
+                Rule = removed,
+                UserMessage = $"Deleted saved rule for {processName}.",
+            };
+        }
+
         public async Task<ProcessRuleCreationResult> SaveRuleAsync(
             ProcessModel process,
             ProcessRuleCreationPayload payload,
@@ -172,6 +217,24 @@ namespace ThreadPilot.Services
                 ? null
                 : process.ExecutablePath.Trim();
             var existing = created ? null : rules[existingIndex];
+
+            // Saving is a merge, not a replacement. A caller that does not carry a field - or a
+            // field that could not be read from the process this time - must not silently erase
+            // what the rule already had: that turned "Apply CPU assignment and save as rule" into
+            // a quiet way to lose the memory and I/O priority saved a moment earlier. Removing a
+            // field is done by deleting the rule, which is an explicit action.
+            var hasAffinityPayload = HasSelectionPayload(payload.CpuSelection) || payload.LegacyAffinityMask.HasValue;
+            var cpuSelection = hasAffinityPayload ? payload.CpuSelection : existing?.CpuSelection;
+            var legacyAffinityMask = hasAffinityPayload
+                ? (HasSelectionPayload(payload.CpuSelection) ? null : payload.LegacyAffinityMask)
+                : existing?.LegacyAffinityMask;
+            var cpuAssignmentMode = hasAffinityPayload
+                ? payload.CpuAssignmentMode
+                : existing?.CpuAssignmentMode ?? payload.CpuAssignmentMode;
+            var priority = payload.Priority ?? existing?.Priority;
+            var memoryPriority = payload.MemoryPriority ?? existing?.MemoryPriority;
+            var ioPriority = payload.IoPriority ?? existing?.IoPriority;
+
             var rule = new PersistentProcessRule
             {
                 Id = existing?.Id ?? Guid.NewGuid().ToString("N"),
@@ -179,16 +242,16 @@ namespace ThreadPilot.Services
                 IsEnabled = true,
                 ProcessName = processName,
                 ExecutablePath = executablePath,
-                CpuSelection = payload.CpuSelection,
-                LegacyAffinityMask = HasSelectionPayload(payload.CpuSelection) ? null : payload.LegacyAffinityMask,
-                CpuAssignmentMode = payload.CpuAssignmentMode,
-                Priority = payload.Priority,
-                MemoryPriority = payload.MemoryPriority,
-                IoPriority = payload.IoPriority,
-                ApplyAffinityOnStart = HasSelectionPayload(payload.CpuSelection) || payload.LegacyAffinityMask.HasValue,
-                ApplyPriorityOnStart = payload.Priority.HasValue,
-                ApplyMemoryPriorityOnStart = payload.MemoryPriority.HasValue,
-                ApplyIoPriorityOnStart = payload.IoPriority.HasValue,
+                CpuSelection = cpuSelection,
+                LegacyAffinityMask = HasSelectionPayload(cpuSelection) ? null : legacyAffinityMask,
+                CpuAssignmentMode = cpuAssignmentMode,
+                Priority = priority,
+                MemoryPriority = memoryPriority,
+                IoPriority = ioPriority,
+                ApplyAffinityOnStart = HasSelectionPayload(cpuSelection) || legacyAffinityMask.HasValue,
+                ApplyPriorityOnStart = priority.HasValue,
+                ApplyMemoryPriorityOnStart = memoryPriority.HasValue,
+                ApplyIoPriorityOnStart = ioPriority.HasValue,
                 PreventSystemSleepWhileRunning = payload.PreventSystemSleepWhileRunning,
                 CreatedAt = existing?.CreatedAt ?? now,
                 UpdatedAt = now,

@@ -426,6 +426,136 @@ namespace ThreadPilot.Core.Tests
                 GlobalLogicalProcessorIndexes = [0],
             };
 
+        [Fact]
+        public async Task SaveRuleAsync_KeepsFieldsTheCallerDidNotCarry()
+        {
+            // The regression this covers: "Apply CPU assignment and save as rule" sent no memory or
+            // I/O priority, and the rewrite dropped both from a rule that already had them.
+            var existing = new PersistentProcessRule
+            {
+                Id = "existing-rule",
+                ProcessName = "Game.exe",
+                ExecutablePath = @"C:\Games\Game.exe",
+                IsEnabled = true,
+                MemoryPriority = ProcessMemoryPriority.Low,
+                IoPriority = ProcessIoPriority.Low,
+                Priority = ProcessPriorityClass.High,
+                ApplyMemoryPriorityOnStart = true,
+                ApplyIoPriorityOnStart = true,
+                ApplyPriorityOnStart = true,
+            };
+            var store = new CapturingRuleStore([existing]);
+            var service = CreateService(store);
+
+            var result = await service.SaveRuleAsync(
+                CreateProcess(path: @"C:\Games\Game.exe"),
+                new ProcessRuleCreationPayload { CpuSelection = CreateCpuSelection() });
+
+            Assert.True(result.Success);
+            var rule = Assert.Single(store.SavedRules);
+            Assert.Equal(ProcessMemoryPriority.Low, rule.MemoryPriority);
+            Assert.Equal(ProcessIoPriority.Low, rule.IoPriority);
+            Assert.Equal(ProcessPriorityClass.High, rule.Priority);
+            Assert.True(rule.ApplyMemoryPriorityOnStart);
+            Assert.True(rule.ApplyIoPriorityOnStart);
+            Assert.True(rule.ApplyPriorityOnStart);
+            Assert.True(rule.ApplyAffinityOnStart);
+        }
+
+        [Fact]
+        public async Task SaveRuleAsync_KeepsTheExistingAffinityWhenOnlyPrioritiesAreSaved()
+        {
+            var selection = CreateCpuSelection();
+            var existing = new PersistentProcessRule
+            {
+                Id = "existing-rule",
+                ProcessName = "Game.exe",
+                ExecutablePath = @"C:\Games\Game.exe",
+                IsEnabled = true,
+                CpuSelection = selection,
+                CpuAssignmentMode = CpuAssignmentMode.CpuSets,
+                ApplyAffinityOnStart = true,
+            };
+            var store = new CapturingRuleStore([existing]);
+            var service = CreateService(store);
+
+            await service.SaveRuleAsync(
+                CreateProcess(path: @"C:\Games\Game.exe"),
+                new ProcessRuleCreationPayload { Priority = ProcessPriorityClass.High });
+
+            var rule = Assert.Single(store.SavedRules);
+            Assert.Same(selection, rule.CpuSelection);
+            Assert.Equal(CpuAssignmentMode.CpuSets, rule.CpuAssignmentMode);
+            Assert.True(rule.ApplyAffinityOnStart);
+        }
+
+        [Fact]
+        public async Task SaveRuleAsync_StillReplacesAFieldTheCallerDoesCarry()
+        {
+            var existing = new PersistentProcessRule
+            {
+                Id = "existing-rule",
+                ProcessName = "Game.exe",
+                ExecutablePath = @"C:\Games\Game.exe",
+                IsEnabled = true,
+                MemoryPriority = ProcessMemoryPriority.Low,
+                ApplyMemoryPriorityOnStart = true,
+            };
+            var store = new CapturingRuleStore([existing]);
+            var service = CreateService(store);
+
+            await service.SaveRuleAsync(
+                CreateProcess(path: @"C:\Games\Game.exe"),
+                new ProcessRuleCreationPayload { MemoryPriority = ProcessMemoryPriority.BelowNormal });
+
+            var rule = Assert.Single(store.SavedRules);
+            Assert.Equal(ProcessMemoryPriority.BelowNormal, rule.MemoryPriority);
+        }
+
+        [Fact]
+        public async Task DeleteRuleAsync_RemovesTheRuleMatchingTheProcess()
+        {
+            var target = new PersistentProcessRule
+            {
+                Id = "target-rule",
+                ProcessName = "Game.exe",
+                ExecutablePath = @"C:\Games\Game.exe",
+                IsEnabled = true,
+                Priority = ProcessPriorityClass.High,
+                ApplyPriorityOnStart = true,
+            };
+            var other = new PersistentProcessRule
+            {
+                Id = "other-rule",
+                ProcessName = "Other.exe",
+                ExecutablePath = @"C:\Games\Other.exe",
+                IsEnabled = true,
+            };
+            var store = new CapturingRuleStore([target, other]);
+            var service = CreateService(store);
+
+            var result = await service.DeleteRuleAsync(CreateProcess(path: @"C:\Games\Game.exe"));
+
+            Assert.True(result.Success);
+            Assert.Equal("Deleted saved rule for Game.exe.", result.UserMessage);
+            var remaining = Assert.Single(store.SavedRules);
+            Assert.Equal("other-rule", remaining.Id);
+        }
+
+        [Fact]
+        public async Task DeleteRuleAsync_ReportsAControlledFailureWhenNoRuleMatches()
+        {
+            var store = new CapturingRuleStore([]);
+            var service = CreateService(store);
+
+            var result = await service.DeleteRuleAsync(CreateProcess());
+
+            Assert.False(result.Success);
+            Assert.Equal("NoSavedRuleToDelete", result.ErrorCode);
+            Assert.Equal(ProcessRuleCreationService.NoSavedRuleMessage, result.UserMessage);
+            Assert.Empty(store.SavedRules);
+        }
+
         private static ProcessModel CreateProcess(
             string name = "Game.exe",
             string path = @"C:\Games\Game.exe",

@@ -300,6 +300,12 @@
                                                           ToolTip="{DynamicResource ProcessView_SaveRuleTooltip}"
                                                           Command="{Binding ApplyAffinityAndSaveAsRuleCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                <Separator Style="{StaticResource ProcessContextMenuSeparatorStyle}"/>
+                                                <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                          Header="{DynamicResource ProcessView_DeleteSavedRule}"
+                                                          ToolTip="{DynamicResource ProcessView_DeleteSavedRuleTooltip}"
+                                                          Command="{Binding DeleteSavedRuleCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                             </MenuItem>
                                             <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
                                                       Header="{DynamicResource ProcessView_SetIoPriority}">

@@ -514,6 +514,22 @@ namespace ThreadPilot.Services
                 return new ProcessCpuSetHandler((uint)pid, process.Name, this.logger);
             });
 
+        public Task<IReadOnlyList<int>?> GetCpuAssignmentLogicalProcessorIndexesAsync(
+            ProcessModel process,
+            CpuAssignmentMode mode)
+        {
+            ArgumentNullException.ThrowIfNull(process);
+
+            return Task.Run<IReadOnlyList<int>?>(() => mode switch
+            {
+                CpuAssignmentMode.CpuSets => this.GetOrCreateCpuSetHandler(process)
+                    .GetDefaultCpuSetLogicalProcessorIndexes(),
+                CpuAssignmentMode.IdealProcessor => new ProcessThreadCpuAssignmentHandler(process.ProcessId)
+                    .GetIdealProcessorIndexes(),
+                _ => null,
+            });
+        }
+
         private async Task<long> ApplyLegacyProcessorAffinityDirectAsync(ProcessModel process, long affinityMask)
         {
             return await Task.Run(() =>

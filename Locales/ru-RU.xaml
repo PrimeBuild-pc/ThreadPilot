@@ -295,6 +295,8 @@
     <sys:String x:Key="ProcessView_LoadProfileTooltip">Загрузите ранее сохраненный профиль</sys:String>
     <sys:String x:Key="ProcessView_SaveCurrentRule">Сохранить текущие настройки как правило</sys:String>
     <sys:String x:Key="ProcessView_SaveRuleTooltip">Сохраняет правило для этого процесса, которое ThreadPilot автоматически применяет снова при следующем запуске процесса, пока включён мониторинг автоматизации. Эти правила не связаны с вкладкой Правила, где настраиваются сопоставления процессов и схем электропитания.</sys:String>
+    <sys:String x:Key="ProcessView_DeleteSavedRule">Удалить сохранённое правило</sys:String>
+    <sys:String x:Key="ProcessView_DeleteSavedRuleTooltip">Удаляет сохранённое правило для этого процесса, чтобы ThreadPilot больше не применял его при запуске процесса.</sys:String>
 
     <sys:String x:Key="ProcessView_LastAction">Последнее действие ThreadPilot:</sys:String>
     <sys:String x:Key="ProcessView_Refresh">Обновить</sys:String>
@@ -407,6 +409,8 @@
     <sys:String x:Key="SettingsView_MinimizeToTray">Свернуть в трей</sys:String>
     <sys:String x:Key="SettingsView_CloseToTray">Рядом с лотком (вместо выхода)</sys:String>
     <sys:String x:Key="SettingsView_StartMinimized">Начать сворачивать</sys:String>
+    <sys:String x:Key="SettingsView_ResetProcessChangesOnExit">Сбрасывать изменения процессов при выходе</sys:String>
+    <sys:String x:Key="SettingsView_ResetProcessChangesOnExitDescription">Восстанавливает назначения ЦП и приоритеты, изменённые ThreadPilot, при закрытии приложения.</sys:String>
     <sys:String x:Key="SettingsView_QuickApply">Включить ожидающие настройки, применимые из трея</sys:String>
     <sys:String x:Key="SettingsView_MonitoringControl">Включить элементы управления мониторингом автоматизации из трея</sys:String>
     <sys:String x:Key="SettingsView_DetailedTooltips">Показать подробные подсказки</sys:String>

@@ -17,6 +17,8 @@ namespace ThreadPilot.Platforms.Windows
 
         CpuSetApplyResult ApplyCpuSelectionDetailed(CpuSelection? selection, bool clearSelection = false);
 
+        IReadOnlyList<int>? GetDefaultCpuSetLogicalProcessorIndexes() => null;
+
         double GetAverageCpuUsage();
 
         bool IsValid { get; }

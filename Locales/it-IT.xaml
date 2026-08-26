@@ -295,6 +295,8 @@
     <sys:String x:Key="ProcessView_LoadProfileTooltip">Carica un profilo salvato in precedenza</sys:String>
     <sys:String x:Key="ProcessView_SaveCurrentRule">Salva le impostazioni correnti come regola</sys:String>
     <sys:String x:Key="ProcessView_SaveRuleTooltip">Salva una regola per processo che ThreadPilot riapplica automaticamente al successivo avvio di questo processo, finché il monitoraggio dell'automazione è attivo. Queste regole sono separate dalla scheda Regole, che gestisce le associazioni tra processi e combinazioni di risparmio energia.</sys:String>
+    <sys:String x:Key="ProcessView_DeleteSavedRule">Elimina la regola salvata</sys:String>
+    <sys:String x:Key="ProcessView_DeleteSavedRuleTooltip">Rimuove la regola salvata per questo processo, così ThreadPilot smette di riapplicarla all'avvio del processo.</sys:String>
 
     <sys:String x:Key="ProcessView_LastAction">Ultima azione ThreadPilot:</sys:String>
     <sys:String x:Key="ProcessView_Refresh">Aggiorna</sys:String>
@@ -407,6 +409,8 @@
     <sys:String x:Key="SettingsView_MinimizeToTray">Ridurre a icona nel vassoio</sys:String>
     <sys:String x:Key="SettingsView_CloseToTray">Vicino al vassoio (invece che all'uscita)</sys:String>
     <sys:String x:Key="SettingsView_StartMinimized">Inizia minimizzato</sys:String>
+    <sys:String x:Key="SettingsView_ResetProcessChangesOnExit">Ripristina le modifiche ai processi all'uscita</sys:String>
+    <sys:String x:Key="SettingsView_ResetProcessChangesOnExitDescription">Ripristina le assegnazioni CPU e le priorità modificate da ThreadPilot quando l'app viene chiusa.</sys:String>
     <sys:String x:Key="SettingsView_QuickApply">Abilita le impostazioni in sospeso applicate dal vassoio</sys:String>
     <sys:String x:Key="SettingsView_MonitoringControl">Abilita i controlli di monitoraggio dell'automazione dal vassoio</sys:String>
     <sys:String x:Key="SettingsView_DetailedTooltips">Mostra descrizioni comandi dettagliate</sys:String>

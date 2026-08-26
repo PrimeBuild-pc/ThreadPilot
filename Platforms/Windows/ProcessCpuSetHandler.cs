@@ -66,6 +66,28 @@ namespace ThreadPilot.Platforms.Windows
 
         public bool IsValid => this.queryLimitedInfoHandle != null && !this.queryLimitedInfoHandle.IsInvalid;
 
+        public IReadOnlyList<int>? GetDefaultCpuSetLogicalProcessorIndexes()
+        {
+            var cpuSetIds = this.TryGetDefaultCpuSetIds();
+            if (cpuSetIds == null)
+            {
+                return null;
+            }
+
+            var indexes = new List<int>(cpuSetIds.Count);
+            foreach (var cpuSetId in cpuSetIds)
+            {
+                if (!this.cpuSetMapping.TryGetProcessorRef(cpuSetId, out var processor))
+                {
+                    return null;
+                }
+
+                indexes.Add(processor.GlobalIndex);
+            }
+
+            return indexes.Distinct().OrderBy(index => index).ToList();
+        }
+
         private static CpuSetMapping EnsureStaticInitialization(IProcessCpuSetNativeApi nativeApi)
         {
             if (staticInitialized)
@@ -360,19 +382,30 @@ namespace ThreadPilot.Platforms.Windows
 
         private bool VerifyCpuSetIds(uint[] expected, uint expectedCount)
         {
-            if (!this.nativeApi.GetProcessDefaultCpuSets(this.queryLimitedInfoHandle!, null, 0, out var requiredCount) && requiredCount == 0)
+            var observed = this.TryGetDefaultCpuSetIds();
+            return observed != null &&
+                observed.OrderBy(id => id).SequenceEqual(expected.Take((int)expectedCount).OrderBy(id => id));
+        }
+
+        private List<uint>? TryGetDefaultCpuSetIds()
+        {
+            if (!this.IsValid)
             {
-                return false;
+                return null;
             }
 
+            var firstCallSucceeded = this.nativeApi.GetProcessDefaultCpuSets(
+                this.queryLimitedInfoHandle!, null, 0, out var requiredCount);
             if (requiredCount == 0)
             {
-                return expectedCount == 0;
+                return firstCallSucceeded ? [] : null;
             }
 
             var observed = new uint[requiredCount];
-            return this.nativeApi.GetProcessDefaultCpuSets(this.queryLimitedInfoHandle!, observed, requiredCount, out requiredCount) &&
-                observed.Take((int)requiredCount).OrderBy(id => id).SequenceEqual(expected.Take((int)expectedCount).OrderBy(id => id));
+            return this.nativeApi.GetProcessDefaultCpuSets(
+                this.queryLimitedInfoHandle!, observed, requiredCount, out var observedCount)
+                ? observed.Take((int)observedCount).ToList()
+                : null;
         }
 
         private List<uint> GetUnavailableAllocatedCpuSetIds(IReadOnlyList<uint> selectedIds)

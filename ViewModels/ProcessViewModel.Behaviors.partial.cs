@@ -161,8 +161,6 @@ namespace ThreadPilot.ViewModels
                 {
                     this.Logger.LogWarning(ex, "Failed while handling selected process change for {ProcessName}", value.Name);
                 });
-                TaskSafety.FireAndForget(this.ResolveCpuAssignmentModeAsync(value), ex =>
-                    this.Logger.LogDebug(ex, "Could not resolve saved CPU assignment mode for {ProcessName}", value.Name));
             }
             else if (value == null)
             {
@@ -183,18 +181,24 @@ namespace ThreadPilot.ViewModels
             }
         }
 
-        private async Task ResolveCpuAssignmentModeAsync(ProcessModel process)
+        private async Task<(CpuAssignmentMode Mode, bool FromRule)> ResolveCpuAssignmentModeAsync(ProcessModel process)
         {
+            var defaultMode = this.settingsService?.Settings.DefaultCpuAssignmentMode ?? CpuAssignmentMode.Automatic;
             if (this.persistentRuleStore == null || this.persistentRuleMatcher == null)
             {
-                return;
+                return (defaultMode, false);
             }
 
-            var rules = await this.persistentRuleStore.LoadAsync().ConfigureAwait(false);
-            var rule = rules.FirstOrDefault(candidate => candidate.IsEnabled && this.persistentRuleMatcher.IsMatch(candidate, process));
-            if (rule != null && this.SelectedProcess?.ProcessId == process.ProcessId)
+            try
             {
-                await InvokeOnUiAsync(() => this.SetCpuAssignmentMode(rule.CpuAssignmentMode, overriddenByRule: true));
+                var rules = await this.persistentRuleStore.LoadAsync().ConfigureAwait(false);
+                var rule = rules.FirstOrDefault(candidate => candidate.IsEnabled && this.persistentRuleMatcher.IsMatch(candidate, process));
+                return rule == null ? (defaultMode, false) : (rule.CpuAssignmentMode, true);
+            }
+            catch (Exception ex)
+            {
+                this.Logger.LogDebug(ex, "Could not resolve saved CPU assignment mode for {ProcessName}", process.Name);
+                return (defaultMode, false);
             }
         }
 
@@ -237,11 +241,41 @@ namespace ThreadPilot.ViewModels
 
                 // Refresh process info to get current state from OS
                 await this.processService.RefreshProcessInfo(value);
+                var assignment = await this.ResolveCpuAssignmentModeAsync(value);
+                var cpuSetIndexes = await this.processService.GetCpuAssignmentLogicalProcessorIndexesAsync(
+                    value,
+                    CpuAssignmentMode.CpuSets);
+                IReadOnlyList<int>? softAssignmentIndexes;
+                if (cpuSetIndexes is { Count: > 0 })
+                {
+                    assignment = (CpuAssignmentMode.CpuSets, assignment.FromRule && assignment.Mode == CpuAssignmentMode.CpuSets);
+                    softAssignmentIndexes = cpuSetIndexes;
+                }
+                else
+                {
+                    softAssignmentIndexes = assignment.Mode == CpuAssignmentMode.IdealProcessor
+                        ? await this.processService.GetCpuAssignmentLogicalProcessorIndexesAsync(value, assignment.Mode)
+                        : null;
+                }
 
                 // Update UI on main thread with fresh data
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                await InvokeOnUiAsync(() =>
                 {
-                    this.UpdateCoreSelections(value.ProcessorAffinity);
+                    if (!ReferenceEquals(this.SelectedProcess, value))
+                    {
+                        return;
+                    }
+
+                    this.SetCpuAssignmentMode(assignment.Mode, assignment.FromRule);
+                    if (softAssignmentIndexes is { Count: > 0 })
+                    {
+                        this.UpdateCoreSelections(softAssignmentIndexes, assignment.Mode);
+                    }
+                    else
+                    {
+                        this.UpdateCoreSelections(value.ProcessorAffinity);
+                    }
+
                     this.UpdateAffinityDisplayState();
                     value.ForceNotifyProcessorAffinityChanged();
 
@@ -424,6 +458,33 @@ namespace ThreadPilot.ViewModels
 
         private void UpdateCoreSelections(long affinityMask, bool forceSync = false)
         {
+            this.currentSoftCpuAssignmentText = null;
+            this.UpdateCoreSelections(
+                core => (affinityMask & core.AffinityMask) != 0,
+                $"affinity mask 0x{affinityMask:X}",
+                forceSync);
+        }
+
+        private void UpdateCoreSelections(
+            IReadOnlyCollection<int> logicalProcessorIndexes,
+            CpuAssignmentMode mode,
+            bool forceSync = false)
+        {
+            var selectedIndexes = logicalProcessorIndexes.ToHashSet();
+            this.currentSoftCpuAssignmentText = mode == CpuAssignmentMode.CpuSets
+                ? $"Current CPU Sets: CPU {string.Join(", ", selectedIndexes.OrderBy(index => index))}"
+                : $"Current ideal processors: CPU {string.Join(", ", selectedIndexes.OrderBy(index => index))}";
+            this.UpdateCoreSelections(
+                core => selectedIndexes.Contains(core.LogicalCoreId),
+                this.currentSoftCpuAssignmentText,
+                forceSync);
+        }
+
+        private void UpdateCoreSelections(
+            Func<CpuCoreModel, bool> isSelected,
+            string source,
+            bool forceSync)
+        {
             if (this.CpuTopology == null || this.CpuCores.Count == 0)
             {
                 this.Logger.LogWarning(
@@ -438,27 +499,13 @@ namespace ThreadPilot.ViewModels
                 return;
             }
 
-            this.Logger.LogDebug(
-                "Updating core selections for affinity mask 0x{AffinityMask:X} ({AffinityMaskBinary})",
-                affinityMask, Convert.ToString(affinityMask, 2).PadLeft(Environment.ProcessorCount, '0'));
-
-            // Update each core's selection state based on the actual OS affinity mask
-            var updatedCores = new List<(int CoreId, bool WasSelected, bool IsSelected)>();
-
             try
             {
                 this.suppressCoreSelectionEvents = true;
 
                 foreach (var core in this.CpuCores)
                 {
-                    bool wasSelected = core.IsSelected;
-                    bool shouldBeSelected = (affinityMask & core.AffinityMask) != 0;
-
-                    if (wasSelected != shouldBeSelected)
-                    {
-                        core.IsSelected = shouldBeSelected;
-                        updatedCores.Add((core.LogicalCoreId, wasSelected, shouldBeSelected));
-                    }
+                    core.IsSelected = isSelected(core);
                 }
             }
             finally
@@ -466,29 +513,10 @@ namespace ThreadPilot.ViewModels
                 this.suppressCoreSelectionEvents = false;
             }
 
-            // The UI will automatically update since CpuCoreModel now implements INotifyPropertyChanged
-            // No need to force collection refresh as individual property changes will be notified
-
-            // Log the affinity update for debugging
             var selectedCoreIds = this.CpuCores.Where(c => c.IsSelected).Select(c => c.LogicalCoreId).OrderBy(id => id).ToList();
-            var totalCores = this.CpuCores.Count;
-            var selectedCount = selectedCoreIds.Count;
-
             this.Logger.LogInformation(
-                "Updated core selections for affinity mask 0x{AffinityMask:X}: " +
-                                "Selected {SelectedCount}/{TotalCores} cores: [{CoreIds}]",
-                affinityMask, selectedCount, totalCores, string.Join(", ", selectedCoreIds));
-
-            if (updatedCores.Count > 0)
-            {
-                this.Logger.LogDebug(
-                    "Core selection changes: {Changes}",
-                    string.Join("; ", updatedCores.Select(c => $"Core {c.CoreId}: {c.WasSelected} -> {c.IsSelected}")));
-            }
-            else
-            {
-                this.Logger.LogDebug("No core selection changes needed - UI already matches affinity mask");
-            }
+                "Updated core selections from {Source}: selected {SelectedCount}/{TotalCores} cores: [{CoreIds}]",
+                source, selectedCoreIds.Count, this.CpuCores.Count, string.Join(", ", selectedCoreIds));
 
             if (forceSync)
             {
@@ -521,12 +549,18 @@ namespace ThreadPilot.ViewModels
                 .ToList();
         }
 
+        private static List<int> GetSelectedLogicalProcessorIndexes(IReadOnlyList<bool> selection) =>
+            selection.Select((selected, index) => (selected, index))
+                .Where(item => item.selected)
+                .Select(item => item.index)
+                .ToList();
+
         private void UpdateAffinityDisplayState()
         {
             var currentMask = this.SelectedProcess?.ProcessorAffinity;
-            this.CurrentAffinityText = currentMask.HasValue
+            this.CurrentAffinityText = this.currentSoftCpuAssignmentText ?? (currentMask.HasValue
                 ? $"Current OS affinity: 0x{currentMask.Value:X}"
-                : "Current OS affinity: no process selected";
+                : "Current OS affinity: no process selected");
 
             if (this.SelectedProcess == null)
             {
@@ -538,7 +572,9 @@ namespace ThreadPilot.ViewModels
             if (!this.HasPendingAffinityEdits)
             {
                 this.PendingAffinityText = "Pending core mask: none";
-                this.AffinityEditStateText = "Current OS affinity is displayed. Select a core mask to stage a change.";
+                this.AffinityEditStateText = this.currentSoftCpuAssignmentText == null
+                    ? "Current OS affinity is displayed. Select a core mask to stage a change."
+                    : "Current soft CPU assignment is displayed. Select a core mask to stage a change.";
                 return;
             }
 
@@ -874,18 +910,30 @@ namespace ThreadPilot.ViewModels
             {
                 this.UpdateCoreSelections(process.ProcessorAffinity, true);
             }
+            else
+            {
+                this.UpdateCoreSelections(
+                    GetSelectedLogicalProcessorIndexes(pendingSelection),
+                    applyResult.EffectiveMode,
+                    true);
+            }
 
             process.ForceNotifyProcessorAffinityChanged();
             this.OnPropertyChanged(nameof(this.SelectedProcess));
             this.HasPendingAffinityEdits = false;
             this.UpdateAffinityDisplayState();
 
+            // Refresh first, then pass what the process actually has: this used to save nulls, and
+            // a rule saved through this menu item lost the memory and I/O priority of the rule it
+            // replaced. The service merges rather than overwrites now, but sending the real values
+            // is what makes this item a full snapshot rather than an affinity-only one.
+            await this.UpdateSelectedProcessSummaryAsync(process);
             var saveResult = await this.processRuleCreationService.SaveCurrentSettingsAsRuleAsync(
                 process,
                 pendingSelection,
-                currentMemoryPriority: null,
+                this.SelectedProcessSummary.MemoryPriority,
                 cpuAssignmentMode: this.SelectedCpuAssignmentMode,
-                currentIoPriority: null,
+                currentIoPriority: this.SelectedProcessSummary.IoPriority,
                 preventSystemSleepWhileRunning: this.IsIdleServerDisabled);
 
             this.ApplyRuleCreationResultStatus(saveResult);
@@ -894,6 +942,36 @@ namespace ThreadPilot.ViewModels
                 saveResult.UserMessage,
                 $"Process: {process.Name}, PID: {process.ProcessId}");
             await this.UpdateSelectedProcessSummaryAsync(process);
+        }
+
+        [RelayCommand]
+        private async Task DeleteSavedRule(ProcessModel? process)
+        {
+            var targetProcess = process ?? this.SelectedProcess;
+            if (targetProcess == null)
+            {
+                return;
+            }
+
+            if (this.processRuleCreationService == null)
+            {
+                this.SetContextError("Persistent rules are unavailable.");
+                return;
+            }
+
+            if (!ReferenceEquals(this.SelectedProcess, targetProcess))
+            {
+                this.SelectedProcess = targetProcess;
+            }
+
+            var result = await this.processRuleCreationService.DeleteRuleAsync(targetProcess);
+
+            this.ApplyRuleCreationResultStatus(result);
+            await this.LogUserActionAsync(
+                result.Success ? "PersistentRuleDeleted" : "PersistentRuleDeleteFailed",
+                result.UserMessage,
+                $"Process: {targetProcess.Name}, PID: {targetProcess.ProcessId}");
+            await this.UpdateSelectedProcessSummaryAsync(targetProcess);
         }
 
         private void ApplyRuleCreationResultStatus(ProcessRuleCreationResult result)
@@ -938,6 +1016,14 @@ namespace ThreadPilot.ViewModels
 
                     if (result.Success)
                     {
+                        if (result.EffectiveMode is CpuAssignmentMode.CpuSets or CpuAssignmentMode.IdealProcessor)
+                        {
+                            this.UpdateCoreSelections(
+                                GetSelectedLogicalProcessorIndexes(pendingSelection),
+                                result.EffectiveMode,
+                                true);
+                        }
+
                         this.HasPendingAffinityEdits = false;
                         this.UpdateAffinityDisplayState();
                         this.SetStatus($"CPU assignment applied successfully to {selectedProcess.Name} using {result.EffectiveMode}.", false);
@@ -1017,13 +1103,6 @@ namespace ThreadPilot.ViewModels
                 }
 
                 await this.UpdateSelectedProcessSummaryAsync(selectedProcess);
-            }
-            finally
-            {
-                await InvokeOnUiAsync(() =>
-                {
-                    this.ClearStatus();
-                });
             }
         }
 
@@ -1208,6 +1287,14 @@ namespace ThreadPilot.ViewModels
                             this.SetStatus(result.Message, false);
                         });
                         return;
+                    }
+
+                    if (result.EffectiveMode is CpuAssignmentMode.CpuSets or CpuAssignmentMode.IdealProcessor)
+                    {
+                        this.UpdateCoreSelections(
+                            GetSelectedLogicalProcessorIndexes(pendingSelection),
+                            result.EffectiveMode,
+                            true);
                     }
 
                     this.HasPendingAffinityEdits = false;
@@ -1903,7 +1990,8 @@ namespace ThreadPilot.ViewModels
 
         private void SetupRefreshTimer()
         {
-            this.refreshTimer = new System.Timers.Timer(5000); // PERFORMANCE OPTIMIZATION: Increased to 5 second refresh for better performance
+            this.refreshTimer = new System.Timers.Timer(
+                Math.Clamp(this.settingsService?.Settings.PollingIntervalMs ?? 5000, 1000, 60000));
             this.refreshTimer.Elapsed += async (s, e) =>
             {
                 if (this.isUiRefreshPaused || !this.isProcessViewActive)
@@ -2171,6 +2259,7 @@ namespace ThreadPilot.ViewModels
             }
 
             this.HasPendingAffinityEdits = false;
+            this.currentSoftCpuAssignmentText = null;
             this.UpdateAffinityDisplayState();
 
             // Reset power plan to current system default

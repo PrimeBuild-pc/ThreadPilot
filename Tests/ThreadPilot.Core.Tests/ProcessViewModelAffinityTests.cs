@@ -84,13 +84,78 @@ namespace ThreadPilot.Core.Tests
             Assert.Same(topologyProvider.Object, provider);
         }
 
+        [Fact]
+        public void PollingInterval_InitializesAndUpdatesFromSettings()
+        {
+            var processService = new Mock<IProcessService>(MockBehavior.Loose);
+            var gameModeService = new Mock<IGameModeService>(MockBehavior.Loose);
+            var initial = new ApplicationSettingsModel { PollingIntervalMs = 2345 };
+            var settingsService = new Mock<IApplicationSettingsService>(MockBehavior.Loose);
+            settingsService.SetupGet(service => service.Settings).Returns(initial);
+            using var viewModel = CreateViewModel(
+                processService.Object,
+                gameModeService.Object,
+                cpuTopologyProvider: null,
+                settingsService: settingsService.Object);
+            var timer = (System.Timers.Timer)typeof(ProcessViewModel)
+                .GetField("refreshTimer", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .GetValue(viewModel)!;
+
+            Assert.Equal(2345, timer.Interval);
+
+            var updated = (ApplicationSettingsModel)initial.Clone();
+            updated.PollingIntervalMs = 6789;
+            settingsService.Raise(
+                service => service.SettingsChanged += null,
+                new ApplicationSettingsChangedEventArgs(initial, updated, [nameof(ApplicationSettingsModel.PollingIntervalMs)]));
+
+            Assert.Equal(6789, timer.Interval);
+        }
+
+        [Fact]
+        public void SelectingProcessInCpuSetsMode_SynchronizesCheckboxesFromWindowsCpuSets()
+        {
+            var processService = new Mock<IProcessService>(MockBehavior.Loose);
+            processService.Setup(service => service.IsProcessStillRunning(It.IsAny<ProcessModel>())).ReturnsAsync(true);
+            processService.Setup(service => service.RefreshProcessInfo(It.IsAny<ProcessModel>())).Returns(Task.CompletedTask);
+            processService
+                .Setup(service => service.GetCpuAssignmentLogicalProcessorIndexesAsync(
+                    It.IsAny<ProcessModel>(), CpuAssignmentMode.CpuSets))
+                .ReturnsAsync([0]);
+            var gameModeService = new Mock<IGameModeService>(MockBehavior.Loose);
+            var settings = new ApplicationSettingsModel { DefaultCpuAssignmentMode = CpuAssignmentMode.AffinityMask };
+            var settingsService = new Mock<IApplicationSettingsService>(MockBehavior.Loose);
+            settingsService.SetupGet(service => service.Settings).Returns(settings);
+            using var viewModel = CreateViewModel(
+                processService.Object,
+                gameModeService.Object,
+                cpuTopologyProvider: null,
+                settingsService: settingsService.Object);
+            viewModel.CpuTopology = CreateTwoCoreTopology();
+            viewModel.CpuCores = new System.Collections.ObjectModel.ObservableCollection<CpuCoreModel>(
+                viewModel.CpuTopology.LogicalCores);
+
+            viewModel.SelectedProcess = new ProcessModel
+            {
+                ProcessId = 1234,
+                Name = "Game",
+                ProcessorAffinity = 3,
+            };
+
+            Assert.True(SpinWait.SpinUntil(
+                () => viewModel.CpuCores[0].IsSelected && !viewModel.CpuCores[1].IsSelected,
+                TimeSpan.FromSeconds(2)));
+            Assert.Equal("Current CPU Sets: CPU 0", viewModel.CurrentAffinityText);
+        }
+
         private static ProcessViewModel CreateViewModel(IProcessService processService, IGameModeService gameModeService)
             => CreateViewModel(processService, gameModeService, cpuTopologyProvider: null);
 
         private static ProcessViewModel CreateViewModel(
             IProcessService processService,
             IGameModeService gameModeService,
-            ICpuTopologyProvider? cpuTopologyProvider)
+            ICpuTopologyProvider? cpuTopologyProvider,
+            IApplicationSettingsService? settingsService = null)
         {
             var virtualizedProcessService = new Mock<IVirtualizedProcessService>(MockBehavior.Loose);
             virtualizedProcessService.SetupProperty(
@@ -116,7 +181,8 @@ namespace ThreadPilot.Core.Tests
                 coreMaskService.Object,
                 associationService.Object,
                 gameModeService,
-                cpuTopologyProvider: cpuTopologyProvider);
+                cpuTopologyProvider: cpuTopologyProvider,
+                settingsService: settingsService);
         }
 
         private static CpuTopologyModel CreateTwoCoreTopology()

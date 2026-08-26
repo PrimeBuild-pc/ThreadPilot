@@ -541,6 +541,12 @@ namespace ThreadPilot.Services
             bool canCreateNoSmtVariants = topologyConfident && hasHyperThreading;
             bool changed = false;
 
+            // Only rewrite already-stored masks when the core count came from a successful
+            // topology detection. Environment.ProcessorCount (the ResolveLogicalCoreCount
+            // fallback) can under-report under affinity/job-object limits, and resizing masks
+            // to a wrong length would silently redefine them.
+            bool canReconcileLengths = topologyConfident && coreCount > 0;
+
             // Collect all default masks with their "no SMT" variants
             var defaultMasks = new List<(string name, List<bool> boolMask, string description)>();
 
@@ -562,7 +568,7 @@ namespace ThreadPilot.Services
                 allCoresMask.BoolMask.Add(true);
             }
 
-            changed |= this.AddBuiltInMaskIfMissing(allCoresMask);
+            changed |= this.AddOrReconcileBuiltInMask(allCoresMask, canReconcileLengths);
 
             if (coreCount > 1)
             {
@@ -579,7 +585,7 @@ namespace ThreadPilot.Services
                     noCoreZeroMask.BoolMask.Add(i != 0);
                 }
 
-                changed |= this.AddBuiltInMaskIfMissing(noCoreZeroMask);
+                changed |= this.AddOrReconcileBuiltInMask(noCoreZeroMask, canReconcileLengths);
             }
 
             // 2. Intel Hybrid Architecture: P-Cores, E-Cores, LPE-Cores (Arrow Lake+)
@@ -690,7 +696,7 @@ namespace ThreadPilot.Services
             // Add all generated masks to AvailableMasks
             foreach (var mask in resultMasks)
             {
-                changed |= this.AddBuiltInMaskIfMissing(mask);
+                changed |= this.AddOrReconcileBuiltInMask(mask, canReconcileLengths);
             }
 
             await Task.CompletedTask;
@@ -707,17 +713,45 @@ namespace ThreadPilot.Services
             return Environment.ProcessorCount;
         }
 
-        private bool AddBuiltInMaskIfMissing(CoreMask mask)
+        private bool AddOrReconcileBuiltInMask(CoreMask mask, bool reconcileLength)
         {
-            if (this.AvailableMasks.Any(existing =>
-                existing.Name.Equals(mask.Name, StringComparison.OrdinalIgnoreCase)))
+            var existing = this.AvailableMasks.FirstOrDefault(m =>
+                m.Name.Equals(mask.Name, StringComparison.OrdinalIgnoreCase));
+
+            if (existing == null)
+            {
+                this.AvailableMasks.Add(mask);
+                this.logger.LogInformation("Backfilled built-in core mask '{Name}'", mask.Name);
+                return true;
+            }
+
+            if (!reconcileLength || existing.BoolMask.Count == mask.BoolMask.Count)
             {
                 return false;
             }
 
-            this.AvailableMasks.Add(mask);
-            this.logger.LogInformation("Backfilled built-in core mask '{Name}'", mask.Name);
+            this.logger.LogInformation(
+                "Re-derived built-in core mask '{Name}' ({Id}) from the current topology: stored {OldCount} logical CPUs, machine has {NewCount}",
+                existing.Name, existing.Id, existing.BoolMask.Count, mask.BoolMask.Count);
+
+            ReplaceBoolMask(existing, mask.BoolMask);
             return true;
+        }
+
+        private static void ReplaceBoolMask(CoreMask mask, IEnumerable<bool> bits)
+        {
+            mask.BoolMask.Clear();
+            foreach (var bit in bits)
+            {
+                mask.BoolMask.Add(bit);
+            }
+
+            // Drop the stale CpuSelection so it is re-derived from the new BoolMask by
+            // ApplyCpuSelectionMigrationAsync (which skips masks that already have one).
+            mask.CpuSelection = null;
+            mask.CpuSelectionMigration = null;
+            mask.ProfileSchemaVersion = CpuAffinityProfileSchemaVersions.Legacy;
+            mask.UpdatedAt = DateTime.UtcNow;
         }
 
         private async Task CreateAmdCcdMasksAsync(

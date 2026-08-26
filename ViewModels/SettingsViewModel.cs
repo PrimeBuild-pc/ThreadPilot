@@ -329,12 +329,16 @@ namespace ThreadPilot.ViewModels
 
                 // Handle autostart setting
                 var currentAutostartState = await this.autostartService.CheckAutostartStatusAsync();
-                if (this.Settings.AutostartWithWindows != currentAutostartState)
+                var startMinimizedChanged = this.Settings.StartMinimized != this.savedSettingsSnapshot.StartMinimized;
+                if (this.Settings.AutostartWithWindows != currentAutostartState ||
+                    (currentAutostartState && startMinimizedChanged))
                 {
                     bool autostartUpdated;
                     if (this.Settings.AutostartWithWindows)
                     {
-                        autostartUpdated = await this.autostartService.EnableAutostartAsync(this.Settings.StartMinimized);
+                        autostartUpdated = currentAutostartState
+                            ? await this.autostartService.UpdateAutostartAsync(this.Settings.StartMinimized)
+                            : await this.autostartService.EnableAutostartAsync(this.Settings.StartMinimized);
                     }
                     else
                     {
