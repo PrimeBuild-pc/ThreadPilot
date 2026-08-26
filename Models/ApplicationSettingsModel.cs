@@ -170,6 +170,11 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private bool hasSeenCpuAssignmentModeChangeNotice;
 
+        // Separate from the profile flag above: profiles were migrated in 1.7.2, saved rules
+        // were not, so a shared flag would skip the rules of everyone already on 1.7.2.
+        [ObservableProperty]
+        private bool hasMigratedPersistentRuleCpuAssignmentModes;
+
         // Advanced Settings
         [ObservableProperty]
         private bool enableDebugLogging = false;
@@ -272,6 +277,7 @@ namespace ThreadPilot.Models
             this.HasSeenStartupMinimizedSuggestion = other.HasSeenStartupMinimizedSuggestion;
             this.HasMigratedCpuAssignmentModeDefault = other.HasMigratedCpuAssignmentModeDefault;
             this.HasSeenCpuAssignmentModeChangeNotice = other.HasSeenCpuAssignmentModeChangeNotice;
+            this.HasMigratedPersistentRuleCpuAssignmentModes = other.HasMigratedPersistentRuleCpuAssignmentModes;
             this.EnableSelfLowImpactMode = other.EnableSelfLowImpactMode;
             this.EnableSelfAffinityLimit = other.EnableSelfAffinityLimit;
             this.MaxLogFileSizeMb = other.MaxLogFileSizeMb;

@@ -578,6 +578,50 @@ namespace ThreadPilot
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to load settings: {ex.Message}");
             }
+
+            await this.MigratePersistentRuleCpuAssignmentModesAsync();
+        }
+
+        // A rule stores the CPU assignment mode it was saved with, so the 1.7.2 profile migration
+        // leaves rules captured before 1.7.1 on Automatic: they keep applying CPU Sets on every
+        // process start, which changes nothing the user can see. Move them once, here rather than
+        // in the settings service, which has no business knowing about the rule store.
+        private async Task MigratePersistentRuleCpuAssignmentModesAsync()
+        {
+            var settings = this.settingsService.Settings;
+            if (settings.HasMigratedPersistentRuleCpuAssignmentModes)
+            {
+                return;
+            }
+
+            try
+            {
+                var ruleStore = this.serviceProvider.GetService<IPersistentProcessRuleStore>();
+                if (ruleStore == null)
+                {
+                    return;
+                }
+
+                var rules = await ruleStore.LoadAsync();
+                var migrated = CpuAssignmentModeMigrationPolicy.ApplyToRules(rules);
+                if (migrated != null)
+                {
+                    await ruleStore.SaveAsync(migrated);
+                    var movedCount = rules
+                        .Zip(migrated, (before, after) => before.CpuAssignmentMode != after.CpuAssignmentMode)
+                        .Count(moved => moved);
+                    this.LogDebug($"Migrated {movedCount} saved rule(s) from Automatic to Affinity Mask");
+                }
+
+                // Only after the rules have reached disk: a failed write has to be retried on the
+                // next launch, not recorded as done.
+                settings.HasMigratedPersistentRuleCpuAssignmentModes = true;
+                await this.settingsService.UpdateSettingsAsync(settings);
+            }
+            catch (Exception ex)
+            {
+                this.LogDebug($"Could not migrate saved rule CPU assignment modes: {ex.Message}");
+            }
         }
 
         private async Task InitializeSystemTrayAsync()
