@@ -298,13 +298,40 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public void LegacyActionSidePanel_IsNotPersistentPrimaryUi()
+        public void LegacyActionSidePanel_IsGoneAndItsControlsLiveInTheVisiblePicker()
         {
+            // The legacy side panel was Visibility="Collapsed" from v1.2.0 onwards, so the CPU
+            // assignment mode picker and Apply button that v1.6.0 added to it were never on screen.
+            // They now live in the Advanced Affinity Picker; nothing may be parked in a hidden pane.
             var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);
             var serialized = document.ToString(SaveOptions.DisableFormatting);
 
-            Assert.Contains("Grid.Column=\"2\" Visibility=\"Collapsed\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("ProcessView_AdvancedAffinityPicker", serialized, StringComparison.Ordinal);
+            var picker = Assert.Single(
+                document.Descendants(),
+                element => element.Name.LocalName == "Expander" &&
+                    element.Attributes().Any(attribute =>
+                        attribute.Value.Contains("ProcessView_AdvancedAffinityPicker", StringComparison.Ordinal)));
+            var pickerXml = picker.ToString(SaveOptions.DisableFormatting);
+
+            // The picker now holds the primary apply action, so it must start open.
+            Assert.Equal("True", picker.Attribute("IsExpanded")?.Value);
+            Assert.Contains("SelectedCpuAssignmentMode", pickerXml, StringComparison.Ordinal);
+            Assert.Contains("SetAffinityCommand", pickerXml, StringComparison.Ordinal);
+            Assert.Contains("ProcessView_CpuCoresReadOnlyHint", pickerXml, StringComparison.Ordinal);
+
+            // No control a user clicks may be parked in a statically collapsed container again.
+            // ControlTemplate parts are exempt: a template child collapsed by default and revealed
+            // by a trigger is normal WPF, and its Visibility says nothing about what is on screen.
+            var hiddenCommands = document
+                .Descendants()
+                .Where(element => element.Attribute("Command") != null)
+                .Where(element => !element.Ancestors().Any(ancestor => ancestor.Name.LocalName == "ControlTemplate"))
+                .Where(element => element.AncestorsAndSelf().Any(ancestor =>
+                    ancestor.Attribute("Visibility")?.Value == "Collapsed"))
+                .Select(element => element.Attribute("Command")!.Value)
+                .ToList();
+
+            Assert.Empty(hiddenCommands);
         }
 
         private static string GetRepositoryRoot()
