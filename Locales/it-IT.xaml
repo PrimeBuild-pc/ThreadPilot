@@ -312,7 +312,10 @@
     <sys:String x:Key="ProcessView_AffinityStagedTooltip">Selezione CPU preparata nell’interfaccia. Viene applicata solo tramite Applica assegnazione CPU.</sys:String>
     <sys:String x:Key="ProcessView_AffinityCurrentTooltip">Affinità attualmente segnalata da Windows per il processo selezionato</sys:String>
     <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Anteprima di sola lettura della selezione CPU — scegli una maschera in 'Maschera core in sospeso' per modificarla.</sys:String>
-    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">Solo anteprima — queste caselle mostrano la selezione CPU, non sono cliccabili. Scegli una maschera in 'Maschera core in sospeso' qui sopra per preparare una selezione diversa (le maschere si creano nella scheda Maschere CPU).</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">Solo anteprima — queste etichette mostrano quali CPU sono selezionate, non sono cliccabili. Scegli una maschera in 'Maschera core in sospeso' qui sopra per preparare una selezione diversa (le maschere si creano nella scheda Maschere CPU).</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreSelected">Selezionata</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreNotSelected">Non selezionata</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreUnavailable">Non disponibile</sys:String>
     <sys:String x:Key="ProcessView_OpenMasksTabTooltip">Apri la scheda CPU Maschere per creare una nuova maschera personalizzata</sys:String>
     <sys:String x:Key="ProcessView_HyperThreadingTooltip">Mostra se Hyper-Threading (Intel) o SMT (AMD) è presente e attivo su questo sistema</sys:String>
 
@@ -578,6 +581,8 @@
     <sys:String x:Key="SystemTweak_GpuMsiMode_Name">Modalità MSI GPU</sys:String>
     <sys:String x:Key="SystemTweak_GpuMsiMode_Desc">Controlla MSI solo se il driver video espone già MSISupported. È necessario riavviare.</sys:String>
     <sys:String x:Key="SystemTweaks_OpenSettings">Apri impostazioni</sys:String>
+    <sys:String x:Key="SystemTweaks_ToggleOn">ON</sys:String>
+    <sys:String x:Key="SystemTweaks_ToggleOff">OFF</sys:String>
     <sys:String x:Key="SystemTweaks_StatusManagedByWindows">Gestito da Windows</sys:String>
     <sys:String x:Key="SystemTweaks_StatusOpenSettingsFailed">Impossibile aprire le impostazioni di Windows</sys:String>
     <sys:String x:Key="SystemTweaks_StatusSettingsOpenedFormat">Impostazioni aperte per {0}</sys:String>

@@ -2,6 +2,30 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.7.1 - CPU affinity apply fixes
+
+### Fixed
+
+- Applying a saved rule or a Rules-tab core mask now changes the CPU affinity Windows actually enforces. `SetProcessorAffinity` substituted a CPU Sets hint for the hard affinity write, so the caller's read-back never matched and every apply reported a verification failure while the affinity was left untouched.
+- The default CPU assignment mode is now `Affinity Mask`. The previous `ThreadPilot automatic` default applied only CPU Sets, a soft scheduling preference that leaves the affinity mask in Task Manager unchanged, and reported it as "Affinity applied successfully".
+- A CPU Sets result no longer claims an affinity was applied. It states that the assignment is a soft preference and that the Task Manager affinity mask is unchanged.
+- "Save Current Settings as Rule" no longer saves a rule pinned to every CPU. It captured the core selection only while edits were staged, otherwise falling back to a process affinity that the soft modes never changed.
+- `Automatic` mode no longer installs CPU Sets that a pre-existing hard affinity prevents Windows from honouring. It applies the hard affinity instead, which can actually replace the restriction.
+- Saved rules resolve CPU Sets from the current topology instead of trusting the CPU Set IDs stored when the rule was created. A stale rule now reports an invalid topology rather than silently pinning the wrong CPUs.
+- Affinity masks that include CPU 63 are no longer discarded. They are negative as signed 64-bit values and were rejected by magnitude comparisons.
+
+### Changed
+
+- The CPU assignment mode picker and the Apply CPU Assignment button are now on screen. They were added to a side panel that has been collapsed since v1.2.0, so neither had ever been reachable; the only way to apply affinity was the process context menu. Both now live in the Advanced Affinity Picker, which starts expanded.
+- The per-CPU cells in the Advanced Affinity Picker are read-only chips rather than checkboxes, with a hint explaining that a selection is staged through the pending core mask. They were never clickable; they only looked it.
+- System tweak toggles are larger and state ON or OFF inside the track, replacing the unlabelled 40x20 switch.
+- Saving a rule from the process context menu explains that the rule is re-applied automatically on process start and is separate from the Rules tab.
+- Removed the collapsed legacy side panel, an unreachable Process tab command, and an unused XML namespace.
+
+### Localization
+
+- Fixed "core mask" mistranslations in the Italian, Spanish, French and Russian locales, and German phrasing for the Rules tab and power plans.
+
 ## v1.7.0 - Gaming and device tuning
 
 ### Added

@@ -312,7 +312,10 @@
     <sys:String x:Key="ProcessView_AffinityStagedTooltip">CPU 选择已暂存，仅通过“应用 CPU 分配”应用。</sys:String>
     <sys:String x:Key="ProcessView_AffinityCurrentTooltip">Windows 当前报告的所选进程的关联性</sys:String>
     <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">CPU 选择的只读预览 — 请在“待处理的核心掩码”中更改。</sys:String>
-    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">仅供预览 — 这些复选框显示 CPU 选择，不可点击。请在上方的“待处理的核心掩码”中选择一个掩码以准备其他选择（掩码在“CPU 掩码”选项卡中创建）。</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">仅供预览 — 这些标签显示已选中的 CPU，不可点击。请在上方的“待处理的核心掩码”中选择一个掩码以准备其他选择（掩码在“CPU 掩码”选项卡中创建）。</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreSelected">已选中</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreNotSelected">未选中</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreUnavailable">不可用</sys:String>
     <sys:String x:Key="ProcessView_OpenMasksTabTooltip">打开 CPU 掩码选项卡以创建新的自定义掩码</sys:String>
     <sys:String x:Key="ProcessView_HyperThreadingTooltip">显示此系统上是否具有并启用了超线程 (Intel) 或 SMT (AMD)</sys:String>
     
@@ -578,6 +581,8 @@
     <sys:String x:Key="SystemTweak_GpuMsiMode_Name">GPU MSI 模式</sys:String>
     <sys:String x:Key="SystemTweak_GpuMsiMode_Desc">仅当显示驱动已公开 MSISupported 时控制 MSI。需要重启。</sys:String>
     <sys:String x:Key="SystemTweaks_OpenSettings">打开设置</sys:String>
+    <sys:String x:Key="SystemTweaks_ToggleOn">开</sys:String>
+    <sys:String x:Key="SystemTweaks_ToggleOff">关</sys:String>
     <sys:String x:Key="SystemTweaks_StatusManagedByWindows">由 Windows 管理</sys:String>
     <sys:String x:Key="SystemTweaks_StatusOpenSettingsFailed">无法打开 Windows 设置</sys:String>
     <sys:String x:Key="SystemTweaks_StatusSettingsOpenedFormat">已打开 {0} 的设置</sys:String>

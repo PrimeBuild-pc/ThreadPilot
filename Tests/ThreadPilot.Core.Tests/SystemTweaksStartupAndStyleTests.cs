@@ -17,14 +17,44 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public void TweaksView_UsesNativeFluentToggleSwitch()
+        public void TweaksView_UsesLabelledPillToggle()
         {
+            // The native ui:ToggleSwitch is 40x20 with no text, too quiet to read as a control on
+            // this list. The pill states ON/OFF inside the track and is sized to be obvious.
             var document = XDocument.Load(GetRepositoryFilePath("Views", "SystemTweaksView.xaml"));
             var serialized = document.ToString(SaveOptions.DisableFormatting);
 
-            Assert.Contains("ToggleSwitch", serialized, StringComparison.Ordinal);
+            Assert.Contains("PillToggleButtonStyle", serialized, StringComparison.Ordinal);
             Assert.Contains("AutomationProperties.Name=\"{Binding Name}\"", serialized, StringComparison.Ordinal);
-            Assert.DoesNotContain("PillToggleButtonStyle", serialized, StringComparison.Ordinal);
+            Assert.Contains("SystemTweaks_ToggleOn", serialized, StringComparison.Ordinal);
+            Assert.Contains("SystemTweaks_ToggleOff", serialized, StringComparison.Ordinal);
+
+            // The label and the thumb must be docked rather than stacked: a long localized label
+            // (ru "ВЫКЛ") has to widen the pill, not slide underneath the thumb.
+            var track = Assert.Single(
+                document.Descendants(),
+                element => element.Name.LocalName == "Border" &&
+                    element.Attributes().Any(attribute =>
+                        attribute.Name.LocalName == "Name" && attribute.Value == "Track"));
+            Assert.Single(track.Descendants(), element => element.Name.LocalName == "DockPanel");
+
+            var pill = Assert.Single(
+                document.Descendants(),
+                element => element.Name.LocalName == "Style" &&
+                    element.Attributes().Any(attribute =>
+                        attribute.Name.LocalName == "Key" && attribute.Value == "PillToggleButtonStyle"));
+            var setters = pill
+                .Elements()
+                .Where(element => element.Name.LocalName == "Setter")
+                .ToDictionary(
+                    element => element.Attribute("Property")!.Value,
+                    element => element.Attribute("Value")?.Value,
+                    StringComparer.Ordinal);
+
+            // MinWidth, never Width: a fixed track clips the wider locales.
+            Assert.Equal("56", setters["MinWidth"]);
+            Assert.Equal("28", setters["Height"]);
+            Assert.False(setters.ContainsKey("Width"));
         }
 
         [Fact]

@@ -312,7 +312,10 @@
     <sys:String x:Key="ProcessView_AffinityStagedTooltip">CPU selection staged in the UI. It is applied only through Apply CPU Assignment.</sys:String>
     <sys:String x:Key="ProcessView_AffinityCurrentTooltip">Affinity currently reported by Windows for the selected process</sys:String>
     <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Read-only preview of the CPU selection — choose a mask under 'Pending core mask' to change it.</sys:String>
-    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">Preview only — these boxes show the CPU selection, they are not clickable. Choose a mask from 'Pending core mask' above to stage a different selection (create masks in the CPU Masks tab).</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">Preview only — these tags show which CPUs are selected, they are not clickable. Choose a mask from 'Pending core mask' above to stage a different selection (create masks in the CPU Masks tab).</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreSelected">Selected</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreNotSelected">Not selected</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreUnavailable">Unavailable</sys:String>
     <sys:String x:Key="ProcessView_OpenMasksTabTooltip">Open CPU Masks tab to create a new custom mask</sys:String>
     <sys:String x:Key="ProcessView_HyperThreadingTooltip">Shows whether Hyper-Threading (Intel) or SMT (AMD) is present and active on this system</sys:String>
     
@@ -578,6 +581,8 @@
     <sys:String x:Key="SystemTweak_GpuMsiMode_Name">GPU MSI Mode</sys:String>
     <sys:String x:Key="SystemTweak_GpuMsiMode_Desc">Controls MSI only when the display driver already exposes MSISupported. A restart is required.</sys:String>
     <sys:String x:Key="SystemTweaks_OpenSettings">Open settings</sys:String>
+    <sys:String x:Key="SystemTweaks_ToggleOn">ON</sys:String>
+    <sys:String x:Key="SystemTweaks_ToggleOff">OFF</sys:String>
     <sys:String x:Key="SystemTweaks_StatusManagedByWindows">Managed by Windows</sys:String>
     <sys:String x:Key="SystemTweaks_StatusOpenSettingsFailed">Could not open Windows settings</sys:String>
     <sys:String x:Key="SystemTweaks_StatusSettingsOpenedFormat">Opened settings for {0}</sys:String>

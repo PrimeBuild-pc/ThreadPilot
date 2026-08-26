@@ -312,7 +312,10 @@
     <sys:String x:Key="ProcessView_AffinityStagedTooltip">Sélection CPU préparée dans l’interface. Elle est appliquée uniquement via Appliquer l’affectation CPU.</sys:String>
     <sys:String x:Key="ProcessView_AffinityCurrentTooltip">Affinité actuellement signalée par Windows pour le processus sélectionné</sys:String>
     <sys:String x:Key="ProcessView_CpuSelectionPreviewTooltip">Aperçu en lecture seule de la sélection CPU — modifiez-la via 'Masque de cœurs en attente'.</sys:String>
-    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">Aperçu uniquement — ces cases indiquent la sélection CPU, elles ne sont pas cliquables. Choisissez un masque dans 'Masque de cœurs en attente' ci-dessus pour préparer une autre sélection (créez les masques dans l'onglet Masques CPU).</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoresReadOnlyHint">Aperçu uniquement — ces étiquettes indiquent les CPU sélectionnés, elles ne sont pas cliquables. Choisissez un masque dans 'Masque de cœurs en attente' ci-dessus pour préparer une autre sélection (créez les masques dans l'onglet Masques CPU).</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreSelected">Sélectionné</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreNotSelected">Non sélectionné</sys:String>
+    <sys:String x:Key="ProcessView_CpuCoreUnavailable">Indisponible</sys:String>
     <sys:String x:Key="ProcessView_OpenMasksTabTooltip">Ouvrez l'onglet CPU Masques pour créer un nouveau masque personnalisé.</sys:String>
     <sys:String x:Key="ProcessView_HyperThreadingTooltip">Indique si Hyper-Threading (Intel) ou SMT (AMD) est présent et actif sur ce système</sys:String>
 
@@ -578,6 +581,8 @@
     <sys:String x:Key="SystemTweak_GpuMsiMode_Name">Mode MSI du GPU</sys:String>
     <sys:String x:Key="SystemTweak_GpuMsiMode_Desc">Contrôle MSI uniquement si le pilote graphique expose déjà MSISupported. Redémarrage requis.</sys:String>
     <sys:String x:Key="SystemTweaks_OpenSettings">Ouvrir les paramètres</sys:String>
+    <sys:String x:Key="SystemTweaks_ToggleOn">OUI</sys:String>
+    <sys:String x:Key="SystemTweaks_ToggleOff">NON</sys:String>
     <sys:String x:Key="SystemTweaks_StatusManagedByWindows">Géré par Windows</sys:String>
     <sys:String x:Key="SystemTweaks_StatusOpenSettingsFailed">Impossible d'ouvrir les paramètres Windows</sys:String>
     <sys:String x:Key="SystemTweaks_StatusSettingsOpenedFormat">Paramètres ouverts pour {0}</sys:String>
