@@ -19,6 +19,8 @@ namespace ThreadPilot.ViewModels
     {
         public event EventHandler? OpenRulesRequested;
 
+        public event EventHandler? OpenMasksRequested;
+
         private readonly IProcessService processService;
         private readonly ProcessFilterService processFilterService;
         private readonly IVirtualizedProcessService virtualizedProcessService;

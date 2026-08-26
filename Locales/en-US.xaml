@@ -238,6 +238,14 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_DescriptionLabel">Description:</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_AutomationService">Automation Service</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_RulesHeader">Rules</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulesHeader">Saved process rules</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulesDescription">Rules saved from the Process tab. ThreadPilot re-applies them to that process every time it starts, while automation monitoring is on. These are separate from the power plan rules above, which switch the global Windows power plan.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleProcess">Process</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleApplies">Applies</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMode">Mode</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleUpdated">Updated</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleDelete">Delete</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_NoSavedRules">No saved process rules yet. Right-click a process in the Process tab and choose Rules to save one.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">Executable</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_PowerPlan">Power Plan</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_CpuMask">CPU Mask</sys:String>

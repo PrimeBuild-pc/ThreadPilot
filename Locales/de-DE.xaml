@@ -238,6 +238,14 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_DescriptionLabel">Beschreibung:</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_AutomationService">Automatisierungsdienst</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_RulesHeader">Regeln</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulesHeader">Gespeicherte Prozessregeln</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulesDescription">Regeln, die auf der Registerkarte Prozesse gespeichert wurden. ThreadPilot wendet sie bei jedem Start des Prozesses erneut an, solange die Automatisierungsüberwachung aktiv ist. Sie sind getrennt von den Energieplanregeln oben, die den globalen Windows-Energieplan umschalten.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleProcess">Prozess</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleApplies">Wendet an</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMode">Modus</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleUpdated">Aktualisiert</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleDelete">Löschen</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_NoSavedRules">Noch keine gespeicherten Prozessregeln. Klicken Sie auf der Registerkarte Prozesse mit der rechten Maustaste auf einen Prozess und wählen Sie Regeln.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">Ausführbar</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_PowerPlan">Energieplan</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_CpuMask">CPU Maske</sys:String>

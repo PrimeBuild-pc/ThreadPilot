@@ -1,6 +1,7 @@
 namespace ThreadPilot.ViewModels
 {
     using System;
+    using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.IO;
     using System.Linq;
@@ -21,6 +22,8 @@ namespace ThreadPilot.ViewModels
         private readonly IProcessService processService;
         private readonly IProcessMonitorManagerService monitorManagerService;
         private readonly ICoreMaskService coreMaskService;
+        private readonly IPersistentProcessRuleStore? persistentRuleStore;
+        private readonly IProcessRuleCreationService? ruleCreationService;
         private bool isInitialized;
         private readonly ILocalizationService? localizationService;
 
@@ -110,7 +113,9 @@ namespace ThreadPilot.ViewModels
             IProcessMonitorManagerService monitorManagerService,
             ICoreMaskService coreMaskService,
             IEnhancedLoggingService? enhancedLoggingService = null,
-            ILocalizationService? localizationService = null)
+            ILocalizationService? localizationService = null,
+            IPersistentProcessRuleStore? persistentRuleStore = null,
+            IProcessRuleCreationService? ruleCreationService = null)
             : base(logger, enhancedLoggingService)
         {
             this.associationService = associationService ?? throw new ArgumentNullException(nameof(associationService));
@@ -119,11 +124,105 @@ namespace ThreadPilot.ViewModels
             this.monitorManagerService = monitorManagerService ?? throw new ArgumentNullException(nameof(monitorManagerService));
             this.coreMaskService = coreMaskService ?? throw new ArgumentNullException(nameof(coreMaskService));
             this.localizationService = localizationService;
+            this.persistentRuleStore = persistentRuleStore;
+            this.ruleCreationService = ruleCreationService;
 
             // Subscribe to events
             this.associationService.ConfigurationChanged += this.OnConfigurationChanged;
             this.monitorManagerService.ServiceStatusChanged += this.OnServiceStatusChanged;
             this.monitorManagerService.ProcessPowerPlanChanged += this.OnProcessPowerPlanChanged;
+        }
+
+        // The per-process rules saved from the Process tab context menu. They are a different thing
+        // from the associations above - those switch the global power plan, these re-apply a
+        // process's own settings - and until they were listed here there was no way to see, or
+        // remove, a rule you had saved.
+        public ObservableCollection<SavedProcessRule> SavedProcessRules { get; } = new();
+
+        [ObservableProperty]
+        private bool hasSavedProcessRules;
+
+        public async Task RefreshSavedProcessRulesAsync()
+        {
+            if (this.persistentRuleStore == null)
+            {
+                return;
+            }
+
+            try
+            {
+                var rules = await this.persistentRuleStore.LoadAsync().ConfigureAwait(true);
+                this.SavedProcessRules.Clear();
+                foreach (var rule in rules.OrderBy(rule => rule.ProcessName, StringComparer.OrdinalIgnoreCase))
+                {
+                    this.SavedProcessRules.Add(SavedProcessRule.From(rule));
+                }
+
+                this.HasSavedProcessRules = this.SavedProcessRules.Count > 0;
+            }
+            catch (Exception ex)
+            {
+                this.Logger.LogWarning(ex, "Could not load saved process rules for the Rules tab");
+            }
+        }
+
+        [RelayCommand]
+        private async Task DeleteSavedProcessRuleAsync(SavedProcessRule? rule)
+        {
+            if (rule == null || this.ruleCreationService == null)
+            {
+                return;
+            }
+
+            var result = await this.ruleCreationService.DeleteRuleByIdAsync(rule.Id).ConfigureAwait(true);
+            this.SetStatus(result.UserMessage, false);
+            await this.RefreshSavedProcessRulesAsync().ConfigureAwait(true);
+        }
+
+        public sealed record SavedProcessRule(
+            string Id,
+            string ProcessName,
+            string Applies,
+            string Mode,
+            bool IsEnabled,
+            DateTime UpdatedAt)
+        {
+            public static SavedProcessRule From(PersistentProcessRule rule)
+            {
+                var applies = new List<string>();
+                if (rule.ApplyAffinityOnStart)
+                {
+                    applies.Add("CPU assignment");
+                }
+
+                if (rule.ApplyPriorityOnStart && rule.Priority.HasValue)
+                {
+                    applies.Add($"priority {rule.Priority}");
+                }
+
+                if (rule.ApplyMemoryPriorityOnStart && rule.MemoryPriority.HasValue)
+                {
+                    applies.Add($"memory {rule.MemoryPriority}");
+                }
+
+                if (rule.ApplyIoPriorityOnStart && rule.IoPriority.HasValue)
+                {
+                    applies.Add($"I/O {rule.IoPriority}");
+                }
+
+                if (rule.PreventSystemSleepWhileRunning)
+                {
+                    applies.Add("keeps the system awake");
+                }
+
+                return new SavedProcessRule(
+                    rule.Id,
+                    string.IsNullOrWhiteSpace(rule.ProcessName) ? "(unnamed)" : rule.ProcessName,
+                    applies.Count == 0 ? "nothing" : string.Join(", ", applies),
+                    rule.ApplyAffinityOnStart ? rule.CpuAssignmentMode.ToString() : "-",
+                    rule.IsEnabled,
+                    rule.UpdatedAt.ToLocalTime());
+            }
         }
 
         protected override void OnDispose()
@@ -143,6 +242,7 @@ namespace ThreadPilot.ViewModels
 
             this.isInitialized = true;
             await this.LoadDataAsync();
+            await this.RefreshSavedProcessRulesAsync();
             this.UpdateServiceStatus();
         }
 

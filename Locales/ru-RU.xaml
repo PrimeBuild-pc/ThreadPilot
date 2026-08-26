@@ -238,6 +238,14 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_DescriptionLabel">Описание:</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_AutomationService">Служба автоматизации</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_RulesHeader">Правила</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulesHeader">Сохранённые правила процессов</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulesDescription">Правила, сохранённые на вкладке «Процессы». ThreadPilot применяет их к процессу при каждом запуске, пока включён автоматический мониторинг. Они отличаются от правил схем питания выше, которые переключают глобальную схему питания Windows.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleProcess">Процесс</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleApplies">Применяет</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMode">Режим</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleUpdated">Обновлено</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleDelete">Удалить</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_NoSavedRules">Сохранённых правил процессов пока нет. Щёлкните процесс правой кнопкой на вкладке «Процессы» и выберите «Правила».</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">Исполняемый файл</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_PowerPlan">План электропитания</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_CpuMask">CPU Маска</sys:String>

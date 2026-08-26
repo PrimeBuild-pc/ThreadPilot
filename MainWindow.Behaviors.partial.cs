@@ -1604,6 +1604,11 @@ namespace ThreadPilot
             this.SelectMainTab("Rules");
         }
 
+        private void OnOpenMasksRequested(object? sender, EventArgs e)
+        {
+            this.SelectMainTab("Masks");
+        }
+
         private void ShowWindowFromTray(string? tabTag = null)
         {
             this.ShowInTaskbar = true;
@@ -2030,6 +2035,18 @@ namespace ThreadPilot
             this.SystemTweaksView.Visibility = tag == "Tweaks" ? Visibility.Visible : Visibility.Collapsed;
             this.SettingsView.Visibility = tag == "Settings" ? Visibility.Visible : Visibility.Collapsed;
 
+            if (string.Equals(tag, "Rules", StringComparison.Ordinal))
+            {
+                // Re-read on every visit: a rule saved from the Process tab a moment ago has to be
+                // there when the user comes to look for it.
+                // ponytail: refresh on show, not a store change event - the two views are never
+                // visible at the same time. Revisit if a rule can ever be written while this is up.
+                TaskSafety.FireAndForget(this.associationViewModel.RefreshSavedProcessRulesAsync(), ex =>
+                {
+                    this.LogDebug($"Refreshing saved process rules failed: {ex.Message}");
+                });
+            }
+
             this.NavProcess.IsActive = tag == "Process";
             this.NavMasks.IsActive = tag == "Masks";
             this.NavPower.IsActive = tag == "Power";
@@ -2201,6 +2218,7 @@ namespace ThreadPilot
             {
                 this.Loaded -= this.OnWindowLoaded;
                 this.processViewModel.OpenRulesRequested -= this.OnOpenRulesRequested;
+                this.processViewModel.OpenMasksRequested -= this.OnOpenMasksRequested;
 
                 this.settingsService.SettingsChanged -= this.OnSettingsChanged;
                 this.processMonitorService.MonitoringStatusChanged -= this.OnMonitoringStatusChanged;
