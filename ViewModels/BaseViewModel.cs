@@ -77,6 +77,15 @@ namespace ThreadPilot.ViewModels
                 return;
             }
 
+            // A completion message is not busy state: SetStatus(..., isBusyState: false) already
+            // gave it a fade lifetime of its own. Blanking it here is what made every successful
+            // apply vanish instantly, while failures - which take the preserved path above - stayed
+            // on screen. Clearing belongs to progress messages only.
+            if (!this.IsBusy && !string.IsNullOrEmpty(this.StatusMessage))
+            {
+                return;
+            }
+
             this.CancelStatusLifetime();
             this.StatusMessage = string.Empty;
             this.StatusOpacity = 1.0;
