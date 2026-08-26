@@ -30,6 +30,10 @@ namespace ThreadPilot.Services
         Task<ProcessRuleCreationResult> DeleteRuleByIdAsync(
             string ruleId,
             CancellationToken cancellationToken = default);
+
+        Task<ProcessRuleCreationResult> UpdateRuleAsync(
+            PersistentProcessRule rule,
+            CancellationToken cancellationToken = default);
     }
 
     public sealed record ProcessRuleCreationPayload
@@ -190,6 +194,63 @@ namespace ThreadPilot.Services
             }
 
             return await this.RemoveAtAsync(rules, existingIndex, cancellationToken).ConfigureAwait(false);
+        }
+
+        // Editing a rule in place, from the saved-rules list. The affinity payload is not editable
+        // there - that needs the core picker in the Process tab - so it is carried over untouched
+        // rather than rebuilt, and only the fields the editor owns are replaced.
+        public async Task<ProcessRuleCreationResult> UpdateRuleAsync(
+            PersistentProcessRule rule,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(rule);
+
+            if (rule.Priority.HasValue && ProcessPriorityGuardrails.IsBlocked(rule.Priority.Value))
+            {
+                return ProcessRuleCreationResult.Failed(
+                    "RealtimePriorityBlocked",
+                    ProcessOperationUserMessages.RealtimePriorityBlocked);
+            }
+
+            var rules = (await this.ruleStore.LoadAsync().ConfigureAwait(false)).ToList();
+            var existingIndex = rules.FindIndex(candidate => string.Equals(candidate.Id, rule.Id, StringComparison.Ordinal));
+            if (existingIndex < 0)
+            {
+                return ProcessRuleCreationResult.Failed("NoSavedRuleToUpdate", NoSavedRuleMessage);
+            }
+
+            var existing = rules[existingIndex];
+            var updated = existing with
+            {
+                IsEnabled = rule.IsEnabled,
+                Priority = rule.Priority,
+                MemoryPriority = rule.MemoryPriority,
+                IoPriority = rule.IoPriority,
+                CpuAssignmentMode = rule.CpuAssignmentMode,
+                PreventSystemSleepWhileRunning = rule.PreventSystemSleepWhileRunning,
+                ApplyPriorityOnStart = rule.Priority.HasValue,
+                ApplyMemoryPriorityOnStart = rule.MemoryPriority.HasValue,
+                ApplyIoPriorityOnStart = rule.IoPriority.HasValue,
+                UpdatedAt = DateTime.UtcNow,
+            };
+
+            rules[existingIndex] = updated;
+
+            cancellationToken.ThrowIfCancellationRequested();
+            await this.ruleStore.SaveAsync(rules).ConfigureAwait(false);
+
+            var processName = string.IsNullOrWhiteSpace(updated.ProcessName)
+                ? "process"
+                : updated.ProcessName.Trim();
+            this.logger.LogInformation("Updated saved rule {RuleId} for process {ProcessName}", updated.Id, processName);
+
+            return new ProcessRuleCreationResult
+            {
+                Success = true,
+                Updated = true,
+                Rule = updated,
+                UserMessage = $"Updated saved rule for {processName}.",
+            };
         }
 
         private async Task<ProcessRuleCreationResult> RemoveAtAsync(

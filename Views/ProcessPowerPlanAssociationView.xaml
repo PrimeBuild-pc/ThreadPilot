@@ -289,7 +289,15 @@
                                Margin="0,0,0,10"/>
 
                     <Grid Grid.Row="1">
-                        <DataGrid ItemsSource="{Binding SavedProcessRules}"
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <DataGrid Grid.Column="0"
+                                  ItemsSource="{Binding SavedProcessRules}"
+                                  SelectedItem="{Binding SelectedSavedProcessRule, Mode=TwoWay}"
                                   AutoGenerateColumns="False"
                                   CanUserAddRows="False"
                                   IsReadOnly="True"
@@ -326,7 +334,57 @@
                             </DataGrid.Columns>
                         </DataGrid>
 
-                        <Border Padding="18"
+                        <GroupBox Grid.Column="2"
+                                  Width="330"
+                                  Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleEditor}"
+                                  VerticalAlignment="Top">
+                            <StackPanel IsEnabled="{Binding SelectedSavedProcessRule, Converter={StaticResource NullToBoolConverter}}">
+                                <TextBlock Text="{Binding SelectedSavedProcessRule.ProcessName}"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,8"/>
+
+                                <CheckBox Content="{DynamicResource MasksView_Enabled}"
+                                          IsChecked="{Binding SavedRuleIsEnabled, Mode=TwoWay}"
+                                          Margin="0,0,0,10"/>
+
+                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleCpuPriority}" Margin="0,0,0,3"/>
+                                <ComboBox ItemsSource="{Binding SavedRulePriorityOptions}"
+                                          SelectedItem="{Binding SavedRulePriority, Mode=TwoWay}"
+                                          Margin="0,0,0,10"/>
+
+                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleMemoryPriority}" Margin="0,0,0,3"/>
+                                <ComboBox ItemsSource="{Binding SavedRuleMemoryPriorityOptions}"
+                                          SelectedItem="{Binding SavedRuleMemoryPriority, Mode=TwoWay}"
+                                          Margin="0,0,0,10"/>
+
+                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleIoPriority}" Margin="0,0,0,3"/>
+                                <ComboBox ItemsSource="{Binding SavedRuleIoPriorityOptions}"
+                                          SelectedItem="{Binding SavedRuleIoPriority, Mode=TwoWay}"
+                                          Margin="0,0,0,10"/>
+
+                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleModeLabel}" Margin="0,0,0,3"/>
+                                <ComboBox ItemsSource="{Binding SavedRuleCpuAssignmentModeOptions}"
+                                          SelectedItem="{Binding SavedRuleCpuAssignmentMode, Mode=TwoWay}"
+                                          Margin="0,0,0,10"/>
+
+                                <CheckBox Content="{DynamicResource ProcessPowerPlanAssociationView_SavedRulePreventSleep}"
+                                          IsChecked="{Binding SavedRulePreventSleep, Mode=TwoWay}"
+                                          Margin="0,0,0,10"/>
+
+                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleEditorHint}"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,10"/>
+
+                                <Button Content="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleSave}"
+                                        Command="{Binding SaveSavedProcessRuleCommand}"
+                                        Padding="10,4"
+                                        HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <Border Grid.Column="0"
+                                Padding="18"
                                 IsHitTestVisible="False"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center">

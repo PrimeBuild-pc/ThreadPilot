@@ -179,13 +179,111 @@ namespace ThreadPilot.ViewModels
             await this.RefreshSavedProcessRulesAsync().ConfigureAwait(true);
         }
 
+        // Editing a saved rule in place. Everything except the core selection is editable here;
+        // that one needs the picker in the Process tab, so it is shown but not editable, and
+        // carried through untouched by the update.
+        [ObservableProperty]
+        private SavedProcessRule? selectedSavedProcessRule;
+
+        [ObservableProperty]
+        private bool savedRuleIsEnabled = true;
+
+        [ObservableProperty]
+        private bool savedRulePreventSleep;
+
+        [ObservableProperty]
+        private string savedRulePriority = NoneOption;
+
+        [ObservableProperty]
+        private string savedRuleMemoryPriority = NoneOption;
+
+        [ObservableProperty]
+        private string savedRuleIoPriority = NoneOption;
+
+        [ObservableProperty]
+        private string savedRuleCpuAssignmentMode = nameof(CpuAssignmentMode.AffinityMask);
+
+        public const string NoneOption = "None";
+
+        // Realtime is deliberately absent: the service refuses it, so offering it would only
+        // produce an error the user cannot resolve.
+        public IReadOnlyList<string> SavedRulePriorityOptions { get; } =
+        [
+            NoneOption,
+            nameof(System.Diagnostics.ProcessPriorityClass.Idle),
+            nameof(System.Diagnostics.ProcessPriorityClass.BelowNormal),
+            nameof(System.Diagnostics.ProcessPriorityClass.Normal),
+            nameof(System.Diagnostics.ProcessPriorityClass.AboveNormal),
+            nameof(System.Diagnostics.ProcessPriorityClass.High),
+        ];
+
+        public IReadOnlyList<string> SavedRuleMemoryPriorityOptions { get; } =
+            [NoneOption, .. Enum.GetNames<ProcessMemoryPriority>()];
+
+        public IReadOnlyList<string> SavedRuleIoPriorityOptions { get; } =
+            [NoneOption, .. Enum.GetNames<ProcessIoPriority>()];
+
+        public IReadOnlyList<string> SavedRuleCpuAssignmentModeOptions { get; } =
+            [.. Enum.GetNames<CpuAssignmentMode>()];
+
+        partial void OnSelectedSavedProcessRuleChanged(SavedProcessRule? value)
+        {
+            if (value == null)
+            {
+                return;
+            }
+
+            var rule = value.Source;
+            this.SavedRuleIsEnabled = rule.IsEnabled;
+            this.SavedRulePreventSleep = rule.PreventSystemSleepWhileRunning;
+            this.SavedRulePriority = rule.Priority?.ToString() ?? NoneOption;
+            this.SavedRuleMemoryPriority = rule.MemoryPriority?.ToString() ?? NoneOption;
+            this.SavedRuleIoPriority = rule.IoPriority?.ToString() ?? NoneOption;
+            this.SavedRuleCpuAssignmentMode = rule.CpuAssignmentMode.ToString();
+        }
+
+        [RelayCommand]
+        private async Task SaveSavedProcessRuleAsync()
+        {
+            var selected = this.SelectedSavedProcessRule;
+            if (selected == null || this.ruleCreationService == null)
+            {
+                return;
+            }
+
+            var updated = selected.Source with
+            {
+                IsEnabled = this.SavedRuleIsEnabled,
+                PreventSystemSleepWhileRunning = this.SavedRulePreventSleep,
+                Priority = ParseOption<System.Diagnostics.ProcessPriorityClass>(this.SavedRulePriority),
+                MemoryPriority = ParseOption<ProcessMemoryPriority>(this.SavedRuleMemoryPriority),
+                IoPriority = ParseOption<ProcessIoPriority>(this.SavedRuleIoPriority),
+                CpuAssignmentMode = Enum.TryParse<CpuAssignmentMode>(this.SavedRuleCpuAssignmentMode, out var mode)
+                    ? mode
+                    : selected.Source.CpuAssignmentMode,
+            };
+
+            var result = await this.ruleCreationService.UpdateRuleAsync(updated).ConfigureAwait(true);
+            this.SetStatus(result.UserMessage, false);
+            await this.RefreshSavedProcessRulesAsync().ConfigureAwait(true);
+            this.SelectedSavedProcessRule = this.SavedProcessRules
+                .FirstOrDefault(row => string.Equals(row.Id, selected.Id, StringComparison.Ordinal));
+        }
+
+        private static T? ParseOption<T>(string? option)
+            where T : struct, Enum =>
+            string.IsNullOrWhiteSpace(option) || string.Equals(option, NoneOption, StringComparison.Ordinal)
+                ? null
+                : Enum.TryParse<T>(option, out var parsed) ? parsed : null;
+
         public sealed record SavedProcessRule(
             string Id,
             string ProcessName,
             string Applies,
             string Mode,
             bool IsEnabled,
-            DateTime UpdatedAt)
+            DateTime UpdatedAt,
+            PersistentProcessRule Source)
         {
             public static SavedProcessRule From(PersistentProcessRule rule)
             {
@@ -221,7 +319,8 @@ namespace ThreadPilot.ViewModels
                     applies.Count == 0 ? "nothing" : string.Join(", ", applies),
                     rule.ApplyAffinityOnStart ? rule.CpuAssignmentMode.ToString() : "-",
                     rule.IsEnabled,
-                    rule.UpdatedAt.ToLocalTime());
+                    rule.UpdatedAt.ToLocalTime(),
+                    rule);
             }
         }
 

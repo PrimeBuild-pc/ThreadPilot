@@ -245,6 +245,14 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMode">Режим</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleUpdated">Обновлено</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleDelete">Удалить</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditor">Изменить правило</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleCpuPriority">Приоритет ЦП</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMemoryPriority">Приоритет памяти</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleIoPriority">Приоритет ввода-вывода</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleModeLabel">Режим назначения ЦП</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulePreventSleep">Не давать системе засыпать, пока процесс работает</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">Ядра, к которым привязано это правило, изменяются на вкладке «Процессы», где находится выбор ядер.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleSave">Сохранить изменения</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_NoSavedRules">Сохранённых правил процессов пока нет. Щёлкните процесс правой кнопкой на вкладке «Процессы» и выберите «Правила».</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">Исполняемый файл</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_PowerPlan">План электропитания</sys:String>
@@ -605,6 +613,7 @@
 
     <!-- SystemTweaksViewModel Messages -->
     <sys:String x:Key="SystemTweaks_StatusReady">Готово</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusDetectionFailed">ThreadPilot не смог прочитать этот параметр в этой системе.</sys:String>
     <sys:String x:Key="SystemTweaks_StatusRefreshing">Обновление настроек системы...</sys:String>
     <sys:String x:Key="SystemTweaks_StatusLastRefreshedFormat">Последнее обновление: {0}</sys:String>
     <sys:String x:Key="SystemTweaks_StatusRefreshFailed">Не удалось обновить настройки системы.</sys:String>

@@ -245,6 +245,14 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMode">模式</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleUpdated">更新时间</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleDelete">删除</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditor">编辑规则</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleCpuPriority">CPU 优先级</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMemoryPriority">内存优先级</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleIoPriority">I/O 优先级</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleModeLabel">CPU 分配模式</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulePreventSleep">该进程运行时阻止系统休眠</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">此规则绑定的核心需在“进程”选项卡中修改，核心选择器在那里。</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleSave">保存更改</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_NoSavedRules">尚无已保存的进程规则。在“进程”选项卡中右键点击某个进程并选择“规则”即可保存。</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">可执行文件</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_PowerPlan">电源计划</sys:String>
@@ -605,6 +613,7 @@
 
     <!-- SystemTweaksViewModel Messages -->
     <sys:String x:Key="SystemTweaks_StatusReady">就绪</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusDetectionFailed">ThreadPilot 无法在此系统上读取该设置。</sys:String>
     <sys:String x:Key="SystemTweaks_StatusRefreshing">正在刷新系统微调选项...</sys:String>
     <sys:String x:Key="SystemTweaks_StatusLastRefreshedFormat">上次刷新时间: {0}</sys:String>
     <sys:String x:Key="SystemTweaks_StatusRefreshFailed">刷新系统微调失败</sys:String>
