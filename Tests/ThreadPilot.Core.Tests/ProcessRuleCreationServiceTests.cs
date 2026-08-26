@@ -644,6 +644,60 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal("NoSavedRuleToUpdate", result.ErrorCode);
         }
 
+        [Fact]
+        public async Task UpdateRuleCoreSelectionAsync_SetsTheCoresWithoutTheProcessRunning()
+        {
+            var existing = new PersistentProcessRule
+            {
+                Id = "rule-1",
+                ProcessName = "cs2",
+                IsEnabled = true,
+                Priority = ProcessPriorityClass.High,
+                ApplyPriorityOnStart = true,
+            };
+            var store = new CapturingRuleStore([existing]);
+            var topologyProvider = new FakeTopologyProvider(CpuTopologySnapshot.Create(
+                [
+                    new ProcessorRef(0, 0, 0),
+                    new ProcessorRef(0, 1, 1),
+                ]));
+            var service = CreateService(store, topologyProvider);
+
+            var result = await service.UpdateRuleCoreSelectionAsync("rule-1", [false, true]);
+
+            Assert.True(result.Success);
+            var rule = Assert.Single(store.SavedRules);
+            Assert.True(rule.ApplyAffinityOnStart);
+            Assert.NotNull(rule.CpuSelection);
+            Assert.Equal(1, rule.CpuSelection!.GlobalLogicalProcessorIndexes.Single());
+            Assert.Equal(ProcessPriorityClass.High, rule.Priority);
+        }
+
+        [Fact]
+        public async Task UpdateRuleCoreSelectionAsync_RefusesASelectionWithNoCores()
+        {
+            var existing = new PersistentProcessRule { Id = "rule-1", ProcessName = "cs2", IsEnabled = true };
+            var store = new CapturingRuleStore([existing]);
+            var service = CreateService(store);
+
+            var result = await service.UpdateRuleCoreSelectionAsync("rule-1", [false, false]);
+
+            Assert.False(result.Success);
+            Assert.Empty(store.SavedRules);
+        }
+
+        [Fact]
+        public async Task UpdateRuleCoreSelectionAsync_ReportsAControlledFailureForAnUnknownRule()
+        {
+            var store = new CapturingRuleStore([]);
+            var service = CreateService(store);
+
+            var result = await service.UpdateRuleCoreSelectionAsync("missing", [true, false]);
+
+            Assert.False(result.Success);
+            Assert.Equal("NoSavedRuleToUpdate", result.ErrorCode);
+        }
+
         private static ProcessModel CreateProcess(
             string name = "Game.exe",
             string path = @"C:\Games\Game.exe",

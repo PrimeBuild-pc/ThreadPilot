@@ -701,7 +701,7 @@ namespace ThreadPilot.Services
                 changed |= this.AddOrReconcileBuiltInMask(mask, canReconcileLengths);
             }
 
-            this.CollectMasksNeedingTopologyReview(coreCount, canReconcileLengths);
+            changed |= await this.ReconcileCustomMaskLengthsAsync(coreCount, canReconcileLengths).ConfigureAwait(false);
 
             await Task.CompletedTask;
             return changed;
@@ -717,34 +717,102 @@ namespace ThreadPilot.Services
             return Environment.ProcessorCount;
         }
 
-        // A built-in mask can be re-derived, because ThreadPilot knows what it is supposed to mean.
-        // A mask the user drew cannot: only they know whether the CPUs that appeared should be part
-        // of it. So flag those and let the Masks tab ask, rather than resize them behind their back
-        // or leave them quietly selecting the wrong cores.
-        private void CollectMasksNeedingTopologyReview(int coreCount, bool topologyIsTrustworthy)
+        // A built-in mask can be re-derived: ThreadPilot knows what "All Cores" is supposed to mean.
+        // A mask the user drew is different. Growing it is safe - the CPUs that appeared are simply
+        // not part of a selection made before they existed - and shrinking it is safe as long as
+        // something is left. Two cases are not ours to decide: a mask that would end up empty, and
+        // a mask a power plan association is actively using, where a silent resize would change what
+        // that automation does. Those are flagged for the user instead.
+        private async Task<bool> ReconcileCustomMaskLengthsAsync(int coreCount, bool topologyIsTrustworthy)
         {
-            if (!topologyIsTrustworthy)
+            if (!topologyIsTrustworthy || coreCount <= 0)
             {
-                return;
+                return false;
             }
+
+            var currentBrand = this.cpuTopologyService.CurrentTopology?.CpuBrand;
+
+            // A different CPU with the same thread count - a 5800X swapped for a 5800X3D, say -
+            // changes what "cores 8-15" means without changing how many there are. The stored
+            // selection carries the signature of the machine it was made on, which is the only way
+            // to see that. This is what CpuSelectionMigrationMetadata.ReviewRequired was computed
+            // for; nothing ever read it.
+            var differentCpu = this.AvailableMasks
+                .Where(mask => !mask.IsDefault
+                    && mask.BoolMask.Count == coreCount
+                    && WasBuiltOnADifferentCpu(mask, currentBrand))
+                .Select(mask => mask.Name);
 
             var stale = this.AvailableMasks
                 .Where(mask => !mask.IsDefault && mask.BoolMask.Count > 0 && mask.BoolMask.Count != coreCount)
-                .Select(mask => mask.Name)
                 .ToList();
-
-            this.MasksNeedingTopologyReview = stale;
-
-            if (stale.Count > 0)
+            if (stale.Count == 0)
             {
+                this.MasksNeedingTopologyReview = differentCpu.ToList();
+                return false;
+            }
+
+            var needsReview = new List<string>(differentCpu);
+            var changed = false;
+
+            foreach (var mask in stale)
+            {
+                var previousCount = mask.BoolMask.Count;
+                var resized = ResizeBoolMask(mask.BoolMask, coreCount);
+
+                if (!resized.Any(selected => selected))
+                {
+                    needsReview.Add(mask.Name);
+                    this.logger.LogInformation(
+                        "Custom core mask '{Name}' selects no CPU that still exists ({OldCount} -> {NewCount}): left untouched for review",
+                        mask.Name,
+                        previousCount,
+                        coreCount);
+                    continue;
+                }
+
+                if (await this.IsMaskReferencedByProfilesAsync(mask.Id).ConfigureAwait(false))
+                {
+                    needsReview.Add(mask.Name);
+                    this.logger.LogInformation(
+                        "Custom core mask '{Name}' is used by an automation rule and was built for a different CPU ({OldCount} -> {NewCount}): left untouched for review",
+                        mask.Name,
+                        previousCount,
+                        coreCount);
+                    continue;
+                }
+
+                ReplaceBoolMask(mask, resized);
+                changed = true;
                 this.logger.LogInformation(
-                    "{Count} custom core mask(s) were built for a different CPU ({Names}): stored bit count does not match the {CoreCount} logical CPUs on this machine",
-                    stale.Count,
-                    string.Join(", ", stale),
+                    "Resized custom core mask '{Name}' from {OldCount} to {NewCount} logical CPUs",
+                    mask.Name,
+                    previousCount,
                     coreCount);
             }
+
+            this.MasksNeedingTopologyReview = needsReview;
+            return changed;
         }
 
+        private static bool WasBuiltOnADifferentCpu(CoreMask mask, string? currentBrand)
+        {
+            var savedBrand = mask.CpuSelection?.Metadata.TopologySignature?.CpuBrand;
+            return !string.IsNullOrWhiteSpace(savedBrand)
+                && !string.IsNullOrWhiteSpace(currentBrand)
+                && !string.Equals(savedBrand, currentBrand, StringComparison.OrdinalIgnoreCase);
+        }
+
+        internal static List<bool> ResizeBoolMask(IReadOnlyList<bool> bits, int coreCount)
+        {
+            var resized = new List<bool>(coreCount);
+            for (var index = 0; index < coreCount; index++)
+            {
+                resized.Add(index < bits.Count && bits[index]);
+            }
+
+            return resized;
+        }
         private bool AddOrReconcileBuiltInMask(CoreMask mask, bool reconcileLength)
         {
             var existing = this.AvailableMasks.FirstOrDefault(m =>

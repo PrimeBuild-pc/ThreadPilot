@@ -367,6 +367,21 @@
                                           SelectedItem="{Binding SavedRuleCpuAssignmentMode, Mode=TwoWay}"
                                           Margin="0,0,0,10"/>
 
+                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleCores}" Margin="0,0,0,3"/>
+                                <TextBlock Text="{Binding SelectedSavedProcessRule.Cores}"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,6"/>
+                                <ComboBox ItemsSource="{Binding AvailableCoreMasks}"
+                                          SelectedItem="{Binding SavedRuleCoreMask, Mode=TwoWay}"
+                                          DisplayMemberPath="Name"
+                                          Margin="0,0,0,6"/>
+                                <Button Content="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleApplyMask}"
+                                        Command="{Binding ApplySavedRuleCoreMaskCommand}"
+                                        Padding="10,4"
+                                        HorizontalAlignment="Left"
+                                        Margin="0,0,0,12"/>
+
                                 <CheckBox Content="{DynamicResource ProcessPowerPlanAssociationView_SavedRulePreventSleep}"
                                           IsChecked="{Binding SavedRulePreventSleep, Mode=TwoWay}"
                                           Margin="0,0,0,10"/>

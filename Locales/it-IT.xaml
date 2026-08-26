@@ -246,12 +246,14 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleUpdated">Aggiornata</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleDelete">Elimina</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditor">Modifica regola</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleCores">Core</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleApplyMask">Imposta i core da questa maschera</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleCpuPriority">Priorità CPU</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMemoryPriority">Priorità memoria</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleIoPriority">Priorità I/O</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleModeLabel">Modalità di assegnazione CPU</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulePreventSleep">Impedisci la sospensione mentre il processo è in esecuzione</sys:String>
-    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">I core a cui questa regola vincola il processo si modificano dalla scheda Processi, dove c'è il selettore dei core.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">Scegli una maschera CPU salvata per impostare i core a cui questa regola vincola il processo. Il selettore core per core è nella scheda Processi.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleSave">Salva modifiche</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_NoSavedRules">Nessuna regola di processo salvata. Fai clic destro su un processo nella scheda Processi e scegli Regole per salvarne una.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">Eseguibile</sys:String>
