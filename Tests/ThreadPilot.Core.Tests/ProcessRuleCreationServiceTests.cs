@@ -556,6 +556,94 @@ namespace ThreadPilot.Core.Tests
             Assert.Empty(store.SavedRules);
         }
 
+        [Fact]
+        public async Task UpdateRuleAsync_ChangesTheEditableFieldsAndKeepsTheAffinity()
+        {
+            var selection = CreateCpuSelection();
+            var existing = new PersistentProcessRule
+            {
+                Id = "rule-1",
+                ProcessName = "cs2",
+                IsEnabled = true,
+                CpuSelection = selection,
+                ApplyAffinityOnStart = true,
+                CpuAssignmentMode = CpuAssignmentMode.AffinityMask,
+            };
+            var store = new CapturingRuleStore([existing]);
+            var service = CreateService(store);
+
+            var result = await service.UpdateRuleAsync(existing with
+            {
+                IsEnabled = false,
+                MemoryPriority = ProcessMemoryPriority.Low,
+                Priority = ProcessPriorityClass.High,
+            });
+
+            Assert.True(result.Success);
+            var rule = Assert.Single(store.SavedRules);
+            Assert.False(rule.IsEnabled);
+            Assert.Equal(ProcessMemoryPriority.Low, rule.MemoryPriority);
+            Assert.True(rule.ApplyMemoryPriorityOnStart);
+            Assert.Equal(ProcessPriorityClass.High, rule.Priority);
+            Assert.True(rule.ApplyPriorityOnStart);
+            Assert.Same(selection, rule.CpuSelection);
+            Assert.True(rule.ApplyAffinityOnStart);
+        }
+
+        [Fact]
+        public async Task UpdateRuleAsync_ClearsAFieldTheEditorSetBackToNone()
+        {
+            var existing = new PersistentProcessRule
+            {
+                Id = "rule-1",
+                ProcessName = "cs2",
+                IsEnabled = true,
+                MemoryPriority = ProcessMemoryPriority.Low,
+                ApplyMemoryPriorityOnStart = true,
+            };
+            var store = new CapturingRuleStore([existing]);
+            var service = CreateService(store);
+
+            await service.UpdateRuleAsync(existing with { MemoryPriority = null });
+
+            var rule = Assert.Single(store.SavedRules);
+            Assert.Null(rule.MemoryPriority);
+            Assert.False(rule.ApplyMemoryPriorityOnStart);
+        }
+
+        [Fact]
+        public async Task UpdateRuleAsync_RefusesRealtimeAndLeavesTheRuleAlone()
+        {
+            var existing = new PersistentProcessRule
+            {
+                Id = "rule-1",
+                ProcessName = "cs2",
+                IsEnabled = true,
+                Priority = ProcessPriorityClass.High,
+                ApplyPriorityOnStart = true,
+            };
+            var store = new CapturingRuleStore([existing]);
+            var service = CreateService(store);
+
+            var result = await service.UpdateRuleAsync(existing with { Priority = ProcessPriorityClass.RealTime });
+
+            Assert.False(result.Success);
+            Assert.Equal("RealtimePriorityBlocked", result.ErrorCode);
+            Assert.Empty(store.SavedRules);
+        }
+
+        [Fact]
+        public async Task UpdateRuleAsync_ReportsAControlledFailureForAnUnknownRule()
+        {
+            var store = new CapturingRuleStore([]);
+            var service = CreateService(store);
+
+            var result = await service.UpdateRuleAsync(new PersistentProcessRule { Id = "missing", ProcessName = "cs2" });
+
+            Assert.False(result.Success);
+            Assert.Equal("NoSavedRuleToUpdate", result.ErrorCode);
+        }
+
         private static ProcessModel CreateProcess(
             string name = "Game.exe",
             string path = @"C:\Games\Game.exe",

@@ -245,6 +245,14 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMode">Modalità</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleUpdated">Aggiornata</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleDelete">Elimina</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditor">Modifica regola</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleCpuPriority">Priorità CPU</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMemoryPriority">Priorità memoria</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleIoPriority">Priorità I/O</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleModeLabel">Modalità di assegnazione CPU</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulePreventSleep">Impedisci la sospensione mentre il processo è in esecuzione</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">I core a cui questa regola vincola il processo si modificano dalla scheda Processi, dove c'è il selettore dei core.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleSave">Salva modifiche</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_NoSavedRules">Nessuna regola di processo salvata. Fai clic destro su un processo nella scheda Processi e scegli Regole per salvarne una.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">Eseguibile</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_PowerPlan">Piano di alimentazione</sys:String>
@@ -605,6 +613,7 @@
 
     <!-- SystemTweaksViewModel Messages -->
     <sys:String x:Key="SystemTweaks_StatusReady">Pronto</sys:String>
+    <sys:String x:Key="SystemTweaks_StatusDetectionFailed">ThreadPilot non è riuscito a leggere questa impostazione su questo sistema.</sys:String>
     <sys:String x:Key="SystemTweaks_StatusRefreshing">Aggiornamento delle modifiche al sistema...</sys:String>
     <sys:String x:Key="SystemTweaks_StatusLastRefreshedFormat">Ultimo aggiornamento: {0}</sys:String>
     <sys:String x:Key="SystemTweaks_StatusRefreshFailed">Impossibile aggiornare le modifiche al sistema</sys:String>
