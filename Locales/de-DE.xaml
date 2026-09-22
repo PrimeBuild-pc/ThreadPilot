@@ -574,8 +574,8 @@
     <sys:String x:Key="SystemTweaksView_Status">Status</sys:String>
 
     <!-- SystemTweaks Names and Descriptions -->
-    <sys:String x:Key="SystemTweak_CoreParking_Name">Core Parking</sys:String>
-    <sys:String x:Key="SystemTweak_CoreParking_Desc">Steuert CPU core parking für die Energieverwaltung</sys:String>
+    <sys:String x:Key="SystemTweak_CoreParking_Name">Core-Parking verhindern</sys:String>
+    <sys:String x:Key="SystemTweak_CoreParking_Desc">Hält alle logischen Prozessoren im aktiven Energiesparplan im Netzbetrieb aktiv.</sys:String>
     <sys:String x:Key="SystemTweak_CStates_Name">C-States</sys:String>
     <sys:String x:Key="SystemTweak_CStates_Desc">Steuert CPU C-States für die Energieverwaltung</sys:String>
     <sys:String x:Key="SystemTweak_SysMain_Name">SysMain-Dienst</sys:String>

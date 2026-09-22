@@ -574,8 +574,8 @@
     <sys:String x:Key="SystemTweaksView_Status">当前状态</sys:String>
 
     <!-- SystemTweaks Names and Descriptions -->
-    <sys:String x:Key="SystemTweak_CoreParking_Name">核心休眠 (Core Parking)</sys:String>
-    <sys:String x:Key="SystemTweak_CoreParking_Desc">控制 CPU 核心休眠以进行电源管理</sys:String>
+    <sys:String x:Key="SystemTweak_CoreParking_Name">禁止核心停驻</sys:String>
+    <sys:String x:Key="SystemTweak_CoreParking_Desc">接通电源时，使当前电源计划中的所有逻辑处理器保持活动状态。</sys:String>
     <sys:String x:Key="SystemTweak_CStates_Name">C-States 状态</sys:String>
     <sys:String x:Key="SystemTweak_CStates_Desc">控制 CPU C-States 以进行节能电源管理</sys:String>
     <sys:String x:Key="SystemTweak_SysMain_Name">SysMain 服务</sys:String>
