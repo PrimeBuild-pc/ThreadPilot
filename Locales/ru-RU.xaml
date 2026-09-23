@@ -574,8 +574,8 @@
     <sys:String x:Key="SystemTweaksView_Status">Статус</sys:String>
 
     <!-- SystemTweaks Names and Descriptions -->
-    <sys:String x:Key="SystemTweak_CoreParking_Name">Core Parking</sys:String>
-    <sys:String x:Key="SystemTweak_CoreParking_Desc">Элементы управления CPU core parking для управления питанием</sys:String>
+    <sys:String x:Key="SystemTweak_CoreParking_Name">Отключить парковку ядер</sys:String>
+    <sys:String x:Key="SystemTweak_CoreParking_Desc">Не позволяет парковать логические процессоры в активной схеме электропитания при работе от сети.</sys:String>
     <sys:String x:Key="SystemTweak_CStates_Name">C-States</sys:String>
     <sys:String x:Key="SystemTweak_CStates_Desc">Элементы управления CPU C-States для управления питанием</sys:String>
     <sys:String x:Key="SystemTweak_SysMain_Name">SysMain Сервис</sys:String>

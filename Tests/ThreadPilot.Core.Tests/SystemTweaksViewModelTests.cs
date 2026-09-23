@@ -51,7 +51,7 @@ namespace ThreadPilot.Core.Tests
 
         [Theory]
         [InlineData(SystemTweak.GameMode, "Game Mode")]
-        [InlineData(SystemTweak.CoreParking, "Core Parking")]
+        [InlineData(SystemTweak.CoreParking, "Prevent Core Parking")]
         [InlineData(SystemTweak.CStates, "C-States")]
         [InlineData(SystemTweak.UsbSelectiveSuspend, "USB Selective Suspend")]
         [InlineData(SystemTweak.PointerPrecision, "Enhance pointer precision")]
@@ -88,7 +88,7 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public async Task ToggleTweakCommand_WhenServiceFails_LogsFailureAndShowsSafeStatus()
+        public async Task ToggleTweakCommand_WhenServiceFails_RestoresDisplayedState()
         {
             var harness = new Harness();
             harness.Tweaks
@@ -96,22 +96,25 @@ namespace ThreadPilot.Core.Tests
                 .ReturnsAsync(false);
             var viewModel = harness.CreateViewModel();
             var item = viewModel.TweakItems.Single(tweak => tweak.TweakType == SystemTweak.CoreParking);
+            var stateNotifications = 0;
+            item.PropertyChanged += (_, args) => stateNotifications += args.PropertyName == nameof(item.IsEnabled) ? 1 : 0;
 
             Assert.NotNull(item.ToggleCommand);
             await item.ToggleCommand.ExecuteAsync(item);
 
+            Assert.Equal(1, stateNotifications);
             harness.Logging.Verify(
                 service => service.LogUserActionAsync(
                     "SystemTweakFailed",
-                    "Failed to enable Core Parking",
+                    "Failed to enable Prevent Core Parking",
                     "CoreParking"),
                 Times.Once);
             var entry = Assert.Single(await harness.Audit.GetEntriesAsync());
             Assert.Equal("Tweaks", entry.Category);
             Assert.Equal(ActivityAuditSeverity.Error, entry.Severity);
-            Assert.Equal("Failed to enable Core Parking", entry.Message);
+            Assert.Equal("Failed to enable Prevent Core Parking", entry.Message);
             Assert.True(viewModel.HasError);
-            Assert.Equal("Failed to toggle Core Parking", viewModel.ErrorMessage);
+            Assert.Equal("Failed to toggle Prevent Core Parking", viewModel.ErrorMessage);
         }
 
         private sealed class Harness

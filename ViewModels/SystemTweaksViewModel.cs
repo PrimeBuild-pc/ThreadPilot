@@ -233,6 +233,10 @@ namespace ThreadPilot.ViewModels
                     $"Error toggling {item.Name}: {ex.Message}",
                     item.TweakType.ToString());
             }
+            finally
+            {
+                item.RefreshIsEnabled();
+            }
         }
 
         private async Task OpenTweakSettingsAsync(SystemTweakItem? item)
@@ -266,7 +270,7 @@ namespace ThreadPilot.ViewModels
                 var text = item.TweakType switch
                 {
                     SystemTweak.GameMode => ("SystemTweak_GameMode_Name", "Game Mode", "SystemTweak_GameMode_Desc", "Windows Game Mode scheduling optimizations"),
-                    SystemTweak.CoreParking => ("SystemTweak_CoreParking_Name", "Core Parking", "SystemTweak_CoreParking_Desc", "Controls CPU core parking for power management"),
+                    SystemTweak.CoreParking => ("SystemTweak_CoreParking_Name", "Prevent Core Parking", "SystemTweak_CoreParking_Desc", "Keeps all logical processors unparked for the active power plan while plugged in."),
                     SystemTweak.CStates => ("SystemTweak_CStates_Name", "C-States", "SystemTweak_CStates_Desc", "Controls CPU C-States for power management"),
                     SystemTweak.MemoryIntegrity => ("SystemTweak_MemoryIntegrity_Name", "Memory Integrity (HVCI)", "SystemTweak_MemoryIntegrity_Desc", "Opens Windows Security. Disabling this protection reduces system security and may require a restart."),
                     SystemTweak.Hags => ("SystemTweak_Hags_Name", "Hardware-accelerated GPU scheduling", "SystemTweak_Hags_Desc", "Opens Windows graphics settings to let you review HAGS."),
@@ -368,5 +372,7 @@ namespace ThreadPilot.ViewModels
         public IAsyncRelayCommand<SystemTweakItem>? ToggleCommand { get; set; }
 
         public IAsyncRelayCommand<SystemTweakItem>? ActionCommand { get; set; }
+
+        public void RefreshIsEnabled() => this.OnPropertyChanged(nameof(this.IsEnabled));
     }
 }
