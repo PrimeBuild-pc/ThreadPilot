@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.7.6 - Localized power plans and version-proof process rules
+
+### Fixed
+
+- Power plan discovery and active-plan detection no longer depend on the English `Power Scheme GUID` label, so localized Windows installations now populate the Power Plans page correctly.
+- Localized parsing preserves active markers and display names containing parentheses.
+
+### Added
+
+- Executable-path rules now support case-insensitive `*` and `?` wildcards for versioned application directories such as WindowsApps packages.
+- Wildcard matching applies to persistent process rules and power plan associations, normalizes path separators, and preserves exact-path behavior for existing rules.
+
+### Validation
+
+- 758 automated tests pass in Release configuration.
+- CI DevSecOps and CodeQL pass for both included contributions.
+
 ## v1.7.5 - Trustworthy system tweak controls
 
 ### Fixed
