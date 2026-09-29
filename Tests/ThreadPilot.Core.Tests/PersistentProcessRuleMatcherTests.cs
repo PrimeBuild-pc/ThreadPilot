@@ -123,7 +123,7 @@ namespace ThreadPilot.Core.Tests
         [Fact]
         public void IsMatch_WithForwardSlashWildcard_MatchesNormalizedBackslashes()
         {
-            var rule = CreateRule(executablePath: @"*/Raycast/*/backend/node.exe");
+            var rule = CreateRule(executablePath: @"*/Raycast/backend/node.exe");
             var process = CreateProcess(name: "node.exe", executablePath: @"C:\Program Files\WindowsApps\Raycast.Raycast_2.5.3.0_x64__qypenmj9wpt2a\Raycast\backend\node.exe");
 
             var result = this.matcher.IsMatch(rule, process);
