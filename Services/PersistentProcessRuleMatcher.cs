@@ -3,7 +3,9 @@
  */
 namespace ThreadPilot.Services
 {
+    using System;
     using System.IO;
+    using ThreadPilot.Helpers;
     using ThreadPilot.Models;
 
     public interface IPersistentProcessRuleMatcher
@@ -28,7 +30,7 @@ namespace ThreadPilot.Services
             {
                 var processPath = NormalizePath(process.ExecutablePath);
                 return !string.IsNullOrWhiteSpace(processPath) &&
-                    string.Equals(rulePath, processPath, StringComparison.OrdinalIgnoreCase);
+                    PathPatternMatcher.IsPathMatch(rulePath, processPath);
             }
 
             return !string.IsNullOrWhiteSpace(rule.ProcessName) &&
@@ -43,13 +45,16 @@ namespace ThreadPilot.Services
             }
 
             var trimmed = path.Trim();
-            try
+            if (!PathPatternMatcher.HasWildcard(trimmed))
             {
-                trimmed = Path.GetFullPath(trimmed);
-            }
-            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
-            {
-                // Keep matching best-effort for inaccessible or malformed process paths.
+                try
+                {
+                    trimmed = Path.GetFullPath(trimmed);
+                }
+                catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+                {
+                    // Keep matching best-effort for inaccessible or malformed process paths.
+                }
             }
 
             return trimmed.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
