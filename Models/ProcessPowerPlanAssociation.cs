@@ -4,6 +4,7 @@ namespace ThreadPilot.Models
     using System.Collections.Generic;
     using System.IO;
     using CommunityToolkit.Mvvm.ComponentModel;
+    using ThreadPilot.Helpers;
     using ThreadPilot.Models.Core;
 
     public partial class ProcessPowerPlanAssociation : ObservableObject, IModel
@@ -72,7 +73,7 @@ namespace ThreadPilot.Models
 
             if (this.MatchByPath && !string.IsNullOrEmpty(this.ExecutablePath))
             {
-                return string.Equals(process.ExecutablePath, this.ExecutablePath, StringComparison.OrdinalIgnoreCase);
+                return PathPatternMatcher.IsPathMatch(this.ExecutablePath, process.ExecutablePath);
             }
             else
             {
