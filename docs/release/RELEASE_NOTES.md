@@ -1,3 +1,24 @@
+## ThreadPilot v1.7.6
+
+This release fixes power plan discovery on localized Windows installations and makes executable-path rules survive application updates.
+
+### Fixed
+
+- Power plan discovery and active-plan detection no longer depend on the English `Power Scheme GUID` label.
+- Localized output preserves active markers and plan names containing parentheses.
+
+### Added
+
+- Persistent process rules and power plan associations accept case-insensitive `*` and `?` wildcards in executable paths.
+- Path separators are normalized, while existing exact-path rules retain their previous behavior.
+
+For example, `*WindowsApps\\Raycast.Raycast_*_x64__*\\Raycast\\backend\\node.exe` continues matching when the packaged application version changes without affecting unrelated `node.exe` processes.
+
+### Validation
+
+- 758 automated tests pass in Release configuration.
+- Release build, CI DevSecOps, and CodeQL pass for the included changes.
+
 ## ThreadPilot v1.7.5
 
 This patch release makes system tweak state trustworthy and clarifies the Core Parking control.
