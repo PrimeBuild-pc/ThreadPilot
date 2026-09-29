@@ -16,7 +16,7 @@ namespace ThreadPilot.Services
         private static readonly Lazy<string> powerPlansPath = new(GetPowerPlansPath);
         private static readonly string powerCfgExecutablePath = Path.Combine(Environment.SystemDirectory, "powercfg.exe");
         private static readonly TimeSpan powerCfgTimeout = TimeSpan.FromSeconds(20);
-        private static readonly Regex powerSchemeRegex = new(@"^Power Scheme GUID:\s*([0-9a-fA-F-]+)[ \t]+\((.*)\)[ \t]*(\*)?[ \t]*\r?$", RegexOptions.Multiline | RegexOptions.Compiled);
+        private static readonly Regex powerSchemeRegex = new(@"^.*?\b([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})[ \t]+\((.*)\)[ \t]*(\*)?[ \t]*\r?$", RegexOptions.Multiline | RegexOptions.Compiled);
         private static readonly Regex pathTraversalRegex = new(@"(^|[\\/])\.\.([\\/]|$)", RegexOptions.Compiled);
 
         private static string PowerPlansPath => powerPlansPath.Value;

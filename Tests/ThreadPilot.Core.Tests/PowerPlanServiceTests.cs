@@ -75,6 +75,28 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task GetPowerPlansAsync_ParsesLocalizedOutput()
+        {
+            const string activeGuid = "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c";
+            var runner = new RecordingProcessRunner
+            {
+                ResultFactory = _ => new ProcessRunResult(
+                    0,
+                    "Modes de gestion de l’alimentation existants (* Actif)\n" +
+                    "GUID du mode de gestion de l’alimentation : 381b4222-f694-41f0-9685-ff5bb260df2e  (Utilisation normale)\n" +
+                    $"GUID du mode de gestion de l’alimentation : {activeGuid}  (Haute performance) *",
+                    string.Empty),
+            };
+            var service = CreateService(runner);
+
+            var plans = await service.GetPowerPlansAsync();
+
+            Assert.Equal(2, plans.Count);
+            Assert.Equal("Haute performance", plans.Single(plan => plan.Guid == activeGuid).Name);
+            Assert.True(plans.Single(plan => plan.Guid == activeGuid).IsActive);
+        }
+
+        [Fact]
         public async Task SetActivePowerPlanByGuidAsync_SkipsChange_WhenAlreadyActive()
         {
             const string guid = "381b4222-f694-41f0-9685-ff5bb260df2e";
