@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.7.5 - Trustworthy system tweak controls
+
+### Fixed
+
+- System tweak switches refresh their displayed state after every write attempt, so a failed or unconfirmed write no longer leaves the switch visually changed.
+- The Core Parking control is now named **Prevent Core Parking**, with a description that explains its active power-plan and plugged-in scope.
+- The renamed control and description are localized across all supported languages.
+
+### Validation
+
+- Issue #60 was verified on Windows 11 with the switch off at AC `CPMINCORES` 0% and on at 100% (`0x64`).
+- 751 automated tests pass in Release configuration.
+
 ## v1.7.4 - Masks that follow the CPU, rules you can finish editing
 
 ### Fixed
