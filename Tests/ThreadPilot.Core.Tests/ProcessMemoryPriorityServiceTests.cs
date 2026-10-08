@@ -60,6 +60,38 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal(ProcessIoPriority.High, nativeApi.LastSetIoPriority);
         }
 
+        [Fact]
+        public async Task SetIoPriorityAsync_WhenStatusPrivilegeNotHeld_ReturnsSafeAccessDeniedFailure()
+        {
+            var nativeApi = new FakeProcessMemoryPriorityNativeApi
+            {
+                SetIoPriorityStatus = unchecked((int)0xC0000061),
+            };
+            var service = CreateService(nativeApi);
+            var process = CreateProcess();
+
+            var result = await service.SetIoPriorityAsync(process, ProcessIoPriority.High);
+
+            Assert.False(result.Success);
+            Assert.True(result.IsAccessDenied);
+            Assert.Equal(AffinityApplyErrorCodes.AccessDenied, result.ErrorCode);
+            Assert.Equal(ProcessOperationUserMessages.AccessDenied, result.UserMessage);
+            Assert.Contains("0xC0000061", result.TechnicalMessage);
+        }
+
+        [Fact]
+        public async Task SetIoPriorityAsync_WhenHighPriority_AttemptsToEnableSeIncreaseBasePriorityPrivilege()
+        {
+            var nativeApi = new FakeProcessMemoryPriorityNativeApi();
+            var service = CreateService(nativeApi);
+            var process = CreateProcess();
+
+            var result = await service.SetIoPriorityAsync(process, ProcessIoPriority.High);
+
+            Assert.True(result.Success);
+            Assert.Contains(ProcessMemoryPriorityNativeMethods.SeIncreaseBasePriorityPrivilege, nativeApi.RequestedPrivileges);
+        }
+
         [Theory]
         [InlineData(1, ProcessMemoryPriority.VeryLow)]
         [InlineData(2, ProcessMemoryPriority.Low)]
@@ -228,6 +260,10 @@ namespace ThreadPilot.Core.Tests
 
             public int LastError { get; init; }
 
+            public int SetIoPriorityStatus { get; init; }
+
+            public List<string> RequestedPrivileges { get; } = new();
+
             public SafeProcessHandle OpenProcess(ProcessAccessFlags access, bool inheritHandle, uint processId)
             {
                 this.LastOpenAccess = access;
@@ -276,7 +312,13 @@ namespace ThreadPilot.Core.Tests
             public int SetIoPriority(SafeProcessHandle process, ref int priority)
             {
                 this.LastSetIoPriority = (ProcessIoPriority)priority;
-                return 0;
+                return this.SetIoPriorityStatus;
+            }
+
+            public bool TryEnableProcessPrivilege(string privilegeName)
+            {
+                this.RequestedPrivileges.Add(privilegeName);
+                return true;
             }
         }
     }

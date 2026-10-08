@@ -34,6 +34,8 @@ namespace ThreadPilot.Platforms.Windows
         }
 
         int SetIoPriority(SafeProcessHandle process, ref int priority) => unchecked((int)0xC0000002);
+
+        bool TryEnableProcessPrivilege(string privilegeName) => false;
     }
 
     public sealed class ProcessMemoryPriorityNativeApi : IProcessMemoryPriorityNativeApi
@@ -96,6 +98,9 @@ namespace ThreadPilot.Platforms.Windows
                 ProcessMemoryPriorityNativeMethods.ProcessIoPriority,
                 ref priority,
                 sizeof(int));
+
+        public bool TryEnableProcessPrivilege(string privilegeName) =>
+            ProcessMemoryPriorityNativeMethods.TryEnablePrivilege(privilegeName);
     }
 
     public enum ProcessInformationClass

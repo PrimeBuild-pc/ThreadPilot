@@ -234,6 +234,11 @@ namespace ThreadPilot.Services
 
             try
             {
+                if (priority == ProcessIoPriority.High)
+                {
+                    this.nativeApi.TryEnableProcessPrivilege(ProcessMemoryPriorityNativeMethods.SeIncreaseBasePriorityPrivilege);
+                }
+
                 using var handle = this.nativeApi.OpenProcess(
                     ProcessAccessFlags.PROCESS_SET_INFORMATION,
                     inheritHandle: false,
@@ -254,7 +259,7 @@ namespace ThreadPilot.Services
 
                 return Task.FromResult(status switch
                 {
-                    unchecked((int)0xC0000022) => ProcessOperationResult.Failed(
+                    unchecked((int)0xC0000022) or unchecked((int)0xC0000061) => ProcessOperationResult.Failed(
                         AffinityApplyErrorCodes.AccessDenied,
                         ProcessOperationUserMessages.AccessDenied,
                         $"NtSetInformationProcess failed with NTSTATUS 0x{status:X8}.",
