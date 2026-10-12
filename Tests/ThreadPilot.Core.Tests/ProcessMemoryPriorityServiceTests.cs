@@ -60,6 +60,59 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal(ProcessIoPriority.High, nativeApi.LastSetIoPriority);
         }
 
+        [Fact]
+        public async Task SetIoPriorityAsync_WhenStatusPrivilegeNotHeld_ReturnsSafeAccessDeniedFailure()
+        {
+            var nativeApi = new FakeProcessMemoryPriorityNativeApi
+            {
+                SetIoPriorityStatus = unchecked((int)0xC0000061),
+            };
+            var service = CreateService(nativeApi);
+            var process = CreateProcess();
+
+            var result = await service.SetIoPriorityAsync(process, ProcessIoPriority.High);
+
+            Assert.False(result.Success);
+            Assert.True(result.IsAccessDenied);
+            Assert.Equal(AffinityApplyErrorCodes.AccessDenied, result.ErrorCode);
+            Assert.Equal(ProcessOperationUserMessages.AccessDenied, result.UserMessage);
+            Assert.Contains("0xC0000061", result.TechnicalMessage);
+        }
+
+        [Fact]
+        public async Task SetIoPriorityAsync_WhenHighPriority_AcquiresAndDisposesPrivilegeScope()
+        {
+            var nativeApi = new FakeProcessMemoryPriorityNativeApi();
+            var service = CreateService(nativeApi);
+            var process = CreateProcess();
+
+            var result = await service.SetIoPriorityAsync(process, ProcessIoPriority.High);
+
+            Assert.True(result.Success);
+            Assert.Contains(ProcessMemoryPriorityNativeMethods.SeIncreaseBasePriorityPrivilege, nativeApi.RequestedPrivileges);
+            Assert.Equal(0, nativeApi.ActivePrivilegeScopesCount);
+            Assert.Equal(1, nativeApi.TotalDisposedPrivilegeScopesCount);
+        }
+
+        [Fact]
+        public async Task SetIoPriorityAsync_WhenHighPriorityAndSetFails_StillDisposesPrivilegeScope()
+        {
+            var nativeApi = new FakeProcessMemoryPriorityNativeApi
+            {
+                SetIoPriorityStatus = unchecked((int)0xC0000061),
+            };
+            var service = CreateService(nativeApi);
+            var process = CreateProcess();
+
+            var result = await service.SetIoPriorityAsync(process, ProcessIoPriority.High);
+
+            Assert.False(result.Success);
+            Assert.True(result.IsAccessDenied);
+            Assert.Contains(ProcessMemoryPriorityNativeMethods.SeIncreaseBasePriorityPrivilege, nativeApi.RequestedPrivileges);
+            Assert.Equal(0, nativeApi.ActivePrivilegeScopesCount);
+            Assert.Equal(1, nativeApi.TotalDisposedPrivilegeScopesCount);
+        }
+
         [Theory]
         [InlineData(1, ProcessMemoryPriority.VeryLow)]
         [InlineData(2, ProcessMemoryPriority.Low)]
@@ -228,6 +281,14 @@ namespace ThreadPilot.Core.Tests
 
             public int LastError { get; init; }
 
+            public int SetIoPriorityStatus { get; init; }
+
+            public List<string> RequestedPrivileges { get; } = new();
+
+            public int ActivePrivilegeScopesCount { get; private set; }
+
+            public int TotalDisposedPrivilegeScopesCount { get; private set; }
+
             public SafeProcessHandle OpenProcess(ProcessAccessFlags access, bool inheritHandle, uint processId)
             {
                 this.LastOpenAccess = access;
@@ -276,7 +337,38 @@ namespace ThreadPilot.Core.Tests
             public int SetIoPriority(SafeProcessHandle process, ref int priority)
             {
                 this.LastSetIoPriority = (ProcessIoPriority)priority;
-                return 0;
+                return this.SetIoPriorityStatus;
+            }
+
+            public IDisposable AcquirePrivilegeScope(string privilegeName)
+            {
+                this.RequestedPrivileges.Add(privilegeName);
+                this.ActivePrivilegeScopesCount++;
+                return new FakePrivilegeScope(() =>
+                {
+                    this.ActivePrivilegeScopesCount--;
+                    this.TotalDisposedPrivilegeScopesCount++;
+                });
+            }
+
+            private sealed class FakePrivilegeScope : IDisposable
+            {
+                private readonly Action onDispose;
+                private bool disposed;
+
+                public FakePrivilegeScope(Action onDispose)
+                {
+                    this.onDispose = onDispose;
+                }
+
+                public void Dispose()
+                {
+                    if (!this.disposed)
+                    {
+                        this.disposed = true;
+                        this.onDispose();
+                    }
+                }
             }
         }
     }

@@ -244,7 +244,22 @@ namespace ThreadPilot.Services
                 }
 
                 var value = (int)priority;
-                var status = this.nativeApi.SetIoPriority(handle, ref value);
+                int status;
+                IDisposable? privilegeScope = null;
+                if (priority == ProcessIoPriority.High)
+                {
+                    privilegeScope = this.nativeApi.AcquirePrivilegeScope(ProcessMemoryPriorityNativeMethods.SeIncreaseBasePriorityPrivilege);
+                }
+
+                try
+                {
+                    status = this.nativeApi.SetIoPriority(handle, ref value);
+                }
+                finally
+                {
+                    privilegeScope?.Dispose();
+                }
+
                 if (status == 0)
                 {
                     return Task.FromResult(ProcessOperationResult.Succeeded(
@@ -254,7 +269,7 @@ namespace ThreadPilot.Services
 
                 return Task.FromResult(status switch
                 {
-                    unchecked((int)0xC0000022) => ProcessOperationResult.Failed(
+                    unchecked((int)0xC0000022) or unchecked((int)0xC0000061) => ProcessOperationResult.Failed(
                         AffinityApplyErrorCodes.AccessDenied,
                         ProcessOperationUserMessages.AccessDenied,
                         $"NtSetInformationProcess failed with NTSTATUS 0x{status:X8}.",
