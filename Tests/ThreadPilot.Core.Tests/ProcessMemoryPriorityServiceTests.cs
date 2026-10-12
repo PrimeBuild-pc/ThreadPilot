@@ -80,7 +80,7 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public async Task SetIoPriorityAsync_WhenHighPriority_AttemptsToEnableSeIncreaseBasePriorityPrivilege()
+        public async Task SetIoPriorityAsync_WhenHighPriority_AcquiresAndDisposesPrivilegeScope()
         {
             var nativeApi = new FakeProcessMemoryPriorityNativeApi();
             var service = CreateService(nativeApi);
@@ -90,6 +90,27 @@ namespace ThreadPilot.Core.Tests
 
             Assert.True(result.Success);
             Assert.Contains(ProcessMemoryPriorityNativeMethods.SeIncreaseBasePriorityPrivilege, nativeApi.RequestedPrivileges);
+            Assert.Equal(0, nativeApi.ActivePrivilegeScopesCount);
+            Assert.Equal(1, nativeApi.TotalDisposedPrivilegeScopesCount);
+        }
+
+        [Fact]
+        public async Task SetIoPriorityAsync_WhenHighPriorityAndSetFails_StillDisposesPrivilegeScope()
+        {
+            var nativeApi = new FakeProcessMemoryPriorityNativeApi
+            {
+                SetIoPriorityStatus = unchecked((int)0xC0000061),
+            };
+            var service = CreateService(nativeApi);
+            var process = CreateProcess();
+
+            var result = await service.SetIoPriorityAsync(process, ProcessIoPriority.High);
+
+            Assert.False(result.Success);
+            Assert.True(result.IsAccessDenied);
+            Assert.Contains(ProcessMemoryPriorityNativeMethods.SeIncreaseBasePriorityPrivilege, nativeApi.RequestedPrivileges);
+            Assert.Equal(0, nativeApi.ActivePrivilegeScopesCount);
+            Assert.Equal(1, nativeApi.TotalDisposedPrivilegeScopesCount);
         }
 
         [Theory]
@@ -264,6 +285,10 @@ namespace ThreadPilot.Core.Tests
 
             public List<string> RequestedPrivileges { get; } = new();
 
+            public int ActivePrivilegeScopesCount { get; private set; }
+
+            public int TotalDisposedPrivilegeScopesCount { get; private set; }
+
             public SafeProcessHandle OpenProcess(ProcessAccessFlags access, bool inheritHandle, uint processId)
             {
                 this.LastOpenAccess = access;
@@ -315,10 +340,35 @@ namespace ThreadPilot.Core.Tests
                 return this.SetIoPriorityStatus;
             }
 
-            public bool TryEnableProcessPrivilege(string privilegeName)
+            public IDisposable AcquirePrivilegeScope(string privilegeName)
             {
                 this.RequestedPrivileges.Add(privilegeName);
-                return true;
+                this.ActivePrivilegeScopesCount++;
+                return new FakePrivilegeScope(() =>
+                {
+                    this.ActivePrivilegeScopesCount--;
+                    this.TotalDisposedPrivilegeScopesCount++;
+                });
+            }
+
+            private sealed class FakePrivilegeScope : IDisposable
+            {
+                private readonly Action onDispose;
+                private bool disposed;
+
+                public FakePrivilegeScope(Action onDispose)
+                {
+                    this.onDispose = onDispose;
+                }
+
+                public void Dispose()
+                {
+                    if (!this.disposed)
+                    {
+                        this.disposed = true;
+                        this.onDispose();
+                    }
+                }
             }
         }
     }

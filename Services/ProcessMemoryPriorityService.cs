@@ -234,11 +234,6 @@ namespace ThreadPilot.Services
 
             try
             {
-                if (priority == ProcessIoPriority.High)
-                {
-                    this.nativeApi.TryEnableProcessPrivilege(ProcessMemoryPriorityNativeMethods.SeIncreaseBasePriorityPrivilege);
-                }
-
                 using var handle = this.nativeApi.OpenProcess(
                     ProcessAccessFlags.PROCESS_SET_INFORMATION,
                     inheritHandle: false,
@@ -249,7 +244,22 @@ namespace ThreadPilot.Services
                 }
 
                 var value = (int)priority;
-                var status = this.nativeApi.SetIoPriority(handle, ref value);
+                int status;
+                IDisposable? privilegeScope = null;
+                if (priority == ProcessIoPriority.High)
+                {
+                    privilegeScope = this.nativeApi.AcquirePrivilegeScope(ProcessMemoryPriorityNativeMethods.SeIncreaseBasePriorityPrivilege);
+                }
+
+                try
+                {
+                    status = this.nativeApi.SetIoPriority(handle, ref value);
+                }
+                finally
+                {
+                    privilegeScope?.Dispose();
+                }
+
                 if (status == 0)
                 {
                     return Task.FromResult(ProcessOperationResult.Succeeded(

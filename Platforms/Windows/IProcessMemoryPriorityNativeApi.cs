@@ -35,7 +35,7 @@ namespace ThreadPilot.Platforms.Windows
 
         int SetIoPriority(SafeProcessHandle process, ref int priority) => unchecked((int)0xC0000002);
 
-        bool TryEnableProcessPrivilege(string privilegeName) => false;
+        IDisposable? AcquirePrivilegeScope(string privilegeName) => null;
     }
 
     public sealed class ProcessMemoryPriorityNativeApi : IProcessMemoryPriorityNativeApi
@@ -99,8 +99,8 @@ namespace ThreadPilot.Platforms.Windows
                 ref priority,
                 sizeof(int));
 
-        public bool TryEnableProcessPrivilege(string privilegeName) =>
-            ProcessMemoryPriorityNativeMethods.TryEnablePrivilege(privilegeName);
+        public IDisposable? AcquirePrivilegeScope(string privilegeName) =>
+            ProcessMemoryPriorityNativeMethods.AcquirePrivilegeScope(privilegeName);
     }
 
     public enum ProcessInformationClass
