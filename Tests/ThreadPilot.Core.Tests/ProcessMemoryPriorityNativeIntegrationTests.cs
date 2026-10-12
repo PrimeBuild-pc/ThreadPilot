@@ -5,6 +5,7 @@ namespace ThreadPilot.Core.Tests
 {
     using System;
     using System.Runtime.Versioning;
+    using System.Threading;
     using ThreadPilot.Platforms.Windows;
 
     [SupportedOSPlatform("windows10.0.22000.0")]
@@ -78,6 +79,85 @@ namespace ThreadPilot.Core.Tests
             }
 
             // Both scopes disposed: privilege must be restored to original state.
+            bool finalEnabled = ProcessMemoryPriorityNativeMethods.IsPrivilegeEnabled(privilegeName);
+            Assert.Equal(originalEnabled, finalEnabled);
+        }
+
+        [Fact]
+        public void AcquirePrivilegeScope_WithConcurrentThreads_MaintainsPrivilegeUntilFinalDisposal()
+        {
+            const string privilegeName = "SeShutdownPrivilege";
+            if (!ProcessMemoryPriorityNativeMethods.IsPrivilegePresent(privilegeName))
+            {
+                return;
+            }
+
+            bool originalEnabled = ProcessMemoryPriorityNativeMethods.IsPrivilegeEnabled(privilegeName);
+
+            using var bothActiveBarrier = new Barrier(2);
+            using var thread1DisposedSignal = new ManualResetEventSlim(false);
+
+            Exception? thread1Error = null;
+            Exception? thread2Error = null;
+
+            var thread1 = new Thread(() =>
+            {
+                try
+                {
+                    using (var scope1 = ProcessMemoryPriorityNativeMethods.AcquirePrivilegeScope(privilegeName))
+                    {
+                        Assert.NotNull(scope1);
+                        Assert.True(ProcessMemoryPriorityNativeMethods.IsPrivilegeEnabled(privilegeName));
+
+                        // Wait until thread 2 also acquires its scope
+                        bothActiveBarrier.SignalAndWait();
+                    }
+
+                    // Scope 1 disposed here
+                    thread1DisposedSignal.Set();
+                }
+                catch (Exception ex)
+                {
+                    thread1Error = ex;
+                    thread1DisposedSignal.Set();
+                }
+            });
+
+            var thread2 = new Thread(() =>
+            {
+                try
+                {
+                    using (var scope2 = ProcessMemoryPriorityNativeMethods.AcquirePrivilegeScope(privilegeName))
+                    {
+                        Assert.NotNull(scope2);
+                        Assert.True(ProcessMemoryPriorityNativeMethods.IsPrivilegeEnabled(privilegeName));
+
+                        // Wait until thread 1 also acquires its scope
+                        bothActiveBarrier.SignalAndWait();
+
+                        // Wait until thread 1 has disposed its scope
+                        Assert.True(thread1DisposedSignal.Wait(TimeSpan.FromSeconds(5)));
+
+                        // Assert privilege remains enabled while thread 2's scope is still active
+                        Assert.True(ProcessMemoryPriorityNativeMethods.IsPrivilegeEnabled(privilegeName));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    thread2Error = ex;
+                }
+            });
+
+            thread1.Start();
+            thread2.Start();
+
+            Assert.True(thread1.Join(TimeSpan.FromSeconds(10)));
+            Assert.True(thread2.Join(TimeSpan.FromSeconds(10)));
+
+            Assert.Null(thread1Error);
+            Assert.Null(thread2Error);
+
+            // Both threads have disposed their scopes: confirm restored to original state
             bool finalEnabled = ProcessMemoryPriorityNativeMethods.IsPrivilegeEnabled(privilegeName);
             Assert.Equal(originalEnabled, finalEnabled);
         }
