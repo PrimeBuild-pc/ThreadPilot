@@ -229,6 +229,13 @@ namespace ThreadPilot.ViewModels
             this.persistentRuleStore = persistentRuleStore;
             this.persistentRuleMatcher = persistentRuleMatcher;
             this.SelectedCpuAssignmentMode = settingsService?.Settings.DefaultCpuAssignmentMode ?? CpuAssignmentMode.Automatic;
+
+            // Fields, not properties: the change handlers would reload and re-save the list during construction.
+            var uiState = UiStateStore.Current;
+            this.showActiveApplicationsOnly = uiState.ShowActiveApplicationsOnly;
+            this.hideSystemProcesses = uiState.HideSystemProcesses;
+            this.hideIdleProcesses = uiState.HideIdleProcesses;
+            this.sortMode = string.IsNullOrWhiteSpace(uiState.SortMode) ? this.sortMode : uiState.SortMode;
             this.IsAutomationMonitoringEnabled = settingsService?.Settings.EnableAutomationMonitoring ?? true;
             if (settingsService != null)
             {

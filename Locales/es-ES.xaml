@@ -556,8 +556,8 @@
     <sys:String x:Key="SystemTweak_GpuMsiMode_Name">Modo MSI de GPU</sys:String>
     <sys:String x:Key="SystemTweak_GpuMsiMode_Desc">Controla MSI solo si el controlador gráfico ya expone MSISupported. Requiere reiniciar.</sys:String>
     <sys:String x:Key="SystemTweaks_OpenSettings">Abrir configuración</sys:String>
-    <sys:String x:Key="SystemTweaks_ToggleOn">SÍ</sys:String>
-    <sys:String x:Key="SystemTweaks_ToggleOff">NO</sys:String>
+    <sys:String x:Key="SystemTweaks_ToggleOn">Activado</sys:String>
+    <sys:String x:Key="SystemTweaks_ToggleOff">Desactivado</sys:String>
     <sys:String x:Key="SystemTweaks_StatusManagedByWindows">Administrado por Windows</sys:String>
     <sys:String x:Key="SystemTweaks_StatusOpenSettingsFailed">No se pudo abrir la configuración de Windows</sys:String>
     <sys:String x:Key="SystemTweaks_StatusSettingsOpenedFormat">Configuración abierta para {0}</sys:String>

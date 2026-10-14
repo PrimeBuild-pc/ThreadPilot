@@ -2143,6 +2143,7 @@ namespace ThreadPilot.ViewModels
 
         partial void OnShowActiveApplicationsOnlyChanged(bool value)
         {
+            UiStateStore.Update(s => s with { ShowActiveApplicationsOnly = value });
             _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
             {
                 await LoadProcessesCommand.ExecuteAsync(null);
@@ -2151,16 +2152,19 @@ namespace ThreadPilot.ViewModels
 
         partial void OnHideSystemProcessesChanged(bool value)
         {
+            UiStateStore.Update(s => s with { HideSystemProcesses = value });
             this.filterRefreshCoordinator.Schedule();
         }
 
         partial void OnHideIdleProcessesChanged(bool value)
         {
+            UiStateStore.Update(s => s with { HideIdleProcesses = value });
             this.filterRefreshCoordinator.Schedule();
         }
 
         partial void OnSortModeChanged(string value)
         {
+            UiStateStore.Update(s => s with { SortMode = value });
             this.filterRefreshCoordinator.Schedule();
         }
 

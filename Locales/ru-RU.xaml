@@ -556,8 +556,8 @@
     <sys:String x:Key="SystemTweak_GpuMsiMode_Name">Режим MSI для GPU</sys:String>
     <sys:String x:Key="SystemTweak_GpuMsiMode_Desc">Управляет MSI, только если видеодрайвер уже предоставляет MSISupported. Требуется перезагрузка.</sys:String>
     <sys:String x:Key="SystemTweaks_OpenSettings">Открыть параметры</sys:String>
-    <sys:String x:Key="SystemTweaks_ToggleOn">ВКЛ</sys:String>
-    <sys:String x:Key="SystemTweaks_ToggleOff">ВЫКЛ</sys:String>
+    <sys:String x:Key="SystemTweaks_ToggleOn">Вкл.</sys:String>
+    <sys:String x:Key="SystemTweaks_ToggleOff">Откл.</sys:String>
     <sys:String x:Key="SystemTweaks_StatusManagedByWindows">Управляется Windows</sys:String>
     <sys:String x:Key="SystemTweaks_StatusOpenSettingsFailed">Не удалось открыть параметры Windows</sys:String>
     <sys:String x:Key="SystemTweaks_StatusSettingsOpenedFormat">Открыты параметры для {0}</sys:String>

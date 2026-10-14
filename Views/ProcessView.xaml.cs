@@ -11,6 +11,22 @@ namespace ThreadPilot.Views
         {
             this.InitializeComponent();
             this.DataContext = ServiceProviderExtensions.GetService<ProcessViewModel>();
+
+            var state = Services.UiStateStore.Current;
+            this.ShowPidColumn.IsChecked = state.ShowPidColumn;
+            this.ShowWindowColumn.IsChecked = state.ShowWindowTitleColumn;
+            this.ShowHasWindowColumn.IsChecked = state.ShowHasWindowColumn;
+            System.Windows.RoutedEventHandler save = (_, _) => Services.UiStateStore.Update(s => s with
+            {
+                ShowPidColumn = this.ShowPidColumn.IsChecked,
+                ShowWindowTitleColumn = this.ShowWindowColumn.IsChecked,
+                ShowHasWindowColumn = this.ShowHasWindowColumn.IsChecked,
+            });
+            foreach (var item in new[] { this.ShowPidColumn, this.ShowWindowColumn, this.ShowHasWindowColumn })
+            {
+                item.Checked += save;
+                item.Unchecked += save;
+            }
         }
 
         private void ProcessWorkspace_SizeChanged(object sender, System.Windows.SizeChangedEventArgs e)
