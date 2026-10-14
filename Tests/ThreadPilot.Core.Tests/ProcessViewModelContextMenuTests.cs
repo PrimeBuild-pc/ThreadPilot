@@ -224,6 +224,9 @@ namespace ThreadPilot.Core.Tests
                     ProcessOperationUserMessages.AccessDenied,
                     "Access is denied.",
                     isAccessDenied: true));
+            memoryPriorityService
+                .Setup(service => service.GetMemoryPriorityAsync(It.IsAny<ProcessModel>()))
+                .ReturnsAsync(ProcessMemoryPriority.Normal);
             var process = CreateProcess();
             var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
             var viewModel = CreateViewModel(

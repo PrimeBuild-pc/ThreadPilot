@@ -769,4 +769,11 @@
     <sys:String x:Key="Settings_ImportPreview">Заменить настройки и {0} привязок к схемам электропитания. Правила процессов: {1}. Продолжить?</sys:String>
     <sys:String x:Key="Settings_ImportKeepRules">сохранить существующие правила</sys:String>
     <sys:String x:Key="Settings_ImportReplaceRules">заменить {0} импортированными правилами</sys:String>
+
+    <!-- Process editor and rules editor -->
+    <sys:String x:Key="ProcessView_ApplyNow">Применить</sys:String>
+    <sys:String x:Key="ProcessView_AutomationPaused">Автоматизация приостановлена. Ручные изменения работают; сохранённые правила не применяются до возобновления мониторинга.</sys:String>
+    <sys:String x:Key="ProcessView_UndoPriority">Отменить последнее изменение приоритета</sys:String>
+    <sys:String x:Key="ProcessView_VisibleCountSuffix">процессов показано</sys:String>
+    <sys:String x:Key="Rules_PendingChanges">Несохранённые изменения</sys:String>
 </ResourceDictionary>

@@ -769,4 +769,11 @@
     <sys:String x:Key="Settings_ImportPreview">Remplacer les paramètres et {0} associations de modes d'alimentation. Règles de processus : {1}. Continuer ?</sys:String>
     <sys:String x:Key="Settings_ImportKeepRules">conserver les règles existantes</sys:String>
     <sys:String x:Key="Settings_ImportReplaceRules">remplacer par {0} règles importées</sys:String>
+
+    <!-- Process editor and rules editor -->
+    <sys:String x:Key="ProcessView_ApplyNow">Appliquer</sys:String>
+    <sys:String x:Key="ProcessView_AutomationPaused">Automatisation en pause. Les modifications manuelles fonctionnent toujours ; les règles enregistrées ne s'appliquent qu'à la reprise de la surveillance.</sys:String>
+    <sys:String x:Key="ProcessView_UndoPriority">Annuler la dernière modification de priorité</sys:String>
+    <sys:String x:Key="ProcessView_VisibleCountSuffix">processus affichés</sys:String>
+    <sys:String x:Key="Rules_PendingChanges">Modifications non enregistrées</sys:String>
 </ResourceDictionary>

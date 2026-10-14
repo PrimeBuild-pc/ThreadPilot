@@ -164,7 +164,7 @@
                             <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_ExecutableMatch}" FontWeight="SemiBold" Margin="0,0,0,5"/>
                             <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_ExecutableHelp}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
-                                       FontSize="10"
+                                       FontSize="13"
                                        TextWrapping="Wrap"
                                        Margin="0,0,0,8"/>
 
@@ -180,11 +180,11 @@
                                     Background="{DynamicResource SurfaceAltBrush}" Padding="8" Margin="0,0,0,10"
                                     Visibility="{Binding HasSelectedExecutable, Converter={StaticResource BoolToVisibilityConverter}}">
                                  <StackPanel>
-                                     <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SelectedExecutable}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                                     <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SelectedExecutable}" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,2"/>
                                      <TextBlock Text="{Binding SelectedExecutableDisplayName}"
                                                FontWeight="SemiBold" Margin="0,0,0,2"/>
                                      <TextBlock Text="{Binding SelectedExecutableFullPath}"
-                                               FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                                               FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
                                  </StackPanel>
                              </Border>
 
@@ -192,7 +192,7 @@
                             <Button Content="{DynamicResource ProcessPowerPlanAssociationView_ClearSelection}"
                                    Command="{Binding ClearSelectedExecutableCommand}"
                                    Padding="5,3" Margin="0,0,0,15"
-                                   HorizontalAlignment="Left" FontSize="10"
+                                   HorizontalAlignment="Left" FontSize="13"
                                    Visibility="{Binding HasSelectedExecutable, Converter={StaticResource BoolToVisibilityConverter}}"
                                    ToolTip="{DynamicResource ProcessPowerPlanAssociationView_ClearSelectionTooltip}"/>
 
@@ -204,7 +204,7 @@
                              <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_RulePowerPlan}" Margin="0,0,0,5" FontWeight="SemiBold"/>
                              <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_RulePowerPlanHelp}"
                                         Foreground="{DynamicResource TextSecondaryBrush}"
-                                        FontSize="10"
+                                        FontSize="13"
                                         TextWrapping="Wrap"
                                         Margin="0,0,0,5"/>
                             <ComboBox ItemsSource="{Binding AvailablePowerPlans}"
@@ -215,7 +215,7 @@
                             <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_RuleCpuMask}" Margin="0,0,0,5"/>
                             <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_AppliedOnlyToMatching}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
-                                       FontSize="10"
+                                       FontSize="13"
                                        TextWrapping="Wrap"
                                        Margin="0,0,0,5"/>
                             <ComboBox ItemsSource="{Binding AvailableCoreMasks}"
@@ -227,7 +227,7 @@
                             <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_ProcessPriority}" Margin="0,0,0,5"/>
                             <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_AppliedToMatching}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
-                                       FontSize="10"
+                                       FontSize="13"
                                        TextWrapping="Wrap"
                                        Margin="0,0,0,5"/>
                             <ComboBox ItemsSource="{Binding AvailablePriorities}"
@@ -359,6 +359,8 @@
                                   Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleEditor}"
                                   VerticalAlignment="Top">
                             <StackPanel IsEnabled="{Binding SelectedSavedProcessRule, Converter={StaticResource NullToBoolConverter}}">
+                                <TextBlock Text="{DynamicResource Rules_PendingChanges}" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,10"
+                                           Visibility="{Binding HasPendingRuleChanges, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                 <TextBlock Text="{Binding SelectedSavedProcessRule.ProcessName}"
                                            FontWeight="SemiBold"
                                            Margin="0,0,0,8"/>
@@ -396,11 +398,6 @@
                                           SelectedItem="{Binding SavedRuleCoreMask, Mode=TwoWay}"
                                           DisplayMemberPath="Name"
                                           Margin="0,0,0,6"/>
-                                <Button Content="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleApplyMask}"
-                                        Command="{Binding ApplySavedRuleCoreMaskCommand}"
-                                        Padding="10,4"
-                                        HorizontalAlignment="Left"
-                                        Margin="0,0,0,12"/>
 
                                 <CheckBox Content="{DynamicResource ProcessPowerPlanAssociationView_SavedRulePreventSleep}"
                                           IsChecked="{Binding SavedRulePreventSleep, Mode=TwoWay}"

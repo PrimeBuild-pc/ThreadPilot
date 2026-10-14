@@ -769,4 +769,11 @@
     <sys:String x:Key="Settings_ImportPreview">Sostituire le impostazioni e {0} associazioni ai piani di alimentazione? Regole dei processi: {1}. Continuare?</sys:String>
     <sys:String x:Key="Settings_ImportKeepRules">mantieni le regole esistenti</sys:String>
     <sys:String x:Key="Settings_ImportReplaceRules">sostituisci con {0} regole importate</sys:String>
+
+    <!-- Process editor and rules editor -->
+    <sys:String x:Key="ProcessView_ApplyNow">Applica</sys:String>
+    <sys:String x:Key="ProcessView_AutomationPaused">Automazione in pausa. Le modifiche manuali funzionano; le regole salvate non vengono applicate finché il monitoraggio non riprende.</sys:String>
+    <sys:String x:Key="ProcessView_UndoPriority">Annulla ultima modifica di priorità</sys:String>
+    <sys:String x:Key="ProcessView_VisibleCountSuffix">processi visibili</sys:String>
+    <sys:String x:Key="Rules_PendingChanges">Modifiche non salvate</sys:String>
 </ResourceDictionary>

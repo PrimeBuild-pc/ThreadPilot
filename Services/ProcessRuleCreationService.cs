@@ -35,6 +35,11 @@ namespace ThreadPilot.Services
             PersistentProcessRule rule,
             CancellationToken cancellationToken = default);
 
+        Task<ProcessRuleCreationResult> UpdateRuleWithCoreSelectionAsync(
+            PersistentProcessRule rule,
+            IReadOnlyList<bool>? coreSelection,
+            CancellationToken cancellationToken = default);
+
         Task<ProcessRuleCreationResult> UpdateRuleCoreSelectionAsync(
             string ruleId,
             IReadOnlyList<bool> coreSelection,
@@ -207,8 +212,14 @@ namespace ThreadPilot.Services
         // Editing a rule in place, from the saved-rules list. The affinity payload is not editable
         // there - that needs the core picker in the Process tab - so it is carried over untouched
         // rather than rebuilt, and only the fields the editor owns are replaced.
-        public async Task<ProcessRuleCreationResult> UpdateRuleAsync(
+        public Task<ProcessRuleCreationResult> UpdateRuleAsync(
             PersistentProcessRule rule,
+            CancellationToken cancellationToken = default) =>
+            this.UpdateRuleWithCoreSelectionAsync(rule, null, cancellationToken);
+
+        public async Task<ProcessRuleCreationResult> UpdateRuleWithCoreSelectionAsync(
+            PersistentProcessRule rule,
+            IReadOnlyList<bool>? coreSelection,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(rule);
@@ -241,6 +252,22 @@ namespace ThreadPilot.Services
                 ApplyIoPriorityOnStart = rule.IoPriority.HasValue,
                 UpdatedAt = DateTime.UtcNow,
             };
+
+            if (coreSelection != null)
+            {
+                var affinity = await this.BuildAffinityPayloadFromCoreSelectionAsync(coreSelection, "Saved rule editor", cancellationToken).ConfigureAwait(false);
+                if (!affinity.Success || affinity.Payload == null)
+                {
+                    return affinity;
+                }
+
+                updated = updated with
+                {
+                    CpuSelection = affinity.Payload.CpuSelection,
+                    LegacyAffinityMask = affinity.Payload.LegacyAffinityMask,
+                    ApplyAffinityOnStart = true,
+                };
+            }
 
             rules[existingIndex] = updated;
 

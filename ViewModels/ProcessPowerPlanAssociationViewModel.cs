@@ -196,21 +196,27 @@ namespace ThreadPilot.ViewModels
         private SavedProcessRule? selectedSavedProcessRule;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasPendingRuleChanges))]
         private bool savedRuleIsEnabled = true;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasPendingRuleChanges))]
         private bool savedRulePreventSleep;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasPendingRuleChanges))]
         private string savedRulePriority = NoneOption;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasPendingRuleChanges))]
         private string savedRuleMemoryPriority = NoneOption;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasPendingRuleChanges))]
         private string savedRuleIoPriority = NoneOption;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasPendingRuleChanges))]
         private string savedRuleCpuAssignmentMode = nameof(CpuAssignmentMode.AffinityMask);
 
         public const string NoneOption = "None";
@@ -243,6 +249,7 @@ namespace ThreadPilot.ViewModels
                 return;
             }
 
+            this.SavedRuleCoreMask = null;
             var rule = value.Source;
             this.SavedRuleIsEnabled = rule.IsEnabled;
             this.SavedRulePreventSleep = rule.PreventSystemSleepWhileRunning;
@@ -257,26 +264,16 @@ namespace ThreadPilot.ViewModels
         // was the one thing you could not change. The vocabulary here is the saved CPU masks, which
         // is what the Masks tab exists to define, rather than a second per-core picker.
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasPendingRuleChanges))]
         private CoreMask? savedRuleCoreMask;
 
-        [RelayCommand]
-        private async Task ApplySavedRuleCoreMaskAsync()
-        {
-            var selected = this.SelectedSavedProcessRule;
-            var mask = this.SavedRuleCoreMask;
-            if (selected == null || mask == null || this.ruleCreationService == null)
-            {
-                return;
-            }
-
-            var result = await this.ruleCreationService
-                .UpdateRuleCoreSelectionAsync(selected.Id, mask.BoolMask)
-                .ConfigureAwait(true);
-            this.SetStatus(result.UserMessage, false);
-            await this.RefreshSavedProcessRulesAsync().ConfigureAwait(true);
-            this.SelectedSavedProcessRule = this.SavedProcessRules
-                .FirstOrDefault(row => string.Equals(row.Id, selected.Id, StringComparison.Ordinal));
-        }
+        public bool HasPendingRuleChanges => this.SelectedSavedProcessRule is { } selected &&
+            (this.SavedRuleCoreMask != null || this.SavedRuleIsEnabled != selected.Source.IsEnabled ||
+             this.SavedRulePreventSleep != selected.Source.PreventSystemSleepWhileRunning ||
+             this.SavedRulePriority != (selected.Source.Priority?.ToString() ?? NoneOption) ||
+             this.SavedRuleMemoryPriority != (selected.Source.MemoryPriority?.ToString() ?? NoneOption) ||
+             this.SavedRuleIoPriority != (selected.Source.IoPriority?.ToString() ?? NoneOption) ||
+             this.SavedRuleCpuAssignmentMode != selected.Source.CpuAssignmentMode.ToString());
 
         [RelayCommand]
         private async Task SaveSavedProcessRuleAsync()
@@ -299,7 +296,9 @@ namespace ThreadPilot.ViewModels
                     : selected.Source.CpuAssignmentMode,
             };
 
-            var result = await this.ruleCreationService.UpdateRuleAsync(updated).ConfigureAwait(true);
+            var result = this.SavedRuleCoreMask == null
+                ? await this.ruleCreationService.UpdateRuleAsync(updated).ConfigureAwait(true)
+                : await this.ruleCreationService.UpdateRuleWithCoreSelectionAsync(updated, this.SavedRuleCoreMask.BoolMask).ConfigureAwait(true);
             this.SetStatus(result.UserMessage, false);
             await this.RefreshSavedProcessRulesAsync().ConfigureAwait(true);
             this.SelectedSavedProcessRule = this.SavedProcessRules

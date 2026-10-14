@@ -37,6 +37,7 @@ namespace ThreadPilot.ViewModels
         private readonly ProcessPowerRequestService? powerRequestService;
         private readonly IProcessRuleCreationService? processRuleCreationService;
         private readonly IApplicationSettingsService? settingsService;
+        private readonly ILocalizationService? uiLocalization;
         private readonly IPersistentProcessRuleStore? persistentRuleStore;
         private readonly IPersistentProcessRuleMatcher? persistentRuleMatcher;
         private readonly Action<string> clipboardSetter;
@@ -224,6 +225,7 @@ namespace ThreadPilot.ViewModels
             this.memoryPriorityService = memoryPriorityService;
             this.powerRequestService = powerRequestService;
             this.settingsService = settingsService;
+            this.uiLocalization = localizationService;
             this.persistentRuleStore = persistentRuleStore;
             this.persistentRuleMatcher = persistentRuleMatcher;
             this.SelectedCpuAssignmentMode = settingsService?.Settings.DefaultCpuAssignmentMode ?? CpuAssignmentMode.Automatic;
@@ -281,13 +283,6 @@ namespace ThreadPilot.ViewModels
             {
                 this.SetCpuAssignmentMode(e.NewSettings.DefaultCpuAssignmentMode, overriddenByRule: false);
             }
-            if (!this.IsAutomationMonitoringEnabled)
-            {
-                this.SetUiRefreshEnabled(false, refreshImmediately: false);
-                this.SelectedProcess = null;
-                return;
-            }
-
             this.SetUiRefreshEnabled(this.isProcessViewActive && !this.IsProcessListLocked);
         }
 

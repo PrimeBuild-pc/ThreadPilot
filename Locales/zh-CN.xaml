@@ -769,4 +769,11 @@
     <sys:String x:Key="Settings_ImportPreview">替换设置和 {0} 个电源计划关联。进程规则：{1}。是否继续？</sys:String>
     <sys:String x:Key="Settings_ImportKeepRules">保留现有规则</sys:String>
     <sys:String x:Key="Settings_ImportReplaceRules">替换为 {0} 条导入的规则</sys:String>
+
+    <!-- Process editor and rules editor -->
+    <sys:String x:Key="ProcessView_ApplyNow">应用</sys:String>
+    <sys:String x:Key="ProcessView_AutomationPaused">自动化已暂停。手动更改仍然有效；恢复监控之前不会应用已保存的规则。</sys:String>
+    <sys:String x:Key="ProcessView_UndoPriority">撤销上次优先级更改</sys:String>
+    <sys:String x:Key="ProcessView_VisibleCountSuffix">个进程已显示</sys:String>
+    <sys:String x:Key="Rules_PendingChanges">未保存的更改</sys:String>
 </ResourceDictionary>

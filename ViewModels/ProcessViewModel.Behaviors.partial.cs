@@ -84,7 +84,7 @@ namespace ThreadPilot.ViewModels
                 System.Diagnostics.Debug.WriteLine("ProcessViewModel.InitializeAsync: Power plans loaded");
 
                 // Load processes automatically only while automation monitoring is enabled.
-                if (this.IsAutomationMonitoringEnabled)
+                if (this.isProcessViewActive)
                 {
                     System.Diagnostics.Debug.WriteLine("ProcessViewModel.InitializeAsync: About to load processes automatically");
                     await this.LoadProcessesCommand.ExecuteAsync(null);
@@ -99,7 +99,7 @@ namespace ThreadPilot.ViewModels
                 System.Diagnostics.Debug.WriteLine($"ProcessViewModel.InitializeAsync: Processes loaded automatically, count: {processCount}");
 
                 // Start refresh timer only while automation monitoring is enabled.
-                if (this.IsAutomationMonitoringEnabled)
+                if (this.isProcessViewActive)
                 {
                     System.Diagnostics.Debug.WriteLine("ProcessViewModel.InitializeAsync: Starting refresh timer");
                     this.refreshTimer?.Start();
@@ -192,7 +192,7 @@ namespace ThreadPilot.ViewModels
             try
             {
                 var rules = await this.persistentRuleStore.LoadAsync().ConfigureAwait(false);
-                var rule = rules.FirstOrDefault(candidate => candidate.IsEnabled && this.persistentRuleMatcher.IsMatch(candidate, process));
+                var rule = PersistentRuleResolution.MatchInApplyOrder(rules, process, this.persistentRuleMatcher).LastOrDefault(candidate => candidate.ApplyAffinityOnStart);
                 return rule == null ? (defaultMode, false) : (rule.CpuAssignmentMode, true);
             }
             catch (Exception ex)
@@ -1740,7 +1740,9 @@ namespace ThreadPilot.ViewModels
 
             try
             {
+                var undo = CapturePriorityUndo(process, cpu: true);
                 await this.processService.SetProcessPriority(process, priority, ProcessPriorityWriteSource.ManualUiAction);
+                this.RememberPriority(undo);
                 await this.processService.RefreshProcessInfo(process);
 
                 var warning = ProcessPriorityGuardrails.GetWarning(priority);
@@ -1790,6 +1792,8 @@ namespace ThreadPilot.ViewModels
 
             try
             {
+                var previous = await this.memoryPriorityService.GetMemoryPriorityAsync(process);
+                var undo = previous.HasValue ? CapturePriorityUndo(process, memory: previous) : null;
                 var result = await this.memoryPriorityService.SetMemoryPriorityAsync(process, priority);
                 if (!result.Success)
                 {
@@ -1805,6 +1809,7 @@ namespace ThreadPilot.ViewModels
                     return;
                 }
 
+                this.RememberPriority(undo);
                 this.SetStatus($"Memory priority applied successfully to {process.Name}: {priority}.", false);
                 await this.LogUserActionAsync(
                     "ProcessMemoryPriorityChanged",
@@ -1831,6 +1836,8 @@ namespace ThreadPilot.ViewModels
                 return;
             }
 
+            var previous = await this.memoryPriorityService.GetIoPriorityAsync(process);
+            var undo = previous.HasValue ? CapturePriorityUndo(process, io: previous) : null;
             var result = await this.memoryPriorityService.SetIoPriorityAsync(process, priority);
             if (!result.Success)
             {
@@ -1843,6 +1850,7 @@ namespace ThreadPilot.ViewModels
                 return;
             }
 
+            this.RememberPriority(undo);
             this.SetStatus($"I/O priority applied successfully to {process.Name}: {priority}.", false);
             await this.LogUserActionAsync(
                 "ProcessIoPriorityChanged",
@@ -2107,7 +2115,7 @@ namespace ThreadPilot.ViewModels
 
         private bool ShouldRunProcessUiRefresh()
         {
-            return this.IsAutomationMonitoringEnabled && this.isProcessViewActive && !this.isUiRefreshPaused && !this.IsProcessListLocked;
+            return this.isProcessViewActive && !this.isUiRefreshPaused && !this.IsProcessListLocked;
         }
 
         private bool ShouldPreloadVirtualizedBatches()

@@ -769,4 +769,11 @@
     <sys:String x:Key="Settings_ImportPreview">Reemplazar la configuración y {0} asociaciones de planes de energía. Reglas de procesos: {1}. ¿Continuar?</sys:String>
     <sys:String x:Key="Settings_ImportKeepRules">mantener las reglas existentes</sys:String>
     <sys:String x:Key="Settings_ImportReplaceRules">reemplazar con {0} reglas importadas</sys:String>
+
+    <!-- Process editor and rules editor -->
+    <sys:String x:Key="ProcessView_ApplyNow">Aplicar</sys:String>
+    <sys:String x:Key="ProcessView_AutomationPaused">Automatización en pausa. Los cambios manuales siguen funcionando; las reglas guardadas no se aplican hasta reanudar la supervisión.</sys:String>
+    <sys:String x:Key="ProcessView_UndoPriority">Deshacer el último cambio de prioridad</sys:String>
+    <sys:String x:Key="ProcessView_VisibleCountSuffix">procesos mostrados</sys:String>
+    <sys:String x:Key="Rules_PendingChanges">Cambios sin guardar</sys:String>
 </ResourceDictionary>

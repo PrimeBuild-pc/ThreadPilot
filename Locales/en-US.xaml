@@ -769,4 +769,11 @@
     <sys:String x:Key="Settings_ImportPreview">Replace settings and {0} power plan associations. Persistent process rules: {1}. Continue?</sys:String>
     <sys:String x:Key="Settings_ImportKeepRules">keep existing rules</sys:String>
     <sys:String x:Key="Settings_ImportReplaceRules">replace with {0} imported rules</sys:String>
+
+    <!-- Process editor and rules editor -->
+    <sys:String x:Key="ProcessView_ApplyNow">Apply</sys:String>
+    <sys:String x:Key="ProcessView_AutomationPaused">Automation is paused. Manual changes still work; saved rules are not applied until monitoring resumes.</sys:String>
+    <sys:String x:Key="ProcessView_UndoPriority">Undo last priority change</sys:String>
+    <sys:String x:Key="ProcessView_VisibleCountSuffix">processes shown</sys:String>
+    <sys:String x:Key="Rules_PendingChanges">Unsaved changes</sys:String>
 </ResourceDictionary>

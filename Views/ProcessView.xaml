@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:converters="clr-namespace:ThreadPilot.Converters"
+             xmlns:sysdiag="clr-namespace:System.Diagnostics;assembly=System.Diagnostics.Process"
              xmlns:models="clr-namespace:ThreadPilot.Models"
              xmlns:sys="clr-namespace:System;assembly=mscorlib"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -22,8 +23,8 @@
         <converters:BytesToMbConverter x:Key="BytesToMbConverter"/>
         <sys:Double x:Key="ProcessFontLarge">24</sys:Double>
         <sys:Double x:Key="ProcessFontMedium">14</sys:Double>
-        <sys:Double x:Key="ProcessFontMediumSmall">12</sys:Double>
-        <sys:Double x:Key="ProcessFontSmall">11</sys:Double>
+        <sys:Double x:Key="ProcessFontMediumSmall">14</sys:Double>
+        <sys:Double x:Key="ProcessFontSmall">13</sys:Double>
         <Style x:Key="ProcessContextMenuItemStyle" TargetType="{x:Type MenuItem}" BasedOn="{x:Null}">
             <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="FontWeight" Value="Normal"/>
@@ -159,18 +160,24 @@
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
             <TextBlock Text="{DynamicResource ProcessView_Title}" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
             <TextBlock Text="{DynamicResource ProcessView_Subtitle}" Style="{StaticResource PageSubtitleTextStyle}"/>
+            <TextBlock Text="{DynamicResource ProcessView_AutomationPaused}" TextWrapping="Wrap" Margin="0,8,0,0"
+                       Visibility="{Binding IsAutomationMonitoringEnabled, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
         </StackPanel>
 
         <Grid Grid.Row="1">
 
-            <Grid>
+            <Grid x:Name="ProcessWorkspace" SizeChanged="ProcessWorkspace_SizeChanged">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition x:Name="DetailColumn" Width="0"/>
+                </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <Border Grid.Row="0"
+                <Border Grid.Row="0" Grid.ColumnSpan="2"
                         Background="{DynamicResource CardSurfaceBrush}"
                         Padding="{DynamicResource StandardCardPadding}"
                         BorderBrush="{DynamicResource BorderSubtleBrush}"
@@ -245,14 +252,16 @@
                                 <ComboBoxItem Content="{DynamicResource ProcessView_ColProcessName}" Tag="Name"/>
                                 <ComboBoxItem Content="{DynamicResource ProcessView_ID}" Tag="ProcessId"/>
                             </ComboBox>
+                            <CheckBox x:Name="ShowPidColumn" Content="{DynamicResource ProcessView_ID}" IsChecked="True" Margin="14,0,8,0"/>
+                            <CheckBox x:Name="ShowWindowColumn" Content="{DynamicResource ProcessView_ColWindowTitle}" Margin="0,0,8,0"/>
+                            <CheckBox x:Name="ShowHasWindowColumn" Content="{DynamicResource ProcessView_HasWindow}"/>
                         </WrapPanel>
                     </Grid>
                 </Border>
 
                 <Grid Grid.Row="1">
-                    <DataGrid ItemsSource="{Binding FilteredProcesses}"
+                    <DataGrid x:Name="ProcessList" ItemsSource="{Binding FilteredProcesses}"
                               SelectedItem="{Binding SelectedProcess}"
-                              Visibility="{Binding IsAutomationMonitoringEnabled, Converter={StaticResource BoolToVisibilityConverter}}"
                               AutoGenerateColumns="False"
                               IsReadOnly="True"
                               SelectionMode="Single"
@@ -411,9 +420,9 @@
                         </DataGrid.RowStyle>
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="{DynamicResource ProcessView_Name}" Binding="{Binding Name}" Width="160"/>
-                            <DataGridTextColumn Header="{DynamicResource ProcessView_ID}" Binding="{Binding ProcessId}" Width="70"/>
-                            <DataGridTextColumn Header="{DynamicResource ProcessView_ColWindowTitle}" Binding="{Binding MainWindowTitle}" Width="220"/>
-                            <DataGridCheckBoxColumn Header="{DynamicResource ProcessView_HasWindow}" Binding="{Binding HasVisibleWindow}" Width="90"/>
+                            <DataGridTextColumn Header="{DynamicResource ProcessView_ID}" Binding="{Binding ProcessId}" Width="70" Visibility="{Binding IsChecked, Source={x:Reference ShowPidColumn}, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                            <DataGridTextColumn Header="{DynamicResource ProcessView_ColWindowTitle}" Binding="{Binding MainWindowTitle}" Width="220" Visibility="{Binding IsChecked, Source={x:Reference ShowWindowColumn}, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                            <DataGridCheckBoxColumn Header="{DynamicResource ProcessView_HasWindow}" Binding="{Binding HasVisibleWindow}" Width="90" Visibility="{Binding IsChecked, Source={x:Reference ShowHasWindowColumn}, Converter={StaticResource BoolToVisibilityConverter}}"/>
                             <DataGridTextColumn Header="{DynamicResource ProcessView_ColCpuUsage}" Binding="{Binding CpuUsage, StringFormat={}{0:N1}%}" Width="90"/>
                             <DataGridTextColumn Header="{DynamicResource ProcessView_MemoryMb}"
                                                 Binding="{Binding MemoryUsage, Converter={StaticResource BytesToMbConverter}}"
@@ -439,18 +448,16 @@
                             Padding="8,5"
                             CornerRadius="{DynamicResource StandardCardCornerRadius}">
                         <TextBlock FontSize="{StaticResource ProcessFontSmall}" Foreground="{DynamicResource TextSecondaryBrush}">
-                            <Run Text="{DynamicResource ProcessView_BatchLabel}"/>
-                            <Run Text="{Binding CurrentBatchIndex, StringFormat={}{0:N0}}"/>
-                            <Run Text="/"/>
-                            <Run Text="{Binding TotalBatches, StringFormat={}{0:N0}}"/>
-                            <Run Text=" ("/>
-                            <Run Text="{Binding TotalProcessCount, StringFormat={}{0:N0}}"/>
-                            <Run Text="{DynamicResource ProcessView_TotalSuffix}"/>
+                            <Run Text="{Binding FilteredProcesses.Count, Mode=OneWay}"/>
+                            <Run Text=" / "/>
+                            <Run Text="{Binding TotalProcessCount}"/>
+                            <Run Text="{DynamicResource ProcessView_VisibleCountSuffix}"/>
                         </TextBlock>
                     </Border>
                 </Grid>
 
-                <Border Grid.Row="2"
+                <ScrollViewer x:Name="ProcessDetails" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="380">
+                <Border
                         Background="{DynamicResource CardSurfaceBrush}"
                         BorderBrush="{DynamicResource BorderSubtleBrush}"
                         BorderThickness="1"
@@ -487,7 +494,7 @@
                             <TextBlock Text="{Binding SelectedProcessSummary.AffinityText}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        Margin="0,0,18,4"/>
-                            <TextBlock Text="{Binding SelectedProcessSummary.RuleStatusText}"
+                            <TextBlock Text="{Binding SelectedProcessSummary.RuleStatusText}" TextWrapping="Wrap"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        Margin="0,0,18,4"/>
                         </WrapPanel>
@@ -513,6 +520,41 @@
                             </TextBlock>
                         </WrapPanel>
 
+                        <TextBlock Text="{DynamicResource ProcessView_SetPriority}" FontWeight="SemiBold" Margin="0,8,0,4"/>
+                        <DockPanel IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}">
+                            <Button DockPanel.Dock="Right" Content="{DynamicResource ProcessView_ApplyNow}" Command="{Binding ApplySelectedCpuPriorityCommand}" Margin="8,0,0,0"/>
+                            <ComboBox SelectedValue="{Binding PendingCpuPriority}" SelectedValuePath="Tag" AutomationProperties.Name="{DynamicResource ProcessView_SetPriority}">
+                                <ComboBoxItem Content="{DynamicResource ProcessView_PriorityBelowNormal}" Tag="{x:Static sysdiag:ProcessPriorityClass.BelowNormal}"/>
+                                <ComboBoxItem Content="{DynamicResource ProcessView_PriorityNormal}" Tag="{x:Static sysdiag:ProcessPriorityClass.Normal}"/>
+                                <ComboBoxItem Content="{DynamicResource ProcessView_PriorityAboveNormal}" Tag="{x:Static sysdiag:ProcessPriorityClass.AboveNormal}"/>
+                                <ComboBoxItem Content="{DynamicResource ProcessView_PriorityHigh}" Tag="{x:Static sysdiag:ProcessPriorityClass.High}"/>
+                            </ComboBox>
+                        </DockPanel>
+                        <TextBlock Text="{DynamicResource ProcessView_SetMemoryPriority}" FontWeight="SemiBold" Margin="0,8,0,4"/>
+                        <DockPanel IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}">
+                            <Button DockPanel.Dock="Right" Content="{DynamicResource ProcessView_ApplyNow}" Command="{Binding ApplySelectedMemoryPriorityCommand}" Margin="8,0,0,0"/>
+                            <ComboBox SelectedValue="{Binding PendingMemoryPriority}" SelectedValuePath="Tag" AutomationProperties.Name="{DynamicResource ProcessView_SetMemoryPriority}">
+                                <ComboBoxItem Content="{DynamicResource ProcessView_PriorityVeryLow}" Tag="{x:Static models:ProcessMemoryPriority.VeryLow}"/>
+                                <ComboBoxItem Content="{DynamicResource ProcessView_PriorityLow}" Tag="{x:Static models:ProcessMemoryPriority.Low}"/>
+                                <ComboBoxItem Content="{DynamicResource ProcessView_PriorityMedium}" Tag="{x:Static models:ProcessMemoryPriority.Medium}"/>
+                                <ComboBoxItem Content="{DynamicResource ProcessView_PriorityBelowNormal}" Tag="{x:Static models:ProcessMemoryPriority.BelowNormal}"/>
+                                <ComboBoxItem Content="{DynamicResource ProcessView_PriorityNormal}" Tag="{x:Static models:ProcessMemoryPriority.Normal}"/>
+                            </ComboBox>
+                        </DockPanel>
+                        <TextBlock Text="{DynamicResource ProcessView_SetIoPriority}" FontWeight="SemiBold" Margin="0,8,0,4"/>
+                        <DockPanel IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}">
+                            <Button DockPanel.Dock="Right" Content="{DynamicResource ProcessView_ApplyNow}" Command="{Binding ApplySelectedIoPriorityCommand}" Margin="8,0,0,0"/>
+                            <ComboBox SelectedValue="{Binding PendingIoPriority}" SelectedValuePath="Tag" AutomationProperties.Name="{DynamicResource ProcessView_SetIoPriority}">
+                                <ComboBoxItem Content="{DynamicResource ProcessView_PriorityVeryLow}" Tag="{x:Static models:ProcessIoPriority.VeryLow}"/>
+                                <ComboBoxItem Content="{DynamicResource ProcessView_PriorityLow}" Tag="{x:Static models:ProcessIoPriority.Low}"/>
+                                <ComboBoxItem Content="{DynamicResource ProcessView_PriorityNormal}" Tag="{x:Static models:ProcessIoPriority.Normal}"/>
+                                <ComboBoxItem Content="{DynamicResource ProcessView_PriorityHigh}" Tag="{x:Static models:ProcessIoPriority.High}"/>
+                            </ComboBox>
+                        </DockPanel>
+                        <WrapPanel Margin="0,12,0,0">
+                            <Button Content="{DynamicResource ProcessView_SaveCurrentRule}" Command="{Binding SaveCurrentSettingsAsRuleCommand}" CommandParameter="{Binding SelectedProcess}" Margin="0,0,8,8"/>
+                            <Button Content="{DynamicResource ProcessView_UndoPriority}" Command="{Binding UndoPriorityCommand}" Margin="0,0,0,8"/>
+                        </WrapPanel>
                         <Expander Header="{DynamicResource ProcessView_AdvancedAffinityPicker}"
                                   IsExpanded="True"
                                   Margin="0,10,0,0">
@@ -521,7 +563,7 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="10"/>
-                                        <ColumnDefinition Width="260"/>
+                                        <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="10"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
@@ -667,23 +709,7 @@
                     </StackPanel>
                 </Border>
 
-                <Border x:Name="MonitoringDisabledOverlay"
-                        Grid.RowSpan="3"
-                        Panel.ZIndex="10"
-                        Background="{DynamicResource SurfaceMutedBrush}"
-                        BorderBrush="{DynamicResource BorderSubtleBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="24"
-                        Visibility="{Binding IsAutomationMonitoringEnabled, Converter={StaticResource InverseBoolToVisibilityConverter}}">
-                    <TextBlock Text="{DynamicResource ProcessView_MonitoringDisabled}"
-                               Foreground="{DynamicResource TextPrimaryBrush}"
-                               FontSize="{StaticResource ProcessFontMedium}"
-                               FontWeight="SemiBold"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               TextAlignment="Center"/>
-                </Border>
+                </ScrollViewer>
             </Grid>
         </Grid>
     </Grid>

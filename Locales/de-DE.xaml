@@ -769,4 +769,11 @@
     <sys:String x:Key="Settings_ImportPreview">Einstellungen und {0} Energiesparplan-Zuordnungen ersetzen. Prozessregeln: {1}. Fortfahren?</sys:String>
     <sys:String x:Key="Settings_ImportKeepRules">vorhandene Regeln behalten</sys:String>
     <sys:String x:Key="Settings_ImportReplaceRules">durch {0} importierte Regeln ersetzen</sys:String>
+
+    <!-- Process editor and rules editor -->
+    <sys:String x:Key="ProcessView_ApplyNow">Anwenden</sys:String>
+    <sys:String x:Key="ProcessView_AutomationPaused">Automatisierung pausiert. Manuelle Änderungen funktionieren weiterhin; gespeicherte Regeln werden erst nach Fortsetzen der Überwachung angewendet.</sys:String>
+    <sys:String x:Key="ProcessView_UndoPriority">Letzte Prioritätsänderung rückgängig machen</sys:String>
+    <sys:String x:Key="ProcessView_VisibleCountSuffix">Prozesse angezeigt</sys:String>
+    <sys:String x:Key="Rules_PendingChanges">Nicht gespeicherte Änderungen</sys:String>
 </ResourceDictionary>
