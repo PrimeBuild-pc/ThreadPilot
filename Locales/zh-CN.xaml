@@ -762,4 +762,11 @@
     <sys:String x:Key="SystemTweak_Error_PowerThrottlingNotAvailable">此系统上不支持电源限流</sys:String>
     <sys:String x:Key="SystemTweak_Error_PriorityControlKeyNotFound">未找到 PriorityControl 注册表键</sys:String>
     <sys:String x:Key="SystemTweak_Error_DesktopKeyNotFound">未找到 Desktop 注册表键</sys:String>
+
+    <!-- Configuration backup and rule precedence -->
+    <sys:String x:Key="ProcessSummary_RuleOrder">按应用顺序的规则：{0}。设置重叠时以后者为准。</sys:String>
+    <sys:String x:Key="ProcessSummary_RuleConflict">存在冲突的值：请检查这些规则。</sys:String>
+    <sys:String x:Key="Settings_ImportPreview">替换设置和 {0} 个电源计划关联。进程规则：{1}。是否继续？</sys:String>
+    <sys:String x:Key="Settings_ImportKeepRules">保留现有规则</sys:String>
+    <sys:String x:Key="Settings_ImportReplaceRules">替换为 {0} 条导入的规则</sys:String>
 </ResourceDictionary>

@@ -63,9 +63,8 @@ namespace ThreadPilot.Services
             var rules = await this.ruleStore.LoadAsync().ConfigureAwait(false);
             var results = new List<PersistentRuleApplyResult>();
 
-            foreach (var rule in rules.Where(rule =>
-                (ruleFilter == null || ruleFilter(rule)) &&
-                this.matcher.IsMatch(rule, process)))
+            foreach (var rule in PersistentRuleResolution.MatchInApplyOrder(rules, process, this.matcher)
+                .Where(rule => ruleFilter == null || ruleFilter(rule)))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 results.Add(await this.ApplyRuleAsync(rule, process, cancellationToken).ConfigureAwait(false));

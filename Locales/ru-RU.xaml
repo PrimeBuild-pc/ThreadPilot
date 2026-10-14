@@ -762,4 +762,11 @@
     <sys:String x:Key="SystemTweak_Error_PowerThrottlingNotAvailable">Power Throttling недоступен в этой системе</sys:String>
     <sys:String x:Key="SystemTweak_Error_PriorityControlKeyNotFound">Ключ реестра PriorityControl не найден</sys:String>
     <sys:String x:Key="SystemTweak_Error_DesktopKeyNotFound">Ключ реестра рабочего стола не найден</sys:String>
+
+    <!-- Configuration backup and rule precedence -->
+    <sys:String x:Key="ProcessSummary_RuleOrder">Правила в порядке применения: {0}. При пересечении действует последнее.</sys:String>
+    <sys:String x:Key="ProcessSummary_RuleConflict">Конфликтующие значения: проверьте эти правила.</sys:String>
+    <sys:String x:Key="Settings_ImportPreview">Заменить настройки и {0} привязок к схемам электропитания. Правила процессов: {1}. Продолжить?</sys:String>
+    <sys:String x:Key="Settings_ImportKeepRules">сохранить существующие правила</sys:String>
+    <sys:String x:Key="Settings_ImportReplaceRules">заменить {0} импортированными правилами</sys:String>
 </ResourceDictionary>

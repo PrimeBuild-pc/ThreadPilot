@@ -361,17 +361,22 @@ namespace ThreadPilot.ViewModels
                     return;
                 }
 
-                var matchingRule = rules.FirstOrDefault(rule => this.persistentRuleMatcher.IsMatch(rule, process));
-                if (matchingRule == null)
+                var matches = PersistentRuleResolution.MatchInApplyOrder(rules, process, this.persistentRuleMatcher);
+                if (matches.Count == 0)
                 {
                     return;
                 }
 
                 this.HasThreadPilotRule = true;
-                var ruleName = string.IsNullOrWhiteSpace(matchingRule.Name)
-                    ? this.L("ProcessSummary_SavedRuleFallback", "saved rule")
-                    : matchingRule.Name.Trim();
-                this.RuleStatusText = this.L("ProcessSummary_SavedRuleExistsFormat", "Saved rule exists: {0}", ruleName);
+                var names = string.Join(" → ", matches.Select(rule => string.IsNullOrWhiteSpace(rule.Name)
+                    ? this.L("ProcessSummary_SavedRuleFallback", "saved rule") : rule.Name.Trim()));
+                this.RuleStatusText = matches.Count == 1
+                    ? this.L("ProcessSummary_SavedRuleExistsFormat", "Saved rule exists: {0}", names)
+                    : this.L("ProcessSummary_RuleOrder", "Rules in apply order: {0}. Later rules win for overlapping settings.", names);
+                if (PersistentRuleResolution.HasConflicts(matches))
+                {
+                    this.RuleStatusText += " " + this.L("ProcessSummary_RuleConflict", "Conflicting values: review these rules.");
+                }
             }
             catch (Exception)
             {

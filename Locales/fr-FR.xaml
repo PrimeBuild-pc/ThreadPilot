@@ -762,4 +762,11 @@
     <sys:String x:Key="SystemTweak_Error_PowerThrottlingNotAvailable">Power Throttling non disponible sur ce système</sys:String>
     <sys:String x:Key="SystemTweak_Error_PriorityControlKeyNotFound">Clé de registre PriorityControl introuvable</sys:String>
     <sys:String x:Key="SystemTweak_Error_DesktopKeyNotFound">Clé de registre de bureau introuvable</sys:String>
+
+    <!-- Configuration backup and rule precedence -->
+    <sys:String x:Key="ProcessSummary_RuleOrder">Règles dans l'ordre d'application : {0}. En cas de chevauchement, la dernière l'emporte.</sys:String>
+    <sys:String x:Key="ProcessSummary_RuleConflict">Valeurs en conflit : vérifiez ces règles.</sys:String>
+    <sys:String x:Key="Settings_ImportPreview">Remplacer les paramètres et {0} associations de modes d'alimentation. Règles de processus : {1}. Continuer ?</sys:String>
+    <sys:String x:Key="Settings_ImportKeepRules">conserver les règles existantes</sys:String>
+    <sys:String x:Key="Settings_ImportReplaceRules">remplacer par {0} règles importées</sys:String>
 </ResourceDictionary>

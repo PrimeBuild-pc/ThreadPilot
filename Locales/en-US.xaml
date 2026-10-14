@@ -762,4 +762,11 @@
     <sys:String x:Key="SystemTweak_Error_PowerThrottlingNotAvailable">Power Throttling not available on this system</sys:String>
     <sys:String x:Key="SystemTweak_Error_PriorityControlKeyNotFound">PriorityControl registry key not found</sys:String>
     <sys:String x:Key="SystemTweak_Error_DesktopKeyNotFound">Desktop registry key not found</sys:String>
+
+    <!-- Configuration backup and rule precedence -->
+    <sys:String x:Key="ProcessSummary_RuleOrder">Rules in apply order: {0}. Later rules win for overlapping settings.</sys:String>
+    <sys:String x:Key="ProcessSummary_RuleConflict">Conflicting values: review these rules.</sys:String>
+    <sys:String x:Key="Settings_ImportPreview">Replace settings and {0} power plan associations. Persistent process rules: {1}. Continue?</sys:String>
+    <sys:String x:Key="Settings_ImportKeepRules">keep existing rules</sys:String>
+    <sys:String x:Key="Settings_ImportReplaceRules">replace with {0} imported rules</sys:String>
 </ResourceDictionary>

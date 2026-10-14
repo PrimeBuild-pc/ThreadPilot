@@ -35,21 +35,13 @@ namespace ThreadPilot.ViewModels
         private readonly IApplicationVersionProvider versionProvider;
         private readonly ILocalizationService localizationService;
         private readonly ICpuTopologyProvider? cpuTopologyProvider;
+        private readonly ConfigurationBackupService? backupService;
         private ApplicationSettingsModel savedSettingsSnapshot;
         private bool isSyncingFromService = false;
         private bool? appliedThemePreference;
         private string cachedDefaultPowerPlanGuid = string.Empty;
         private string cachedDefaultPowerPlanName = string.Empty;
         private UpdateReleaseInfo? availableUpdate;
-        private static readonly JsonSerializerOptions ImportExportJsonOptions = new()
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            PropertyNameCaseInsensitive = true,
-            ReadCommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = true,
-        };
-
         [ObservableProperty]
         private ApplicationSettingsModel settings;
 
@@ -113,7 +105,8 @@ namespace ThreadPilot.ViewModels
             ILocalizationService localizationService,
             IEnhancedLoggingService? enhancedLoggingService = null,
             IActivityAuditService? activityAuditService = null,
-            ICpuTopologyProvider? cpuTopologyProvider = null)
+            ICpuTopologyProvider? cpuTopologyProvider = null,
+            ConfigurationBackupService? backupService = null)
             : base(logger, enhancedLoggingService, activityAuditService)
         {
             this.settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
@@ -128,6 +121,7 @@ namespace ThreadPilot.ViewModels
             this.versionProvider = versionProvider ?? throw new ArgumentNullException(nameof(versionProvider));
             this.localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
             this.cpuTopologyProvider = cpuTopologyProvider;
+            this.backupService = backupService;
 
             this.ApplicationVersion = this.versionProvider.DisplayVersion;
 
@@ -467,18 +461,9 @@ namespace ThreadPilot.ViewModels
                     return;
                 }
 
-                var settingsSnapshot = (ApplicationSettingsModel)this.Settings.Clone();
-                var rulesSnapshot = CloneConfiguration(this.associationService.Configuration);
-
-                var bundle = new ConfigurationBundle
-                {
-                    SchemaVersion = "2.0",
-                    ExportedAtUtc = DateTime.UtcNow,
-                    Settings = settingsSnapshot,
-                    ProcessMonitorConfiguration = rulesSnapshot,
-                };
-
-                var json = JsonSerializer.Serialize(bundle, ImportExportJsonOptions);
+                var backup = this.backupService ?? throw new InvalidOperationException("Backup service unavailable.");
+                var bundle = await backup.CaptureAsync(this.Settings);
+                var json = ConfigurationBackupService.Serialize(bundle);
                 await AtomicFileWriter.WriteAllTextAsync(saveDialog.FileName, json, Encoding.UTF8);
 
                 this.StatusMessage = this.GetLocalizedString("Settings_StatusExportedFormat", "Configuration exported to: {0}", saveDialog.FileName);
@@ -531,17 +516,21 @@ namespace ThreadPilot.ViewModels
                 var importPath = openDialog.FileName;
                 var json = await File.ReadAllTextAsync(importPath);
 
-                if (TryParseBundle(json, out var bundle))
+                var bundle = ConfigurationBackupService.Parse(json);
+                if (bundle != null)
                 {
-                    await this.settingsService.UpdateSettingsAsync(bundle.Settings);
-
-                    var importedConfiguration = bundle.ProcessMonitorConfiguration ?? new ProcessMonitorConfiguration();
-                    var replaced = await this.associationService.ReplaceConfigurationAsync(importedConfiguration);
-                    if (!replaced)
+                    var preview = this.GetLocalizedString("Settings_ImportPreview", "Replace settings and {0} power plan associations. Persistent process rules: {1}. Continue?",
+                        bundle.ProcessMonitorConfiguration!.Associations.Count,
+                        bundle.PersistentProcessRules == null
+                            ? this.GetLocalizedString("Settings_ImportKeepRules", "keep existing rules")
+                            : this.GetLocalizedString("Settings_ImportReplaceRules", "replace with {0} imported rules", bundle.PersistentProcessRules.Count));
+                    if (MessageBox.Show(preview, this.GetLocalizedString("Settings_DialogImportTitle", "Import ThreadPilot Configuration"),
+                        MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.Cancel) != MessageBoxResult.OK)
                     {
-                        throw new InvalidOperationException("Failed to apply imported rules configuration");
+                        return;
                     }
 
+                    await (this.backupService ?? throw new InvalidOperationException("Backup service unavailable.")).ApplyAsync(bundle);
                     await this.processMonitorManagerService.RefreshConfigurationAsync();
                     this.processMonitorManagerService.UpdateSettings();
                     await this.RefreshSettingsAsync();
@@ -920,71 +909,5 @@ namespace ThreadPilot.ViewModels
             this.HasUnsavedChanges = false;
         }
 
-        private static bool TryParseBundle(string json, out ConfigurationBundle bundle)
-        {
-            bundle = new ConfigurationBundle();
-
-            try
-            {
-                using var document = JsonDocument.Parse(json);
-                if (document.RootElement.ValueKind != JsonValueKind.Object)
-                {
-                    return false;
-                }
-
-                if (!document.RootElement.TryGetProperty("settings", out var settingsElement))
-                {
-                    return false;
-                }
-
-                if (!document.RootElement.TryGetProperty("processMonitorConfiguration", out var rulesElement) &&
-                    !document.RootElement.TryGetProperty("rulesConfiguration", out rulesElement))
-                {
-                    return false;
-                }
-
-                var parsedBundle = JsonSerializer.Deserialize<ConfigurationBundle>(json, ImportExportJsonOptions);
-                if (parsedBundle?.Settings == null)
-                {
-                    return false;
-                }
-
-                parsedBundle.ProcessMonitorConfiguration =
-                    parsedBundle.ProcessMonitorConfiguration
-                    ?? parsedBundle.RulesConfiguration
-                    ?? JsonSerializer.Deserialize<ProcessMonitorConfiguration>(rulesElement.GetRawText(), ImportExportJsonOptions)
-                    ?? new ProcessMonitorConfiguration();
-
-                parsedBundle.ProcessMonitorConfiguration.Associations ??= new List<ProcessPowerPlanAssociation>();
-                bundle = parsedBundle;
-                return true;
-            }
-            catch (JsonException)
-            {
-                return false;
-            }
-        }
-
-        private static ProcessMonitorConfiguration CloneConfiguration(ProcessMonitorConfiguration source)
-        {
-            var serialized = JsonSerializer.Serialize(source, ImportExportJsonOptions);
-            var clone = JsonSerializer.Deserialize<ProcessMonitorConfiguration>(serialized, ImportExportJsonOptions)
-                ?? new ProcessMonitorConfiguration();
-            clone.Associations ??= new List<ProcessPowerPlanAssociation>();
-            return clone;
-        }
-
-        private sealed class ConfigurationBundle
-        {
-            public string SchemaVersion { get; set; } = "2.0";
-
-            public DateTime ExportedAtUtc { get; set; } = DateTime.UtcNow;
-
-            public ApplicationSettingsModel Settings { get; set; } = new ApplicationSettingsModel();
-
-            public ProcessMonitorConfiguration? ProcessMonitorConfiguration { get; set; }
-
-            public ProcessMonitorConfiguration? RulesConfiguration { get; set; }
-        }
     }
 }
