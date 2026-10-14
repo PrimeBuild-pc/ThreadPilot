@@ -250,6 +250,7 @@ namespace ThreadPilot.ViewModels
                 persistentRuleMatcher,
                 localizationService,
                 SystemTweaksService.IsPowerThrottlingOff);
+            this.SelectedProcessSummary.PropertyChanged += this.OnSelectedProcessSummaryChanged;
 
             // Subscribe to topology detection events
             this.cpuTopologyService.TopologyDetected += this.OnTopologyDetected;

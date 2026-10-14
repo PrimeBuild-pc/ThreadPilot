@@ -15,12 +15,12 @@
     <sys:String x:Key="MainWindow_RequestElevation">Запросить повышение</sys:String>
 
     <!-- MainWindow Navigation -->
-    <sys:String x:Key="MainWindow_NavProcess">Управление процессами</sys:String>
+    <sys:String x:Key="MainWindow_NavProcess">Процессы</sys:String>
     <sys:String x:Key="MainWindow_NavMasks">Маски CPU</sys:String>
-    <sys:String x:Key="MainWindow_NavPower">Планы электропитания</sys:String>
+    <sys:String x:Key="MainWindow_NavPower">Электропитание</sys:String>
     <sys:String x:Key="MainWindow_NavRules">Правила</sys:String>
     <sys:String x:Key="MainWindow_NavDiagnostics">Диагностика</sys:String>
-    <sys:String x:Key="MainWindow_NavActivity">Активность ThreadPilot</sys:String>
+    <sys:String x:Key="MainWindow_NavActivity">Активность</sys:String>
     <sys:String x:Key="MainWindow_NavTweaks">Тонкая настройка</sys:String>
     <sys:String x:Key="MainWindow_NavSettings">Настройки</sys:String>
 
@@ -42,8 +42,8 @@
     <sys:String x:Key="MainWindow_LoadingOverlay">Оверлей загрузки приложения при запуске</sys:String>
 
     <!-- LogViewerView -->
-    <sys:String x:Key="LogViewerView_Title">ThreadPilot Активность</sys:String>
-    <sys:String x:Key="LogViewerView_Subtitle">Показывает действия, выполняемые ThreadPilot, включая примененные правила, изменения привязки, изменения приоритета, изменения плана электропитания, изменения настроек, настройки, оптимизации и сообщения о безопасных сбоях.</sys:String>
+    <sys:String x:Key="LogViewerView_Title">Активность</sys:String>
+    <sys:String x:Key="LogViewerView_Subtitle">Что изменил ThreadPilot и что не удалось.</sys:String>
     <sys:String x:Key="LogViewerView_Search">Поиск:</sys:String>
     <sys:String x:Key="LogViewerView_CategoryLabel">Категория:</sys:String>
     <sys:String x:Key="LogViewerView_LevelLabel">Уровень:</sys:String>
@@ -85,7 +85,7 @@
 
     <!-- MasksView -->
     <sys:String x:Key="MasksView_Title">Маски CPU</sys:String>
-    <sys:String x:Key="MasksView_Subtitle">Создавайте повторно используемые наборы привязки к CPU для отдельных процессов.</sys:String>
+    <sys:String x:Key="MasksView_Subtitle">Наборы ядер для процессов и правил.</sys:String>
     <sys:String x:Key="MasksView_EditingClarification">Выбор маски здесь редактирует только предустановку. Привязка CPU не изменяется до тех пор, пока вы не примените ее к процессу или не сохраните в правиле процесса.</sys:String>
     <sys:String x:Key="MasksView_New">Новый</sys:String>
     <sys:String x:Key="MasksView_Delete">Удалить</sys:String>
@@ -163,7 +163,7 @@
 
     <!-- PowerPlanView -->
     <sys:String x:Key="PowerPlanView_Title">Планы электропитания</sys:String>
-    <sys:String x:Key="PowerPlanView_Subtitle">Управляйте активным планом электропитания Windows и импортируйте пользовательские профили .pow.</sys:String>
+    <sys:String x:Key="PowerPlanView_Subtitle">Смена активной схемы Windows или импорт файлов .pow.</sys:String>
     <sys:String x:Key="PowerPlanView_WindowsPowerPlans">Windows Планы электропитания</sys:String>
     <sys:String x:Key="PowerPlanView_SelectActiveTip">Выберите план Windows, чтобы активировать его.</sys:String>
     <sys:String x:Key="PowerPlanView_SetActive">Установить как активный план Windows</sys:String>
@@ -182,7 +182,7 @@
     <sys:String x:Key="PowerPlanView_Active">Активный</sys:String>
 
     <!-- ProcessPowerPlanAssociationView -->
-    <sys:String x:Key="ProcessPowerPlanAssociationView_Title">Правила и автоматизация</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Title">Правила</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Subtitle">Мониторинг автоматизации отслеживает события запуска и остановки процесса и применяет настроенный план электропитания, маску CPU и правила приоритета.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_RuleEditor">Редактор правил</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_EditorSubtitle">Создайте правило из исполняемого или запущенного процесса для автоматизации плана электропитания, маски CPU и приоритетного поведения.</sys:String>
@@ -212,7 +212,7 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_ClearSelectionTooltip">Очистить выбранный исполняемый файл</sys:String>
 
     <sys:String x:Key="ProcessPowerPlanAssociationView_CurrentRules">Текущие правила</sys:String>
-    <sys:String x:Key="ProcessPowerPlanAssociationView_RulesDescription">Определите правила для каждого процесса. Планы электропитания являются глобальными; маски и приоритеты применяются к процессам сопоставления.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulesDescription">Что ThreadPilot применяет автоматически при запуске процесса.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Remove">Удалить</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_RemoveTooltip">Удалить выбранную ассоциацию</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_DefaultPowerPlan">План электропитания по умолчанию (резервный вариант, если ни одно правило не соответствует)</sys:String>
@@ -228,7 +228,7 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SaveConfig">Сохранить конфигурацию</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_NoRules">Правил автоматизации пока нет</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Status">Статус:</sys:String>
-    <sys:String x:Key="ProcessPowerPlanAssociationView_AutomationMonitoring">Автоматизация мониторинга</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AutomationMonitoring">Мониторинг</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_StartAutomation">Начать мониторинг автоматизации</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_StopAutomation">Остановить мониторинг автоматизации</sys:String>
 
@@ -237,9 +237,9 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SelectedExecutable">Выбранный исполняемый файл:</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_DescriptionLabel">Описание:</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_AutomationService">Служба автоматизации</sys:String>
-    <sys:String x:Key="ProcessPowerPlanAssociationView_RulesHeader">Правила</sys:String>
-    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulesHeader">Сохранённые правила процессов</sys:String>
-    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulesDescription">Правила, сохранённые на вкладке «Процессы». ThreadPilot применяет их к процессу при каждом запуске, пока включён автоматический мониторинг. Они отличаются от правил схем питания выше, которые переключают глобальную схему питания Windows.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulesHeader">Смена схемы питания</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulesHeader">Правила процессов</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulesDescription">Сохраняются на странице «Процессы». Применяются при каждом запуске процесса, пока включён мониторинг.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleProcess">Процесс</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleApplies">Применяет</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMode">Режим</sys:String>
@@ -252,7 +252,7 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleIoPriority">Приоритет ввода-вывода</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleModeLabel">Режим назначения ЦП</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulePreventSleep">Не давать системе засыпать, пока процесс работает</sys:String>
-    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">Выберите сохранённую маску ЦП, чтобы задать ядра для этого правила. Выбор отдельных ядер — на вкладке «Процессы».</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">Выберите сохранённую маску CPU для ядер этого правила. Маски редактируются на странице «Маски CPU».</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleSave">Сохранить изменения</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_NoSavedRules">Сохранённых правил процессов пока нет. Щёлкните процесс правой кнопкой на вкладке «Процессы» и выберите «Правила».</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">Исполняемый файл</sys:String>
@@ -263,8 +263,7 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_ProcessPriority">Приоритет процесса:</sys:String>
 
     <!-- ProcessView -->
-    <sys:String x:Key="ProcessView_Title">Управление процессами</sys:String>
-    <sys:String x:Key="ProcessView_Subtitle">Поиск, фильтрация и контроль активных конфигураций процессов</sys:String>
+    <sys:String x:Key="ProcessView_Title">Процессы</sys:String>
     <sys:String x:Key="ProcessView_SearchPlaceholder">Поиск процессов по названию</sys:String>
     <sys:String x:Key="ProcessView_SearchAutomationName">Процесс поиска</sys:String>
     <sys:String x:Key="ProcessView_HideSystem">Скрыть системные процессы Windows</sys:String>
@@ -288,7 +287,7 @@
 
     <sys:String x:Key="ProcessView_PendingCoreMask">Ожидающая маска ядер</sys:String>
     <sys:String x:Key="ProcessView_StageMaskTooltip">Подготовьте маску. Изменения вступят в силу только после нажатия «Применить назначение ЦП».</sys:String>
-    <sys:String x:Key="ProcessView_ApplyAffinity">Применить назначение ЦП</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinity">Применить ядра</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinityTooltip">Применяет выбор ЦП в выбранном режиме и проверяет состояние Windows.</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinitySaveRule">Применить назначение ЦП и сохранить правило</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinitySaveRuleTooltip">Сохраните текущие настройки процесса как правило. Эти настройки будут автоматически применены при запуске этого процесса в будущем.</sys:String>
@@ -310,13 +309,12 @@
     <sys:String x:Key="ProcessView_SaveProfileTooltip">Сохранить текущие настройки привязки к CPU и приоритета как повторно используемый профиль.</sys:String>
     <sys:String x:Key="ProcessView_LoadProfile">Загрузить профиль</sys:String>
     <sys:String x:Key="ProcessView_LoadProfileTooltip">Загрузите ранее сохраненный профиль</sys:String>
-    <sys:String x:Key="ProcessView_SaveCurrentRule">Сохранить текущие настройки как правило</sys:String>
+    <sys:String x:Key="ProcessView_SaveCurrentRule">Сохранить как правило</sys:String>
     <sys:String x:Key="ProcessView_SaveRuleTooltip">Сохраняет правило для этого процесса, которое ThreadPilot автоматически применяет снова при следующем запуске процесса, пока включён мониторинг автоматизации. Эти правила не связаны с вкладкой Правила, где настраиваются сопоставления процессов и схем электропитания.</sys:String>
     <sys:String x:Key="ProcessView_DeleteSavedRule">Удалить сохранённое правило</sys:String>
     <sys:String x:Key="ProcessView_DeleteSavedRuleTooltip">Удаляет сохранённое правило для этого процесса, чтобы ThreadPilot больше не применял его при запуске процесса.</sys:String>
 
     <sys:String x:Key="ProcessView_LastAction">Последнее действие ThreadPilot:</sys:String>
-    <sys:String x:Key="ProcessView_Refresh">Обновить</sys:String>
     <sys:String x:Key="ProcessView_RefreshTooltip">Обновить список процессов</sys:String>
     <sys:String x:Key="ProcessView_LoadMore">Загрузить больше</sys:String>
     <sys:String x:Key="ProcessView_LoadMoreTooltip">Загрузить больше процессов</sys:String>
@@ -324,8 +322,6 @@
     <sys:String x:Key="ProcessView_LoadMoreAutomationName">Загрузить больше процессов</sys:String>
     <sys:String x:Key="ProcessView_RunningListAutomationName">Список запущенных процессов</sys:String>
     <sys:String x:Key="ProcessView_RunningListAutomationHelp">Виртуализированная таблица процессов с сортировкой и выбором</sys:String>
-    <sys:String x:Key="ProcessView_MonitoringDisabled">Мониторинг автоматизации отключен.</sys:String>
-    <sys:String x:Key="ProcessView_MonitoringDisabledDescription">Включите мониторинг автоматизации в разделе «Правила и автоматизация» или в системном трее, чтобы показать и обновлять список процессов.</sys:String>
 
     <sys:String x:Key="ProcessView_ColProcessName">Имя процесса</sys:String>
     <sys:String x:Key="ProcessView_ColWindowTitle">Название окна</sys:String>
@@ -347,9 +343,6 @@
     <sys:String x:Key="ProcessView_ClearCpuSets">Очистить наборы CPU</sys:String>
     <sys:String x:Key="ProcessView_ApplyPendingSettings">Применить ожидающие настройки</sys:String>
     <sys:String x:Key="ProcessView_ApplyPendingSettingsTooltip">Примените ожидающее соответствие и выбранный план электропитания к выбранному процессу.</sys:String>
-    <sys:String x:Key="ProcessView_RulesAppliedOnlyWhenConfigured">Правила и изменения применяются ThreadPilot только после настройки.</sys:String>
-    <sys:String x:Key="ProcessView_CurrentProcessStatus">Текущий статус процесса</sys:String>
-    <sys:String x:Key="ProcessView_AdvancedAffinityPicker">Расширенный выбор привязки</sys:String>
     <sys:String x:Key="ProcessView_RowMaskTooltip">Выберите ожидающую маску для действий привязки контекстного меню строки.</sys:String>
     <sys:String x:Key="ProcessView_SelectedPowerPlan">Выбранный план электропитания</sys:String>
     <sys:String x:Key="ProcessView_SaveAsRule">Сохранить как правило</sys:String>
@@ -404,7 +397,7 @@
 
     <!-- SettingsView -->
     <sys:String x:Key="SettingsView_Title">Настройки приложения</sys:String>
-    <sys:String x:Key="SettingsView_Subtitle">Настройка уведомлений, панели задач и поведения приложений</sys:String>
+    <sys:String x:Key="SettingsView_Subtitle">Уведомления, трей, автозапуск и язык.</sys:String>
     <sys:String x:Key="SettingsView_Notifications">Уведомления</sys:String>
     <sys:String x:Key="SettingsView_EnableNotifications">Включить уведомления</sys:String>
     <sys:String x:Key="SettingsView_NotificationLevel">Уровень уведомления</sys:String>
@@ -565,8 +558,8 @@
     <sys:String x:Key="SettingsWindow_Save">Сохранить</sys:String>
 
     <!-- SystemTweaksView -->
-    <sys:String x:Key="SystemTweaksView_Title">Системные настройки и оптимизации</sys:String>
-    <sys:String x:Key="SystemTweaksView_Subtitle">Настройте оптимизацию системы Windows и настройки производительности.</sys:String>
+    <sys:String x:Key="SystemTweaksView_Title">Тонкая настройка</sys:String>
+    <sys:String x:Key="SystemTweaksView_Subtitle">Параметры Windows, влияющие на производительность.</sys:String>
     <sys:String x:Key="SystemTweaksView_RefreshAll">Обновить все</sys:String>
     <sys:String x:Key="SystemTweaksView_RefreshAllTooltip">Обновить все состояния настройки</sys:String>
     <sys:String x:Key="SystemTweaksView_TweakTooltip">Переключить эту настройку Windows</sys:String>
@@ -772,7 +765,7 @@
     <!-- Process editor and rules editor -->
     <sys:String x:Key="ProcessView_ApplyNow">Применить</sys:String>
     <sys:String x:Key="ProcessView_AutomationPaused">Автоматизация приостановлена. Ручные изменения работают; сохранённые правила не применяются до возобновления мониторинга.</sys:String>
-    <sys:String x:Key="ProcessView_UndoPriority">Отменить последнее изменение приоритета</sys:String>
+    <sys:String x:Key="ProcessView_UndoPriority">Отменить последнее изменение</sys:String>
     <sys:String x:Key="ProcessView_VisibleCountSuffix">процессов показано</sys:String>
     <sys:String x:Key="Rules_PendingChanges">Несохранённые изменения</sys:String>
     <sys:String x:Key="ProcessView_PriorityRestored">Предыдущий приоритет восстановлен.</sys:String>
@@ -787,4 +780,17 @@
     <sys:String x:Key="ProcessSummary_EfficiencyFormat">Режим эффективности: {0}</sys:String>
     <sys:String x:Key="ProcessSummary_EfficiencyUnavailable">Режим эффективности недоступен</sys:String>
     <sys:String x:Key="ProcessSummary_EfficiencyVoidedFormat">Режим эффективности: {0} (не действует: регулирование мощности отключено в оптимизациях)</sys:String>
+
+    <!-- Process page layout -->
+    <sys:String x:Key="ProcessView_Filters">Фильтры</sys:String>
+    <sys:String x:Key="ProcessView_Columns">Столбцы</sys:String>
+    <sys:String x:Key="ProcessView_PrioritySection">Приоритет</sys:String>
+    <sys:String x:Key="ProcessView_CoresSection">Ядра CPU</sys:String>
+    <sys:String x:Key="ProcessView_RuleSection">Правило</sys:String>
+    <sys:String x:Key="ProcessView_RowCpu">CPU</sys:String>
+    <sys:String x:Key="ProcessView_RowMemory">Память</sys:String>
+    <sys:String x:Key="ProcessView_RowIo">Ввод-вывод</sys:String>
+    <sys:String x:Key="ProcessView_RowEfficiency">Эффективность</sys:String>
+    <sys:String x:Key="ProcessView_SelectProcessHint">Выберите процесс, чтобы увидеть и изменить приоритет, ядра и правило.</sys:String>
+    <sys:String x:Key="Rules_NotSet">Не задано</sys:String>
 </ResourceDictionary>

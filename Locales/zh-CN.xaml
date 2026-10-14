@@ -15,14 +15,14 @@
     <sys:String x:Key="MainWindow_RequestElevation">请求权限提升</sys:String>
     
     <!-- MainWindow Navigation -->
-    <sys:String x:Key="MainWindow_NavProcess">进程管理</sys:String>
+    <sys:String x:Key="MainWindow_NavProcess">进程</sys:String>
     <sys:String x:Key="MainWindow_NavMasks">CPU 掩码</sys:String>
     <sys:String x:Key="MainWindow_NavPower">电源计划</sys:String>
-    <sys:String x:Key="MainWindow_NavRules">自动化规则</sys:String>
+    <sys:String x:Key="MainWindow_NavRules">规则</sys:String>
     <sys:String x:Key="MainWindow_NavDiagnostics">性能诊断</sys:String>
-    <sys:String x:Key="MainWindow_NavActivity">活动日志</sys:String>
+    <sys:String x:Key="MainWindow_NavActivity">活动</sys:String>
     <sys:String x:Key="MainWindow_NavTweaks">系统微调</sys:String>
-    <sys:String x:Key="MainWindow_NavSettings">应用设置</sys:String>
+    <sys:String x:Key="MainWindow_NavSettings">设置</sys:String>
     
     <!-- MainWindow Overlays -->
     <sys:String x:Key="MainWindow_StartupMinimizedSuggestionTitle">启动时最小化</sys:String>
@@ -42,8 +42,8 @@
     <sys:String x:Key="MainWindow_LoadingOverlay">应用启动加载覆盖层</sys:String>
     
     <!-- LogViewerView -->
-    <sys:String x:Key="LogViewerView_Title">ThreadPilot 活动日志</sys:String>
-    <sys:String x:Key="LogViewerView_Subtitle">显示 ThreadPilot 执行的操作，包括已应用规则、关联性更改、优先级更改、电源计划更改、设置更改、调整、优化以及安全故障消息。</sys:String>
+    <sys:String x:Key="LogViewerView_Title">活动</sys:String>
+    <sys:String x:Key="LogViewerView_Subtitle">ThreadPilot 所做的更改及失败记录。</sys:String>
     <sys:String x:Key="LogViewerView_Search">搜索:</sys:String>
     <sys:String x:Key="LogViewerView_CategoryLabel">类别:</sys:String>
     <sys:String x:Key="LogViewerView_LevelLabel">级别:</sys:String>
@@ -85,7 +85,7 @@
     
     <!-- MasksView -->
     <sys:String x:Key="MasksView_Title">CPU 掩码</sys:String>
-    <sys:String x:Key="MasksView_Subtitle">创建可复用的 CPU 关联性预设以供每个进程使用。</sys:String>
+    <sys:String x:Key="MasksView_Subtitle">可复用于进程和规则的核心选择。</sys:String>
     <sys:String x:Key="MasksView_EditingClarification">在此处选择掩码仅编辑预设。在将其应用于进程或保存在进程规则中之前，它不会更改 CPU 关联性。</sys:String>
     <sys:String x:Key="MasksView_New">新建</sys:String>
     <sys:String x:Key="MasksView_Delete">删除</sys:String>
@@ -163,7 +163,7 @@
 
     <!-- PowerPlanView -->
     <sys:String x:Key="PowerPlanView_Title">电源计划管理</sys:String>
-    <sys:String x:Key="PowerPlanView_Subtitle">管理活动的 Windows 电源计划并导入自定义 .pow 配置文件</sys:String>
+    <sys:String x:Key="PowerPlanView_Subtitle">切换当前 Windows 电源计划或导入 .pow 文件。</sys:String>
     <sys:String x:Key="PowerPlanView_WindowsPowerPlans">Windows 电源计划</sys:String>
     <sys:String x:Key="PowerPlanView_SelectActiveTip">选择要激活的 Windows 电源计划。</sys:String>
     <sys:String x:Key="PowerPlanView_SetActive">设为活动 Windows 电源计划</sys:String>
@@ -182,7 +182,7 @@
     <sys:String x:Key="PowerPlanView_Active">活动</sys:String>
 
     <!-- ProcessPowerPlanAssociationView -->
-    <sys:String x:Key="ProcessPowerPlanAssociationView_Title">规则与自动化</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_Title">规则</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Subtitle">自动化监控监视进程的启动/停止事件，并应用配置的电源计划、CPU 掩码和优先级规则。</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_RuleEditor">规则编辑器</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_EditorSubtitle">从可执行文件或运行中的进程创建规则，以实现电源计划、CPU 掩码和优先级行为的自动化。</sys:String>
@@ -212,7 +212,7 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_ClearSelectionTooltip">清除选定的可执行文件</sys:String>
     
     <sys:String x:Key="ProcessPowerPlanAssociationView_CurrentRules">当前规则</sys:String>
-    <sys:String x:Key="ProcessPowerPlanAssociationView_RulesDescription">定义针对每个进程的规则。电源计划是全局的；掩码和优先级适用于匹配的进程。</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulesDescription">进程启动时 ThreadPilot 自动应用的设置。</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Remove">删除</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_RemoveTooltip">删除所选关联</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_DefaultPowerPlan">默认电源计划 (当无规则匹配时的后备方案)</sys:String>
@@ -228,7 +228,7 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SaveConfig">保存配置</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_NoRules">尚无自动化规则</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Status">状态:</sys:String>
-    <sys:String x:Key="ProcessPowerPlanAssociationView_AutomationMonitoring">自动化监控</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_AutomationMonitoring">监控</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_StartAutomation">启动自动化监控</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_StopAutomation">停止自动化监控</sys:String>
     
@@ -237,9 +237,9 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SelectedExecutable">选定的可执行文件:</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_DescriptionLabel">描述:</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_AutomationService">自动化服务</sys:String>
-    <sys:String x:Key="ProcessPowerPlanAssociationView_RulesHeader">规则</sys:String>
-    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulesHeader">已保存的进程规则</sys:String>
-    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulesDescription">在“进程”选项卡中保存的规则。只要自动化监控处于开启状态，ThreadPilot 会在该进程每次启动时重新应用它们。它们与上方的电源计划规则不同，后者切换的是 Windows 全局电源计划。</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_RulesHeader">电源计划切换</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulesHeader">进程规则</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulesDescription">从“进程”页面保存。监控开启时，每次进程启动都会应用。</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleProcess">进程</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleApplies">应用</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMode">模式</sys:String>
@@ -252,7 +252,7 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleIoPriority">I/O 优先级</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleModeLabel">CPU 分配模式</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulePreventSleep">该进程运行时阻止系统休眠</sys:String>
-    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">选择一个已保存的 CPU 掩码来设置此规则绑定的核心。逐核选择器在“进程”选项卡中。</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">为此规则的核心选择已保存的 CPU 掩码。掩码在“CPU 掩码”页面中编辑。</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleSave">保存更改</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_NoSavedRules">尚无已保存的进程规则。在“进程”选项卡中右键点击某个进程并选择“规则”即可保存。</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">可执行文件</sys:String>
@@ -263,8 +263,7 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_ProcessPriority">进程优先级:</sys:String>
 
     <!-- ProcessView -->
-    <sys:String x:Key="ProcessView_Title">系统进程管理</sys:String>
-    <sys:String x:Key="ProcessView_Subtitle">搜索、过滤和控制活动的进程配置</sys:String>
+    <sys:String x:Key="ProcessView_Title">进程</sys:String>
     <sys:String x:Key="ProcessView_SearchPlaceholder">按名称搜索进程</sys:String>
     <sys:String x:Key="ProcessView_SearchAutomationName">进程搜索</sys:String>
     <sys:String x:Key="ProcessView_HideSystem">隐藏 Windows 系统进程</sys:String>
@@ -288,7 +287,7 @@
     
     <sys:String x:Key="ProcessView_PendingCoreMask">待处理的核心掩码</sys:String>
     <sys:String x:Key="ProcessView_StageMaskTooltip">选择并暂存掩码。点击“应用 CPU 分配”前不会发生更改。</sys:String>
-    <sys:String x:Key="ProcessView_ApplyAffinity">应用 CPU 分配</sys:String>
+    <sys:String x:Key="ProcessView_ApplyAffinity">应用核心</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinityTooltip">使用所选模式应用待处理 CPU 选择，并验证 Windows 状态</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinitySaveRule">应用 CPU 分配并保存为规则</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinitySaveRuleTooltip">将当前进程设置保存为规则。以后此进程启动时将自动应用这些设置。</sys:String>
@@ -310,13 +309,12 @@
     <sys:String x:Key="ProcessView_SaveProfileTooltip">将当前 CPU 关联性和优先级保存为可复用的配置文件</sys:String>
     <sys:String x:Key="ProcessView_LoadProfile">加载配置文件</sys:String>
     <sys:String x:Key="ProcessView_LoadProfileTooltip">加载以前保存的配置文件</sys:String>
-    <sys:String x:Key="ProcessView_SaveCurrentRule">保存当前设置为规则</sys:String>
+    <sys:String x:Key="ProcessView_SaveCurrentRule">保存为规则</sys:String>
     <sys:String x:Key="ProcessView_SaveRuleTooltip">保存针对该进程的规则；只要启用了自动化监视，ThreadPilot 会在此进程下次启动时自动重新应用它。这些规则与“自动化规则”选项卡相互独立，后者管理进程与电源计划的关联。</sys:String>
     <sys:String x:Key="ProcessView_DeleteSavedRule">删除已保存的规则</sys:String>
     <sys:String x:Key="ProcessView_DeleteSavedRuleTooltip">删除此进程的已保存规则，ThreadPilot 将不再在该进程启动时应用它。</sys:String>
     
     <sys:String x:Key="ProcessView_LastAction">最后一次 ThreadPilot 操作:</sys:String>
-    <sys:String x:Key="ProcessView_Refresh">刷新</sys:String>
     <sys:String x:Key="ProcessView_RefreshTooltip">刷新进程列表</sys:String>
     <sys:String x:Key="ProcessView_LoadMore">加载更多</sys:String>
     <sys:String x:Key="ProcessView_LoadMoreTooltip">加载更多进程</sys:String>
@@ -324,8 +322,6 @@
     <sys:String x:Key="ProcessView_LoadMoreAutomationName">加载更多进程</sys:String>
     <sys:String x:Key="ProcessView_RunningListAutomationName">运行中进程列表</sys:String>
     <sys:String x:Key="ProcessView_RunningListAutomationHelp">支持排序和选择的虚拟化进程表</sys:String>
-    <sys:String x:Key="ProcessView_MonitoringDisabled">自动化监控已禁用。</sys:String>
-    <sys:String x:Key="ProcessView_MonitoringDisabledDescription">请从“规则和自动化”或系统托盘启用自动化监控，以显示和刷新进程列表。</sys:String>
     
     <sys:String x:Key="ProcessView_ColProcessName">进程名称</sys:String>
     <sys:String x:Key="ProcessView_ColWindowTitle">窗口标题</sys:String>
@@ -347,9 +343,6 @@
     <sys:String x:Key="ProcessView_ClearCpuSets">清除 CPU 集</sys:String>
     <sys:String x:Key="ProcessView_ApplyPendingSettings">应用待处理设置</sys:String>
     <sys:String x:Key="ProcessView_ApplyPendingSettingsTooltip">将待处理的关联性和选定的电源计划应用于选定的进程</sys:String>
-    <sys:String x:Key="ProcessView_RulesAppliedOnlyWhenConfigured">ThreadPilot 仅在配置后才应用规则和更改。</sys:String>
-    <sys:String x:Key="ProcessView_CurrentProcessStatus">当前进程状态</sys:String>
-    <sys:String x:Key="ProcessView_AdvancedAffinityPicker">高级关联性选择器</sys:String>
     <sys:String x:Key="ProcessView_RowMaskTooltip">为行上下文菜单关联性操作选择待处理掩码</sys:String>
     <sys:String x:Key="ProcessView_SelectedPowerPlan">所选电源计划</sys:String>
     <sys:String x:Key="ProcessView_SaveAsRule">保存为规则</sys:String>
@@ -404,7 +397,7 @@
 
     <!-- SettingsView -->
     <sys:String x:Key="SettingsView_Title">ThreadPilot 系统设置</sys:String>
-    <sys:String x:Key="SettingsView_Subtitle">配置通知、系统托盘和应用程序行为</sys:String>
+    <sys:String x:Key="SettingsView_Subtitle">通知、托盘、启动和语言。</sys:String>
     <sys:String x:Key="SettingsView_Notifications">系统通知</sys:String>
     <sys:String x:Key="SettingsView_EnableNotifications">启用应用通知</sys:String>
     <sys:String x:Key="SettingsView_NotificationLevel">通知级别</sys:String>
@@ -565,8 +558,8 @@
     <sys:String x:Key="SettingsWindow_Save">保存</sys:String>
 
     <!-- SystemTweaksView -->
-    <sys:String x:Key="SystemTweaksView_Title">系统微调与优化</sys:String>
-    <sys:String x:Key="SystemTweaksView_Subtitle">配置 Windows 系统级优化项和性能微调选项</sys:String>
+    <sys:String x:Key="SystemTweaksView_Title">系统微调</sys:String>
+    <sys:String x:Key="SystemTweaksView_Subtitle">影响性能的 Windows 设置。</sys:String>
     <sys:String x:Key="SystemTweaksView_RefreshAll">刷新状态</sys:String>
     <sys:String x:Key="SystemTweaksView_RefreshAllTooltip">刷新所有微调选项的状态</sys:String>
     <sys:String x:Key="SystemTweaksView_TweakTooltip">切换此 Windows 系统微调项</sys:String>
@@ -772,7 +765,7 @@
     <!-- Process editor and rules editor -->
     <sys:String x:Key="ProcessView_ApplyNow">应用</sys:String>
     <sys:String x:Key="ProcessView_AutomationPaused">自动化已暂停。手动更改仍然有效；恢复监控之前不会应用已保存的规则。</sys:String>
-    <sys:String x:Key="ProcessView_UndoPriority">撤销上次优先级更改</sys:String>
+    <sys:String x:Key="ProcessView_UndoPriority">撤销上次更改</sys:String>
     <sys:String x:Key="ProcessView_VisibleCountSuffix">个进程已显示</sys:String>
     <sys:String x:Key="Rules_PendingChanges">未保存的更改</sys:String>
     <sys:String x:Key="ProcessView_PriorityRestored">已恢复之前的优先级。</sys:String>
@@ -787,4 +780,17 @@
     <sys:String x:Key="ProcessSummary_EfficiencyFormat">效率模式：{0}</sys:String>
     <sys:String x:Key="ProcessSummary_EfficiencyUnavailable">效率模式不可用</sys:String>
     <sys:String x:Key="ProcessSummary_EfficiencyVoidedFormat">效率模式：{0}（无效：已在优化中禁用电源限制）</sys:String>
+
+    <!-- Process page layout -->
+    <sys:String x:Key="ProcessView_Filters">筛选</sys:String>
+    <sys:String x:Key="ProcessView_Columns">列</sys:String>
+    <sys:String x:Key="ProcessView_PrioritySection">优先级</sys:String>
+    <sys:String x:Key="ProcessView_CoresSection">CPU 核心</sys:String>
+    <sys:String x:Key="ProcessView_RuleSection">规则</sys:String>
+    <sys:String x:Key="ProcessView_RowCpu">CPU</sys:String>
+    <sys:String x:Key="ProcessView_RowMemory">内存</sys:String>
+    <sys:String x:Key="ProcessView_RowIo">I/O</sys:String>
+    <sys:String x:Key="ProcessView_RowEfficiency">效率</sys:String>
+    <sys:String x:Key="ProcessView_SelectProcessHint">选择一个进程以查看和更改其优先级、核心和规则。</sys:String>
+    <sys:String x:Key="Rules_NotSet">未设置</sys:String>
 </ResourceDictionary>

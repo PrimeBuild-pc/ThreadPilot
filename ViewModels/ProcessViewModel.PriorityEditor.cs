@@ -1,5 +1,6 @@
 namespace ThreadPilot.ViewModels
 {
+    using System.ComponentModel;
     using System.Diagnostics;
     using CommunityToolkit.Mvvm.ComponentModel;
     using CommunityToolkit.Mvvm.Input;
@@ -8,31 +9,58 @@ namespace ThreadPilot.ViewModels
 
     public partial class ProcessViewModel
     {
+        // Null shows an empty picker: the value could not be read for this process.
         [ObservableProperty]
-        private ProcessPriorityClass pendingCpuPriority = ProcessPriorityClass.Normal;
+        private ProcessPriorityClass? pendingCpuPriority;
 
         [ObservableProperty]
-        private ProcessMemoryPriority pendingMemoryPriority = ProcessMemoryPriority.Normal;
+        private ProcessMemoryPriority? pendingMemoryPriority;
 
         [ObservableProperty]
-        private ProcessIoPriority pendingIoPriority = ProcessIoPriority.Normal;
+        private ProcessIoPriority? pendingIoPriority;
 
         [ObservableProperty]
-        private ProcessEfficiencyMode pendingEfficiencyMode = ProcessEfficiencyMode.SystemManaged;
+        private ProcessEfficiencyMode? pendingEfficiencyMode;
 
         private PriorityUndoSnapshot? priorityUndo;
 
         [RelayCommand]
-        private Task ApplySelectedCpuPriority() => this.SetContextCpuPriorityAsync(this.SelectedProcess, this.PendingCpuPriority);
+        private Task ApplySelectedCpuPriority() =>
+            this.PendingCpuPriority is { } value ? this.SetContextCpuPriorityAsync(this.SelectedProcess, value) : Task.CompletedTask;
 
         [RelayCommand]
-        private Task ApplySelectedMemoryPriority() => this.SetContextMemoryPriorityAsync(this.SelectedProcess, this.PendingMemoryPriority);
+        private Task ApplySelectedMemoryPriority() =>
+            this.PendingMemoryPriority is { } value ? this.SetContextMemoryPriorityAsync(this.SelectedProcess, value) : Task.CompletedTask;
 
         [RelayCommand]
-        private Task ApplySelectedIoPriority() => this.SetContextIoPriorityAsync(this.SelectedProcess, this.PendingIoPriority);
+        private Task ApplySelectedIoPriority() =>
+            this.PendingIoPriority is { } value ? this.SetContextIoPriorityAsync(this.SelectedProcess, value) : Task.CompletedTask;
 
         [RelayCommand]
-        private Task ApplySelectedEfficiencyMode() => this.SetContextEfficiencyModeAsync(this.SelectedProcess, this.PendingEfficiencyMode);
+        private Task ApplySelectedEfficiencyMode() =>
+            this.PendingEfficiencyMode is { } value ? this.SetContextEfficiencyModeAsync(this.SelectedProcess, value) : Task.CompletedTask;
+
+        // The summary is re-read on selection and after every change, so the pickers start from what the process has now.
+        private void OnSelectedProcessSummaryChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            var summary = this.SelectedProcessSummary;
+            switch (e.PropertyName)
+            {
+                case nameof(SelectedProcessSummaryViewModel.CpuPriority):
+                case nameof(SelectedProcessSummaryViewModel.HasSelection):
+                    this.PendingCpuPriority = summary.HasSelection ? summary.CpuPriority : null;
+                    break;
+                case nameof(SelectedProcessSummaryViewModel.MemoryPriority):
+                    this.PendingMemoryPriority = summary.MemoryPriority;
+                    break;
+                case nameof(SelectedProcessSummaryViewModel.IoPriority):
+                    this.PendingIoPriority = summary.IoPriority;
+                    break;
+                case nameof(SelectedProcessSummaryViewModel.EfficiencyMode):
+                    this.PendingEfficiencyMode = summary.EfficiencyMode;
+                    break;
+            }
+        }
 
         [RelayCommand]
         private Task SetContextEfficiencyOn(ProcessModel? process) => this.SetContextEfficiencyModeAsync(process, ProcessEfficiencyMode.On);

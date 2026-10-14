@@ -127,6 +127,18 @@ namespace ThreadPilot.ViewModels
             this.persistentRuleStore = persistentRuleStore;
             this.ruleCreationService = ruleCreationService;
 
+            if (localizationService != null)
+            {
+                localizationService.LanguageChanged += (_, _) =>
+                {
+                    this.OnPropertyChanged(nameof(this.SavedRulePriorityOptions));
+                    this.OnPropertyChanged(nameof(this.SavedRuleMemoryPriorityOptions));
+                    this.OnPropertyChanged(nameof(this.SavedRuleIoPriorityOptions));
+                    this.OnPropertyChanged(nameof(this.SavedRuleEfficiencyModeOptions));
+                    this.OnPropertyChanged(nameof(this.SavedRuleCpuAssignmentModeOptions));
+                };
+            }
+
             // Subscribe to events
             this.associationService.ConfigurationChanged += this.OnConfigurationChanged;
             this.monitorManagerService.ServiceStatusChanged += this.OnServiceStatusChanged;
@@ -227,27 +239,40 @@ namespace ThreadPilot.ViewModels
 
         // Realtime is deliberately absent: the service refuses it, so offering it would only
         // produce an error the user cannot resolve.
-        public IReadOnlyList<string> SavedRulePriorityOptions { get; } =
-        [
-            NoneOption,
-            nameof(System.Diagnostics.ProcessPriorityClass.Idle),
-            nameof(System.Diagnostics.ProcessPriorityClass.BelowNormal),
-            nameof(System.Diagnostics.ProcessPriorityClass.Normal),
-            nameof(System.Diagnostics.ProcessPriorityClass.AboveNormal),
-            nameof(System.Diagnostics.ProcessPriorityClass.High),
-        ];
+        // Values stay the enum names the editor already stores; only the labels are localized.
+        public IReadOnlyList<RuleOption> SavedRulePriorityOptions => this.Options(
+            "ProcessView_Priority",
+            [
+                NoneOption,
+                nameof(System.Diagnostics.ProcessPriorityClass.Idle),
+                nameof(System.Diagnostics.ProcessPriorityClass.BelowNormal),
+                nameof(System.Diagnostics.ProcessPriorityClass.Normal),
+                nameof(System.Diagnostics.ProcessPriorityClass.AboveNormal),
+                nameof(System.Diagnostics.ProcessPriorityClass.High),
+            ]);
 
-        public IReadOnlyList<string> SavedRuleMemoryPriorityOptions { get; } =
-            [NoneOption, .. Enum.GetNames<ProcessMemoryPriority>()];
+        public IReadOnlyList<RuleOption> SavedRuleMemoryPriorityOptions =>
+            this.Options("ProcessView_Priority", [NoneOption, .. Enum.GetNames<ProcessMemoryPriority>()]);
 
-        public IReadOnlyList<string> SavedRuleIoPriorityOptions { get; } =
-            [NoneOption, .. Enum.GetNames<ProcessIoPriority>()];
+        public IReadOnlyList<RuleOption> SavedRuleIoPriorityOptions =>
+            this.Options("ProcessView_Priority", [NoneOption, .. Enum.GetNames<ProcessIoPriority>()]);
 
-        public IReadOnlyList<string> SavedRuleEfficiencyModeOptions { get; } =
-            [NoneOption, .. Enum.GetNames<ProcessEfficiencyMode>()];
+        public IReadOnlyList<RuleOption> SavedRuleEfficiencyModeOptions =>
+            this.Options("EfficiencyMode_", [NoneOption, .. Enum.GetNames<ProcessEfficiencyMode>()]);
 
-        public IReadOnlyList<string> SavedRuleCpuAssignmentModeOptions { get; } =
-            [.. Enum.GetNames<CpuAssignmentMode>()];
+        public IReadOnlyList<RuleOption> SavedRuleCpuAssignmentModeOptions =>
+            this.Options("CpuAssignmentMode_", [.. Enum.GetNames<CpuAssignmentMode>()]);
+
+        private RuleOption[] Options(string labelPrefix, IReadOnlyList<string> values) =>
+            values.Select(value => new RuleOption(
+                value,
+                value == NoneOption ? this.Localize("Rules_NotSet", "Not set")
+                    // Windows calls the Idle class "Low", as Task Manager does.
+                    : value == nameof(System.Diagnostics.ProcessPriorityClass.Idle) ? this.Localize("ProcessView_PriorityLow", "Low")
+                    : this.Localize(labelPrefix + value, value)))
+                .ToArray();
+
+        public sealed record RuleOption(string Value, string Label);
 
         partial void OnSelectedSavedProcessRuleChanged(SavedProcessRule? value)
         {

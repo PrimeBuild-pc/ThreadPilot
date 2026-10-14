@@ -265,6 +265,27 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task PriorityPickers_StartFromTheSelectedProcessCurrentValues()
+        {
+            var memoryPriorityService = new Mock<IProcessMemoryPriorityService>();
+            memoryPriorityService
+                .Setup(service => service.GetMemoryPriorityAsync(It.IsAny<ProcessModel>()))
+                .ReturnsAsync(ProcessMemoryPriority.Low);
+            memoryPriorityService
+                .Setup(service => service.GetIoPriorityAsync(It.IsAny<ProcessModel>()))
+                .ReturnsAsync((ProcessIoPriority?)null);
+            var viewModel = CreateViewModel(CreateProcessService().Object, memoryPriorityService: memoryPriorityService.Object);
+            var process = CreateProcess();
+            process.Priority = ProcessPriorityClass.High;
+
+            await viewModel.SelectedProcessSummary.UpdateAsync(process);
+
+            Assert.Equal(ProcessPriorityClass.High, viewModel.PendingCpuPriority);
+            Assert.Equal(ProcessMemoryPriority.Low, viewModel.PendingMemoryPriority);
+            Assert.Null(viewModel.PendingIoPriority); // unreadable: the picker stays empty instead of guessing
+        }
+
+        [Fact]
         public async Task CopyContextProcessInfo_IncludesNamePidAndPath()
         {
             string? copiedText = null;

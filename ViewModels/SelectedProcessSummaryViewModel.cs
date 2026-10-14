@@ -28,6 +28,7 @@ namespace ThreadPilot.ViewModels
         private ProcessIoPriority? ioPriority;
         private ProcessEfficiencyMode? efficiencyMode;
         private string efficiencyModeText = "Efficiency mode unavailable";
+        private bool isEfficiencyModeVoided;
         private string processTitle = "No process selected";
         private string currentProcessStatusText = "No process selected";
         private string cpuUsageText = "CPU: unavailable";
@@ -128,6 +129,12 @@ namespace ThreadPilot.ViewModels
         {
             get => this.efficiencyModeText;
             private set => this.SetProperty(ref this.efficiencyModeText, value);
+        }
+
+        public bool IsEfficiencyModeVoided
+        {
+            get => this.isEfficiencyModeVoided;
+            private set => this.SetProperty(ref this.isEfficiencyModeVoided, value);
         }
 
         public string ProcessTitle
@@ -289,6 +296,7 @@ namespace ThreadPilot.ViewModels
             this.MemoryPriority = null;
             this.IoPriority = null;
             this.EfficiencyMode = null;
+            this.IsEfficiencyModeVoided = false;
             this.IsProtectedOrAccessDenied = false;
             this.HasThreadPilotRule = false;
             this.ProcessTitle = this.L("ProcessView_NoProcessSelected", "No process selected");
@@ -371,6 +379,7 @@ namespace ThreadPilot.ViewModels
         private async Task UpdateEfficiencyModeAsync(ProcessModel process, int version)
         {
             this.EfficiencyMode = null;
+            this.IsEfficiencyModeVoided = false;
             this.EfficiencyModeText = this.L("ProcessSummary_EfficiencyUnavailable", "Efficiency mode unavailable");
             if (this.memoryPriorityService == null)
             {
@@ -387,7 +396,8 @@ namespace ThreadPilot.ViewModels
 
                 this.EfficiencyMode = mode.Value;
                 var label = this.L($"EfficiencyMode_{mode.Value}", mode.Value.ToString());
-                this.EfficiencyModeText = mode == ProcessEfficiencyMode.On && this.isPowerThrottlingOff()
+                this.IsEfficiencyModeVoided = mode == ProcessEfficiencyMode.On && this.isPowerThrottlingOff();
+                this.EfficiencyModeText = this.IsEfficiencyModeVoided
                     ? this.L("ProcessSummary_EfficiencyVoidedFormat", "Efficiency mode: {0} (no effect: power throttling is disabled in Tweaks)", label)
                     : this.L("ProcessSummary_EfficiencyFormat", "Efficiency mode: {0}", label);
             }

@@ -83,8 +83,8 @@
             <ui:NavigationView x:Name="RootNavigation"
                                PaneDisplayMode="Left"
                                IsBackButtonVisible="Collapsed"
-                               IsPaneOpen="False"
-                               OpenPaneLength="180"
+                               IsPaneOpen="True"
+                               OpenPaneLength="200"
                                CompactPaneLength="52"
                                AutomationProperties.Name="{DynamicResource MainWindow_PrimaryNavigation}">
                 <ui:NavigationView.Resources>

@@ -61,6 +61,186 @@
                 </Style>
             </TabControl.Resources>
 
+            <!-- Saved Process Rules Tab -->
+            <TabItem Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRulesHeader}">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRulesDescription}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,10"/>
+
+                    <Border Grid.Row="1"
+                            Background="{DynamicResource CardSurfaceBrush}"
+                            BorderBrush="{DynamicResource BorderSubtleBrush}"
+                            BorderThickness="1"
+                            Padding="12,8"
+                            Margin="0,0,0,10">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SavedRulesReviewMessage}" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Text="{Binding SavedRulesReviewMessage}" TextWrapping="Wrap" FontSize="12"/>
+                    </Border>
+
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <DataGrid Grid.Column="0"
+                                  ItemsSource="{Binding SavedProcessRules}"
+                                  SelectedItem="{Binding SelectedSavedProcessRule, Mode=TwoWay}"
+                                  AutoGenerateColumns="False"
+                                  CanUserAddRows="False"
+                                  IsReadOnly="True"
+                                  GridLinesVisibility="Horizontal"
+                                  HeadersVisibility="Column"
+                                  BorderThickness="1">
+                            <DataGrid.Columns>
+                                <DataGridCheckBoxColumn Header="{DynamicResource MasksView_Enabled}"
+                                                       Binding="{Binding IsEnabled}"
+                                                       Width="60"/>
+                                <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleProcess}"
+                                                   Binding="{Binding ProcessName}"
+                                                   Width="150"/>
+                                <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleApplies}"
+                                                   Binding="{Binding Applies}"
+                                                   Width="*"/>
+                                <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleMode}"
+                                                   Binding="{Binding Mode}"
+                                                   Width="110"/>
+                                <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleUpdated}"
+                                                   Binding="{Binding UpdatedAt}"
+                                                   Width="140"/>
+                                <DataGridTemplateColumn Width="90">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleDelete}"
+                                                    Padding="8,2"
+                                                    Margin="2"
+                                                    Command="{Binding DataContext.DeleteSavedProcessRuleCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    CommandParameter="{Binding}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <GroupBox Grid.Column="2"
+                                  Width="330"
+                                  Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleEditor}"
+                                  VerticalAlignment="Top">
+                            <StackPanel IsEnabled="{Binding SelectedSavedProcessRule, Converter={StaticResource NullToBoolConverter}}">
+                                <TextBlock Text="{DynamicResource Rules_PendingChanges}" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,10"
+                                           Visibility="{Binding HasPendingRuleChanges, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                <TextBlock Text="{Binding SelectedSavedProcessRule.ProcessName}"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,8"/>
+
+                                <CheckBox Content="{DynamicResource MasksView_Enabled}"
+                                          IsChecked="{Binding SavedRuleIsEnabled, Mode=TwoWay}"
+                                          Margin="0,0,0,10"/>
+
+                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleCpuPriority}" Margin="0,0,0,3"/>
+                                <ComboBox ItemsSource="{Binding SavedRulePriorityOptions}"
+                                          SelectedValuePath="Value"
+                                          DisplayMemberPath="Label"
+                                          SelectedValue="{Binding SavedRulePriority, Mode=TwoWay}"
+                                          Margin="0,0,0,10"/>
+
+                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleMemoryPriority}" Margin="0,0,0,3"/>
+                                <ComboBox ItemsSource="{Binding SavedRuleMemoryPriorityOptions}"
+                                          SelectedValuePath="Value"
+                                          DisplayMemberPath="Label"
+                                          SelectedValue="{Binding SavedRuleMemoryPriority, Mode=TwoWay}"
+                                          Margin="0,0,0,10"/>
+
+                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleIoPriority}" Margin="0,0,0,3"/>
+                                <ComboBox ItemsSource="{Binding SavedRuleIoPriorityOptions}"
+                                          SelectedValuePath="Value"
+                                          DisplayMemberPath="Label"
+                                          SelectedValue="{Binding SavedRuleIoPriority, Mode=TwoWay}"
+                                          Margin="0,0,0,10"/>
+
+                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleEfficiencyMode}" Margin="0,0,0,3"
+                                           ToolTip="{DynamicResource ProcessView_EfficiencyModeTooltip}"/>
+                                <ComboBox ItemsSource="{Binding SavedRuleEfficiencyModeOptions}"
+                                          SelectedValuePath="Value"
+                                          DisplayMemberPath="Label"
+                                          SelectedValue="{Binding SavedRuleEfficiencyMode, Mode=TwoWay}"
+                                          ToolTip="{DynamicResource ProcessView_EfficiencyModeTooltip}"
+                                          Margin="0,0,0,10"/>
+
+                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleModeLabel}" Margin="0,0,0,3"/>
+                                <ComboBox ItemsSource="{Binding SavedRuleCpuAssignmentModeOptions}"
+                                          SelectedValuePath="Value"
+                                          DisplayMemberPath="Label"
+                                          SelectedValue="{Binding SavedRuleCpuAssignmentMode, Mode=TwoWay}"
+                                          Margin="0,0,0,10"/>
+
+                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleCores}" Margin="0,0,0,3"/>
+                                <TextBlock Text="{Binding SelectedSavedProcessRule.Cores}"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,6"/>
+                                <ComboBox ItemsSource="{Binding AvailableCoreMasks}"
+                                          ToolTip="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleEditorHint}"
+                                          SelectedItem="{Binding SavedRuleCoreMask, Mode=TwoWay}"
+                                          DisplayMemberPath="Name"
+                                          Margin="0,0,0,6"/>
+
+                                <CheckBox IsChecked="{Binding SavedRulePreventSleep, Mode=TwoWay}"
+                                          Margin="0,0,0,10">
+                                    <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRulePreventSleep}" TextWrapping="Wrap"/>
+                                </CheckBox>
+
+
+                                <Button Content="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleSave}"
+                                        Command="{Binding SaveSavedProcessRuleCommand}"
+                                        Padding="10,4"
+                                        HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <Border Grid.Column="0"
+                                Padding="18"
+                                IsHitTestVisible="False"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SavedProcessRules.Count}" Value="0">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_NoSavedRules}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextWrapping="Wrap"
+                                       TextAlignment="Center"/>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
             <!-- Rules Tab -->
             <TabItem Header="{DynamicResource ProcessPowerPlanAssociationView_RulesHeader}">
                 <Grid Margin="10">
@@ -271,178 +451,6 @@
                             </StackPanel>
                         </ScrollViewer>
                     </GroupBox>
-                </Grid>
-            </TabItem>
-
-            <!-- Saved Process Rules Tab -->
-            <TabItem Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRulesHeader}">
-                <Grid Margin="10">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Row="0"
-                               Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRulesDescription}"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               TextWrapping="Wrap"
-                               Margin="0,0,0,10"/>
-
-                    <Border Grid.Row="1"
-                            Background="{DynamicResource CardSurfaceBrush}"
-                            BorderBrush="{DynamicResource BorderSubtleBrush}"
-                            BorderThickness="1"
-                            Padding="12,8"
-                            Margin="0,0,0,10">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Visibility" Value="Visible"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SavedRulesReviewMessage}" Value="">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <TextBlock Text="{Binding SavedRulesReviewMessage}" TextWrapping="Wrap" FontSize="12"/>
-                    </Border>
-
-                    <Grid Grid.Row="2">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="2*"/>
-                            <ColumnDefinition Width="10"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <DataGrid Grid.Column="0"
-                                  ItemsSource="{Binding SavedProcessRules}"
-                                  SelectedItem="{Binding SelectedSavedProcessRule, Mode=TwoWay}"
-                                  AutoGenerateColumns="False"
-                                  CanUserAddRows="False"
-                                  IsReadOnly="True"
-                                  GridLinesVisibility="Horizontal"
-                                  HeadersVisibility="Column"
-                                  BorderThickness="1">
-                            <DataGrid.Columns>
-                                <DataGridCheckBoxColumn Header="{DynamicResource MasksView_Enabled}"
-                                                       Binding="{Binding IsEnabled}"
-                                                       Width="60"/>
-                                <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleProcess}"
-                                                   Binding="{Binding ProcessName}"
-                                                   Width="150"/>
-                                <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleApplies}"
-                                                   Binding="{Binding Applies}"
-                                                   Width="*"/>
-                                <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleMode}"
-                                                   Binding="{Binding Mode}"
-                                                   Width="110"/>
-                                <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleUpdated}"
-                                                   Binding="{Binding UpdatedAt}"
-                                                   Width="140"/>
-                                <DataGridTemplateColumn Width="90">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Button Content="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleDelete}"
-                                                    Padding="8,2"
-                                                    Margin="2"
-                                                    Command="{Binding DataContext.DeleteSavedProcessRuleCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                    CommandParameter="{Binding}"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </DataGrid.Columns>
-                        </DataGrid>
-
-                        <GroupBox Grid.Column="2"
-                                  Width="330"
-                                  Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleEditor}"
-                                  VerticalAlignment="Top">
-                            <StackPanel IsEnabled="{Binding SelectedSavedProcessRule, Converter={StaticResource NullToBoolConverter}}">
-                                <TextBlock Text="{DynamicResource Rules_PendingChanges}" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,10"
-                                           Visibility="{Binding HasPendingRuleChanges, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                <TextBlock Text="{Binding SelectedSavedProcessRule.ProcessName}"
-                                           FontWeight="SemiBold"
-                                           Margin="0,0,0,8"/>
-
-                                <CheckBox Content="{DynamicResource MasksView_Enabled}"
-                                          IsChecked="{Binding SavedRuleIsEnabled, Mode=TwoWay}"
-                                          Margin="0,0,0,10"/>
-
-                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleCpuPriority}" Margin="0,0,0,3"/>
-                                <ComboBox ItemsSource="{Binding SavedRulePriorityOptions}"
-                                          SelectedItem="{Binding SavedRulePriority, Mode=TwoWay}"
-                                          Margin="0,0,0,10"/>
-
-                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleMemoryPriority}" Margin="0,0,0,3"/>
-                                <ComboBox ItemsSource="{Binding SavedRuleMemoryPriorityOptions}"
-                                          SelectedItem="{Binding SavedRuleMemoryPriority, Mode=TwoWay}"
-                                          Margin="0,0,0,10"/>
-
-                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleIoPriority}" Margin="0,0,0,3"/>
-                                <ComboBox ItemsSource="{Binding SavedRuleIoPriorityOptions}"
-                                          SelectedItem="{Binding SavedRuleIoPriority, Mode=TwoWay}"
-                                          Margin="0,0,0,10"/>
-
-                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleEfficiencyMode}" Margin="0,0,0,3"
-                                           ToolTip="{DynamicResource ProcessView_EfficiencyModeTooltip}"/>
-                                <ComboBox ItemsSource="{Binding SavedRuleEfficiencyModeOptions}"
-                                          SelectedItem="{Binding SavedRuleEfficiencyMode, Mode=TwoWay}"
-                                          ToolTip="{DynamicResource ProcessView_EfficiencyModeTooltip}"
-                                          Margin="0,0,0,10"/>
-
-                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleModeLabel}" Margin="0,0,0,3"/>
-                                <ComboBox ItemsSource="{Binding SavedRuleCpuAssignmentModeOptions}"
-                                          SelectedItem="{Binding SavedRuleCpuAssignmentMode, Mode=TwoWay}"
-                                          Margin="0,0,0,10"/>
-
-                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleCores}" Margin="0,0,0,3"/>
-                                <TextBlock Text="{Binding SelectedSavedProcessRule.Cores}"
-                                           FontWeight="SemiBold"
-                                           TextWrapping="Wrap"
-                                           Margin="0,0,0,6"/>
-                                <ComboBox ItemsSource="{Binding AvailableCoreMasks}"
-                                          SelectedItem="{Binding SavedRuleCoreMask, Mode=TwoWay}"
-                                          DisplayMemberPath="Name"
-                                          Margin="0,0,0,6"/>
-
-                                <CheckBox Content="{DynamicResource ProcessPowerPlanAssociationView_SavedRulePreventSleep}"
-                                          IsChecked="{Binding SavedRulePreventSleep, Mode=TwoWay}"
-                                          Margin="0,0,0,10"/>
-
-                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleEditorHint}"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"
-                                           TextWrapping="Wrap"
-                                           Margin="0,0,0,10"/>
-
-                                <Button Content="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleSave}"
-                                        Command="{Binding SaveSavedProcessRuleCommand}"
-                                        Padding="10,4"
-                                        HorizontalAlignment="Left"/>
-                            </StackPanel>
-                        </GroupBox>
-
-                        <Border Grid.Column="0"
-                                Padding="18"
-                                IsHitTestVisible="False"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SavedProcessRules.Count}" Value="0">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                            <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_NoSavedRules}"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       TextWrapping="Wrap"
-                                       TextAlignment="Center"/>
-                        </Border>
-                    </Grid>
                 </Grid>
             </TabItem>
 
