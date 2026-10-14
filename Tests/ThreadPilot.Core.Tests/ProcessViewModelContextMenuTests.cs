@@ -286,6 +286,25 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void ProcessCounter_NeverShowsMoreVisibleThanTotal()
+        {
+            var viewModel = CreateViewModel(CreateProcessService().Object);
+            viewModel.TotalProcessCount = 1; // stale snapshot from an earlier batch load
+            foreach (var pid in new[] { 101, 102, 103 })
+            {
+                viewModel.Processes.Add(new ProcessModel { ProcessId = pid, Name = $"p{pid}" });
+            }
+
+            // Filtering is debounced through the dispatcher in the app; call the filter step directly.
+            typeof(ProcessViewModel)
+                .GetMethod("FilterProcesses", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                .Invoke(viewModel, null);
+
+            Assert.Equal(3, viewModel.FilteredProcesses.Count);
+            Assert.Equal(3, viewModel.TotalProcessCount);
+        }
+
+        [Fact]
         public async Task CopyContextProcessInfo_IncludesNamePidAndPath()
         {
             string? copiedText = null;

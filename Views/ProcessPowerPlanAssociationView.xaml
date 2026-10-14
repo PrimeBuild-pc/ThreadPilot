@@ -120,7 +120,8 @@
                                                    Width="150"/>
                                 <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleApplies}"
                                                    Binding="{Binding Applies}"
-                                                   Width="*"/>
+                                                   Width="*"
+                                                   MinWidth="160"/>
                                 <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleMode}"
                                                    Binding="{Binding Mode}"
                                                    Width="110"/>

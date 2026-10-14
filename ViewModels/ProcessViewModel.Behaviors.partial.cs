@@ -2219,6 +2219,13 @@ namespace ThreadPilot.ViewModels
 
                     var filteredResults = this.processFilterService.FilterAndSort(this.Processes, criteria);
                     this.FilteredProcesses = new ObservableCollection<ProcessModel>(filteredResults);
+
+                    // The batch total is a snapshot from the first load; refreshes add processes, so the
+                    // counter showed "157 / 151". Once everything is loaded the list itself is the total.
+                    if (!this.HasMoreBatches || this.Processes.Count > this.TotalProcessCount)
+                    {
+                        this.TotalProcessCount = this.Processes.Count;
+                    }
                 }
                 while (this.filterRefreshPending);
             }

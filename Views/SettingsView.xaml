@@ -487,15 +487,15 @@
             </StackPanel>
         </ScrollViewer>
 
-        <!-- Footer with status and actions -->
+        <!-- Footer: status on its own line so it is never cut, actions below on the right -->
         <Grid Grid.Row="2" Margin="0,12,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-            <Border Grid.Column="0"
-                    Margin="0,0,12,0"
+            <Border Grid.Row="0"
+                    Margin="0,0,0,8"
                     Padding="10,7"
                     VerticalAlignment="Center"
                     CornerRadius="{DynamicResource StandardCardCornerRadius}"
@@ -514,7 +514,7 @@
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
-                <TextBlock Text="{Binding StatusMessage}" TextTrimming="CharacterEllipsis">
+                <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
                             <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}"/>
@@ -528,7 +528,7 @@
                 </TextBlock>
             </Border>
 
-            <StackPanel Grid.Column="1" Orientation="Horizontal">
+            <WrapPanel Grid.Row="1" HorizontalAlignment="Right">
                 <Button Content="{DynamicResource SettingsView_ResetDefaults}"
                         Command="{Binding ResetToDefaultsCommand}"
                         Margin="0,0,8,0"/>
@@ -542,7 +542,7 @@
                            Content="{DynamicResource SettingsView_SaveSettings}"
                            Command="{Binding SaveSettingsCommand}"
                            IsEnabled="{Binding CanSaveSettings}"/>
-            </StackPanel>
+            </WrapPanel>
         </Grid>
     </Grid>
 </UserControl>

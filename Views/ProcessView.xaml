@@ -194,66 +194,68 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
                     <ui:TextBox Grid.Column="0"
                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                                 PlaceholderText="{DynamicResource ProcessView_SearchPlaceholder}"
                                 Icon="{ui:SymbolIcon Search24}"
                                 AutomationProperties.Name="{DynamicResource ProcessView_SearchAutomationName}"/>
-                    <ui:DropDownButton Grid.Column="1" Margin="8,0,0,0"
-                                       Icon="{ui:SymbolIcon Filter24}"
-                                       Content="{DynamicResource ProcessView_Filters}">
-                        <ui:DropDownButton.Flyout>
-                            <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                                <MenuItem Header="{DynamicResource ProcessView_ActiveAppsOnly}" IsCheckable="True" StaysOpenOnClick="True"
-                                          IsChecked="{Binding ShowActiveApplicationsOnly}" ToolTip="{DynamicResource ProcessView_VisibleWindowsOnly}"/>
-                                <MenuItem Header="{DynamicResource ProcessView_HideSystemShort}" IsCheckable="True" StaysOpenOnClick="True"
-                                          IsChecked="{Binding HideSystemProcesses}" ToolTip="{DynamicResource ProcessView_HideSystem}"/>
-                                <MenuItem Header="{DynamicResource ProcessView_HideIdle}" IsCheckable="True" StaysOpenOnClick="True"
-                                          IsChecked="{Binding HideIdleProcesses}" ToolTip="{DynamicResource ProcessView_HideLowCpu}"/>
-                                <Separator/>
-                                <MenuItem Header="{DynamicResource ProcessView_LockList}" IsCheckable="True" StaysOpenOnClick="True"
-                                          IsChecked="{Binding IsProcessListLocked}" ToolTip="{DynamicResource ProcessView_LockListTooltip}"/>
-                            </ContextMenu>
-                        </ui:DropDownButton.Flyout>
-                    </ui:DropDownButton>
-                    <ui:DropDownButton Grid.Column="2" Margin="8,0,0,0"
-                                       Icon="{ui:SymbolIcon TableSettings24}"
-                                       Content="{DynamicResource ProcessView_Columns}">
-                        <ui:DropDownButton.Flyout>
-                            <ContextMenu>
-                                <MenuItem x:Name="ShowPidColumn" Header="{DynamicResource ProcessView_ID}" IsCheckable="True" StaysOpenOnClick="True" IsChecked="True"/>
-                                <MenuItem x:Name="ShowWindowColumn" Header="{DynamicResource ProcessView_ColWindowTitle}" IsCheckable="True" StaysOpenOnClick="True"/>
-                                <MenuItem x:Name="ShowHasWindowColumn" Header="{DynamicResource ProcessView_HasWindow}" IsCheckable="True" StaysOpenOnClick="True"/>
-                            </ContextMenu>
-                        </ui:DropDownButton.Flyout>
-                    </ui:DropDownButton>
-                    <ComboBox Grid.Column="3" Margin="8,0,0,0" MinWidth="140"
-                              SelectedValue="{Binding SortMode}"
-                              SelectedValuePath="Tag"
-                              ToolTip="{DynamicResource ProcessView_SortByTooltip}"
-                              AutomationProperties.Name="{DynamicResource ProcessView_SortBy}">
-                        <ComboBoxItem Content="{DynamicResource ProcessView_ColCpuUsage}" Tag="CpuUsage"/>
-                        <ComboBoxItem Content="{DynamicResource ProcessView_ColMemory}" Tag="MemoryUsage"/>
-                        <ComboBoxItem Content="{DynamicResource ProcessView_ColProcessName}" Tag="Name"/>
-                        <ComboBoxItem Content="{DynamicResource ProcessView_ID}" Tag="ProcessId"/>
-                    </ComboBox>
-                    <ui:Button Grid.Column="4" Margin="8,0,0,0"
-                               Command="{Binding LoadProcessesCommand}"
-                               Icon="{ui:SymbolIcon ArrowClockwise24}"
-                               ToolTip="{DynamicResource ProcessView_RefreshTooltip}"
-                               AutomationProperties.Name="{DynamicResource ProcessView_RefreshAutomationName}"/>
-                    <Button Grid.Column="5" Margin="8,0,0,0"
-                            Command="{Binding LoadMoreProcessesCommand}"
-                            Content="{DynamicResource ProcessView_LoadMore}"
-                            Visibility="{Binding HasMoreBatches, Converter={StaticResource BoolToVisibilityConverter}}"
-                            ToolTip="{DynamicResource ProcessView_LoadMoreTooltip}"
-                            AutomationProperties.Name="{DynamicResource ProcessView_LoadMoreAutomationName}"/>
+                    <StackPanel x:Name="ToolbarActions" Grid.Column="1" Orientation="Horizontal">
+                        <ui:DropDownButton Margin="8,0,0,0"
+                                           Icon="{ui:SymbolIcon Filter24}"
+                                           Content="{DynamicResource ProcessView_Filters}">
+                            <ui:DropDownButton.Flyout>
+                                <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                    <MenuItem Header="{DynamicResource ProcessView_ActiveAppsOnly}" IsCheckable="True" StaysOpenOnClick="True"
+                                              IsChecked="{Binding ShowActiveApplicationsOnly}" ToolTip="{DynamicResource ProcessView_VisibleWindowsOnly}"/>
+                                    <MenuItem Header="{DynamicResource ProcessView_HideSystemShort}" IsCheckable="True" StaysOpenOnClick="True"
+                                              IsChecked="{Binding HideSystemProcesses}" ToolTip="{DynamicResource ProcessView_HideSystem}"/>
+                                    <MenuItem Header="{DynamicResource ProcessView_HideIdle}" IsCheckable="True" StaysOpenOnClick="True"
+                                              IsChecked="{Binding HideIdleProcesses}" ToolTip="{DynamicResource ProcessView_HideLowCpu}"/>
+                                    <Separator/>
+                                    <MenuItem Header="{DynamicResource ProcessView_LockList}" IsCheckable="True" StaysOpenOnClick="True"
+                                              IsChecked="{Binding IsProcessListLocked}" ToolTip="{DynamicResource ProcessView_LockListTooltip}"/>
+                                </ContextMenu>
+                            </ui:DropDownButton.Flyout>
+                        </ui:DropDownButton>
+                        <ui:DropDownButton Margin="8,0,0,0"
+                                           Icon="{ui:SymbolIcon TableSettings24}"
+                                           Content="{DynamicResource ProcessView_Columns}">
+                            <ui:DropDownButton.Flyout>
+                                <ContextMenu>
+                                    <MenuItem x:Name="ShowPidColumn" Header="{DynamicResource ProcessView_ID}" IsCheckable="True" StaysOpenOnClick="True" IsChecked="True"/>
+                                    <MenuItem x:Name="ShowWindowColumn" Header="{DynamicResource ProcessView_ColWindowTitle}" IsCheckable="True" StaysOpenOnClick="True"/>
+                                    <MenuItem x:Name="ShowHasWindowColumn" Header="{DynamicResource ProcessView_HasWindow}" IsCheckable="True" StaysOpenOnClick="True"/>
+                                </ContextMenu>
+                            </ui:DropDownButton.Flyout>
+                        </ui:DropDownButton>
+                        <ComboBox Margin="8,0,0,0" MinWidth="140"
+                                  SelectedValue="{Binding SortMode}"
+                                  SelectedValuePath="Tag"
+                                  ToolTip="{DynamicResource ProcessView_SortByTooltip}"
+                                  AutomationProperties.Name="{DynamicResource ProcessView_SortBy}">
+                            <ComboBoxItem Content="{DynamicResource ProcessView_ColCpuUsage}" Tag="CpuUsage"/>
+                            <ComboBoxItem Content="{DynamicResource ProcessView_ColMemory}" Tag="MemoryUsage"/>
+                            <ComboBoxItem Content="{DynamicResource ProcessView_ColProcessName}" Tag="Name"/>
+                            <ComboBoxItem Content="{DynamicResource ProcessView_ID}" Tag="ProcessId"/>
+                        </ComboBox>
+                        <ui:Button Margin="8,0,0,0"
+                                   Command="{Binding LoadProcessesCommand}"
+                                   Icon="{ui:SymbolIcon ArrowClockwise24}"
+                                   ToolTip="{DynamicResource ProcessView_RefreshTooltip}"
+                                   AutomationProperties.Name="{DynamicResource ProcessView_RefreshAutomationName}"/>
+                        <Button Margin="8,0,0,0"
+                                Command="{Binding LoadMoreProcessesCommand}"
+                                Content="{DynamicResource ProcessView_LoadMore}"
+                                Visibility="{Binding HasMoreBatches, Converter={StaticResource BoolToVisibilityConverter}}"
+                                ToolTip="{DynamicResource ProcessView_LoadMoreTooltip}"
+                                AutomationProperties.Name="{DynamicResource ProcessView_LoadMoreAutomationName}"/>
+                    </StackPanel>
                 </Grid>
 
 

@@ -21,6 +21,12 @@ namespace ThreadPilot.Views
             Grid.SetColumn(this.ProcessDetails, wide ? 1 : 0);
             this.ProcessDetails.MaxHeight = wide ? double.PositiveInfinity : Math.Max(160, e.NewSize.Height * 0.48);
             this.ProcessDetails.Padding = wide ? new System.Windows.Thickness(12, 0, 12, 0) : new System.Windows.Thickness(0, 12, 12, 0);
+
+            // Below ~820 px the buttons would squeeze the search box to a few letters: give it its own row.
+            var stacked = e.NewSize.Width < 820;
+            Grid.SetRow(this.ToolbarActions, stacked ? 1 : 0);
+            Grid.SetColumn(this.ToolbarActions, stacked ? 0 : 1);
+            this.ToolbarActions.Margin = stacked ? new System.Windows.Thickness(-8, 8, 0, 0) : default;
         }
 
         private void ProcessRow_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
