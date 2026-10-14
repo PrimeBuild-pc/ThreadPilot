@@ -1,24 +1,23 @@
 <UserControl x:Class="ThreadPilot.Views.SettingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:ThreadPilot.Views"
              xmlns:models="clr-namespace:ThreadPilot.Models"
              xmlns:converters="clr-namespace:ThreadPilot.Converters"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-             mc:Ignorable="d" 
+             mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="800">
-    
+
     <UserControl.Resources>
         <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="{DynamicResource SectionTitleFontSize}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="Margin" Value="0,20,0,8"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
-        
+
         <Style x:Key="DescriptionStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="{DynamicResource CaptionFontSize}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
@@ -26,11 +25,25 @@
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
 
-        <Style x:Key="SettingsCardStyle" TargetType="Border" BasedOn="{StaticResource StandardCardStyle}">
+        <!-- One setting = one row: what it is on the left, its control on the right (Windows 11 Settings). -->
+        <Style x:Key="SettingRowStyle" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource CardSurfaceBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-            <Setter Property="Padding" Value="{DynamicResource StandardCardPadding}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
         </Style>
+
+        <Style x:Key="SubSettingRowStyle" TargetType="Border" BasedOn="{StaticResource SettingRowStyle}">
+            <Setter Property="Margin" Value="32,0,0,4"/>
+        </Style>
+
+        <Style x:Key="SettingTitleStyle" TargetType="TextBlock">
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
     </UserControl.Resources>
 
     <Grid Margin="12">
@@ -40,446 +53,451 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+        <StackPanel Grid.Row="0" Margin="0,0,0,4">
             <TextBlock Text="{DynamicResource SettingsView_Title}" Style="{StaticResource PageTitleTextStyle}" Margin="0,0,0,4"/>
             <TextBlock Text="{DynamicResource SettingsView_Subtitle}"
                        Style="{StaticResource PageSubtitleTextStyle}"/>
         </StackPanel>
 
-        <!-- Settings Content -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <WrapPanel HorizontalAlignment="Left">
-                
-                 <!-- Notifications Section -->
-                 <StackPanel Width="372" Margin="0,0,16,16">
-                     <TextBlock Text="{DynamicResource SettingsView_Notifications}" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
-                     <Border Style="{StaticResource SettingsCardStyle}">
-                        <StackPanel>
-                            <CheckBox Content="{DynamicResource SettingsView_EnableNotifications}" 
-                                      IsChecked="{Binding Settings.EnableNotifications}"
-                                      Margin="0,0,0,10"/>
+            <StackPanel MaxWidth="980" HorizontalAlignment="Stretch" Margin="0,0,12,12">
 
-                            <StackPanel Margin="20,0,0,10"
-                                        IsEnabled="{Binding Settings.EnableNotifications}">
-                                <TextBlock Text="{DynamicResource SettingsView_NotificationLevel}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <ComboBox SelectedValue="{Binding Settings.NotificationLevel}"
-                                          SelectedValuePath="Tag">
-                                    <ComboBoxItem Content="{DynamicResource SettingsView_NotificationLevelAll}" Tag="{x:Static models:NotificationLevelProfile.All}"/>
-                                    <ComboBoxItem Content="{DynamicResource SettingsView_NotificationLevelWarningsErrors}" Tag="{x:Static models:NotificationLevelProfile.WarningsAndErrorsOnly}"/>
-                                    <ComboBoxItem Content="{DynamicResource SettingsView_NotificationLevelSilent}" Tag="{x:Static models:NotificationLevelProfile.Silent}"/>
-                                </ComboBox>
-                            </StackPanel>
-                            
-                            <CheckBox Content="{DynamicResource SettingsView_EnableBalloon}" 
-                                      IsChecked="{Binding Settings.EnableBalloonNotifications}"
-                                      IsEnabled="{Binding Settings.EnableNotifications}"
-                                      Margin="20,0,0,5"/>
-                            
-                            <CheckBox Content="{DynamicResource SettingsView_EnableToast}" 
-                                      IsChecked="{Binding Settings.EnableToastNotifications}"
-                                      IsEnabled="{Binding Settings.EnableNotifications}"
-                                      Margin="20,0,0,10"/>
-                            
-                            <Separator Margin="0,10"/>
-                            
-                            <TextBlock Text="{DynamicResource SettingsView_NotificationTypes}" FontWeight="SemiBold" Margin="0,5"/>
-                            
-                            <CheckBox Content="{DynamicResource SettingsView_NotifyPowerPlan}" 
-                                      IsChecked="{Binding Settings.EnablePowerPlanChangeNotifications}"
-                                      IsEnabled="{Binding Settings.EnableNotifications}"
-                                      Margin="20,5,0,5"/>
-                            
-                            <CheckBox Content="{DynamicResource SettingsView_NotifyProcess}" 
-                                      IsChecked="{Binding Settings.EnableProcessMonitoringNotifications}"
-                                      IsEnabled="{Binding Settings.EnableNotifications}"
-                                      Margin="20,0,0,5"/>
-                            
-                            <CheckBox Content="{DynamicResource SettingsView_NotifyError}" 
-                                      IsChecked="{Binding Settings.EnableErrorNotifications}"
-                                      IsEnabled="{Binding Settings.EnableNotifications}"
-                                      Margin="20,0,0,5"/>
-                            
-                            <CheckBox Content="{DynamicResource SettingsView_NotifySuccess}" 
-                                      IsChecked="{Binding Settings.EnableSuccessNotifications}"
-                                      IsEnabled="{Binding Settings.EnableNotifications}"
-                                      Margin="20,0,0,10"/>
-                            
-                            <Separator Margin="0,10"/>
-                            
-                            <Grid Margin="0,5">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                
-                                <TextBlock Text="{DynamicResource SettingsView_Duration}" VerticalAlignment="Center"/>
-                                <Slider Grid.Column="1" 
-                                        Value="{Binding Settings.NotificationDisplayDurationMs}"
-                                        Minimum="1000" Maximum="30000" 
-                                        TickFrequency="1000"
-                                        IsSnapToTickEnabled="True"
-                                        Margin="10,0"/>
-                                <TextBlock Grid.Column="2" 
-                                           Text="{Binding Settings.NotificationDisplayDurationMs}"
-                                           VerticalAlignment="Center" MinWidth="40"/>
-                            </Grid>
-                            
-                            <Button Content="{DynamicResource SettingsView_TestNotification}" 
-                                    Command="{Binding TestNotificationCommand}"
-                                    HorizontalAlignment="Left" 
-                                    Margin="0,10,0,0" 
-                                    Padding="15,5"/>
+                <!-- General -->
+                <TextBlock Text="{DynamicResource SettingsView_BasicPreferences}" Style="{StaticResource SectionHeaderStyle}" Margin="0,8,0,8"/>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.AutostartWithWindows}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_StartWithWindows}"/>
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource SettingsView_StartWithWindows}" Style="{StaticResource SettingTitleStyle}"/>
+                            <TextBlock Text="{DynamicResource SettingsView_AutostartDescription}" Style="{StaticResource DescriptionStyle}"/>
                         </StackPanel>
-                    </Border>
-                 </StackPanel>
-
-                <!-- System Tray Section -->
-                <StackPanel Width="372" Margin="0,0,16,16">
-                    <TextBlock Text="{DynamicResource SettingsView_SystemTray}" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
-                    <Border Style="{StaticResource SettingsCardStyle}">
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <ComboBox DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" MinWidth="200"
+                                  SelectedValue="{Binding Settings.Language}" SelectedValuePath="Tag"
+                                  AutomationProperties.Name="{DynamicResource SettingsView_Language}">
+                            <ComboBoxItem Content="{DynamicResource SettingsView_LanguageEnUs}" Tag="en-US"/>
+                            <ComboBoxItem Content="{DynamicResource SettingsView_LanguageZhCn}" Tag="zh-CN"/>
+                            <ComboBoxItem Content="{DynamicResource SettingsView_LanguageItIt}" Tag="it-IT"/>
+                            <ComboBoxItem Content="{DynamicResource SettingsView_LanguageFrFr}" Tag="fr-FR"/>
+                            <ComboBoxItem Content="{DynamicResource SettingsView_LanguageDeDe}" Tag="de-DE"/>
+                            <ComboBoxItem Content="{DynamicResource SettingsView_LanguageEsEs}" Tag="es-ES"/>
+                            <ComboBoxItem Content="{DynamicResource SettingsView_LanguageRuRu}" Tag="ru-RU"/>
+                        </ComboBox>
                         <StackPanel>
-                            <CheckBox Content="{DynamicResource SettingsView_ShowTrayIcon}" 
-                                      IsChecked="{Binding Settings.ShowTrayIcon}"
-                                      Margin="0,0,0,10"/>
-                            
-                            <CheckBox Content="{DynamicResource SettingsView_MinimizeToTray}" 
-                                      IsChecked="{Binding Settings.MinimizeToTray}"
-                                      IsEnabled="{Binding Settings.ShowTrayIcon}"
-                                      Margin="20,0,0,5"/>
-                            
-                            <CheckBox Content="{DynamicResource SettingsView_CloseToTray}" 
-                                      IsChecked="{Binding Settings.CloseToTray}"
-                                      IsEnabled="{Binding Settings.ShowTrayIcon}"
-                                      Margin="20,0,0,5"/>
-                            
-                            <CheckBox Content="{DynamicResource SettingsView_StartMinimized}" 
-                                      IsChecked="{Binding Settings.StartMinimized}"
-                                      Margin="20,0,0,10"/>
-                            
-                            <Separator Margin="0,10"/>
-                            
-                            <CheckBox Content="{DynamicResource SettingsView_QuickApply}"
-                                      IsChecked="{Binding Settings.EnableQuickApplyFromTray}"
-                                      IsEnabled="{Binding Settings.ShowTrayIcon}"
-                                      Margin="0,5"/>
-                            
-                            <CheckBox Content="{DynamicResource SettingsView_MonitoringControl}"
-                                      IsChecked="{Binding Settings.EnableMonitoringControlFromTray}"
-                                      IsEnabled="{Binding Settings.ShowTrayIcon}"
-                                      Margin="0,0,0,5"/>
-                            
-                            <CheckBox Content="{DynamicResource SettingsView_DetailedTooltips}" 
-                                      IsChecked="{Binding Settings.ShowDetailedTooltips}"
-                                      IsEnabled="{Binding Settings.ShowTrayIcon}"
-                                      Margin="0,0,0,10"/>
+                            <TextBlock Text="{DynamicResource SettingsView_Language}" Style="{StaticResource SettingTitleStyle}"/>
+                            <TextBlock Text="{DynamicResource SettingsView_LanguageDescription}" Style="{StaticResource DescriptionStyle}"/>
                         </StackPanel>
-                    </Border>
-                </StackPanel>
-
-                <!-- Basic Preferences Section -->
-                <StackPanel Width="372" Margin="0,0,16,16">
-                    <TextBlock Text="{DynamicResource SettingsView_BasicPreferences}" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
-                    <Border Style="{StaticResource SettingsCardStyle}">
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.UseDarkTheme}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_UseDarkTheme}"/>
                         <StackPanel>
-                            <TextBlock Text="{DynamicResource SettingsView_Autostart}" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                            <CheckBox Content="{DynamicResource SettingsView_StartWithWindows}"
-                                      IsChecked="{Binding Settings.AutostartWithWindows}"
-                                      Margin="0,0,0,5"/>
-                            <TextBlock Text="{DynamicResource SettingsView_AutostartDescription}"
-                                       Style="{StaticResource DescriptionStyle}"
-                                       Margin="20,0,0,15"/>
-
-                            <CheckBox Content="{DynamicResource SettingsView_ResetProcessChangesOnExit}"
-                                      IsChecked="{Binding Settings.ClearMasksOnClose}"
-                                      Margin="0,0,0,5"/>
-                            <TextBlock Text="{DynamicResource SettingsView_ResetProcessChangesOnExitDescription}"
-                                       Style="{StaticResource DescriptionStyle}"
-                                       Margin="20,0,0,15"/>
-
-                            <CheckBox Content="{DynamicResource SettingsView_LowImpactMode}"
-                                      IsChecked="{Binding Settings.EnableSelfLowImpactMode}"
-                                      Margin="0,0,0,5"/>
-                            <TextBlock Text="{DynamicResource SettingsView_LowImpactDescription}"
-                                       Style="{StaticResource DescriptionStyle}"
-                                       Margin="20,0,0,15"/>
-                                       
-                            <Separator Margin="0,0,0,15"/>
-                            
-                            <TextBlock Text="{DynamicResource SettingsView_Appearance}" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                            <CheckBox Content="{DynamicResource SettingsView_UseDarkTheme}"
-                                      IsChecked="{Binding Settings.UseDarkTheme}"
-                                      Margin="0,0,0,5"/>
-                            <TextBlock Text="{DynamicResource SettingsView_ThemeDescription}"
-                                       Style="{StaticResource DescriptionStyle}"
-                                       Margin="20,0,0,5"/>
-
-                            <Separator Margin="0,10"/>
-
-                            <TextBlock Text="{DynamicResource SettingsView_Language}" FontWeight="SemiBold" Margin="0,5,0,5"/>
-                            <ComboBox SelectedValue="{Binding Settings.Language}" SelectedValuePath="Tag" Margin="0,0,0,5">
-                                <ComboBoxItem Content="{DynamicResource SettingsView_LanguageEnUs}" Tag="en-US"/>
-                                <ComboBoxItem Content="{DynamicResource SettingsView_LanguageZhCn}" Tag="zh-CN"/>
-                                <ComboBoxItem Content="{DynamicResource SettingsView_LanguageItIt}" Tag="it-IT"/>
-                                <ComboBoxItem Content="{DynamicResource SettingsView_LanguageFrFr}" Tag="fr-FR"/>
-                                <ComboBoxItem Content="{DynamicResource SettingsView_LanguageDeDe}" Tag="de-DE"/>
-                                <ComboBoxItem Content="{DynamicResource SettingsView_LanguageEsEs}" Tag="es-ES"/>
-                                <ComboBoxItem Content="{DynamicResource SettingsView_LanguageRuRu}" Tag="ru-RU"/>
-                            </ComboBox>
-                            <TextBlock Text="{DynamicResource SettingsView_LanguageDescription}"
-                                       Style="{StaticResource DescriptionStyle}"
-                                       Margin="0,2,0,5"/>
+                            <TextBlock Text="{DynamicResource SettingsView_UseDarkTheme}" Style="{StaticResource SettingTitleStyle}"/>
+                            <TextBlock Text="{DynamicResource SettingsView_ThemeDescription}" Style="{StaticResource DescriptionStyle}"/>
                         </StackPanel>
-                    </Border>
-                </StackPanel>
-
-                <!-- Rules & automation Section -->
-                <StackPanel Width="372" Margin="0,0,16,16">
-                    <TextBlock Text="{DynamicResource SettingsView_RulesAutomation}" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
-                    <Border Style="{StaticResource SettingsCardStyle}">
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.ClearMasksOnClose}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_ResetProcessChangesOnExit}"/>
                         <StackPanel>
-                            <TextBlock Text="{DynamicResource SettingsView_RuleAutoApply}" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                            <CheckBox IsChecked="{Binding Settings.ApplyPersistentRulesOnProcessStart}"
-                                      Margin="0,0,0,5">
-                                <TextBlock Text="{DynamicResource SettingsView_ApplyOnStart}"
-                                           TextWrapping="Wrap"/>
-                            </CheckBox>
-                            <TextBlock Text="{DynamicResource SettingsView_ApplyOnStartDescription}"
-                                       Style="{StaticResource DescriptionStyle}"
-                                       Margin="20,0,0,15"/>
-
-                            <Separator Margin="0,0,0,15"/>
-
-                            <CheckBox Content="{DynamicResource SettingsView_EnableWmi}"
-                                      IsChecked="{Binding Settings.EnableWmiMonitoring}"
-                                      Margin="0,0,0,5"/>
-                            <TextBlock Text="{DynamicResource SettingsView_WmiDescription}"
-                                       Style="{StaticResource DescriptionStyle}"
-                                       Margin="20,0,0,15"/>
-
-                            <CheckBox Content="{DynamicResource SettingsView_EnableFallback}"
-                                      IsChecked="{Binding Settings.EnableFallbackPolling}"
-                                      Margin="0,0,0,5"/>
-                            <TextBlock Text="{DynamicResource SettingsView_FallbackDescription}"
-                                       Style="{StaticResource DescriptionStyle}"
-                                       Margin="20,0,0,15"/>
-
-                            <Separator Margin="0,0,0,15"/>
-
-                            <Grid Margin="0,0,0,10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-
-                                <TextBlock Text="{DynamicResource SettingsView_PollingInterval}" VerticalAlignment="Center"/>
-                                <Slider Grid.Column="1"
-                                        Value="{Binding Settings.PollingIntervalMs}"
-                                        Minimum="1000" Maximum="30000"
-                                        TickFrequency="1000"
-                                        IsSnapToTickEnabled="True"
-                                        Margin="10,0"/>
-                                <TextBlock Grid.Column="2"
-                                           Text="{Binding Settings.PollingIntervalMs}"
-                                           VerticalAlignment="Center" MinWidth="40"/>
-                            </Grid>
-
-                            <Grid Margin="0,5,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-
-                                <TextBlock Text="{DynamicResource SettingsView_FallbackPollingInterval}" VerticalAlignment="Center"/>
-                                <Slider Grid.Column="1"
-                                        Value="{Binding Settings.FallbackPollingIntervalMs}"
-                                        Minimum="5000" Maximum="60000"
-                                        TickFrequency="5000"
-                                        IsSnapToTickEnabled="True"
-                                        Margin="10,0"/>
-                                <TextBlock Grid.Column="2"
-                                           Text="{Binding Settings.FallbackPollingIntervalMs}"
-                                           VerticalAlignment="Center" MinWidth="40"/>
-                            </Grid>
+                            <TextBlock Text="{DynamicResource SettingsView_ResetProcessChangesOnExit}" Style="{StaticResource SettingTitleStyle}"/>
+                            <TextBlock Text="{DynamicResource SettingsView_ResetProcessChangesOnExitDescription}" Style="{StaticResource DescriptionStyle}"/>
                         </StackPanel>
-                    </Border>
-                </StackPanel>
-
-                <!-- CPU assignment Section -->
-                <StackPanel Width="372" Margin="0,0,16,16">
-                    <TextBlock Text="{DynamicResource SettingsView_CpuAssignment}" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
-                    <Border Style="{StaticResource SettingsCardStyle}">
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.EnableSelfLowImpactMode}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_LowImpactMode}"/>
                         <StackPanel>
-                            <DockPanel Margin="0,0,0,5">
-                                <TextBlock Text="{DynamicResource SettingsView_DefaultCpuAssignment}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                <TextBlock Text="ⓘ"
-                                           Margin="8,0,0,0"
-                                           VerticalAlignment="Center"
-                                           ToolTip="{DynamicResource SettingsView_CpuAssignmentTooltip}"
-                                           AutomationProperties.Name="{DynamicResource SettingsView_CpuAssignmentInfo}"
-                                           AutomationProperties.HelpText="{DynamicResource SettingsView_CpuAssignmentTooltip}"/>
-                            </DockPanel>
-                            <ComboBox SelectedValue="{Binding Settings.DefaultCpuAssignmentMode}"
-                                      SelectedValuePath="Tag"
-                                      Margin="0,0,0,6">
-                                <ComboBoxItem Content="{DynamicResource CpuAssignmentMode_AffinityMask}" Tag="{x:Static models:CpuAssignmentMode.AffinityMask}" ToolTip="{DynamicResource CpuAssignmentMode_AffinityMaskTooltip}"/>
-                                <ComboBoxItem Content="{DynamicResource CpuAssignmentMode_IdealProcessor}" Tag="{x:Static models:CpuAssignmentMode.IdealProcessor}" ToolTip="{DynamicResource CpuAssignmentMode_IdealProcessorTooltip}"/>
-                                <ComboBoxItem Content="{DynamicResource CpuAssignmentMode_CpuSets}" Tag="{x:Static models:CpuAssignmentMode.CpuSets}" ToolTip="{DynamicResource CpuAssignmentMode_CpuSetsTooltip}"/>
-                                <ComboBoxItem Content="{DynamicResource CpuAssignmentMode_Automatic}" Tag="{x:Static models:CpuAssignmentMode.Automatic}" ToolTip="{DynamicResource CpuAssignmentMode_AutomaticTooltip}"/>
-                            </ComboBox>
+                            <TextBlock Text="{DynamicResource SettingsView_LowImpactMode}" Style="{StaticResource SettingTitleStyle}"/>
+                            <TextBlock Text="{DynamicResource SettingsView_LowImpactDescription}" Style="{StaticResource DescriptionStyle}"/>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+
+                <!-- Rules & automation -->
+                <TextBlock Text="{DynamicResource SettingsView_RulesAutomation}" Style="{StaticResource SectionHeaderStyle}"/>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.ApplyPersistentRulesOnProcessStart}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_RuleAutoApply}"/>
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource SettingsView_ApplyOnStart}" TextWrapping="Wrap"/>
+                            <TextBlock Text="{DynamicResource SettingsView_ApplyOnStartDescription}" Style="{StaticResource DescriptionStyle}"/>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.EnableWmiMonitoring}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_EnableWmi}"/>
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource SettingsView_EnableWmi}" Style="{StaticResource SettingTitleStyle}"/>
+                            <TextBlock Text="{DynamicResource SettingsView_WmiDescription}" Style="{StaticResource DescriptionStyle}"/>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.EnableFallbackPolling}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_EnableFallback}"/>
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource SettingsView_EnableFallback}" Style="{StaticResource SettingTitleStyle}"/>
+                            <TextBlock Text="{DynamicResource SettingsView_FallbackDescription}" Style="{StaticResource DescriptionStyle}"/>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
+                            <Slider Width="200" VerticalAlignment="Center"
+                                    Value="{Binding Settings.PollingIntervalMs}"
+                                    Minimum="1000" Maximum="30000" TickFrequency="1000" IsSnapToTickEnabled="True"
+                                    AutomationProperties.Name="{DynamicResource SettingsView_PollingInterval}"/>
+                            <TextBlock Text="{Binding Settings.PollingIntervalMs}" MinWidth="52" TextAlignment="Right" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock Text="{DynamicResource SettingsView_PollingInterval}" Style="{StaticResource SettingTitleStyle}"/>
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SettingRowStyle}" IsEnabled="{Binding Settings.EnableFallbackPolling}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
+                            <Slider Width="200" VerticalAlignment="Center"
+                                    Value="{Binding Settings.FallbackPollingIntervalMs}"
+                                    Minimum="5000" Maximum="60000" TickFrequency="5000" IsSnapToTickEnabled="True"
+                                    AutomationProperties.Name="{DynamicResource SettingsView_FallbackPollingInterval}"/>
+                            <TextBlock Text="{Binding Settings.FallbackPollingIntervalMs}" MinWidth="52" TextAlignment="Right" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock Text="{DynamicResource SettingsView_FallbackPollingInterval}" Style="{StaticResource SettingTitleStyle}"/>
+                    </DockPanel>
+                </Border>
+
+                <!-- CPU assignment -->
+                <TextBlock Text="{DynamicResource SettingsView_CpuAssignment}" Style="{StaticResource SectionHeaderStyle}"/>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <ComboBox DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" MinWidth="200"
+                                  SelectedValue="{Binding Settings.DefaultCpuAssignmentMode}"
+                                  SelectedValuePath="Tag"
+                                  ToolTip="{DynamicResource SettingsView_CpuAssignmentTooltip}"
+                                  AutomationProperties.Name="{DynamicResource SettingsView_DefaultCpuAssignment}"
+                                  AutomationProperties.HelpText="{DynamicResource SettingsView_CpuAssignmentTooltip}">
+                            <ComboBoxItem Content="{DynamicResource CpuAssignmentMode_AffinityMask}" Tag="{x:Static models:CpuAssignmentMode.AffinityMask}" ToolTip="{DynamicResource CpuAssignmentMode_AffinityMaskTooltip}"/>
+                            <ComboBoxItem Content="{DynamicResource CpuAssignmentMode_IdealProcessor}" Tag="{x:Static models:CpuAssignmentMode.IdealProcessor}" ToolTip="{DynamicResource CpuAssignmentMode_IdealProcessorTooltip}"/>
+                            <ComboBoxItem Content="{DynamicResource CpuAssignmentMode_CpuSets}" Tag="{x:Static models:CpuAssignmentMode.CpuSets}" ToolTip="{DynamicResource CpuAssignmentMode_CpuSetsTooltip}"/>
+                            <ComboBoxItem Content="{DynamicResource CpuAssignmentMode_Automatic}" Tag="{x:Static models:CpuAssignmentMode.Automatic}" ToolTip="{DynamicResource CpuAssignmentMode_AutomaticTooltip}"/>
+                        </ComboBox>
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource SettingsView_DefaultCpuAssignment}" Style="{StaticResource SettingTitleStyle}"/>
                             <TextBlock Text="{DynamicResource SettingsView_CpuAssignmentDescription}" Style="{StaticResource DescriptionStyle}"/>
-                            <Separator Margin="0,12"/>
-                            <TextBlock Text="{Binding ReservedCpuSetsStatus}" TextWrapping="Wrap" FontWeight="SemiBold"/>
-                            <TextBlock Text="{DynamicResource SettingsView_ReservedCpuSetsWarning}"
-                                       Style="{StaticResource DescriptionStyle}"
-                                       ToolTip="{DynamicResource SettingsView_ReservedCpuSetsTooltip}"
-                                       AutomationProperties.HelpText="{DynamicResource SettingsView_ReservedCpuSetsTooltip}"/>
                         </StackPanel>
-                    </Border>
-                </StackPanel>
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding ReservedCpuSetsStatus}" TextWrapping="Wrap"/>
+                        <TextBlock Text="{DynamicResource SettingsView_ReservedCpuSetsWarning}"
+                                   Style="{StaticResource DescriptionStyle}"
+                                   ToolTip="{DynamicResource SettingsView_ReservedCpuSetsTooltip}"
+                                   AutomationProperties.HelpText="{DynamicResource SettingsView_ReservedCpuSetsTooltip}"/>
+                    </StackPanel>
+                </Border>
 
-                <!-- Advanced Section -->
-                <StackPanel Width="372" Margin="0,0,16,16">
-                    <TextBlock Text="{DynamicResource SettingsView_Advanced}" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
-                    <Border Style="{StaticResource SettingsCardStyle}">
+                <!-- System tray -->
+                <TextBlock Text="{DynamicResource SettingsView_SystemTray}" Style="{StaticResource SectionHeaderStyle}"/>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.ShowTrayIcon}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_ShowTrayIcon}"/>
+                        <TextBlock Text="{DynamicResource SettingsView_ShowTrayIcon}" Style="{StaticResource SettingTitleStyle}"/>
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SubSettingRowStyle}" IsEnabled="{Binding Settings.ShowTrayIcon}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.MinimizeToTray}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_MinimizeToTray}"/>
+                        <TextBlock Text="{DynamicResource SettingsView_MinimizeToTray}" Style="{StaticResource SettingTitleStyle}"/>
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SubSettingRowStyle}" IsEnabled="{Binding Settings.ShowTrayIcon}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.CloseToTray}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_CloseToTray}"/>
+                        <TextBlock Text="{DynamicResource SettingsView_CloseToTray}" Style="{StaticResource SettingTitleStyle}"/>
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SubSettingRowStyle}" IsEnabled="{Binding Settings.ShowTrayIcon}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.EnableQuickApplyFromTray}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_QuickApply}"/>
+                        <TextBlock Text="{DynamicResource SettingsView_QuickApply}" Style="{StaticResource SettingTitleStyle}"/>
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SubSettingRowStyle}" IsEnabled="{Binding Settings.ShowTrayIcon}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.EnableMonitoringControlFromTray}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_MonitoringControl}"/>
+                        <TextBlock Text="{DynamicResource SettingsView_MonitoringControl}" Style="{StaticResource SettingTitleStyle}"/>
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SubSettingRowStyle}" IsEnabled="{Binding Settings.ShowTrayIcon}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.ShowDetailedTooltips}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_DetailedTooltips}"/>
+                        <TextBlock Text="{DynamicResource SettingsView_DetailedTooltips}" Style="{StaticResource SettingTitleStyle}"/>
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.StartMinimized}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_StartMinimized}"/>
+                        <TextBlock Text="{DynamicResource SettingsView_StartMinimized}" Style="{StaticResource SettingTitleStyle}"/>
+                    </DockPanel>
+                </Border>
+
+                <!-- Notifications -->
+                <TextBlock Text="{DynamicResource SettingsView_Notifications}" Style="{StaticResource SectionHeaderStyle}"/>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.EnableNotifications}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_EnableNotifications}"/>
+                        <TextBlock Text="{DynamicResource SettingsView_EnableNotifications}" Style="{StaticResource SettingTitleStyle}"/>
+                    </DockPanel>
+                </Border>
+                <StackPanel IsEnabled="{Binding Settings.EnableNotifications}">
+                    <Border Style="{StaticResource SubSettingRowStyle}">
+                        <DockPanel>
+                            <ComboBox DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" MinWidth="200"
+                                      SelectedValue="{Binding Settings.NotificationLevel}"
+                                      SelectedValuePath="Tag"
+                                      AutomationProperties.Name="{DynamicResource SettingsView_NotificationLevel}">
+                                <ComboBoxItem Content="{DynamicResource SettingsView_NotificationLevelAll}" Tag="{x:Static models:NotificationLevelProfile.All}"/>
+                                <ComboBoxItem Content="{DynamicResource SettingsView_NotificationLevelWarningsErrors}" Tag="{x:Static models:NotificationLevelProfile.WarningsAndErrorsOnly}"/>
+                                <ComboBoxItem Content="{DynamicResource SettingsView_NotificationLevelSilent}" Tag="{x:Static models:NotificationLevelProfile.Silent}"/>
+                            </ComboBox>
+                            <TextBlock Text="{DynamicResource SettingsView_NotificationLevel}" Style="{StaticResource SettingTitleStyle}"/>
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource SubSettingRowStyle}">
+                        <DockPanel>
+                            <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                             IsChecked="{Binding Settings.EnableToastNotifications}"
+                                             AutomationProperties.Name="{DynamicResource SettingsView_EnableToast}"/>
+                            <TextBlock Text="{DynamicResource SettingsView_EnableToast}" Style="{StaticResource SettingTitleStyle}"/>
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource SubSettingRowStyle}">
+                        <DockPanel>
+                            <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                             IsChecked="{Binding Settings.EnableBalloonNotifications}"
+                                             AutomationProperties.Name="{DynamicResource SettingsView_EnableBalloon}"/>
+                            <TextBlock Text="{DynamicResource SettingsView_EnableBalloon}" Style="{StaticResource SettingTitleStyle}"/>
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource SubSettingRowStyle}">
                         <StackPanel>
-                            <CheckBox Content="{DynamicResource SettingsView_NotificationHistory}"
-                                      IsChecked="{Binding Settings.EnableNotificationHistory}"
-                                      Margin="0,0,0,10"/>
-
-                            <Grid Margin="0,5" IsEnabled="{Binding Settings.EnableNotificationHistory}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-
-                                <TextBlock Text="{DynamicResource SettingsView_MaxHistory}" VerticalAlignment="Center"/>
-                                <Slider Grid.Column="1"
-                                        Value="{Binding Settings.MaxNotificationHistoryItems}"
-                                        Minimum="10" Maximum="1000"
-                                        TickFrequency="10"
-                                        IsSnapToTickEnabled="True"
-                                        Margin="10,0"/>
-                                <TextBlock Grid.Column="2"
-                                           Text="{Binding Settings.MaxNotificationHistoryItems}"
-                                           VerticalAlignment="Center" MinWidth="40"/>
-                            </Grid>
-
-                            <CheckBox Content="{DynamicResource SettingsView_AutoHide}"
-                                      IsChecked="{Binding Settings.AutoHideNotifications}"
-                                      Margin="0,10,0,5"/>
-
-                            <CheckBox Content="{DynamicResource SettingsView_NotificationSound}"
-                                      IsChecked="{Binding Settings.EnableNotificationSound}"
-                                      Margin="0,0,0,5"/>
-
-                            <CheckBox Content="{DynamicResource SettingsView_DebugLogging}"
-                                      IsChecked="{Binding Settings.EnableDebugLogging}"
-                                      Margin="0,0,0,5"/>
-
-                            <CheckBox Content="{DynamicResource SettingsView_PerformanceCounters}"
-                                      IsChecked="{Binding Settings.EnablePerformanceCounters}"
-                                      Margin="0,0,0,10"/>
+                            <TextBlock Text="{DynamicResource SettingsView_NotificationTypes}" Margin="0,0,0,6"/>
+                            <WrapPanel>
+                                <CheckBox Content="{DynamicResource SettingsView_NotifyPowerPlan}" IsChecked="{Binding Settings.EnablePowerPlanChangeNotifications}" Margin="0,0,24,4"/>
+                                <CheckBox Content="{DynamicResource SettingsView_NotifyProcess}" IsChecked="{Binding Settings.EnableProcessMonitoringNotifications}" Margin="0,0,24,4"/>
+                                <CheckBox Content="{DynamicResource SettingsView_NotifyError}" IsChecked="{Binding Settings.EnableErrorNotifications}" Margin="0,0,24,4"/>
+                                <CheckBox Content="{DynamicResource SettingsView_NotifySuccess}" IsChecked="{Binding Settings.EnableSuccessNotifications}" Margin="0,0,24,4"/>
+                            </WrapPanel>
                         </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource SubSettingRowStyle}">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
+                                <Slider Width="200" VerticalAlignment="Center"
+                                        Value="{Binding Settings.NotificationDisplayDurationMs}"
+                                        Minimum="1000" Maximum="30000" TickFrequency="1000" IsSnapToTickEnabled="True"
+                                        AutomationProperties.Name="{DynamicResource SettingsView_Duration}"/>
+                                <TextBlock Text="{Binding Settings.NotificationDisplayDurationMs}" MinWidth="52" TextAlignment="Right" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock Text="{DynamicResource SettingsView_Duration}" Style="{StaticResource SettingTitleStyle}"/>
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource SubSettingRowStyle}">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                    Content="{DynamicResource SettingsView_TestNotification}"
+                                    Command="{Binding TestNotificationCommand}"/>
+                            <TextBlock/>
+                        </DockPanel>
                     </Border>
                 </StackPanel>
 
-                <!-- Support Section -->
-                <StackPanel Width="372" Margin="0,0,16,16">
-                    <TextBlock Text="{DynamicResource SettingsView_SomethingWrong}" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
-                    <Border Style="{StaticResource SettingsCardStyle}">
+                <!-- Advanced -->
+                <TextBlock Text="{DynamicResource SettingsView_Advanced}" Style="{StaticResource SectionHeaderStyle}"/>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.EnableNotificationHistory}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_NotificationHistory}"/>
+                        <TextBlock Text="{DynamicResource SettingsView_NotificationHistory}" Style="{StaticResource SettingTitleStyle}"/>
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SubSettingRowStyle}" IsEnabled="{Binding Settings.EnableNotificationHistory}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
+                            <Slider Width="200" VerticalAlignment="Center"
+                                    Value="{Binding Settings.MaxNotificationHistoryItems}"
+                                    Minimum="10" Maximum="1000" TickFrequency="10" IsSnapToTickEnabled="True"
+                                    AutomationProperties.Name="{DynamicResource SettingsView_MaxHistory}"/>
+                            <TextBlock Text="{Binding Settings.MaxNotificationHistoryItems}" MinWidth="52" TextAlignment="Right" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock Text="{DynamicResource SettingsView_MaxHistory}" Style="{StaticResource SettingTitleStyle}"/>
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.AutoHideNotifications}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_AutoHide}"/>
+                        <TextBlock Text="{DynamicResource SettingsView_AutoHide}" Style="{StaticResource SettingTitleStyle}"/>
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.EnableNotificationSound}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_NotificationSound}"/>
+                        <TextBlock Text="{DynamicResource SettingsView_NotificationSound}" Style="{StaticResource SettingTitleStyle}"/>
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.EnableDebugLogging}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_DebugLogging}"/>
+                        <TextBlock Text="{DynamicResource SettingsView_DebugLogging}" Style="{StaticResource SettingTitleStyle}"/>
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.EnablePerformanceCounters}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_PerformanceCounters}"/>
+                        <TextBlock Text="{DynamicResource SettingsView_PerformanceCounters}" Style="{StaticResource SettingTitleStyle}"/>
+                    </DockPanel>
+                </Border>
+
+                <!-- Updates and about -->
+                <TextBlock Text="{DynamicResource SettingsView_About}" Style="{StaticResource SectionHeaderStyle}"/>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
+                            <Button Content="{DynamicResource SettingsView_CheckUpdates}" Command="{Binding CheckUpdatesCommand}"/>
+                            <ui:Button Appearance="Primary" Margin="8,0,0,0"
+                                       Content="{DynamicResource SettingsView_DownloadInstallUpdate}"
+                                       Command="{Binding DownloadAndInstallUpdateCommand}"
+                                       IsEnabled="{Binding CanDownloadAndInstallUpdate}"/>
+                        </StackPanel>
                         <StackPanel>
-                            <TextBlock Text="{DynamicResource SettingsView_DiscordDescription}" Style="{StaticResource DescriptionStyle}"/>
-                            <Button Command="{Binding OpenDiscordCommand}"
-                                    Padding="12,6"
-                                    HorizontalAlignment="Left"
-                                    Margin="0,8,0,0">
-                                <StackPanel Orientation="Horizontal">
-                                    <Viewbox Width="17" Height="17" Margin="0,0,7,0">
-                                        <Path Fill="{DynamicResource TextFillColorPrimaryBrush}"
-                                              Data="M20.317,4.37 C18.78,3.66 17.13,3.15 15.432,2.855 C15.26,2.83 15.18,2.91 15.08,3.09 C14.87,3.47 14.64,3.96 14.47,4.34 C12.63,4.06 10.79,4.06 8.99,4.34 C8.82,3.95 8.58,3.47 8.37,3.09 C8.27,2.91 8.19,2.83 8.02,2.855 C6.32,3.15 4.67,3.66 3.13,4.37 C0.53,8.02 -0.32,13.58 0.1,18.06 C1.94,19.54 4.04,20.54 6.12,21.14 C6.61,20.47 7.05,19.76 7.42,19.02 C6.76,18.77 6.14,18.47 5.54,18.13 C5.79,17.94 6.04,17.75 6.28,17.55 C10.14,19.34 14.39,19.34 18.25,17.55 C18.49,17.75 18.74,17.94 18.99,18.13 C18.39,18.47 17.77,18.77 17.11,19.02 C17.48,19.76 17.92,20.47 18.41,21.14 C20.49,20.54 22.59,19.54 24.43,18.06 C24.93,12.88 23.59,8.39 20.32,4.37 Z M8.02,15.33 C6.84,15.33 5.86,14.25 5.86,12.91 C5.86,11.58 6.82,10.49 8.02,10.49 C9.23,10.49 10.19,11.59 10.18,12.91 C10.18,14.25 9.22,15.33 8.02,15.33 Z M15.99,15.33 C14.81,15.33 13.84,14.25 13.84,12.91 C13.84,11.58 14.79,10.49 15.99,10.49 C17.2,10.49 18.17,11.59 18.15,12.91 C18.15,14.25 17.21,15.33 15.99,15.33 Z"/>
-                                    </Viewbox>
-                                    <TextBlock Text="{DynamicResource SettingsView_OpenDiscord}" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Button>
-
-                            <Separator Margin="0,12"/>
-
-                            <TextBlock Text="{DynamicResource SettingsView_IssuesDescription}" Style="{StaticResource DescriptionStyle}"/>
-                            <Button Command="{Binding ReportIssueCommand}"
-                                    Padding="12,6"
-                                    HorizontalAlignment="Left"
-                                    Margin="0,8,0,0">
-                                <StackPanel Orientation="Horizontal">
-                                    <ui:SymbolIcon Symbol="Bug24" Margin="0,0,7,0"/>
-                                    <TextBlock Text="{DynamicResource SettingsView_ReportIssue}" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Button>
+                            <TextBlock Style="{StaticResource SettingTitleStyle}">
+                                <Run Text="{DynamicResource SettingsView_ThreadPilot}" FontWeight="SemiBold"/>
+                                <Run Text="{Binding ApplicationVersion, Mode=OneWay}"/>
+                            </TextBlock>
+                            <TextBlock Style="{StaticResource DescriptionStyle}">
+                                <Run Text="{DynamicResource SettingsView_LatestVersion}"/>
+                                <Run Text="{Binding LatestUpdateVersion, Mode=OneWay}"/>
+                                <Run Text="·"/>
+                                <Run Text="{DynamicResource SettingsView_LastUpdateCheck}"/>
+                                <Run Text="{Binding LastUpdateCheckText, Mode=OneWay}"/>
+                            </TextBlock>
                         </StackPanel>
-                    </Border>
-                </StackPanel>
-
-                <!-- About Section -->
-                <StackPanel Width="372" Margin="0,0,16,16">
-                    <TextBlock Text="{DynamicResource SettingsView_About}" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,8"/>
-                    <Border Style="{StaticResource SettingsCardStyle}">
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.EnableAutomaticUpdateChecks}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_EnableAutomaticUpdateChecks}"/>
                         <StackPanel>
-                            <TextBlock Text="{DynamicResource SettingsView_ThreadPilot}" FontWeight="SemiBold" FontSize="14"/>
-                            <TextBlock Text="{DynamicResource SettingsView_Version}" FontWeight="SemiBold" Margin="0,8,0,0"/>
-                            <TextBlock Text="{Binding ApplicationVersion}" Margin="0,0,0,10"/>
-
-                            <CheckBox Content="{DynamicResource SettingsView_EnableAutomaticUpdateChecks}"
-                                      IsChecked="{Binding Settings.EnableAutomaticUpdateChecks}"
-                                      Margin="0,0,0,6"/>
-
-                            <CheckBox Content="{DynamicResource SettingsView_IncludePrereleaseUpdates}"
-                                      IsChecked="{Binding Settings.IncludePrereleaseUpdates}"
-                                      Margin="0,0,0,10"/>
-
-                            <TextBlock Text="{DynamicResource SettingsView_LatestVersion}" FontWeight="SemiBold" Margin="0,0,0,0"/>
-                            <TextBlock Text="{Binding LatestUpdateVersion}" Margin="0,0,0,6"/>
-                            <TextBlock Text="{DynamicResource SettingsView_LastUpdateCheck}" FontWeight="SemiBold" Margin="0,0,0,0"/>
-                            <TextBlock Text="{Binding LastUpdateCheckText}" Margin="0,0,0,10"/>
-
-                            <TextBlock Text="{DynamicResource SettingsView_Copyright}" Margin="0,0,0,4"/>
-                            <TextBlock Text="{DynamicResource SettingsView_License}" Style="{StaticResource DescriptionStyle}"/>
-
-                            <Separator Margin="0,12,0,12"/>
-
-                            <Button Content="{DynamicResource SettingsView_CheckUpdates}"
-                                    Command="{Binding CheckUpdatesCommand}"
-                                    Padding="15,6"
-                                    HorizontalAlignment="Left"/>
-                            <Button Content="{DynamicResource SettingsView_DownloadInstallUpdate}"
-                                    Command="{Binding DownloadAndInstallUpdateCommand}"
-                                    IsEnabled="{Binding CanDownloadAndInstallUpdate}"
-                                    Padding="15,6"
-                                    HorizontalAlignment="Left"
-                                    Margin="0,8,0,0"/>
-                            <TextBlock Text="{DynamicResource SettingsView_UpdatesDescription}"
-                                       Style="{StaticResource DescriptionStyle}"
-                                       Margin="0,6,0,0"/>
+                            <TextBlock Text="{DynamicResource SettingsView_EnableAutomaticUpdateChecks}" Style="{StaticResource SettingTitleStyle}"/>
+                            <TextBlock Text="{DynamicResource SettingsView_UpdatesDescription}" Style="{StaticResource DescriptionStyle}"/>
                         </StackPanel>
-                    </Border>
-                </StackPanel>
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
+                                         IsChecked="{Binding Settings.IncludePrereleaseUpdates}"
+                                         AutomationProperties.Name="{DynamicResource SettingsView_IncludePrereleaseUpdates}"/>
+                        <TextBlock Text="{DynamicResource SettingsView_IncludePrereleaseUpdates}" Style="{StaticResource SettingTitleStyle}"/>
+                    </DockPanel>
+                </Border>
 
-            </WrapPanel>
+                <!-- Help -->
+                <TextBlock Text="{DynamicResource SettingsView_SomethingWrong}" Style="{StaticResource SectionHeaderStyle}"/>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" Command="{Binding OpenDiscordCommand}">
+                            <StackPanel Orientation="Horizontal">
+                                <Viewbox Width="17" Height="17" Margin="0,0,7,0">
+                                    <Path Fill="{DynamicResource TextFillColorPrimaryBrush}"
+                                          Data="M20.317,4.37 C18.78,3.66 17.13,3.15 15.432,2.855 C15.26,2.83 15.18,2.91 15.08,3.09 C14.87,3.47 14.64,3.96 14.47,4.34 C12.63,4.06 10.79,4.06 8.99,4.34 C8.82,3.95 8.58,3.47 8.37,3.09 C8.27,2.91 8.19,2.83 8.02,2.855 C6.32,3.15 4.67,3.66 3.13,4.37 C0.53,8.02 -0.32,13.58 0.1,18.06 C1.94,19.54 4.04,20.54 6.12,21.14 C6.61,20.47 7.05,19.76 7.42,19.02 C6.76,18.77 6.14,18.47 5.54,18.13 C5.79,17.94 6.04,17.75 6.28,17.55 C10.14,19.34 14.39,19.34 18.25,17.55 C18.49,17.75 18.74,17.94 18.99,18.13 C18.39,18.47 17.77,18.77 17.11,19.02 C17.48,19.76 17.92,20.47 18.41,21.14 C20.49,20.54 22.59,19.54 24.43,18.06 C24.93,12.88 23.59,8.39 20.32,4.37 Z M8.02,15.33 C6.84,15.33 5.86,14.25 5.86,12.91 C5.86,11.58 6.82,10.49 8.02,10.49 C9.23,10.49 10.19,11.59 10.18,12.91 C10.18,14.25 9.22,15.33 8.02,15.33 Z M15.99,15.33 C14.81,15.33 13.84,14.25 13.84,12.91 C13.84,11.58 14.79,10.49 15.99,10.49 C17.2,10.49 18.17,11.59 18.15,12.91 C18.15,14.25 17.21,15.33 15.99,15.33 Z"/>
+                                </Viewbox>
+                                <TextBlock Text="{DynamicResource SettingsView_OpenDiscord}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Text="{DynamicResource SettingsView_DiscordDescription}" Style="{StaticResource SettingTitleStyle}"/>
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" Command="{Binding ReportIssueCommand}">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Bug24" Margin="0,0,7,0"/>
+                                <TextBlock Text="{DynamicResource SettingsView_ReportIssue}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Text="{DynamicResource SettingsView_IssuesDescription}" Style="{StaticResource SettingTitleStyle}"/>
+                    </DockPanel>
+                </Border>
+                <TextBlock Margin="0,12,0,0" Style="{StaticResource DescriptionStyle}">
+                    <Run Text="{DynamicResource SettingsView_Copyright}"/>
+                    <Run Text="·"/>
+                    <Run Text="{DynamicResource SettingsView_License}"/>
+                </TextBlock>
+            </StackPanel>
         </ScrollViewer>
 
-        <!-- Footer with buttons and status -->
-        <Grid Grid.Row="2" Margin="0,20,0,0">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-            
-            <!-- Status -->
-            <Border Grid.Row="0"
-                    Margin="0,0,0,10"
+        <!-- Footer with status and actions -->
+        <Grid Grid.Row="2" Margin="0,12,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0"
+                    Margin="0,0,12,0"
                     Padding="10,7"
+                    VerticalAlignment="Center"
                     CornerRadius="{DynamicResource StandardCardCornerRadius}"
                     BorderThickness="1"
                     Opacity="{Binding StatusOpacity}"
@@ -496,7 +514,7 @@
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
-                <TextBlock Text="{Binding StatusMessage}">
+                <TextBlock Text="{Binding StatusMessage}" TextTrimming="CharacterEllipsis">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
                             <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}"/>
@@ -509,28 +527,21 @@
                     </TextBlock.Style>
                 </TextBlock>
             </Border>
-            
-            <!-- Buttons -->
-            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="{DynamicResource SettingsView_ResetDefaults}" 
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Content="{DynamicResource SettingsView_ResetDefaults}"
                         Command="{Binding ResetToDefaultsCommand}"
-                        Margin="0,0,10,0" 
-                        Padding="15,8"/>
-                
-                <Button Content="{DynamicResource SettingsView_ExportConfig}" 
+                        Margin="0,0,8,0"/>
+                <Button Content="{DynamicResource SettingsView_ExportConfig}"
                         Command="{Binding ExportSettingsCommand}"
-                        Margin="0,0,10,0" 
-                        Padding="15,8"/>
-                
-                <Button Content="{DynamicResource SettingsView_ImportConfig}" 
+                        Margin="0,0,8,0"/>
+                <Button Content="{DynamicResource SettingsView_ImportConfig}"
                         Command="{Binding ImportSettingsCommand}"
-                        Margin="0,0,20,0" 
-                        Padding="15,8"/>
-                
-                <Button Content="{DynamicResource SettingsView_SaveSettings}"
-                        Command="{Binding SaveSettingsCommand}"
-                        IsEnabled="{Binding CanSaveSettings}"
-                        Padding="20,8"/>
+                        Margin="0,0,16,0"/>
+                <ui:Button Appearance="Primary"
+                           Content="{DynamicResource SettingsView_SaveSettings}"
+                           Command="{Binding SaveSettingsCommand}"
+                           IsEnabled="{Binding CanSaveSettings}"/>
             </StackPanel>
         </Grid>
     </Grid>

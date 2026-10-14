@@ -23,8 +23,10 @@ Branch `feat/ux-clarity`, impilato su #69 (EcoQoS). Nessuna modifica al formato 
 - [x] Processi: ricerca con testo guida; filtri e colonne in due menu a tendina; dettagli in tre riquadri (Processo, Priorità, Core CPU) più la riga della regola; selettori allineati allo stato attuale; testi di aiuto nei tooltip.
 - [x] Regole: scheda "Regole dei processi" per prima, nomi delle schede più chiari, etichette localizzate nell'editor.
 - [x] Sottotitoli accorciati in tutte le lingue.
-- [ ] Impostazioni e Ottimizzazioni con righe in stile Impostazioni di Windows 11 (`CardControl`): prossimo passo, richiede una riscrittura più ampia delle due viste.
-- [ ] Area unica per gli avvisi della finestra principale: da valutare dopo la verifica sul campo.
+- [x] Impostazioni e Ottimizzazioni in una colonna di righe in stile Impostazioni di Windows 11 (titolo e descrizione a sinistra, interruttore a destra); sezioni più usate in alto.
+- [x] Avvisi della finestra principale: già mostrati uno alla volta (coda elevazione → avvio ridotto → modalità CPU in `MainWindow.Behaviors.partial.cs`); nessuna modifica necessaria.
+- [x] Elenco regole: colonne "Applica" e "Modalità" localizzate.
+- [x] Rimosse 76 stringhe non più usate da tutte le lingue.
 
 ## Verifica
 

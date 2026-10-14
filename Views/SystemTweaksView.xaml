@@ -70,181 +70,133 @@
             </Setter>
         </Style>
     </UserControl.Resources>
-    <Grid Margin="10">
+    <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-         <!-- Header and Controls -->
-         <Border Grid.Row="0"
-                 Style="{StaticResource StandardCardStyle}"
-                 Margin="0,0,0,16">
-             <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                 <!-- Description and Refresh Button -->
-                 <Grid Grid.Row="0" Margin="0,10,0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0">
-                        <TextBlock Text="{DynamicResource SystemTweaksView_Title}"
-                                   Style="{StaticResource PageTitleTextStyle}"
-                                   Margin="0,0,0,4"/>
-                        <TextBlock Text="{DynamicResource SystemTweaksView_Subtitle}"
-                                   Style="{StaticResource PageSubtitleTextStyle}"/>
-                    </StackPanel>
-
-                    <Button Grid.Column="1"
-                            Content="{DynamicResource SystemTweaksView_RefreshAll}"
-                            Command="{Binding RefreshAllTweaksCommand}"
-                            Padding="12,6"
-                            ToolTip="{DynamicResource SystemTweaksView_RefreshAllTooltip}"
-                            IsEnabled="{Binding IsRefreshing, Converter={StaticResource InverseBooleanConverter}}"/>
-                </Grid>
-
-                <!-- Status Bar -->
-                <Grid Grid.Row="1">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Grid.Column="0"
-                               Text="{DynamicResource SystemTweaksView_Status}"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center"/>
-
-                    <TextBlock Grid.Column="1"
-                               Text="{Binding RefreshStatusText}"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               Margin="10,0"
-                               VerticalAlignment="Center"/>
-
-                    <ProgressBar Grid.Column="2"
-                                 Width="100"
-                                 Height="4"
+        <Grid Grid.Row="0" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="{DynamicResource SystemTweaksView_Title}"
+                           Style="{StaticResource PageTitleTextStyle}"
+                           Margin="0,0,0,4"/>
+                <TextBlock Text="{DynamicResource SystemTweaksView_Subtitle}"
+                           Style="{StaticResource PageSubtitleTextStyle}"/>
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <TextBlock Text="{DynamicResource SystemTweaksView_Status}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <TextBlock Text="{Binding RefreshStatusText}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="6,0,10,0"/>
+                    <ProgressBar Width="100" Height="4" VerticalAlignment="Center"
                                  IsIndeterminate="{Binding IsRefreshing}"
                                  Visibility="{Binding IsRefreshing, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                </Grid>
-            </Grid>
-        </Border>
+                </StackPanel>
+            </StackPanel>
+            <ui:Button Grid.Column="1"
+                       VerticalAlignment="Top"
+                       Icon="{ui:SymbolIcon ArrowClockwise24}"
+                       Content="{DynamicResource SystemTweaksView_RefreshAll}"
+                       Command="{Binding RefreshAllTweaksCommand}"
+                       ToolTip="{DynamicResource SystemTweaksView_RefreshAllTooltip}"
+                       IsEnabled="{Binding IsRefreshing, Converter={StaticResource InverseBooleanConverter}}"/>
+        </Grid>
 
-        <!-- Tweaks List -->
+        <!-- One tweak per row, Windows 11 Settings style: what it does on the left, its switch on the right. -->
         <ScrollViewer Grid.Row="1"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
-            <ItemsControl ItemsSource="{Binding TweakItems}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <UniformGrid Columns="2"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-
+            <ItemsControl ItemsSource="{Binding TweakItems}" MaxWidth="980" HorizontalAlignment="Stretch" Margin="0,0,12,12">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <GroupBox Margin="0,0,12,12" Padding="{DynamicResource CompactCardPadding}">
-                            <GroupBox.Header>
-                                 <TextBlock Text="{Binding Name}"
-                                            FontSize="14"
-                                            FontWeight="SemiBold"
-                                            Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            </GroupBox.Header>
+                        <Border Background="{DynamicResource CardSurfaceBrush}"
+                                BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="16,12"
+                                Margin="0,0,0,4">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
 
-                            <StackPanel>
-                                 <TextBlock Text="{Binding Description}"
-                                            FontSize="11"
-                                            Foreground="{DynamicResource TextSecondaryBrush}"
-                                            TextWrapping="Wrap"
-                                            Margin="0,0,0,8"/>
+                                <Ellipse Grid.Column="0" Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,14,0"
+                                         ToolTip="{Binding StatusText}">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Setter Property="Fill" Value="{DynamicResource SuccessTextBrush}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsAvailable}" Value="False">
+                                                    <Setter Property="Fill" Value="{DynamicResource ErrorTextBrush}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                                                    <Setter Property="Fill" Value="{DynamicResource TextSecondaryBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
 
-                                <Grid Margin="0,0,0,5">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="{Binding Description}"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               TextWrapping="Wrap"
+                                               Margin="0,2,0,0"/>
+                                    <TextBlock Text="{Binding ErrorMessage}"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource ErrorTextBrush}"
+                                               TextWrapping="Wrap"
+                                               Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
+                                </StackPanel>
 
-                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Ellipse Width="8" Height="8"
-                                                 VerticalAlignment="Center"
-                                                 Margin="0,0,8,0">
-                                            <Ellipse.Style>
-                                                <Style TargetType="Ellipse">
-                                                    <Setter Property="Fill" Value="{DynamicResource SuccessTextBrush}"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsAvailable}" Value="False">
-                                                            <Setter Property="Fill" Value="{DynamicResource ErrorTextBrush}"/>
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding IsEnabled}" Value="False">
-                                                            <Setter Property="Fill" Value="{DynamicResource TextSecondaryBrush}"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Ellipse.Style>
-                                        </Ellipse>
+                                <ToggleButton Grid.Column="2"
+                                              IsChecked="{Binding IsEnabled, Mode=OneWay}"
+                                              IsEnabled="{Binding IsAvailable}"
+                                              Command="{Binding ToggleCommand}"
+                                              CommandParameter="{Binding}"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Right"
+                                              Margin="10,0,0,0"
+                                              AutomationProperties.Name="{Binding Name}"
+                                              ToolTip="{DynamicResource SystemTweaksView_TweakTooltip}">
+                                    <ToggleButton.Style>
+                                        <Style TargetType="ToggleButton" BasedOn="{StaticResource PillToggleButtonStyle}">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsGuidedAction}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ToggleButton.Style>
+                                </ToggleButton>
 
-                                        <TextBlock Text="{Binding StatusText}"
-                                                   FontSize="11"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                                   VerticalAlignment="Center"/>
-                                    </StackPanel>
-
-                                    <ToggleButton Grid.Column="1"
-                                                  IsChecked="{Binding IsEnabled, Mode=OneWay}"
-                                                  IsEnabled="{Binding IsAvailable}"
-                                                  Command="{Binding ToggleCommand}"
-                                                  CommandParameter="{Binding}"
-                                                  VerticalAlignment="Center"
-                                                  HorizontalAlignment="Right"
-                                                  Margin="10,0,0,0"
-                                                  AutomationProperties.Name="{Binding Name}"
-                                                  ToolTip="{DynamicResource SystemTweaksView_TweakTooltip}">
-                                        <ToggleButton.Style>
-                                            <Style TargetType="ToggleButton" BasedOn="{StaticResource PillToggleButtonStyle}">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsGuidedAction}" Value="True">
-                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </ToggleButton.Style>
-                                    </ToggleButton>
-
-                                    <Button Grid.Column="1"
-                                            Content="{DynamicResource SystemTweaks_OpenSettings}"
-                                            Command="{Binding ActionCommand}"
-                                            CommandParameter="{Binding}"
-                                            IsEnabled="{Binding IsAvailable}"
-                                            Padding="10,4"
-                                            AutomationProperties.Name="{Binding Name}">
-                                        <Button.Style>
-                                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsGuidedAction}" Value="True">
-                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Button.Style>
-                                    </Button>
-                                </Grid>
-
-                                 <TextBlock Text="{Binding ErrorMessage}"
-                                            FontSize="11"
-                                            Foreground="{DynamicResource ErrorTextBrush}"
-                                            TextWrapping="Wrap"
-                                            Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
-                            </StackPanel>
-                        </GroupBox>
+                                <Button Grid.Column="2"
+                                        Content="{DynamicResource SystemTweaks_OpenSettings}"
+                                        Command="{Binding ActionCommand}"
+                                        CommandParameter="{Binding}"
+                                        IsEnabled="{Binding IsAvailable}"
+                                        Padding="10,4"
+                                        AutomationProperties.Name="{Binding Name}">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsGuidedAction}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </Grid>
+                        </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

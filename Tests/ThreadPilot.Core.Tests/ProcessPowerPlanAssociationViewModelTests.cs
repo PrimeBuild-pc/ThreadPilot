@@ -55,8 +55,8 @@ namespace ThreadPilot.Core.Tests
 
             var row = Assert.Single(viewModel.SavedProcessRules);
             Assert.Equal("cs2", row.ProcessName);
-            Assert.Contains("CPU assignment", row.Applies);
-            Assert.Contains("memory Low", row.Applies);
+            Assert.Contains("CPU cores", row.Applies);
+            Assert.Contains("Memory Low", row.Applies);
             Assert.Equal("AffinityMask", row.Mode);
             Assert.True(viewModel.HasSavedProcessRules);
         }

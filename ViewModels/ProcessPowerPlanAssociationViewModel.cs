@@ -136,6 +136,7 @@ namespace ThreadPilot.ViewModels
                     this.OnPropertyChanged(nameof(this.SavedRuleIoPriorityOptions));
                     this.OnPropertyChanged(nameof(this.SavedRuleEfficiencyModeOptions));
                     this.OnPropertyChanged(nameof(this.SavedRuleCpuAssignmentModeOptions));
+                    TaskSafety.FireAndForget(this.RefreshSavedProcessRulesAsync(), _ => { });
                 };
             }
 
@@ -170,7 +171,7 @@ namespace ThreadPilot.ViewModels
                 this.SavedProcessRules.Clear();
                 foreach (var rule in rules.OrderBy(rule => rule.ProcessName, StringComparer.OrdinalIgnoreCase))
                 {
-                    this.SavedProcessRules.Add(SavedProcessRule.From(rule));
+                    this.SavedProcessRules.Add(SavedProcessRule.From(rule, this.Localize));
                 }
 
                 this.HasSavedProcessRules = this.SavedProcessRules.Count > 0;
@@ -356,44 +357,49 @@ namespace ThreadPilot.ViewModels
             string Cores,
             PersistentProcessRule Source)
         {
-            public static SavedProcessRule From(PersistentProcessRule rule)
+            // text(key, fallback) resolves a localized string; the fallbacks keep the list readable without one.
+            public static SavedProcessRule From(PersistentProcessRule rule, Func<string, string, string> text)
             {
+                string Level(object value) => value.ToString() == nameof(System.Diagnostics.ProcessPriorityClass.Idle)
+                    ? text("ProcessView_PriorityLow", "Low")
+                    : text("ProcessView_Priority" + value, value.ToString()!);
+
                 var applies = new List<string>();
                 if (rule.ApplyAffinityOnStart)
                 {
-                    applies.Add("CPU assignment");
+                    applies.Add(text("ProcessView_CoresSection", "CPU cores"));
                 }
 
                 if (rule.ApplyPriorityOnStart && rule.Priority.HasValue)
                 {
-                    applies.Add($"priority {rule.Priority}");
+                    applies.Add($"{text("ProcessView_RowCpu", "CPU")} {Level(rule.Priority.Value)}");
                 }
 
                 if (rule.ApplyMemoryPriorityOnStart && rule.MemoryPriority.HasValue)
                 {
-                    applies.Add($"memory {rule.MemoryPriority}");
+                    applies.Add($"{text("ProcessView_RowMemory", "Memory")} {Level(rule.MemoryPriority.Value)}");
                 }
 
                 if (rule.ApplyIoPriorityOnStart && rule.IoPriority.HasValue)
                 {
-                    applies.Add($"I/O {rule.IoPriority}");
+                    applies.Add($"{text("ProcessView_RowIo", "I/O")} {Level(rule.IoPriority.Value)}");
                 }
 
                 if (rule.ApplyEfficiencyModeOnStart && rule.EfficiencyMode.HasValue)
                 {
-                    applies.Add($"efficiency {rule.EfficiencyMode}");
+                    applies.Add($"{text("ProcessView_RowEfficiency", "Efficiency")} {text("EfficiencyMode_" + rule.EfficiencyMode.Value, rule.EfficiencyMode.Value.ToString())}");
                 }
 
                 if (rule.PreventSystemSleepWhileRunning)
                 {
-                    applies.Add("keeps the system awake");
+                    applies.Add(text("Rules_AppliesKeepAwake", "keeps the PC awake"));
                 }
 
                 return new SavedProcessRule(
                     rule.Id,
-                    string.IsNullOrWhiteSpace(rule.ProcessName) ? "(unnamed)" : rule.ProcessName,
-                    applies.Count == 0 ? "nothing" : string.Join(", ", applies),
-                    rule.ApplyAffinityOnStart ? rule.CpuAssignmentMode.ToString() : "-",
+                    string.IsNullOrWhiteSpace(rule.ProcessName) ? text("Rules_Unnamed", "(unnamed)") : rule.ProcessName,
+                    applies.Count == 0 ? text("Rules_AppliesNothing", "nothing") : string.Join(", ", applies),
+                    rule.ApplyAffinityOnStart ? text("CpuAssignmentMode_" + rule.CpuAssignmentMode, rule.CpuAssignmentMode.ToString()) : "-",
                     rule.IsEnabled,
                     rule.UpdatedAt.ToLocalTime(),
                     DescribeCores(rule),
@@ -901,8 +907,9 @@ namespace ThreadPilot.ViewModels
             });
         }
 
+        // GetString echoes the key when it is missing, so treat that as "no translation".
         private string Localize(string key, string fallback) =>
-            this.localizationService?.GetString(key) ?? fallback;
+            this.localizationService?.GetString(key) is { Length: > 0 } text && text != key ? text : fallback;
 
         private void UpdateServiceStatus()
         {
