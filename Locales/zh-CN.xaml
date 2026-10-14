@@ -247,7 +247,6 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleDelete">删除</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditor">编辑规则</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleCores">核心</sys:String>
-    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleApplyMask">从此掩码设置核心</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleCpuPriority">CPU 优先级</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMemoryPriority">内存优先级</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleIoPriority">I/O 优先级</sys:String>
@@ -776,4 +775,5 @@
     <sys:String x:Key="ProcessView_UndoPriority">撤销上次优先级更改</sys:String>
     <sys:String x:Key="ProcessView_VisibleCountSuffix">个进程已显示</sys:String>
     <sys:String x:Key="Rules_PendingChanges">未保存的更改</sys:String>
+    <sys:String x:Key="ProcessView_PriorityRestored">已恢复之前的优先级。</sys:String>
 </ResourceDictionary>

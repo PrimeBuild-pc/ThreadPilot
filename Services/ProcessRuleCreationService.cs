@@ -40,11 +40,6 @@ namespace ThreadPilot.Services
             IReadOnlyList<bool>? coreSelection,
             CancellationToken cancellationToken = default);
 
-        Task<ProcessRuleCreationResult> UpdateRuleCoreSelectionAsync(
-            string ruleId,
-            IReadOnlyList<bool> coreSelection,
-            CancellationToken cancellationToken = default);
-
         Task<IReadOnlyList<string>> GetRulesNeedingTopologyReviewAsync(
             CancellationToken cancellationToken = default);
     }
@@ -256,15 +251,20 @@ namespace ThreadPilot.Services
             if (coreSelection != null)
             {
                 var affinity = await this.BuildAffinityPayloadFromCoreSelectionAsync(coreSelection, "Saved rule editor", cancellationToken).ConfigureAwait(false);
-                if (!affinity.Success || affinity.Payload == null)
+                if (!affinity.Success)
                 {
                     return affinity;
+                }
+
+                if (affinity.Payload == null)
+                {
+                    return ProcessRuleCreationResult.Failed("NoActionableRulePayload", NoCurrentSettingsMessage);
                 }
 
                 updated = updated with
                 {
                     CpuSelection = affinity.Payload.CpuSelection,
-                    LegacyAffinityMask = affinity.Payload.LegacyAffinityMask,
+                    LegacyAffinityMask = HasSelectionPayload(affinity.Payload.CpuSelection) ? null : affinity.Payload.LegacyAffinityMask,
                     ApplyAffinityOnStart = true,
                 };
             }
@@ -285,71 +285,6 @@ namespace ThreadPilot.Services
                 Updated = true,
                 Rule = updated,
                 UserMessage = $"Updated saved rule for {processName}.",
-            };
-        }
-
-        // Setting a rule's cores without the process being around to select. The bits come from a
-        // saved CPU mask, and go through the same migration path the Process tab uses, so a rule
-        // edited here is indistinguishable from one saved there.
-        public async Task<ProcessRuleCreationResult> UpdateRuleCoreSelectionAsync(
-            string ruleId,
-            IReadOnlyList<bool> coreSelection,
-            CancellationToken cancellationToken = default)
-        {
-            ArgumentNullException.ThrowIfNull(coreSelection);
-
-            if (string.IsNullOrWhiteSpace(ruleId))
-            {
-                return ProcessRuleCreationResult.Failed("NoSavedRuleToUpdate", NoSavedRuleMessage);
-            }
-
-            var affinityPayload = await this.BuildAffinityPayloadFromCoreSelectionAsync(
-                coreSelection,
-                "Set from a saved CPU mask in the Rules tab",
-                cancellationToken).ConfigureAwait(false);
-            if (!affinityPayload.Success)
-            {
-                return affinityPayload;
-            }
-
-            if (affinityPayload.Payload == null)
-            {
-                return ProcessRuleCreationResult.Failed("NoActionableRulePayload", NoCurrentSettingsMessage);
-            }
-
-            var rules = (await this.ruleStore.LoadAsync().ConfigureAwait(false)).ToList();
-            var existingIndex = rules.FindIndex(candidate => string.Equals(candidate.Id, ruleId, StringComparison.Ordinal));
-            if (existingIndex < 0)
-            {
-                return ProcessRuleCreationResult.Failed("NoSavedRuleToUpdate", NoSavedRuleMessage);
-            }
-
-            var selection = affinityPayload.Payload.CpuSelection;
-            var existing = rules[existingIndex];
-            var updated = existing with
-            {
-                CpuSelection = selection,
-                LegacyAffinityMask = HasSelectionPayload(selection) ? null : affinityPayload.Payload.LegacyAffinityMask,
-                ApplyAffinityOnStart = true,
-                UpdatedAt = DateTime.UtcNow,
-            };
-
-            rules[existingIndex] = updated;
-
-            cancellationToken.ThrowIfCancellationRequested();
-            await this.ruleStore.SaveAsync(rules).ConfigureAwait(false);
-
-            var processName = string.IsNullOrWhiteSpace(updated.ProcessName)
-                ? "process"
-                : updated.ProcessName.Trim();
-            this.logger.LogInformation("Updated the CPU selection of saved rule {RuleId} for {ProcessName}", updated.Id, processName);
-
-            return new ProcessRuleCreationResult
-            {
-                Success = true,
-                Updated = true,
-                Rule = updated,
-                UserMessage = $"Updated the cores of the saved rule for {processName}.",
             };
         }
 

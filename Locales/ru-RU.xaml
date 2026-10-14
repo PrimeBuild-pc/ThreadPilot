@@ -247,7 +247,6 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleDelete">Удалить</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditor">Изменить правило</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleCores">Ядра</sys:String>
-    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleApplyMask">Задать ядра из этой маски</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleCpuPriority">Приоритет ЦП</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMemoryPriority">Приоритет памяти</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleIoPriority">Приоритет ввода-вывода</sys:String>
@@ -776,4 +775,5 @@
     <sys:String x:Key="ProcessView_UndoPriority">Отменить последнее изменение приоритета</sys:String>
     <sys:String x:Key="ProcessView_VisibleCountSuffix">процессов показано</sys:String>
     <sys:String x:Key="Rules_PendingChanges">Несохранённые изменения</sys:String>
+    <sys:String x:Key="ProcessView_PriorityRestored">Предыдущий приоритет восстановлен.</sys:String>
 </ResourceDictionary>

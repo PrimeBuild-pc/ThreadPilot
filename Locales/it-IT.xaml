@@ -247,7 +247,6 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleDelete">Elimina</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditor">Modifica regola</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleCores">Core</sys:String>
-    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleApplyMask">Imposta i core da questa maschera</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleCpuPriority">Priorità CPU</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMemoryPriority">Priorità memoria</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleIoPriority">Priorità I/O</sys:String>
@@ -776,4 +775,5 @@
     <sys:String x:Key="ProcessView_UndoPriority">Annulla ultima modifica di priorità</sys:String>
     <sys:String x:Key="ProcessView_VisibleCountSuffix">processi visibili</sys:String>
     <sys:String x:Key="Rules_PendingChanges">Modifiche non salvate</sys:String>
+    <sys:String x:Key="ProcessView_PriorityRestored">Priorità precedente ripristinata.</sys:String>
 </ResourceDictionary>

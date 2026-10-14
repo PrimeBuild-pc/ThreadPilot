@@ -645,7 +645,7 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public async Task UpdateRuleCoreSelectionAsync_SetsTheCoresWithoutTheProcessRunning()
+        public async Task UpdateRuleWithCoreSelectionAsync_SetsTheCoresWithoutTheProcessRunning()
         {
             var existing = new PersistentProcessRule
             {
@@ -663,7 +663,7 @@ namespace ThreadPilot.Core.Tests
                 ]));
             var service = CreateService(store, topologyProvider);
 
-            var result = await service.UpdateRuleCoreSelectionAsync("rule-1", [false, true]);
+            var result = await service.UpdateRuleWithCoreSelectionAsync(existing, [false, true]);
 
             Assert.True(result.Success);
             var rule = Assert.Single(store.SavedRules);
@@ -674,25 +674,25 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public async Task UpdateRuleCoreSelectionAsync_RefusesASelectionWithNoCores()
+        public async Task UpdateRuleWithCoreSelectionAsync_RefusesASelectionWithNoCores()
         {
             var existing = new PersistentProcessRule { Id = "rule-1", ProcessName = "cs2", IsEnabled = true };
             var store = new CapturingRuleStore([existing]);
             var service = CreateService(store);
 
-            var result = await service.UpdateRuleCoreSelectionAsync("rule-1", [false, false]);
+            var result = await service.UpdateRuleWithCoreSelectionAsync(existing, [false, false]);
 
             Assert.False(result.Success);
             Assert.Empty(store.SavedRules);
         }
 
         [Fact]
-        public async Task UpdateRuleCoreSelectionAsync_ReportsAControlledFailureForAnUnknownRule()
+        public async Task UpdateRuleWithCoreSelectionAsync_ReportsAControlledFailureForAnUnknownRule()
         {
             var store = new CapturingRuleStore([]);
             var service = CreateService(store);
 
-            var result = await service.UpdateRuleCoreSelectionAsync("missing", [true, false]);
+            var result = await service.UpdateRuleWithCoreSelectionAsync(new PersistentProcessRule { Id = "missing", ProcessName = "cs2" }, [true, false]);
 
             Assert.False(result.Success);
             Assert.Equal("NoSavedRuleToUpdate", result.ErrorCode);
