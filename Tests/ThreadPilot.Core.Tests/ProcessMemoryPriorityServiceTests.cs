@@ -27,6 +27,38 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal("Memory priority applied.", result.UserMessage);
         }
 
+        [Theory]
+        [InlineData(ProcessEfficiencyMode.On, 1u, 1u)]
+        [InlineData(ProcessEfficiencyMode.Off, 1u, 0u)]
+        [InlineData(ProcessEfficiencyMode.SystemManaged, 0u, 0u)]
+        public async Task SetEfficiencyModeAsync_MapsEachModeToItsThrottlingMasks(ProcessEfficiencyMode mode, uint control, uint state)
+        {
+            var nativeApi = new FakeProcessMemoryPriorityNativeApi();
+
+            var result = await CreateService(nativeApi).SetEfficiencyModeAsync(CreateProcess(), mode);
+
+            Assert.True(result.Success);
+            Assert.Equal(ProcessAccessFlags.PROCESS_SET_INFORMATION, nativeApi.LastOpenAccess);
+            Assert.Equal(PowerThrottlingState.CurrentVersion, nativeApi.LastSetThrottling!.Value.Version);
+            Assert.Equal(control, nativeApi.LastSetThrottling.Value.ControlMask);
+            Assert.Equal(state, nativeApi.LastSetThrottling.Value.StateMask);
+
+            var readBack = await CreateService(new FakeProcessMemoryPriorityNativeApi { ThrottlingToReturn = nativeApi.LastSetThrottling.Value })
+                .GetEfficiencyModeAsync(CreateProcess());
+            Assert.Equal(mode, readBack);
+        }
+
+        [Fact]
+        public async Task SetEfficiencyModeAsync_WhenWindowsDenies_ReportsAccessDenied()
+        {
+            var nativeApi = new FakeProcessMemoryPriorityNativeApi { SetResult = false, LastError = 5 };
+
+            var result = await CreateService(nativeApi).SetEfficiencyModeAsync(CreateProcess(), ProcessEfficiencyMode.On);
+
+            Assert.False(result.Success);
+            Assert.True(result.IsAccessDenied);
+        }
+
         [Fact]
         public async Task GetMemoryPriorityAsync_WithValidProcess_ReadsNativeApi()
         {
@@ -273,6 +305,10 @@ namespace ThreadPilot.Core.Tests
 
             public ProcessIoPriority? LastSetIoPriority { get; private set; }
 
+            public PowerThrottlingState ThrottlingToReturn { get; init; }
+
+            public PowerThrottlingState? LastSetThrottling { get; private set; }
+
             public Exception? OpenException { get; init; }
 
             public Exception? SetException { get; init; }
@@ -326,6 +362,18 @@ namespace ThreadPilot.Core.Tests
             }
 
             public int GetLastWin32Error() => this.LastError;
+
+            public bool GetPowerThrottling(SafeProcessHandle process, ref PowerThrottlingState state)
+            {
+                state = this.ThrottlingToReturn;
+                return true;
+            }
+
+            public bool SetPowerThrottling(SafeProcessHandle process, ref PowerThrottlingState state)
+            {
+                this.LastSetThrottling = state;
+                return this.SetResult;
+            }
 
             public int QueryIoPriority(SafeProcessHandle process, ref int priority, out uint returnLength)
             {

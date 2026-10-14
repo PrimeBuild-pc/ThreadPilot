@@ -71,9 +71,11 @@ namespace ThreadPilot.Services
                     (rule.Priority.HasValue && (!Enum.IsDefined(rule.Priority.Value) || rule.Priority == ProcessPriorityClass.RealTime)) ||
                     (rule.MemoryPriority.HasValue && !Enum.IsDefined(rule.MemoryPriority.Value)) ||
                     (rule.IoPriority.HasValue && !Enum.IsDefined(rule.IoPriority.Value)) ||
+                    (rule.EfficiencyMode.HasValue && !Enum.IsDefined(rule.EfficiencyMode.Value)) ||
                     (rule.ApplyPriorityOnStart && !rule.Priority.HasValue) ||
                     (rule.ApplyMemoryPriorityOnStart && !rule.MemoryPriority.HasValue) ||
                     (rule.ApplyIoPriorityOnStart && !rule.IoPriority.HasValue) ||
+                    (rule.ApplyEfficiencyModeOnStart && !rule.EfficiencyMode.HasValue) ||
                     (rule.ApplyAffinityOnStart && rule.CpuSelection == null && rule.LegacyAffinityMask.GetValueOrDefault() == 0))
                 {
                     throw new InvalidDataException("Invalid persistent process rule.");

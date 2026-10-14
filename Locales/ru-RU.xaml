@@ -776,4 +776,15 @@
     <sys:String x:Key="ProcessView_VisibleCountSuffix">процессов показано</sys:String>
     <sys:String x:Key="Rules_PendingChanges">Несохранённые изменения</sys:String>
     <sys:String x:Key="ProcessView_PriorityRestored">Предыдущий приоритет восстановлен.</sys:String>
+
+    <!-- Efficiency mode (EcoQoS) -->
+    <sys:String x:Key="ProcessView_SetEfficiencyMode">Режим эффективности (EcoQoS)</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEfficiencyMode">Режим эффективности (EcoQoS)</sys:String>
+    <sys:String x:Key="ProcessView_EfficiencyModeTooltip">Вкл.: Windows запускает процесс на пониженной частоте и предпочитает энергоэффективные ядра. Выкл.: Windows никогда его не замедляет. В отличие от диспетчера задач, приоритет ЦП не меняется. Не действует, если регулирование мощности Windows отключено в оптимизациях.</sys:String>
+    <sys:String x:Key="EfficiencyMode_SystemManaged">Решает Windows</sys:String>
+    <sys:String x:Key="EfficiencyMode_On">Вкл. (EcoQoS)</sys:String>
+    <sys:String x:Key="EfficiencyMode_Off">Выкл. (не замедлять)</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyFormat">Режим эффективности: {0}</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyUnavailable">Режим эффективности недоступен</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyVoidedFormat">Режим эффективности: {0} (не действует: регулирование мощности отключено в оптимизациях)</sys:String>
 </ResourceDictionary>

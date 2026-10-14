@@ -217,6 +217,10 @@ namespace ThreadPilot.ViewModels
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(HasPendingRuleChanges))]
+        private string savedRuleEfficiencyMode = NoneOption;
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasPendingRuleChanges))]
         private string savedRuleCpuAssignmentMode = nameof(CpuAssignmentMode.AffinityMask);
 
         public const string NoneOption = "None";
@@ -239,6 +243,9 @@ namespace ThreadPilot.ViewModels
         public IReadOnlyList<string> SavedRuleIoPriorityOptions { get; } =
             [NoneOption, .. Enum.GetNames<ProcessIoPriority>()];
 
+        public IReadOnlyList<string> SavedRuleEfficiencyModeOptions { get; } =
+            [NoneOption, .. Enum.GetNames<ProcessEfficiencyMode>()];
+
         public IReadOnlyList<string> SavedRuleCpuAssignmentModeOptions { get; } =
             [.. Enum.GetNames<CpuAssignmentMode>()];
 
@@ -256,6 +263,7 @@ namespace ThreadPilot.ViewModels
             this.SavedRulePriority = rule.Priority?.ToString() ?? NoneOption;
             this.SavedRuleMemoryPriority = rule.MemoryPriority?.ToString() ?? NoneOption;
             this.SavedRuleIoPriority = rule.IoPriority?.ToString() ?? NoneOption;
+            this.SavedRuleEfficiencyMode = rule.EfficiencyMode?.ToString() ?? NoneOption;
             this.SavedRuleCpuAssignmentMode = rule.CpuAssignmentMode.ToString();
         }
 
@@ -273,6 +281,7 @@ namespace ThreadPilot.ViewModels
              this.SavedRulePriority != (selected.Source.Priority?.ToString() ?? NoneOption) ||
              this.SavedRuleMemoryPriority != (selected.Source.MemoryPriority?.ToString() ?? NoneOption) ||
              this.SavedRuleIoPriority != (selected.Source.IoPriority?.ToString() ?? NoneOption) ||
+             this.SavedRuleEfficiencyMode != (selected.Source.EfficiencyMode?.ToString() ?? NoneOption) ||
              this.SavedRuleCpuAssignmentMode != selected.Source.CpuAssignmentMode.ToString());
 
         [RelayCommand]
@@ -291,6 +300,7 @@ namespace ThreadPilot.ViewModels
                 Priority = ParseOption<System.Diagnostics.ProcessPriorityClass>(this.SavedRulePriority),
                 MemoryPriority = ParseOption<ProcessMemoryPriority>(this.SavedRuleMemoryPriority),
                 IoPriority = ParseOption<ProcessIoPriority>(this.SavedRuleIoPriority),
+                EfficiencyMode = ParseOption<ProcessEfficiencyMode>(this.SavedRuleEfficiencyMode),
                 CpuAssignmentMode = Enum.TryParse<CpuAssignmentMode>(this.SavedRuleCpuAssignmentMode, out var mode)
                     ? mode
                     : selected.Source.CpuAssignmentMode,
@@ -342,6 +352,11 @@ namespace ThreadPilot.ViewModels
                 if (rule.ApplyIoPriorityOnStart && rule.IoPriority.HasValue)
                 {
                     applies.Add($"I/O {rule.IoPriority}");
+                }
+
+                if (rule.ApplyEfficiencyModeOnStart && rule.EfficiencyMode.HasValue)
+                {
+                    applies.Add($"efficiency {rule.EfficiencyMode}");
                 }
 
                 if (rule.PreventSystemSleepWhileRunning)

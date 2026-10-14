@@ -85,6 +85,7 @@ namespace ThreadPilot.Services
                 !rule.ApplyPriorityOnStart &&
                 !rule.ApplyMemoryPriorityOnStart &&
                 !rule.ApplyIoPriorityOnStart &&
+                !rule.ApplyEfficiencyModeOnStart &&
                 !rule.PreventSystemSleepWhileRunning)
             {
                 return MarkRuleConfigurationFailure(
@@ -202,6 +203,34 @@ namespace ThreadPilot.Services
                     {
                         success = false;
                         result = this.MergeMemoryPriorityFailure(result, ioResult);
+                    }
+                }
+            }
+
+            if (rule.ApplyEfficiencyModeOnStart && !result.IsProcessExited)
+            {
+                if (!rule.EfficiencyMode.HasValue)
+                {
+                    success = false;
+                    result = MarkRuleConfigurationFailure(
+                        result,
+                        rule,
+                        "PersistentRuleMissingEfficiencyMode",
+                        "This saved rule has no efficiency mode value to apply.");
+                }
+                else
+                {
+                    var efficiencyResult = await this.memoryPriorityService
+                        .SetEfficiencyModeAsync(process, rule.EfficiencyMode.Value)
+                        .ConfigureAwait(false);
+                    if (efficiencyResult.Success)
+                    {
+                        result = result with { EfficiencyModeApplied = true };
+                    }
+                    else
+                    {
+                        success = false;
+                        result = this.MergeMemoryPriorityFailure(result, efficiencyResult);
                     }
                 }
             }

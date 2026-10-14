@@ -776,4 +776,15 @@
     <sys:String x:Key="ProcessView_VisibleCountSuffix">Prozesse angezeigt</sys:String>
     <sys:String x:Key="Rules_PendingChanges">Nicht gespeicherte Änderungen</sys:String>
     <sys:String x:Key="ProcessView_PriorityRestored">Vorherige Priorität wiederhergestellt.</sys:String>
+
+    <!-- Efficiency mode (EcoQoS) -->
+    <sys:String x:Key="ProcessView_SetEfficiencyMode">Effizienzmodus (EcoQoS)</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEfficiencyMode">Effizienzmodus (EcoQoS)</sys:String>
+    <sys:String x:Key="ProcessView_EfficiencyModeTooltip">Ein: Windows führt den Prozess mit niedrigerem Takt aus und bevorzugt Effizienzkerne. Aus: Windows drosselt ihn nie. Anders als im Task-Manager bleibt die CPU-Priorität unverändert. Ohne Wirkung, solange die Energiedrosselung in den Optimierungen deaktiviert ist.</sys:String>
+    <sys:String x:Key="EfficiencyMode_SystemManaged">Windows entscheidet</sys:String>
+    <sys:String x:Key="EfficiencyMode_On">Ein (EcoQoS)</sys:String>
+    <sys:String x:Key="EfficiencyMode_Off">Aus (nie drosseln)</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyFormat">Effizienzmodus: {0}</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyUnavailable">Effizienzmodus nicht verfügbar</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyVoidedFormat">Effizienzmodus: {0} (ohne Wirkung: Energiedrosselung ist in den Optimierungen deaktiviert)</sys:String>
 </ResourceDictionary>

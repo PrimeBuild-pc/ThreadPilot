@@ -858,7 +858,8 @@ namespace ThreadPilot.ViewModels
                 this.SelectedProcessSummary.MemoryPriority,
                 this.SelectedCpuAssignmentMode,
                 this.SelectedProcessSummary.IoPriority,
-                this.IsIdleServerDisabled);
+                this.IsIdleServerDisabled,
+                this.SelectedProcessSummary.EfficiencyMode);
 
             this.ApplyRuleCreationResultStatus(result);
             await this.LogUserActionAsync(
@@ -934,7 +935,8 @@ namespace ThreadPilot.ViewModels
                 this.SelectedProcessSummary.MemoryPriority,
                 cpuAssignmentMode: this.SelectedCpuAssignmentMode,
                 currentIoPriority: this.SelectedProcessSummary.IoPriority,
-                preventSystemSleepWhileRunning: this.IsIdleServerDisabled);
+                preventSystemSleepWhileRunning: this.IsIdleServerDisabled,
+                currentEfficiencyMode: this.SelectedProcessSummary.EfficiencyMode);
 
             this.ApplyRuleCreationResultStatus(saveResult);
             await this.LogUserActionAsync(
@@ -1695,6 +1697,7 @@ namespace ThreadPilot.ViewModels
                 .AppendLine($"CPU priority: {process.Priority}")
                 .AppendLine($"Memory priority: {this.SelectedProcessSummary.MemoryPriority?.ToString() ?? "unavailable"}")
                 .AppendLine($"I/O priority: {this.SelectedProcessSummary.IoPriority?.ToString() ?? "unavailable"}")
+                .AppendLine($"Efficiency mode: {this.SelectedProcessSummary.EfficiencyMode?.ToString() ?? "unavailable"}")
                 .AppendLine($"Affinity: 0x{process.ProcessorAffinity:X}")
                 .AppendLine($"Rule status: {this.SelectedProcessSummary.RuleStatusText}");
 

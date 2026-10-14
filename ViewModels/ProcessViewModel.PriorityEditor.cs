@@ -17,6 +17,9 @@ namespace ThreadPilot.ViewModels
         [ObservableProperty]
         private ProcessIoPriority pendingIoPriority = ProcessIoPriority.Normal;
 
+        [ObservableProperty]
+        private ProcessEfficiencyMode pendingEfficiencyMode = ProcessEfficiencyMode.SystemManaged;
+
         private PriorityUndoSnapshot? priorityUndo;
 
         [RelayCommand]
@@ -28,6 +31,48 @@ namespace ThreadPilot.ViewModels
         [RelayCommand]
         private Task ApplySelectedIoPriority() => this.SetContextIoPriorityAsync(this.SelectedProcess, this.PendingIoPriority);
 
+        [RelayCommand]
+        private Task ApplySelectedEfficiencyMode() => this.SetContextEfficiencyModeAsync(this.SelectedProcess, this.PendingEfficiencyMode);
+
+        [RelayCommand]
+        private Task SetContextEfficiencyOn(ProcessModel? process) => this.SetContextEfficiencyModeAsync(process, ProcessEfficiencyMode.On);
+
+        [RelayCommand]
+        private Task SetContextEfficiencyOff(ProcessModel? process) => this.SetContextEfficiencyModeAsync(process, ProcessEfficiencyMode.Off);
+
+        [RelayCommand]
+        private Task SetContextEfficiencySystemManaged(ProcessModel? process) => this.SetContextEfficiencyModeAsync(process, ProcessEfficiencyMode.SystemManaged);
+
+        private async Task SetContextEfficiencyModeAsync(ProcessModel? process, ProcessEfficiencyMode mode)
+        {
+            if (process == null || this.memoryPriorityService == null)
+            {
+                return;
+            }
+
+            var previous = await this.memoryPriorityService.GetEfficiencyModeAsync(process);
+            var undo = previous.HasValue ? CapturePriorityUndo(process, efficiency: previous) : null;
+            var result = await this.memoryPriorityService.SetEfficiencyModeAsync(process, mode);
+            if (!result.Success)
+            {
+                this.SetContextError(result.UserMessage);
+                await this.LogUserActionAsync(
+                    "ProcessEfficiencyModeFailed",
+                    result.UserMessage,
+                    $"Process: {process.Name}, PID: {process.ProcessId}, Mode: {mode}");
+                await this.UpdateSelectedProcessSummaryAsync(process);
+                return;
+            }
+
+            this.RememberPriority(undo);
+            this.SetStatus($"Efficiency mode applied to {process.Name}: {mode}.", false);
+            await this.LogUserActionAsync(
+                "ProcessEfficiencyModeChanged",
+                $"Efficiency mode changed for {process.Name}: {mode}",
+                $"PID: {process.ProcessId}");
+            await this.UpdateSelectedProcessSummaryAsync(process);
+        }
+
         private bool CanUndoPriority() => this.priorityUndo != null;
 
         private void RememberPriority(PriorityUndoSnapshot? snapshot)
@@ -37,13 +82,14 @@ namespace ThreadPilot.ViewModels
         }
 
         private static PriorityUndoSnapshot? CapturePriorityUndo(
-            ProcessModel process, bool cpu = false, ProcessMemoryPriority? memory = null, ProcessIoPriority? io = null)
+            ProcessModel process, bool cpu = false, ProcessMemoryPriority? memory = null, ProcessIoPriority? io = null,
+            ProcessEfficiencyMode? efficiency = null)
         {
             try
             {
                 using var native = Process.GetProcessById(process.ProcessId);
                 return new(process.ProcessId, native.StartTime.ToUniversalTime(), process.Name,
-                    cpu ? native.PriorityClass : null, memory, io);
+                    cpu ? native.PriorityClass : null, memory, io, efficiency);
             }
             catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
             {
@@ -82,9 +128,9 @@ namespace ThreadPilot.ViewModels
                         return;
                     }
 
-                    var result = undo.Memory.HasValue
-                        ? await this.memoryPriorityService.SetMemoryPriorityAsync(process, undo.Memory.Value)
-                        : await this.memoryPriorityService.SetIoPriorityAsync(process, undo.Io!.Value);
+                    var result = undo.Memory.HasValue ? await this.memoryPriorityService.SetMemoryPriorityAsync(process, undo.Memory.Value)
+                        : undo.Io.HasValue ? await this.memoryPriorityService.SetIoPriorityAsync(process, undo.Io.Value)
+                        : await this.memoryPriorityService.SetEfficiencyModeAsync(process, undo.Efficiency!.Value);
                     if (!result.Success)
                     {
                         this.SetContextError(result.UserMessage);
@@ -113,7 +159,7 @@ namespace ThreadPilot.ViewModels
         }
 
         internal sealed record PriorityUndoSnapshot(int ProcessId, DateTime StartedUtc, string Name,
-            ProcessPriorityClass? Cpu, ProcessMemoryPriority? Memory, ProcessIoPriority? Io)
+            ProcessPriorityClass? Cpu, ProcessMemoryPriority? Memory, ProcessIoPriority? Io, ProcessEfficiencyMode? Efficiency)
         {
             public bool Matches(int processId, DateTime startedUtc) => this.ProcessId == processId && this.StartedUtc == startedUtc;
         }

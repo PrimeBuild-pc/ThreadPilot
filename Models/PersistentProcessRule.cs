@@ -30,6 +30,8 @@ namespace ThreadPilot.Models
 
         public ProcessIoPriority? IoPriority { get; init; }
 
+        public ProcessEfficiencyMode? EfficiencyMode { get; init; }
+
         public bool ApplyAffinityOnStart { get; init; }
 
         public bool ApplyPriorityOnStart { get; init; }
@@ -37,6 +39,8 @@ namespace ThreadPilot.Models
         public bool ApplyMemoryPriorityOnStart { get; init; }
 
         public bool ApplyIoPriorityOnStart { get; init; }
+
+        public bool ApplyEfficiencyModeOnStart { get; init; }
 
         public bool PreventSystemSleepWhileRunning { get; init; }
 
@@ -74,6 +78,8 @@ namespace ThreadPilot.Models
         public bool MemoryPriorityApplied { get; init; }
 
         public bool IoPriorityApplied { get; init; }
+
+        public bool EfficiencyModeApplied { get; init; }
 
         public bool PreventSleepApplied { get; init; }
 

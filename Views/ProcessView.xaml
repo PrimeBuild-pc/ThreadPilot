@@ -383,6 +383,22 @@
                                                           Command="{Binding SetContextMemoryPriorityNormalCommand}"
                                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                             </MenuItem>
+                                            <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                      Header="{DynamicResource ProcessView_SetEfficiencyMode}"
+                                                      ToolTip="{DynamicResource ProcessView_EfficiencyModeTooltip}">
+                                                <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                          Header="{DynamicResource EfficiencyMode_On}"
+                                                          Command="{Binding SetContextEfficiencyOnCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                          Header="{DynamicResource EfficiencyMode_Off}"
+                                                          Command="{Binding SetContextEfficiencyOffCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
+                                                          Header="{DynamicResource EfficiencyMode_SystemManaged}"
+                                                          Command="{Binding SetContextEfficiencySystemManagedCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                            </MenuItem>
                                             <Separator Style="{StaticResource ProcessContextMenuSeparatorStyle}"/>
                                             <MenuItem Style="{StaticResource ProcessContextMenuItemStyle}"
                                                       Header="{DynamicResource ProcessView_OpenLocation}"
@@ -491,6 +507,10 @@
                             <TextBlock Text="{Binding SelectedProcessSummary.IoPriorityText}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        Margin="0,0,18,4"/>
+                            <TextBlock Text="{Binding SelectedProcessSummary.EfficiencyModeText}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,18,4"/>
                             <TextBlock Text="{Binding SelectedProcessSummary.AffinityText}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        Margin="0,0,18,4"/>
@@ -549,6 +569,18 @@
                                 <ComboBoxItem Content="{DynamicResource ProcessView_PriorityLow}" Tag="{x:Static models:ProcessIoPriority.Low}"/>
                                 <ComboBoxItem Content="{DynamicResource ProcessView_PriorityNormal}" Tag="{x:Static models:ProcessIoPriority.Normal}"/>
                                 <ComboBoxItem Content="{DynamicResource ProcessView_PriorityHigh}" Tag="{x:Static models:ProcessIoPriority.High}"/>
+                            </ComboBox>
+                        </DockPanel>
+                        <TextBlock Text="{DynamicResource ProcessView_SetEfficiencyMode}" FontWeight="SemiBold" Margin="0,8,0,4"
+                                   ToolTip="{DynamicResource ProcessView_EfficiencyModeTooltip}"/>
+                        <DockPanel IsEnabled="{Binding SelectedProcess, Converter={StaticResource NullToBoolConverter}}">
+                            <Button DockPanel.Dock="Right" Content="{DynamicResource ProcessView_ApplyNow}" Command="{Binding ApplySelectedEfficiencyModeCommand}" Margin="8,0,0,0"/>
+                            <ComboBox SelectedValue="{Binding PendingEfficiencyMode}" SelectedValuePath="Tag"
+                                      ToolTip="{DynamicResource ProcessView_EfficiencyModeTooltip}"
+                                      AutomationProperties.Name="{DynamicResource ProcessView_SetEfficiencyMode}">
+                                <ComboBoxItem Content="{DynamicResource EfficiencyMode_SystemManaged}" Tag="{x:Static models:ProcessEfficiencyMode.SystemManaged}"/>
+                                <ComboBoxItem Content="{DynamicResource EfficiencyMode_On}" Tag="{x:Static models:ProcessEfficiencyMode.On}"/>
+                                <ComboBoxItem Content="{DynamicResource EfficiencyMode_Off}" Tag="{x:Static models:ProcessEfficiencyMode.Off}"/>
                             </ComboBox>
                         </DockPanel>
                         <WrapPanel Margin="0,12,0,0">

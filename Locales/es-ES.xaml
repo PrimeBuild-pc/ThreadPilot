@@ -776,4 +776,15 @@
     <sys:String x:Key="ProcessView_VisibleCountSuffix">procesos mostrados</sys:String>
     <sys:String x:Key="Rules_PendingChanges">Cambios sin guardar</sys:String>
     <sys:String x:Key="ProcessView_PriorityRestored">Prioridad anterior restaurada.</sys:String>
+
+    <!-- Efficiency mode (EcoQoS) -->
+    <sys:String x:Key="ProcessView_SetEfficiencyMode">Modo de eficiencia (EcoQoS)</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEfficiencyMode">Modo de eficiencia (EcoQoS)</sys:String>
+    <sys:String x:Key="ProcessView_EfficiencyModeTooltip">Activado: Windows ejecuta el proceso a menor frecuencia y prefiere los núcleos de eficiencia. Desactivado: Windows nunca lo limita. A diferencia del Administrador de tareas, no cambia la prioridad de CPU. Sin efecto si la limitación de energía de Windows está desactivada en Ajustes.</sys:String>
+    <sys:String x:Key="EfficiencyMode_SystemManaged">Decide Windows</sys:String>
+    <sys:String x:Key="EfficiencyMode_On">Activado (EcoQoS)</sys:String>
+    <sys:String x:Key="EfficiencyMode_Off">Desactivado (nunca limitar)</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyFormat">Modo de eficiencia: {0}</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyUnavailable">Modo de eficiencia no disponible</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyVoidedFormat">Modo de eficiencia: {0} (sin efecto: la limitación de energía está desactivada en Ajustes)</sys:String>
 </ResourceDictionary>

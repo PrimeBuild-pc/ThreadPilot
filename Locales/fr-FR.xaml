@@ -776,4 +776,15 @@
     <sys:String x:Key="ProcessView_VisibleCountSuffix">processus affichés</sys:String>
     <sys:String x:Key="Rules_PendingChanges">Modifications non enregistrées</sys:String>
     <sys:String x:Key="ProcessView_PriorityRestored">Priorité précédente restaurée.</sys:String>
+
+    <!-- Efficiency mode (EcoQoS) -->
+    <sys:String x:Key="ProcessView_SetEfficiencyMode">Mode efficacité (EcoQoS)</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEfficiencyMode">Mode efficacité (EcoQoS)</sys:String>
+    <sys:String x:Key="ProcessView_EfficiencyModeTooltip">Activé : Windows exécute le processus à fréquence réduite et privilégie les cœurs à efficacité énergétique. Désactivé : Windows ne le bride jamais. Contrairement au Gestionnaire des tâches, la priorité CPU ne change pas. Sans effet si la limitation d'alimentation de Windows est désactivée dans les Optimisations.</sys:String>
+    <sys:String x:Key="EfficiencyMode_SystemManaged">Windows décide</sys:String>
+    <sys:String x:Key="EfficiencyMode_On">Activé (EcoQoS)</sys:String>
+    <sys:String x:Key="EfficiencyMode_Off">Désactivé (jamais brider)</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyFormat">Mode efficacité : {0}</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyUnavailable">Mode efficacité indisponible</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyVoidedFormat">Mode efficacité : {0} (sans effet : la limitation d'alimentation est désactivée dans les Optimisations)</sys:String>
 </ResourceDictionary>

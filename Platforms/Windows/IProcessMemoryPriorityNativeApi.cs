@@ -35,6 +35,10 @@ namespace ThreadPilot.Platforms.Windows
 
         int SetIoPriority(SafeProcessHandle process, ref int priority) => unchecked((int)0xC0000002);
 
+        bool GetPowerThrottling(SafeProcessHandle process, ref PowerThrottlingState state) => false;
+
+        bool SetPowerThrottling(SafeProcessHandle process, ref PowerThrottlingState state) => false;
+
         IDisposable? AcquirePrivilegeScope(string privilegeName) => null;
     }
 
@@ -99,6 +103,14 @@ namespace ThreadPilot.Platforms.Windows
                 ref priority,
                 sizeof(int));
 
+        public bool GetPowerThrottling(SafeProcessHandle process, ref PowerThrottlingState state) =>
+            ProcessMemoryPriorityNativeMethods.GetProcessPowerThrottling(
+                process, ProcessInformationClass.ProcessPowerThrottling, ref state, (uint)Marshal.SizeOf<PowerThrottlingState>());
+
+        public bool SetPowerThrottling(SafeProcessHandle process, ref PowerThrottlingState state) =>
+            ProcessMemoryPriorityNativeMethods.SetProcessPowerThrottling(
+                process, ProcessInformationClass.ProcessPowerThrottling, ref state, (uint)Marshal.SizeOf<PowerThrottlingState>());
+
         public IDisposable? AcquirePrivilegeScope(string privilegeName) =>
             ProcessMemoryPriorityNativeMethods.AcquirePrivilegeScope(privilegeName);
     }
@@ -106,6 +118,19 @@ namespace ThreadPilot.Platforms.Windows
     public enum ProcessInformationClass
     {
         ProcessMemoryPriority = 0,
+        ProcessPowerThrottling = 4,
+    }
+
+    // PROCESS_POWER_THROTTLING_STATE: ControlMask picks the mechanism, StateMask turns it on or off.
+    [StructLayout(LayoutKind.Sequential)]
+    public struct PowerThrottlingState
+    {
+        public const uint CurrentVersion = 1;
+        public const uint ExecutionSpeed = 0x1;
+
+        public uint Version;
+        public uint ControlMask;
+        public uint StateMask;
     }
 
     [StructLayout(LayoutKind.Sequential)]

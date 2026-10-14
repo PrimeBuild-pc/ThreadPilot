@@ -776,4 +776,15 @@
     <sys:String x:Key="ProcessView_VisibleCountSuffix">个进程已显示</sys:String>
     <sys:String x:Key="Rules_PendingChanges">未保存的更改</sys:String>
     <sys:String x:Key="ProcessView_PriorityRestored">已恢复之前的优先级。</sys:String>
+
+    <!-- Efficiency mode (EcoQoS) -->
+    <sys:String x:Key="ProcessView_SetEfficiencyMode">效率模式 (EcoQoS)</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEfficiencyMode">效率模式 (EcoQoS)</sys:String>
+    <sys:String x:Key="ProcessView_EfficiencyModeTooltip">开启：Windows 以较低频率运行该进程并优先使用能效核心。关闭：Windows 从不限制它。与任务管理器不同，不会更改 CPU 优先级。如果在优化中禁用了 Windows 电源限制，则此设置无效。</sys:String>
+    <sys:String x:Key="EfficiencyMode_SystemManaged">由 Windows 决定</sys:String>
+    <sys:String x:Key="EfficiencyMode_On">开启 (EcoQoS)</sys:String>
+    <sys:String x:Key="EfficiencyMode_Off">关闭（从不限制）</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyFormat">效率模式：{0}</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyUnavailable">效率模式不可用</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyVoidedFormat">效率模式：{0}（无效：已在优化中禁用电源限制）</sys:String>
 </ResourceDictionary>

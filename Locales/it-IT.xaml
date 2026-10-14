@@ -776,4 +776,15 @@
     <sys:String x:Key="ProcessView_VisibleCountSuffix">processi visibili</sys:String>
     <sys:String x:Key="Rules_PendingChanges">Modifiche non salvate</sys:String>
     <sys:String x:Key="ProcessView_PriorityRestored">Priorità precedente ripristinata.</sys:String>
+
+    <!-- Efficiency mode (EcoQoS) -->
+    <sys:String x:Key="ProcessView_SetEfficiencyMode">Modalità efficienza (EcoQoS)</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEfficiencyMode">Modalità efficienza (EcoQoS)</sys:String>
+    <sys:String x:Key="ProcessView_EfficiencyModeTooltip">Attiva: Windows esegue il processo a frequenze più basse e preferisce i core efficienti. Disattivata: Windows non lo rallenta mai. A differenza del Task Manager, la priorità CPU non cambia. Nessun effetto se il power throttling di Windows è disattivato nelle Ottimizzazioni.</sys:String>
+    <sys:String x:Key="EfficiencyMode_SystemManaged">Decide Windows</sys:String>
+    <sys:String x:Key="EfficiencyMode_On">Attiva (EcoQoS)</sys:String>
+    <sys:String x:Key="EfficiencyMode_Off">Disattivata (mai rallentare)</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyFormat">Modalità efficienza: {0}</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyUnavailable">Modalità efficienza non disponibile</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyVoidedFormat">Modalità efficienza: {0} (nessun effetto: il power throttling è disattivato nelle Ottimizzazioni)</sys:String>
 </ResourceDictionary>

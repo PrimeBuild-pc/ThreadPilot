@@ -776,4 +776,15 @@
     <sys:String x:Key="ProcessView_VisibleCountSuffix">processes shown</sys:String>
     <sys:String x:Key="Rules_PendingChanges">Unsaved changes</sys:String>
     <sys:String x:Key="ProcessView_PriorityRestored">Previous priority restored.</sys:String>
+
+    <!-- Efficiency mode (EcoQoS) -->
+    <sys:String x:Key="ProcessView_SetEfficiencyMode">Efficiency mode (EcoQoS)</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEfficiencyMode">Efficiency mode (EcoQoS)</sys:String>
+    <sys:String x:Key="ProcessView_EfficiencyModeTooltip">On: Windows runs the process at lower clock speeds and prefers efficiency cores. Off: Windows never throttles it. Unlike Task Manager, CPU priority is not changed. No effect while Windows power throttling is disabled in Tweaks.</sys:String>
+    <sys:String x:Key="EfficiencyMode_SystemManaged">Windows decides</sys:String>
+    <sys:String x:Key="EfficiencyMode_On">On (EcoQoS)</sys:String>
+    <sys:String x:Key="EfficiencyMode_Off">Off (never throttle)</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyFormat">Efficiency mode: {0}</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyUnavailable">Efficiency mode unavailable</sys:String>
+    <sys:String x:Key="ProcessSummary_EfficiencyVoidedFormat">Efficiency mode: {0} (no effect: power throttling is disabled in Tweaks)</sys:String>
 </ResourceDictionary>

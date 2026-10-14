@@ -384,6 +384,13 @@
                                           SelectedItem="{Binding SavedRuleIoPriority, Mode=TwoWay}"
                                           Margin="0,0,0,10"/>
 
+                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleEfficiencyMode}" Margin="0,0,0,3"
+                                           ToolTip="{DynamicResource ProcessView_EfficiencyModeTooltip}"/>
+                                <ComboBox ItemsSource="{Binding SavedRuleEfficiencyModeOptions}"
+                                          SelectedItem="{Binding SavedRuleEfficiencyMode, Mode=TwoWay}"
+                                          ToolTip="{DynamicResource ProcessView_EfficiencyModeTooltip}"
+                                          Margin="0,0,0,10"/>
+
                                 <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleModeLabel}" Margin="0,0,0,3"/>
                                 <ComboBox ItemsSource="{Binding SavedRuleCpuAssignmentModeOptions}"
                                           SelectedItem="{Binding SavedRuleCpuAssignmentMode, Mode=TwoWay}"

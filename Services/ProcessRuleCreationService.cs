@@ -21,6 +21,7 @@ namespace ThreadPilot.Services
             CpuAssignmentMode cpuAssignmentMode = CpuAssignmentMode.Automatic,
             ProcessIoPriority? currentIoPriority = null,
             bool preventSystemSleepWhileRunning = false,
+            ProcessEfficiencyMode? currentEfficiencyMode = null,
             CancellationToken cancellationToken = default);
 
         Task<ProcessRuleCreationResult> DeleteRuleAsync(
@@ -55,6 +56,8 @@ namespace ThreadPilot.Services
         public ProcessMemoryPriority? MemoryPriority { get; init; }
 
         public ProcessIoPriority? IoPriority { get; init; }
+
+        public ProcessEfficiencyMode? EfficiencyMode { get; init; }
 
         public bool PreventSystemSleepWhileRunning { get; init; }
 
@@ -121,6 +124,7 @@ namespace ThreadPilot.Services
             CpuAssignmentMode cpuAssignmentMode = CpuAssignmentMode.Automatic,
             ProcessIoPriority? currentIoPriority = null,
             bool preventSystemSleepWhileRunning = false,
+            ProcessEfficiencyMode? currentEfficiencyMode = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(process);
@@ -132,6 +136,8 @@ namespace ThreadPilot.Services
                     : null,
                 MemoryPriority = currentMemoryPriority,
                 IoPriority = currentIoPriority,
+                // Only an explicit choice is worth saving; "Windows decides" is the default anyway.
+                EfficiencyMode = currentEfficiencyMode is ProcessEfficiencyMode.SystemManaged ? null : currentEfficiencyMode,
                 PreventSystemSleepWhileRunning = preventSystemSleepWhileRunning,
                 CpuAssignmentMode = cpuAssignmentMode,
             };
@@ -240,11 +246,13 @@ namespace ThreadPilot.Services
                 Priority = rule.Priority,
                 MemoryPriority = rule.MemoryPriority,
                 IoPriority = rule.IoPriority,
+                EfficiencyMode = rule.EfficiencyMode,
                 CpuAssignmentMode = rule.CpuAssignmentMode,
                 PreventSystemSleepWhileRunning = rule.PreventSystemSleepWhileRunning,
                 ApplyPriorityOnStart = rule.Priority.HasValue,
                 ApplyMemoryPriorityOnStart = rule.MemoryPriority.HasValue,
                 ApplyIoPriorityOnStart = rule.IoPriority.HasValue,
+                ApplyEfficiencyModeOnStart = rule.EfficiencyMode.HasValue,
                 UpdatedAt = DateTime.UtcNow,
             };
 
@@ -406,6 +414,7 @@ namespace ThreadPilot.Services
             var priority = payload.Priority ?? existing?.Priority;
             var memoryPriority = payload.MemoryPriority ?? existing?.MemoryPriority;
             var ioPriority = payload.IoPriority ?? existing?.IoPriority;
+            var efficiencyMode = payload.EfficiencyMode ?? existing?.EfficiencyMode;
 
             var rule = new PersistentProcessRule
             {
@@ -420,10 +429,12 @@ namespace ThreadPilot.Services
                 Priority = priority,
                 MemoryPriority = memoryPriority,
                 IoPriority = ioPriority,
+                EfficiencyMode = efficiencyMode,
                 ApplyAffinityOnStart = HasSelectionPayload(cpuSelection) || legacyAffinityMask.HasValue,
                 ApplyPriorityOnStart = priority.HasValue,
                 ApplyMemoryPriorityOnStart = memoryPriority.HasValue,
                 ApplyIoPriorityOnStart = ioPriority.HasValue,
+                ApplyEfficiencyModeOnStart = efficiencyMode.HasValue,
                 PreventSystemSleepWhileRunning = payload.PreventSystemSleepWhileRunning,
                 CreatedAt = existing?.CreatedAt ?? now,
                 UpdatedAt = now,
@@ -518,6 +529,7 @@ namespace ThreadPilot.Services
             payload.Priority.HasValue ||
             payload.MemoryPriority.HasValue ||
             payload.IoPriority.HasValue ||
+            payload.EfficiencyMode.HasValue ||
             payload.PreventSystemSleepWhileRunning;
 
         private static bool HasSelectionPayload(CpuSelection? selection) =>

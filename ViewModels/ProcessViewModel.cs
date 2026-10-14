@@ -248,7 +248,8 @@ namespace ThreadPilot.ViewModels
                 memoryPriorityService,
                 persistentRuleStore,
                 persistentRuleMatcher,
-                localizationService);
+                localizationService,
+                SystemTweaksService.IsPowerThrottlingOff);
 
             // Subscribe to topology detection events
             this.cpuTopologyService.TopologyDetected += this.OnTopologyDetected;
