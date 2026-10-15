@@ -345,7 +345,7 @@ namespace ThreadPilot.Services
         private bool IsBackgroundCandidate(ProcessModel process, GameSession currentSession) =>
             process.ProcessId != currentSession.Game.ProcessId
             && process.ProcessId != Environment.ProcessId
-            && GameBoostProcessLists.IsListedBackground(process.Name, this.Settings.GameBoostMode, this.Settings.GameBoostBackgroundProcesses)
+            && GameBoostProcessLists.IsListedBackground(process.Name, process.ExecutablePath, this.Settings.GameBoostMode, this.Settings.GameBoostBackgroundProcesses)
             && !this.processFilterService.IsSystemProcess(process)
             && !IsUnderDirectory(process.ExecutablePath, currentSession.GameDirectory);
 

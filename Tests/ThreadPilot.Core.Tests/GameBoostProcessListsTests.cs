@@ -40,17 +40,19 @@ namespace ThreadPilot.Core.Tests
         {
             var userList = GameBoostProcessLists.DefaultBackgroundProcesses.ToList();
 
-            Assert.True(GameBoostProcessLists.IsListedBackground("chrome", GameBoostMode.Automatic, userList));
-            Assert.False(GameBoostProcessLists.IsListedBackground("Spotify", GameBoostMode.Automatic, userList));
-            Assert.True(GameBoostProcessLists.IsListedBackground("Spotify", GameBoostMode.Isolation, userList));
-            Assert.False(GameBoostProcessLists.IsListedBackground("Discord", GameBoostMode.Isolation, userList));
-            Assert.False(GameBoostProcessLists.IsListedBackground("obs64", GameBoostMode.Isolation, userList));
+            Assert.True(GameBoostProcessLists.IsListedBackground("chrome", null, GameBoostMode.Automatic, userList));
+            Assert.False(GameBoostProcessLists.IsListedBackground("Spotify", null, GameBoostMode.Automatic, userList));
+            Assert.True(GameBoostProcessLists.IsListedBackground("Spotify", null, GameBoostMode.Isolation, userList));
+            Assert.False(GameBoostProcessLists.IsListedBackground("Discord", null, GameBoostMode.Isolation, userList));
+            Assert.False(GameBoostProcessLists.IsListedBackground("obs64", null, GameBoostMode.Isolation, userList));
         }
 
         [Fact]
         public void IsListedBackground_UserAddedEntry()
         {
-            Assert.True(GameBoostProcessLists.IsListedBackground("MyTool", GameBoostMode.Automatic, ["MyTool.exe"]));
+            Assert.True(GameBoostProcessLists.IsListedBackground("MyTool", null, GameBoostMode.Automatic, ["MyTool.exe"]));
+            Assert.True(GameBoostProcessLists.IsListedBackground("MyTool", @"C:\Tools\MyTool.exe", GameBoostMode.Automatic, [@"C:\Tools\MyTool.exe"]));
+            Assert.False(GameBoostProcessLists.IsListedBackground("MyTool", @"D:\Other\MyTool.exe", GameBoostMode.Automatic, [@"C:\Tools\MyTool.exe"]));
         }
     }
 }

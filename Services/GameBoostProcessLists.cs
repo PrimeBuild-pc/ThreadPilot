@@ -83,11 +83,11 @@ namespace ThreadPilot.Services
                 && !NonGameNameFragments.Any(fragment => name.Contains(fragment, StringComparison.OrdinalIgnoreCase));
         }
 
-        public static bool IsListedBackground(string? processName, GameBoostMode mode, IReadOnlyCollection<string>? userBackground)
+        public static bool IsListedBackground(string? processName, string? executablePath, GameBoostMode mode, IReadOnlyCollection<string>? userBackground)
         {
             var name = Normalize(processName);
             return name.Length > 0
-                && (Matches(userBackground, name, executablePath: null)
+                && (Matches(userBackground, name, executablePath)
                     || (mode == GameBoostMode.Isolation && IsolationExtraProcesses.Any(entry => Normalize(entry).Equals(name, StringComparison.OrdinalIgnoreCase))));
         }
 
