@@ -18,7 +18,8 @@ QA precedente: Ryzen 7 5800X3D single-CCD e VM Windows 11 pulita; impostazioni, 
 
 ## Verifiche e pubblicazione
 
-- Test Release locali dopo la preparazione beta: 851 passati; audit dipendenze senza vulnerabilità segnalate.
+- Test Release locali dopo la preparazione beta: 851 passati; audit dipendenze senza vulnerabilità segnalate; installer/portable generati e smoke test del single-file riuscito.
+- Causa della CI EcoQoS: Server 2022 build 20348 rifiuta GetProcessInformation(ProcessPowerThrottling) con errore 87 sia con query limitata sia completa. I job con test nativi e smoke usano ora Server 2025, coerente con il target Windows 11; il round-trip reale non viene saltato.
 - Per stato effettivo di merge/release/CI consultare GitHub, non dedurlo dalla presenza di questo file: `gh pr list`, `gh run list`, `gh release view v1.7.7-beta.2`.
 - Prima del tag verificare CI della combinazione finale e corrispondenza del codice con tutte le modifiche locali. Il tag deve puntare al commit integrato in main.
 - Dopo il tag verificare artifact installer/portable/SHA256, smoke test, flag prerelease=true e `/releases/latest` ancora su v1.7.6.

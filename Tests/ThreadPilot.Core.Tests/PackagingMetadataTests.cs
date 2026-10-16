@@ -103,6 +103,8 @@ namespace ThreadPilot.Core.Tests
             var root = FindRepositoryRoot();
             var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "release.yml"));
             Assert.Contains("^v\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?$", workflow, StringComparison.Ordinal);
+            Assert.Contains("runs-on: windows-2025", workflow, StringComparison.Ordinal);
+            AssertFileContains(Path.Combine(root, ".github", "workflows", "ci-devsecops.yml"), "runs-on: windows-2025");
             Assert.Contains("prerelease: ${{ needs.build.outputs.prerelease == 'true' }}", workflow, StringComparison.Ordinal);
             Assert.Contains("make_latest: ${{ needs.build.outputs.prerelease == 'true' && 'false' || 'true' }}", workflow, StringComparison.Ordinal);
             Assert.Contains("if: needs.release.result == 'success' && needs.build.outputs.prerelease != 'true'", workflow, StringComparison.Ordinal);

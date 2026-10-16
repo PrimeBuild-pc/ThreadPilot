@@ -9,6 +9,7 @@ All notable changes to this project are documented in this file.
 - Three-state EcoQoS for live processes and persistent rules, independent of CPU priority.
 - Persistent-rule backups, validated/transactional imports, deterministic precedence and conflict reporting.
 - Refreshed navigation, process/rule editors, Windows 11 settings rows, layout persistence and scaling fixes.
+- CI and release native tests run on Windows Server 2025: Server 2022 build 20348 rejects EcoQoS read-back with Win32 error 87, even with full query access. The real integration test remains enabled.
 - Pre-release publication keeps the stable/latest release and package-manager channels unchanged.
 - Real Game Boost validation on dual-CCD Ryzen/X3D and Intel hybrid CPUs, gaming benchmarks and anti-cheat testing remain pending. See [test procedure and reporting checklist](releases/v1.7.7-beta.2.md).
 
