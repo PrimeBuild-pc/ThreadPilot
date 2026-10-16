@@ -426,6 +426,25 @@ namespace ThreadPilot.Core.Tests
                 GlobalLogicalProcessorIndexes = [0],
             };
 
+        [Theory]
+        [InlineData(ProcessEfficiencyMode.On, true)]
+        [InlineData(ProcessEfficiencyMode.SystemManaged, false)]
+        public async Task SaveCurrentSettingsAsRuleAsync_SavesOnlyAnExplicitEfficiencyMode(ProcessEfficiencyMode current, bool saved)
+        {
+            var store = new CapturingRuleStore([]);
+            var service = CreateService(store);
+
+            await service.SaveCurrentSettingsAsRuleAsync(
+                CreateProcess(priority: ProcessPriorityClass.High, affinity: 0),
+                currentCoreSelection: null,
+                currentMemoryPriority: null,
+                currentEfficiencyMode: current);
+
+            var rule = Assert.Single(store.SavedRules);
+            Assert.Equal(saved, rule.ApplyEfficiencyModeOnStart);
+            Assert.Equal(saved ? current : null, rule.EfficiencyMode);
+        }
+
         [Fact]
         public async Task SaveRuleAsync_KeepsFieldsTheCallerDidNotCarry()
         {

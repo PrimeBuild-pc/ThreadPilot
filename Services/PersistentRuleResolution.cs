@@ -19,6 +19,7 @@ namespace ThreadPilot.Services
             rules.Where(r => r.ApplyPriorityOnStart).Select(r => r.Priority).Distinct().Skip(1).Any() ||
             rules.Where(r => r.ApplyMemoryPriorityOnStart).Select(r => r.MemoryPriority).Distinct().Skip(1).Any() ||
             rules.Where(r => r.ApplyIoPriorityOnStart).Select(r => r.IoPriority).Distinct().Skip(1).Any() ||
+            rules.Where(r => r.ApplyEfficiencyModeOnStart).Select(r => r.EfficiencyMode).Distinct().Skip(1).Any() ||
             rules.Where(r => r.ApplyAffinityOnStart)
                 .Select(r => $"{r.CpuAssignmentMode}:{r.LegacyAffinityMask}:{string.Join(",", (r.CpuSelection?.GlobalLogicalProcessorIndexes ?? []).Order())}")
                 .Distinct().Skip(1).Any();

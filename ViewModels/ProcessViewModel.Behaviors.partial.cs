@@ -858,7 +858,8 @@ namespace ThreadPilot.ViewModels
                 this.SelectedProcessSummary.MemoryPriority,
                 this.SelectedCpuAssignmentMode,
                 this.SelectedProcessSummary.IoPriority,
-                this.IsIdleServerDisabled);
+                this.IsIdleServerDisabled,
+                this.SelectedProcessSummary.EfficiencyMode);
 
             this.ApplyRuleCreationResultStatus(result);
             await this.LogUserActionAsync(
@@ -934,7 +935,8 @@ namespace ThreadPilot.ViewModels
                 this.SelectedProcessSummary.MemoryPriority,
                 cpuAssignmentMode: this.SelectedCpuAssignmentMode,
                 currentIoPriority: this.SelectedProcessSummary.IoPriority,
-                preventSystemSleepWhileRunning: this.IsIdleServerDisabled);
+                preventSystemSleepWhileRunning: this.IsIdleServerDisabled,
+                currentEfficiencyMode: this.SelectedProcessSummary.EfficiencyMode);
 
             this.ApplyRuleCreationResultStatus(saveResult);
             await this.LogUserActionAsync(
@@ -1695,6 +1697,7 @@ namespace ThreadPilot.ViewModels
                 .AppendLine($"CPU priority: {process.Priority}")
                 .AppendLine($"Memory priority: {this.SelectedProcessSummary.MemoryPriority?.ToString() ?? "unavailable"}")
                 .AppendLine($"I/O priority: {this.SelectedProcessSummary.IoPriority?.ToString() ?? "unavailable"}")
+                .AppendLine($"Efficiency mode: {this.SelectedProcessSummary.EfficiencyMode?.ToString() ?? "unavailable"}")
                 .AppendLine($"Affinity: 0x{process.ProcessorAffinity:X}")
                 .AppendLine($"Rule status: {this.SelectedProcessSummary.RuleStatusText}");
 
@@ -2140,6 +2143,7 @@ namespace ThreadPilot.ViewModels
 
         partial void OnShowActiveApplicationsOnlyChanged(bool value)
         {
+            UiStateStore.Update(s => s with { ShowActiveApplicationsOnly = value });
             _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
             {
                 await LoadProcessesCommand.ExecuteAsync(null);
@@ -2148,16 +2152,19 @@ namespace ThreadPilot.ViewModels
 
         partial void OnHideSystemProcessesChanged(bool value)
         {
+            UiStateStore.Update(s => s with { HideSystemProcesses = value });
             this.filterRefreshCoordinator.Schedule();
         }
 
         partial void OnHideIdleProcessesChanged(bool value)
         {
+            UiStateStore.Update(s => s with { HideIdleProcesses = value });
             this.filterRefreshCoordinator.Schedule();
         }
 
         partial void OnSortModeChanged(string value)
         {
+            UiStateStore.Update(s => s with { SortMode = value });
             this.filterRefreshCoordinator.Schedule();
         }
 
@@ -2216,6 +2223,13 @@ namespace ThreadPilot.ViewModels
 
                     var filteredResults = this.processFilterService.FilterAndSort(this.Processes, criteria);
                     this.FilteredProcesses = new ObservableCollection<ProcessModel>(filteredResults);
+
+                    // The batch total is a snapshot from the first load; refreshes add processes, so the
+                    // counter showed "157 / 151". Once everything is loaded the list itself is the total.
+                    if (!this.HasMoreBatches || this.Processes.Count > this.TotalProcessCount)
+                    {
+                        this.TotalProcessCount = this.Processes.Count;
+                    }
                 }
                 while (this.filterRefreshPending);
             }

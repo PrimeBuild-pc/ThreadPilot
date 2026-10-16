@@ -15,6 +15,7 @@ namespace ThreadPilot.ViewModels
         private readonly IPersistentProcessRuleStore? persistentRuleStore;
         private readonly IPersistentProcessRuleMatcher? persistentRuleMatcher;
         private readonly ILocalizationService? localizationService;
+        private readonly Func<bool> isPowerThrottlingOff;
         private bool hasSelection;
         private int processId;
         private string processName = string.Empty;
@@ -25,6 +26,9 @@ namespace ThreadPilot.ViewModels
         private long processorAffinity;
         private ProcessMemoryPriority? memoryPriority;
         private ProcessIoPriority? ioPriority;
+        private ProcessEfficiencyMode? efficiencyMode;
+        private string efficiencyModeText = "Efficiency mode unavailable";
+        private bool isEfficiencyModeVoided;
         private string processTitle = "No process selected";
         private string currentProcessStatusText = "No process selected";
         private string cpuUsageText = "CPU: unavailable";
@@ -44,8 +48,10 @@ namespace ThreadPilot.ViewModels
             IProcessMemoryPriorityService? memoryPriorityService = null,
             IPersistentProcessRuleStore? persistentRuleStore = null,
             IPersistentProcessRuleMatcher? persistentRuleMatcher = null,
-            ILocalizationService? localizationService = null)
+            ILocalizationService? localizationService = null,
+            Func<bool>? isPowerThrottlingOff = null)
         {
+            this.isPowerThrottlingOff = isPowerThrottlingOff ?? (() => false);
             this.memoryPriorityService = memoryPriorityService;
             this.persistentRuleStore = persistentRuleStore;
             this.persistentRuleMatcher = persistentRuleMatcher;
@@ -111,6 +117,24 @@ namespace ThreadPilot.ViewModels
         {
             get => this.ioPriority;
             private set => this.SetProperty(ref this.ioPriority, value);
+        }
+
+        public ProcessEfficiencyMode? EfficiencyMode
+        {
+            get => this.efficiencyMode;
+            private set => this.SetProperty(ref this.efficiencyMode, value);
+        }
+
+        public string EfficiencyModeText
+        {
+            get => this.efficiencyModeText;
+            private set => this.SetProperty(ref this.efficiencyModeText, value);
+        }
+
+        public bool IsEfficiencyModeVoided
+        {
+            get => this.isEfficiencyModeVoided;
+            private set => this.SetProperty(ref this.isEfficiencyModeVoided, value);
         }
 
         public string ProcessTitle
@@ -234,6 +258,12 @@ namespace ThreadPilot.ViewModels
                 return;
             }
 
+            await this.UpdateEfficiencyModeAsync(process, version);
+            if (!this.IsCurrentVersion(version))
+            {
+                return;
+            }
+
             await this.UpdateRuleStatusAsync(process, version);
         }
 
@@ -265,6 +295,8 @@ namespace ThreadPilot.ViewModels
             this.ProcessorAffinity = 0;
             this.MemoryPriority = null;
             this.IoPriority = null;
+            this.EfficiencyMode = null;
+            this.IsEfficiencyModeVoided = false;
             this.IsProtectedOrAccessDenied = false;
             this.HasThreadPilotRule = false;
             this.ProcessTitle = this.L("ProcessView_NoProcessSelected", "No process selected");
@@ -274,6 +306,7 @@ namespace ThreadPilot.ViewModels
             this.CpuPriorityText = this.L("ProcessSummary_CpuPriorityUnavailable", "CPU priority: unavailable");
             this.MemoryPriorityText = this.L("ProcessSummary_MemoryPriorityUnavailable", "Memory priority unavailable");
             this.IoPriorityText = this.L("ProcessSummary_IoPriorityUnavailable", "I/O priority unavailable");
+            this.EfficiencyModeText = this.L("ProcessSummary_EfficiencyUnavailable", "Efficiency mode unavailable");
             this.AffinityText = this.L("ProcessSummary_AffinityUnavailable", "Affinity: unavailable");
             this.RuleStatusText = this.L("ProcessSummary_NoSavedRule", "No saved rule");
             this.UpdateLastOperation(lastOperationMessage, lastOperationIsError);
@@ -340,6 +373,37 @@ namespace ThreadPilot.ViewModels
             catch (Exception)
             {
                 this.IoPriority = null;
+            }
+        }
+
+        private async Task UpdateEfficiencyModeAsync(ProcessModel process, int version)
+        {
+            this.EfficiencyMode = null;
+            this.IsEfficiencyModeVoided = false;
+            this.EfficiencyModeText = this.L("ProcessSummary_EfficiencyUnavailable", "Efficiency mode unavailable");
+            if (this.memoryPriorityService == null)
+            {
+                return;
+            }
+
+            try
+            {
+                var mode = await this.memoryPriorityService.GetEfficiencyModeAsync(process);
+                if (!this.IsCurrentVersion(version) || mode == null)
+                {
+                    return;
+                }
+
+                this.EfficiencyMode = mode.Value;
+                var label = this.L($"EfficiencyMode_{mode.Value}", mode.Value.ToString());
+                this.IsEfficiencyModeVoided = mode == ProcessEfficiencyMode.On && this.isPowerThrottlingOff();
+                this.EfficiencyModeText = this.IsEfficiencyModeVoided
+                    ? this.L("ProcessSummary_EfficiencyVoidedFormat", "Efficiency mode: {0} (no effect: power throttling is disabled in Tweaks)", label)
+                    : this.L("ProcessSummary_EfficiencyFormat", "Efficiency mode: {0}", label);
+            }
+            catch (Exception)
+            {
+                this.EfficiencyMode = null;
             }
         }
 

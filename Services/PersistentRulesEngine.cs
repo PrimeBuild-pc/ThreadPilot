@@ -33,6 +33,7 @@ namespace ThreadPilot.Services
         private readonly IProcessService processService;
         private readonly IProcessMemoryPriorityService memoryPriorityService;
         private readonly ProcessPowerRequestService? powerRequestService;
+        private readonly ProcessPolicyApplyGate? applyGate;
         private readonly ILogger<PersistentRulesEngine> logger;
 
         public PersistentRulesEngine(
@@ -42,7 +43,8 @@ namespace ThreadPilot.Services
             IProcessService processService,
             IProcessMemoryPriorityService memoryPriorityService,
             ILogger<PersistentRulesEngine> logger,
-            ProcessPowerRequestService? powerRequestService = null)
+            ProcessPowerRequestService? powerRequestService = null,
+            ProcessPolicyApplyGate? applyGate = null)
         {
             this.ruleStore = ruleStore ?? throw new ArgumentNullException(nameof(ruleStore));
             this.matcher = matcher ?? throw new ArgumentNullException(nameof(matcher));
@@ -51,6 +53,7 @@ namespace ThreadPilot.Services
             this.memoryPriorityService = memoryPriorityService ?? throw new ArgumentNullException(nameof(memoryPriorityService));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.powerRequestService = powerRequestService;
+            this.applyGate = applyGate;
         }
 
         public async Task<IReadOnlyList<PersistentRuleApplyResult>> ApplyMatchingRulesAsync(
@@ -63,6 +66,7 @@ namespace ThreadPilot.Services
             var rules = await this.ruleStore.LoadAsync().ConfigureAwait(false);
             var results = new List<PersistentRuleApplyResult>();
 
+            using var gate = this.applyGate == null ? null : await this.applyGate.EnterAsync(cancellationToken).ConfigureAwait(false);
             foreach (var rule in PersistentRuleResolution.MatchInApplyOrder(rules, process, this.matcher)
                 .Where(rule => ruleFilter == null || ruleFilter(rule)))
             {
@@ -85,6 +89,7 @@ namespace ThreadPilot.Services
                 !rule.ApplyPriorityOnStart &&
                 !rule.ApplyMemoryPriorityOnStart &&
                 !rule.ApplyIoPriorityOnStart &&
+                !rule.ApplyEfficiencyModeOnStart &&
                 !rule.PreventSystemSleepWhileRunning)
             {
                 return MarkRuleConfigurationFailure(
@@ -202,6 +207,34 @@ namespace ThreadPilot.Services
                     {
                         success = false;
                         result = this.MergeMemoryPriorityFailure(result, ioResult);
+                    }
+                }
+            }
+
+            if (rule.ApplyEfficiencyModeOnStart && !result.IsProcessExited)
+            {
+                if (!rule.EfficiencyMode.HasValue)
+                {
+                    success = false;
+                    result = MarkRuleConfigurationFailure(
+                        result,
+                        rule,
+                        "PersistentRuleMissingEfficiencyMode",
+                        "This saved rule has no efficiency mode value to apply.");
+                }
+                else
+                {
+                    var efficiencyResult = await this.memoryPriorityService
+                        .SetEfficiencyModeAsync(process, rule.EfficiencyMode.Value)
+                        .ConfigureAwait(false);
+                    if (efficiencyResult.Success)
+                    {
+                        result = result with { EfficiencyModeApplied = true };
+                    }
+                    else
+                    {
+                        success = false;
+                        result = this.MergeMemoryPriorityFailure(result, efficiencyResult);
                     }
                 }
             }

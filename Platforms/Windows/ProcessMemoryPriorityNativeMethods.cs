@@ -62,6 +62,22 @@ namespace ThreadPilot.Platforms.Windows
             ref MemoryPriorityInformation processInformation,
             uint processInformationSize);
 
+        [LibraryImport("kernel32.dll", EntryPoint = "GetProcessInformation", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool GetProcessPowerThrottling(
+            SafeProcessHandle process,
+            ProcessInformationClass processInformationClass,
+            ref PowerThrottlingState processInformation,
+            uint processInformationSize);
+
+        [LibraryImport("kernel32.dll", EntryPoint = "SetProcessInformation", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool SetProcessPowerThrottling(
+            SafeProcessHandle process,
+            ProcessInformationClass processInformationClass,
+            ref PowerThrottlingState processInformation,
+            uint processInformationSize);
+
         [LibraryImport("ntdll.dll")]
         public static partial int NtQueryInformationProcess(
             SafeProcessHandle process,

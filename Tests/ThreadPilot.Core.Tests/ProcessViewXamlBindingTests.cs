@@ -301,15 +301,14 @@ namespace ThreadPilot.Core.Tests
             var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);
             var serialized = document.ToString(SaveOptions.DisableFormatting);
 
+            // The core picker holds the primary apply action, so it is a plain card, never collapsed.
             var picker = Assert.Single(
                 document.Descendants(),
-                element => element.Name.LocalName == "Expander" &&
-                    element.Attributes().Any(attribute =>
-                        attribute.Value.Contains("ProcessView_AdvancedAffinityPicker", StringComparison.Ordinal)));
+                element => element.Attributes().Any(attribute =>
+                    attribute.Name.LocalName == "Name" && attribute.Value == "CpuCoresCard"));
             var pickerXml = picker.ToString(SaveOptions.DisableFormatting);
 
-            // The picker now holds the primary apply action, so it must start open.
-            Assert.Equal("True", picker.Attribute("IsExpanded")?.Value);
+            Assert.DoesNotContain(picker.AncestorsAndSelf(), element => element.Name.LocalName == "Expander");
             Assert.Contains("SelectedCpuAssignmentMode", pickerXml, StringComparison.Ordinal);
             Assert.Contains("SetAffinityCommand", pickerXml, StringComparison.Ordinal);
             Assert.Contains("ProcessView_CpuCoresReadOnlyHint", pickerXml, StringComparison.Ordinal);
