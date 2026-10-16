@@ -1,3 +1,11 @@
+## ThreadPilot v1.7.7-beta.2
+
+Pre-release only: Game Boost, EcoQoS, topology fixes, persistent-rule/backup reliability and the complete UI refresh, including all local Game Boost work through 2026-10-16.
+
+**Game Boost still needs real dual-CCD Ryzen/X3D and Intel hybrid hardware validation, comparative gaming benchmarks and protected-game/anti-cheat testing.** No performance improvement is claimed.
+
+Full release description, quick test steps and issue-reporting checklist: [v1.7.7-beta.2](../releases/v1.7.7-beta.2.md). Artifacts are unsigned. v1.7.6 remains stable/latest; no beta publication to winget or Chocolatey.
+
 ## ThreadPilot v1.7.6
 
 This release fixes power plan discovery on localized Windows installations and makes executable-path rules survive application updates.

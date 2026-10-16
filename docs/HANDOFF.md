@@ -1,38 +1,32 @@
-# Handoff ThreadPilot — aggiornato 2026-10-14
+# Handoff ThreadPilot — 2026-10-16
 
-Piani di riferimento: `docs/IMPLEMENTATION_PLAN.md` (affidabilità regole/UX) e `docs/UX_REDESIGN_PLAN.md` (redesign). Cancellare questo file quando non serve più.
+## Versione e ambito
 
-## Stato
+La versione preparata è **v1.7.7-beta.2**, esclusivamente pre-release. Include la pila #67–#70, le correzioni della topologia CPU e Game Boost (#71), comprese le modifiche locali del 15 ottobre alla diagnostica Attività. La conferma hardware EcoQoS di SA-Mousavichashmi è nella #66; non equivale alla validazione di Game Boost.
 
-- **Quattro PR aperte, impilate e non mergiate.** Vanno unite in quest'ordine, ognuna sopra la precedente:
-  1. #67 `fix/backup-rule-precedence` → `main`: il backup include le regole persistenti; ordine di applicazione delle regole deterministico, con avviso dei conflitti.
-  2. #68 `codex/ux-rules-reliability` → #67: editor di processi e regole, annulla ultima priorità, automazione in pausa senza overlay.
-  3. #69 `feat/ecoqos-efficiency-mode` → #68: modalità efficienza (EcoQoS) per i processi e nelle regole (issue #66), con tre stati: decide Windows / attiva / disattivata.
-  4. #70 `feat/ux-clarity` → #69: redesign completo:
-     - menu con etichette, pagina Processi a schede, Regole, Impostazioni e Ottimizzazioni in stile Windows 11, interruttori nativi;
-     - layout ricordato in `ui-state.json`: barra laterale, finestra, filtri, colonne;
-     - correzioni trovate in VM: contatore processi, barra stretta, scala 150%.
-- **Pre-release pubblica [v1.7.7-beta.1](https://github.com/PrimeBuild-pc/ThreadPilot/releases/tag/v1.7.7-beta.1)**: commit `20abf70`, installer e SHA256. La "latest" resta v1.7.6, quindi l'aggiornamento automatico non la propone. Non contiene l'ultimo commit di #70 (`1544587`: persistenza layout e interruttori); per EcoQoS non cambia nulla.
-- **In attesa**: risposta di chi ha aperto la #66 (SA-Mousavichashmi) con il test su CPU ibrida con E-core; gli è stato chiesto anche modello CPU e build di Windows.
-- Test: 791 passano. Build Debug e Release pulite.
+Fonte pubblica per funzionalità, limiti, test richiesti e dati da allegare alle issue: `docs/releases/v1.7.7-beta.2.md`. Queste note vengono usate dal workflow Release. v1.7.6 deve restare stable/latest; la beta non va pubblicata su winget o Chocolatey. I binari sono ancora unsigned.
 
-## Prossimi passi
+## Validazione hardware ancora necessaria
 
-1. **Se la #66 conferma che funziona:**
-   - merge #67 → #68 → #69 → #70, in ordine; dopo ogni merge ribasare la PR successiva su `main`;
-   - release 1.7.7: versione in `ThreadPilot.csproj` (oggi 1.7.6), CHANGELOG, `build/build-installer.ps1 -Version 1.7.7`.
-2. **Se non funziona:** correggere su `feat/ecoqos-efficiency-mode` e propagare con un merge verso `feat/ux-clarity`.
-3. Facoltativi:
-   - salvare anche la scheda aperta in Regole e i filtri di Attività;
-   - la lista processi ordinata per CPU si riordina sotto il cursore (problema che c'era già prima; oggi lo evita solo "Blocca l'elenco");
-   - le opzioni dell'editor di regole e l'elenco regole sono localizzati, ma i messaggi di errore di `ProcessOperationUserMessages` sono ancora solo in inglese;
-   - provare la persistenza della finestra con più monitor.
+- Game Boost su Ryzen dual-CCD X3D (7900X3D/7950X3D/9900X3D/9950X3D), incluso il parcheggio dei core del driver AMD.
+- AMD a CCD uguali (7950X/9950X): confronto Automatico/Isolamento.
+- Intel ibrida: P-core al gioco, E-core al background sulle topologie supportate; ripiego conservativo se il lato gioco ha meno di sei core fisici.
+- Benchmark ripetibili con/senza background e Above Normal, almeno tre passaggi per scenario; FPS medi, 1% low, P95/P99 dei frame time.
+- Giochi protetti/anti-cheat reali, stuttering, crash e regressioni.
 
-## Promemoria di lavoro
+QA precedente: Ryzen 7 5800X3D single-CCD e VM Windows 11 pulita; impostazioni, sessioni, priorità, rispetto delle modifiche manuali/regole e recupero dopo crash. Il test nativo CPU Sets usa vere chiamate Windows ma topologia dual-L3 simulata: non dimostra il comportamento su vero hardware multi-CCD. I test nativi Game Boost non esercitano lo split sui piccoli runner CI.
 
-- **Fine riga misti nel repo:** le `.cs` sono quasi tutte CRLF, le XAML e `Locales/*.xaml` LF, alcuni file misti. `sed -i` di Git Bash e la riscrittura completa dei file cambiano i fine riga: prima di ogni commit confrontare `git diff --numstat` con `--ignore-cr-at-eol`, e per i file misti reinserire le modifiche sul contenuto di HEAD.
-- **Traduzioni:** sette lingue in `Locales/*.xaml`, tutte con le stesse chiavi. Le chiavi mancanti nella XAML compaiono vuote nell'interfaccia.
-- **Test UI:** le view hanno test di "contratto" XAML (`*XamlBindingTests`, `SettingsViewModelThemeTests`, `SystemTweaksStartupAndStyleTests`), da aggiornare quando cambia il layout. I test scrivono `ui-state.json` in una cartella temporanea (`TestUiStateIsolation`).
-- **VM per test grafici:** `NeuroTune-W11`, procedura nella memoria `vm-gui-testing`. Fare sempre il checkpoint prima e il ripristino dopo; risoluzione 1080p e autologon solo durante il test.
-- **Shell elevata:** si può avviare l'app (`requireAdministrator`) e fare screenshot con PrintWindow e clic dalle UIAutomation bounds.
-- **Git e GitHub:** account `PrimeBuild-pc`. Niente attribuzioni a Claude in commit e PR.
+## Verifiche e pubblicazione
+
+- Test Release locali dopo la preparazione beta: 851 passati; audit dipendenze senza vulnerabilità segnalate; installer/portable generati e smoke test del single-file riuscito.
+- Causa della CI EcoQoS: Server 2022 build 20348 rifiuta GetProcessInformation(ProcessPowerThrottling) con errore 87 sia con query limitata sia completa. I job con test nativi e smoke usano ora Server 2025, coerente con il target Windows 11; il round-trip reale non viene saltato.
+- Per stato effettivo di merge/release/CI consultare GitHub, non dedurlo dalla presenza di questo file: `gh pr list`, `gh run list`, `gh release view v1.7.7-beta.2`.
+- Prima del tag verificare CI della combinazione finale e corrispondenza del codice con tutte le modifiche locali. Il tag deve puntare al commit integrato in main.
+- Dopo il tag verificare artifact installer/portable/SHA256, smoke test, flag prerelease=true e `/releases/latest` ancora su v1.7.6.
+- Pulire solo i branch della pila e Game Boost dopo l'integrazione; lasciare intatti worktree e branch di altri lavori.
+
+## Convenzioni
+
+- Fine riga misti: prima del commit confrontare `git diff --numstat` e `git diff --ignore-cr-at-eol --numstat`.
+- Sette lingue in `Locales/*.xaml`, con le stesse chiavi; layout coperto dai test di contratto XAML.
+- Per altri dettagli di sviluppo: `docs/IMPLEMENTATION_PLAN.md`, `docs/UX_REDESIGN_PLAN.md`, `docs/release/RELEASE_RUNBOOK.md`.
