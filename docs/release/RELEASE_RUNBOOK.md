@@ -42,7 +42,8 @@ Source-of-truth policy:
 - GitHub release tag and assets are the canonical release source.
 - Winget and Chocolatey metadata must reference an existing GitHub release tag and reachable asset URLs.
 - Changelog generation in CI must run with runner-native `git-cliff` binary (pinned version + checksum verification), not Docker-based changelog actions.
-- Tagged releases are public-release mode: missing winget publication secrets are a release blocker, not a silent skip.
+- Stable tagged releases are public-release mode: missing winget publication secrets are a release blocker, not a silent skip.
+- Pre-release tags (for example `v1.7.7-beta.2`) use matching project metadata and `docs/releases/<tag>.md` tester notes. The workflow marks them as pre-release, leaves latest unchanged, and skips winget manifests/publication. Chocolatey remains manual and must not be published for this beta.
 - `workflow_dispatch` may be run with `dry_run_publish=true` to validate build, assets, summaries, and winget flow without external publication.
 - Chocolatey publish is manual only through the `Publish Chocolatey` workflow, after prior ThreadPilot versions clear Chocolatey moderation.
 - Every publish channel that runs must leave evidence behind via `GITHUB_STEP_SUMMARY` plus uploaded log artifacts.
