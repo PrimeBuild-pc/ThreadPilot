@@ -33,7 +33,6 @@ namespace ThreadPilot.Services
         private readonly IProcessService processService;
         private readonly IProcessMemoryPriorityService memoryPriorityService;
         private readonly ProcessPowerRequestService? powerRequestService;
-        private readonly ProcessPolicyApplyGate? applyGate;
         private readonly ILogger<PersistentRulesEngine> logger;
 
         public PersistentRulesEngine(
@@ -43,8 +42,7 @@ namespace ThreadPilot.Services
             IProcessService processService,
             IProcessMemoryPriorityService memoryPriorityService,
             ILogger<PersistentRulesEngine> logger,
-            ProcessPowerRequestService? powerRequestService = null,
-            ProcessPolicyApplyGate? applyGate = null)
+            ProcessPowerRequestService? powerRequestService = null)
         {
             this.ruleStore = ruleStore ?? throw new ArgumentNullException(nameof(ruleStore));
             this.matcher = matcher ?? throw new ArgumentNullException(nameof(matcher));
@@ -53,7 +51,6 @@ namespace ThreadPilot.Services
             this.memoryPriorityService = memoryPriorityService ?? throw new ArgumentNullException(nameof(memoryPriorityService));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.powerRequestService = powerRequestService;
-            this.applyGate = applyGate;
         }
 
         public async Task<IReadOnlyList<PersistentRuleApplyResult>> ApplyMatchingRulesAsync(
@@ -66,7 +63,6 @@ namespace ThreadPilot.Services
             var rules = await this.ruleStore.LoadAsync().ConfigureAwait(false);
             var results = new List<PersistentRuleApplyResult>();
 
-            using var gate = this.applyGate == null ? null : await this.applyGate.EnterAsync(cancellationToken).ConfigureAwait(false);
             foreach (var rule in PersistentRuleResolution.MatchInApplyOrder(rules, process, this.matcher)
                 .Where(rule => ruleFilter == null || ruleFilter(rule)))
             {

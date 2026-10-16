@@ -91,7 +91,6 @@ namespace ThreadPilot.Services
             var coreIndexes = new Dictionary<ProcessorRef, int>();
             var numaNodeIndexes = new Dictionary<ProcessorRef, int>();
             var lastLevelCacheIndexes = new Dictionary<ProcessorRef, int>();
-            var lastLevelCacheSizes = new Dictionary<int, ulong>();
             var packageIndexes = new Dictionary<ProcessorRef, int>();
             var smtSiblingGlobalIndexes = new Dictionary<ProcessorRef, IReadOnlyList<int>>();
             var reservedLogicalProcessorIndexes = new HashSet<int>();
@@ -112,7 +111,6 @@ namespace ThreadPilot.Services
                 coreIndexes,
                 numaNodeIndexes,
                 lastLevelCacheIndexes,
-                lastLevelCacheSizes,
                 packageIndexes,
                 smtSiblingGlobalIndexes,
                 cancellationToken);
@@ -161,8 +159,7 @@ namespace ThreadPilot.Services
                 lastLevelCacheIndexes,
                 packageIndexes,
                 smtSiblingGlobalIndexes,
-                reservedLogicalProcessorIndexes,
-                lastLevelCacheSizes);
+                reservedLogicalProcessorIndexes);
         }
 
         private void ReadCpuSetInformation(
@@ -239,7 +236,6 @@ namespace ThreadPilot.Services
             IDictionary<ProcessorRef, int> coreIndexes,
             IDictionary<ProcessorRef, int> numaNodeIndexes,
             IDictionary<ProcessorRef, int> lastLevelCacheIndexes,
-            IDictionary<int, ulong> lastLevelCacheSizes,
             IDictionary<ProcessorRef, int> packageIndexes,
             IDictionary<ProcessorRef, IReadOnlyList<int>> smtSiblingGlobalIndexes,
             CancellationToken cancellationToken)
@@ -300,9 +296,8 @@ namespace ThreadPilot.Services
                                 packageIndexes);
                             break;
                         case LogicalProcessorRelationship.RelationCache:
-                            if (TryReadL3CacheProcessors(itemPtr, out var cacheProcessors, out var cacheSizeBytes))
+                            if (TryReadL3CacheProcessors(itemPtr, out var cacheProcessors))
                             {
-                                lastLevelCacheSizes[lastLevelCacheIndex] = cacheSizeBytes;
                                 foreach (var processor in cacheProcessors)
                                 {
                                     logicalProcessors.Add(processor);
@@ -370,9 +365,9 @@ namespace ThreadPilot.Services
             }
         }
 
-        private static bool TryReadL3CacheProcessors(IntPtr itemPtr, out IReadOnlyList<ProcessorRef> processors, out uint cacheSizeBytes)
+        private static bool TryReadL3CacheProcessors(IntPtr itemPtr, out IReadOnlyList<ProcessorRef> processors)
         {
-            return WindowsCpuTopologyNativeLayout.TryReadL3CacheProcessors(IntPtr.Add(itemPtr, 8), out processors, out cacheSizeBytes);
+            return WindowsCpuTopologyNativeLayout.TryReadL3CacheProcessors(IntPtr.Add(itemPtr, 8), out processors);
         }
 
         private void ReadNumaNodeRelationship(

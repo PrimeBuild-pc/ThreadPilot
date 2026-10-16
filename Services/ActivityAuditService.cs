@@ -121,7 +121,6 @@ namespace ThreadPilot.Services
         public const string Settings = "Settings";
         public const string Tweaks = "Tweaks";
         public const string Optimization = "Optimization";
-        public const string GameBoost = "Game Boost";
         public const string Diagnostics = "Diagnostics";
         public const string Safety = "Safety";
     }
@@ -184,11 +183,6 @@ namespace ThreadPilot.Services
                 action.Contains("RegistryPriority", StringComparison.OrdinalIgnoreCase))
             {
                 return ActivityAuditCategories.Tweaks;
-            }
-
-            if (action.StartsWith("GameBoost", StringComparison.OrdinalIgnoreCase))
-            {
-                return ActivityAuditCategories.GameBoost;
             }
 
             if (action.StartsWith("Optimization", StringComparison.OrdinalIgnoreCase))

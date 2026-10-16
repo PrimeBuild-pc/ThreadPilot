@@ -2,16 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
-## v1.7.7-beta.2 - Game Boost hardware-test pre-release
+## v1.7.7 - Stable efficiency mode, rules reliability and UI refresh
 
-- Opt-in Game Boost: topology-aware game/background CPU Sets, optional priority, safe restoration, crash recovery and Activity diagnostics.
-- Correct Intel P/E classification and derive AMD CCD groups from real L3 topology, including 6+6 CPUs.
-- Three-state EcoQoS for live processes and persistent rules, independent of CPU priority.
-- Persistent-rule backups, validated/transactional imports, deterministic precedence and conflict reporting.
-- Refreshed navigation, process/rule editors, Windows 11 settings rows, layout persistence and scaling fixes.
-- CI and release native tests run on Windows Server 2025: Server 2022 build 20348 rejects EcoQoS read-back with Win32 error 87, even with full query access. The real integration test remains enabled.
-- Pre-release publication keeps the stable/latest release and package-manager channels unchanged.
-- Real Game Boost validation on dual-CCD Ryzen/X3D and Intel hybrid CPUs, gaming benchmarks and anti-cheat testing remain pending. See [test procedure and reporting checklist](releases/v1.7.7-beta.2.md).
+- Three-state EcoQoS for running processes and saved rules, independent of CPU priority; hardware-verified in issue #66.
+- Persistent-rule backups, validated imports with rollback, deterministic rule precedence and conflict reporting.
+- Clearer process/rule editors, priority undo, non-blocking automation pause, Windows 11 settings rows and remembered layout.
+- Updated localization and narrow-window/scaling fixes.
+- CI/release native tests run on Server 2025; Server 2022 build 20348 rejects EcoQoS read-back with error 87.
+- **No experimental Game Boost or its additional topology changes in this stable release.** Those are reserved for v1.7.8-beta.1.
+- [Full release notes](releases/v1.7.7.md).
 
 ## v1.7.6 - Localized power plans and version-proof process rules
 

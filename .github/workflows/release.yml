@@ -402,7 +402,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ "${{ needs.build.outputs.prerelease }}" = "true" ]; then
+          if [ -f "docs/releases/${{ needs.build.outputs.tag }}.md" ]; then
             cp "docs/releases/${{ needs.build.outputs.tag }}.md" release-notes.md
           else
             git-cliff --config cliff.toml --latest > release-notes.md

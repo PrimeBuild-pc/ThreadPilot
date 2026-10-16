@@ -14,7 +14,6 @@ namespace ThreadPilot.Services
     public class CpuTopologyService : ICpuTopologyService
     {
         private readonly ILogger<CpuTopologyService> logger;
-        private readonly ICpuTopologyProvider? topologyProvider;
         private readonly SemaphoreSlim detectSemaphore = new(1, 1);
         private CpuTopologyModel? currentTopology;
         private DateTime topologyCachedAtUtc = DateTime.MinValue;
@@ -73,10 +72,9 @@ namespace ThreadPilot.Services
             IntPtr buffer,
             ref int returnedLength);
 
-        public CpuTopologyService(ILogger<CpuTopologyService> logger, ICpuTopologyProvider? topologyProvider = null)
+        public CpuTopologyService(ILogger<CpuTopologyService> logger)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            this.topologyProvider = topologyProvider;
         }
 
         public async Task<CpuTopologyModel> DetectTopologyAsync()
@@ -292,7 +290,7 @@ namespace ThreadPilot.Services
                     }
 
                     this.ApplyHyperThreadingFromPhysicalMapping(topology);
-                    ApplyCoreTypeFromEfficiencyClass(topology, discovered);
+                    this.ApplyCoreTypeFromEfficiencyClass(topology, discovered);
 
                     this.logger.LogInformation(
                         "Detected CPU topology via GetLogicalProcessorInformationEx: {LogicalCpuCount} logical CPUs, {PhysicalCpuCount} physical CPUs",
@@ -347,13 +345,13 @@ namespace ThreadPilot.Services
             }
         }
 
-        internal static void ApplyCoreTypeFromEfficiencyClass(
+        private void ApplyCoreTypeFromEfficiencyClass(
             CpuTopologyModel topology,
             List<(int PhysicalCpuId, int LogicalCpuId, byte EfficiencyClass)> discovered)
         {
             var byPhysical = discovered
                 .GroupBy(d => d.PhysicalCpuId)
-                .Select(g => new { PhysicalCpuId = g.Key, EfficiencyClass = g.Max(x => x.EfficiencyClass) })
+                .Select(g => new { PhysicalCpuId = g.Key, EfficiencyClass = g.Min(x => x.EfficiencyClass) })
                 .ToList();
 
             var classes = byPhysical
@@ -367,8 +365,7 @@ namespace ThreadPilot.Services
                 return;
             }
 
-            // A higher EfficiencyClass is the more performant core (PROCESSOR_RELATIONSHIP docs).
-            byte performanceClass = classes.Max();
+            byte performanceClass = classes.Min();
             foreach (var logicalCpu in topology.LogicalCores)
             {
                 byte classValue = byPhysical.First(x => x.PhysicalCpuId == logicalCpu.PhysicalCoreId).EfficiencyClass;
@@ -528,12 +525,6 @@ namespace ThreadPilot.Services
             {
                 if (topology.CpuBrand.Contains("AMD", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (await this.TryAssignCcdsFromL3GroupsAsync(topology))
-                    {
-                        return;
-                    }
-
-                    // Fallback estimate, display only: Game Boost never uses it (it reads CpuTopologySnapshot).
                     // AMD CCD detection - improved heuristic
                     // Only assign CCD if we actually have multiple CCDs
                     var totalPhysicalCores = topology.TotalPhysicalCores;
@@ -569,48 +560,6 @@ namespace ThreadPilot.Services
             {
                 this.logger.LogWarning(ex, "Failed to detect AMD CCD topology");
             }
-        }
-
-        // Each Zen CCD (CCX on Zen 2) has its own L3, so the real L3 groups replace the 8-cores-per-CCD guess,
-        // which split 6+6 parts such as the 7900X3D into 8+4.
-        internal async Task<bool> TryAssignCcdsFromL3GroupsAsync(CpuTopologyModel topology)
-        {
-            if (this.topologyProvider == null)
-            {
-                return false;
-            }
-
-            var snapshot = await this.topologyProvider.GetTopologySnapshotAsync();
-            var l3ByLogicalCore = new Dictionary<int, int>();
-            foreach (var processor in snapshot.LogicalProcessors)
-            {
-                if (snapshot.TryGetLastLevelCacheIndex(processor, out var l3Index))
-                {
-                    l3ByLogicalCore[processor.GlobalIndex] = l3Index;
-                }
-            }
-
-            if (topology.LogicalCores.Count == 0 || topology.LogicalCores.Any(core => !l3ByLogicalCore.ContainsKey(core.LogicalCoreId)))
-            {
-                return false;
-            }
-
-            // Number the groups by their lowest CPU, so CCD 0 is always the one holding CPU 0.
-            var ccdByL3 = topology.LogicalCores
-                .GroupBy(core => l3ByLogicalCore[core.LogicalCoreId])
-                .OrderBy(group => group.Min(core => core.LogicalCoreId))
-                .Select((group, ccdId) => (group.Key, ccdId))
-                .ToDictionary(item => item.Key, item => item.ccdId);
-            var hasMultipleL3Groups = ccdByL3.Count > 1;
-
-            foreach (var core in topology.LogicalCores)
-            {
-                core.CcdId = hasMultipleL3Groups ? ccdByL3[l3ByLogicalCore[core.LogicalCoreId]] : null;
-                core.CoreType = CpuCoreType.Zen3; // Default assumption, as in the estimate below
-            }
-
-            this.logger.LogInformation("Detected AMD L3 groups from Windows topology: {L3GroupCount}", ccdByL3.Count);
-            return true;
         }
 
         private void DetectHyperThreading(CpuTopologyModel topology)

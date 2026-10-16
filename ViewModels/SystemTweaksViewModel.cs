@@ -31,16 +31,12 @@ namespace ThreadPilot.ViewModels
             ILocalizationService localizationService,
             ILogger<SystemTweaksViewModel> logger,
             IEnhancedLoggingService? enhancedLoggingService = null,
-            IActivityAuditService? activityAuditService = null,
-            IApplicationSettingsService? settingsService = null,
-            IGameSessionService? gameSessionService = null)
+            IActivityAuditService? activityAuditService = null)
             : base(logger, enhancedLoggingService, activityAuditService)
         {
             this.systemTweaksService = systemTweaksService;
             this.notificationService = notificationService;
             this.localizationService = localizationService;
-            this.settingsService = settingsService;
-            this.gameSessionService = gameSessionService;
 
             this.systemTweaksService.TweakStatusChanged += this.OnTweakStatusChanged;
             this.localizationService.LanguageChanged += this.OnLanguageChanged;
@@ -64,7 +60,6 @@ namespace ThreadPilot.ViewModels
         [RelayCommand]
         public async Task LoadAsync()
         {
-            await this.LoadGameBoostAsync();
             await this.RefreshAllTweaksAsync();
         }
 
@@ -319,11 +314,7 @@ namespace ThreadPilot.ViewModels
             ? this.Localize("SystemTweaks_StatusNotAvailable", "Not available")
             : this.Localize(status.IsEnabled ? "SystemTweaks_StatusEnabled" : "SystemTweaks_StatusDisabled", status.IsEnabled ? "Enabled" : "Disabled");
 
-        private void OnLanguageChanged(object? sender, string language)
-        {
-            this.ApplyLocalizedTweakText();
-            TaskSafety.FireAndForget(this.RefreshGameBoostDecisionTextAsync(), ex => this.Logger.LogDebug(ex, "Game Boost text refresh failed"));
-        }
+        private void OnLanguageChanged(object? sender, string language) => this.ApplyLocalizedTweakText();
 
         private void OnTweakStatusChanged(object? sender, TweakStatusChangedEventArgs e)
         {

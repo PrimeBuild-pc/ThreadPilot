@@ -504,16 +504,6 @@ namespace ThreadPilot
             await this.InitializeMonitoringAsync();
             this.LogDebug("Monitoring initialized successfully");
 
-            // Game Boost has its own switch, independent of automation monitoring; starting also undoes a crashed run.
-            try
-            {
-                await this.serviceProvider.GetRequiredService<IGameSessionService>().StartAsync();
-            }
-            catch (Exception ex)
-            {
-                this.LogDebug($"Game Boost startup failed: {ex.Message}");
-            }
-
             if (this.skipProcessMonitoringDuringStartup || !this.settingsService.Settings.EnableAutomationMonitoring)
             {
                 this.LogDebug(this.skipProcessMonitoringDuringStartup
@@ -746,16 +736,7 @@ namespace ThreadPilot
                 this.LogDebug("Starting graceful shutdown...");
                 this.selfResourceManagementService.RestoreForegroundMode();
 
-                // 1. Stop monitoring services; Game Boost first restores what it changed
-                try
-                {
-                    await this.serviceProvider.GetRequiredService<IGameSessionService>().StopAsync();
-                }
-                catch (Exception ex)
-                {
-                    this.LogDebug($"Error stopping Game Boost: {ex.Message}");
-                }
-
+                // 1. Stop monitoring services
                 try
                 {
                     this.LogDebug("Stopping process monitoring manager...");

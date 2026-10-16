@@ -78,7 +78,6 @@ namespace ThreadPilot.ViewModels
             "Settings",
             "Tweaks",
             "Optimization",
-            "Game Boost",
             "Diagnostics",
             "Safety",
         };

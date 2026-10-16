@@ -43,7 +43,8 @@ Source-of-truth policy:
 - Winget and Chocolatey metadata must reference an existing GitHub release tag and reachable asset URLs.
 - Changelog generation in CI must run with runner-native `git-cliff` binary (pinned version + checksum verification), not Docker-based changelog actions.
 - Stable tagged releases are public-release mode: missing winget publication secrets are a release blocker, not a silent skip.
-- Pre-release tags (for example `v1.7.7-beta.2`) use matching project metadata and `docs/releases/<tag>.md` tester notes. The workflow marks them as pre-release, leaves latest unchanged, and skips winget manifests/publication. Chocolatey remains manual and must not be published for this beta.
+- Pre-release tags use matching project metadata, are marked prerelease, leave latest unchanged and skip winget manifests/publication. Do not manually publish the Game Boost beta to Chocolatey.
+- Version-specific notes in `docs/releases/<tag>.md` take precedence over generated notes for both channels. v1.7.7 is stable without Game Boost; v1.7.8-beta.1 contains the experimental Game Boost implementation.
 - `workflow_dispatch` may be run with `dry_run_publish=true` to validate build, assets, summaries, and winget flow without external publication.
 - Chocolatey publish is manual only through the `Publish Chocolatey` workflow, after prior ThreadPilot versions clear Chocolatey moderation.
 - Every publish channel that runs must leave evidence behind via `GITHUB_STEP_SUMMARY` plus uploaded log artifacts.
