@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.7.7-beta.2 - Game Boost hardware-test pre-release
+
+- Opt-in Game Boost: topology-aware game/background CPU Sets, optional priority, safe restoration, crash recovery and Activity diagnostics.
+- Correct Intel P/E classification and derive AMD CCD groups from real L3 topology, including 6+6 CPUs.
+- Three-state EcoQoS for live processes and persistent rules, independent of CPU priority.
+- Persistent-rule backups, validated/transactional imports, deterministic precedence and conflict reporting.
+- Refreshed navigation, process/rule editors, Windows 11 settings rows, layout persistence and scaling fixes.
+- Pre-release publication keeps the stable/latest release and package-manager channels unchanged.
+- Real Game Boost validation on dual-CCD Ryzen/X3D and Intel hybrid CPUs, gaming benchmarks and anti-cheat testing remain pending. See [test procedure and reporting checklist](releases/v1.7.7-beta.2.md).
+
 ## v1.7.6 - Localized power plans and version-proof process rules
 
 ### Fixed
