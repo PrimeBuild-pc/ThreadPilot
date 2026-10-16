@@ -16,7 +16,8 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-2022
+    # Match the Windows 11-era APIs exercised by the native integration tests.
+    runs-on: windows-2025
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
@@ -285,7 +286,7 @@ jobs:
           if-no-files-found: error
 
   smoke-test:
-    runs-on: windows-2022
+    runs-on: windows-2025
     needs: build
 
     steps:

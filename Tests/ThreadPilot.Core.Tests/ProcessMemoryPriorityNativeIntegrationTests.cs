@@ -24,22 +24,7 @@ namespace ThreadPilot.Core.Tests
                 foreach (var mode in new[] { ThreadPilot.Models.ProcessEfficiencyMode.On, ThreadPilot.Models.ProcessEfficiencyMode.Off })
                 {
                     Assert.True((await service.SetEfficiencyModeAsync(self, mode)).Success);
-                    var observed = await service.GetEfficiencyModeAsync(self);
-                    if (observed == null)
-                    {
-                        var api = ProcessMemoryPriorityNativeApi.Instance;
-                        using var limited = api.OpenProcess(ProcessAccessFlags.PROCESS_QUERY_LIMITED_INFORMATION, false, (uint)Environment.ProcessId);
-                        var state = new PowerThrottlingState { Version = PowerThrottlingState.CurrentVersion };
-                        var limitedResult = api.GetPowerThrottling(limited, ref state);
-                        var limitedError = api.GetLastWin32Error();
-                        using var full = api.OpenProcess((ProcessAccessFlags)0x0400, false, (uint)Environment.ProcessId);
-                        state = new PowerThrottlingState { Version = PowerThrottlingState.CurrentVersion };
-                        var fullResult = api.GetPowerThrottling(full, ref state);
-                        var fullError = api.GetLastWin32Error();
-                        Assert.Fail($"OS {Environment.OSVersion}: limited query={limitedResult}, error={limitedError}; full query={fullResult}, error={fullError}, control={state.ControlMask}, state={state.StateMask}");
-                    }
-
-                    Assert.Equal(mode, observed);
+                    Assert.Equal(mode, await service.GetEfficiencyModeAsync(self));
                 }
             }
             finally

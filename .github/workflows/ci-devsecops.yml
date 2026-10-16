@@ -12,7 +12,8 @@ permissions:
 
 jobs:
   build-test-scan:
-    runs-on: windows-2022
+    # Native EcoQoS read-back needs the Windows 11-era kernel (build 22000+).
+    runs-on: windows-2025
 
     steps:
       - name: Checkout
