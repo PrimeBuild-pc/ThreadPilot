@@ -9,5 +9,6 @@ namespace ThreadPilot.Services
         ProcessProfileLoad,
         ManualUiAction,
         CleanupOrRestore,
+        GameBoost,
     }
 }

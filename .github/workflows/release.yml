@@ -21,6 +21,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
 
     steps:
       - name: Checkout
@@ -38,7 +39,7 @@ jobs:
         shell: pwsh
         run: |
           $refName = "${{ github.ref_name }}"
-          if ($refName -match '^v\d+\.\d+\.\d+$') {
+          if ($refName -match '^v\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') {
             $version = $refName.TrimStart('v')
             $tag = $refName
           }
@@ -52,6 +53,8 @@ jobs:
             $tag = "v$version"
           }
 
+          $prerelease = $version.Contains('-').ToString().ToLowerInvariant()
+          "prerelease=$prerelease" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
@@ -205,6 +208,7 @@ jobs:
           }
 
       - name: Generate winget manifests
+        if: steps.version.outputs.prerelease != 'true'
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -273,6 +277,7 @@ jobs:
           path: artifacts/release/SHA256SUMS.txt
 
       - name: Upload winget manifests
+        if: steps.version.outputs.prerelease != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: winget-manifests
@@ -342,6 +347,7 @@ jobs:
           path: release-assets
 
       - name: Download winget manifests
+        if: needs.build.outputs.prerelease != 'true'
         uses: actions/download-artifact@v4
         with:
           name: winget-manifests
@@ -361,7 +367,9 @@ jobs:
           compgen -G "release-assets/installer/*.exe" > /dev/null || { echo "Missing installer executable in release-assets/installer"; exit 1; }
           compgen -G "release-assets/packages/*.zip" > /dev/null || { echo "Missing release package zip in release-assets/packages"; exit 1; }
           test -f "release-assets/SHA256SUMS.txt" || { echo "Missing release checksums file"; exit 1; }
-          find "winget-manifests" -type f -name "*.yaml" | grep -q . || { echo "Missing winget manifest yaml files"; exit 1; }
+          if [ "${{ needs.build.outputs.prerelease }}" != "true" ]; then
+            find "winget-manifests" -type f -name "*.yaml" | grep -q . || { echo "Missing winget manifest yaml files"; exit 1; }
+          fi
           test -f "sbom/manifest.spdx.json" || { echo "Missing SBOM manifest"; exit 1; }
 
       - name: Stage public GitHub release assets
@@ -394,7 +402,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git-cliff --config cliff.toml --latest > release-notes.md
+          if [ "${{ needs.build.outputs.prerelease }}" = "true" ]; then
+            cp "docs/releases/${{ needs.build.outputs.tag }}.md" release-notes.md
+          else
+            git-cliff --config cliff.toml --latest > release-notes.md
+          fi
 
           {
             echo "content<<EOF"
@@ -421,6 +433,8 @@ jobs:
             public-release-assets/ThreadPilot_${{ needs.build.outputs.tag }}_Setup.exe
             public-release-assets/ThreadPilot_${{ needs.build.outputs.tag }}_Portable.zip
             public-release-assets/SHA256SUMS.txt
+          prerelease: ${{ needs.build.outputs.prerelease == 'true' }}
+          make_latest: ${{ needs.build.outputs.prerelease == 'true' && 'false' || 'true' }}
           generate_release_notes: true
 
   publish-winget:
@@ -428,7 +442,7 @@ jobs:
     needs:
       - build
       - release
-    if: needs.release.result == 'success'
+    if: needs.release.result == 'success' && needs.build.outputs.prerelease != 'true'
 
     steps:
       - name: Resolve winget publish policy

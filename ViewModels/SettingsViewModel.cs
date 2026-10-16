@@ -908,6 +908,5 @@ namespace ThreadPilot.ViewModels
             this.savedSettingsSnapshot = (ApplicationSettingsModel)settingsSnapshot.Clone();
             this.HasUnsavedChanges = false;
         }
-
     }
 }
