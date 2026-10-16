@@ -32,7 +32,7 @@ namespace ThreadPilot.Core.Tests
                         var state = new PowerThrottlingState { Version = PowerThrottlingState.CurrentVersion };
                         var limitedResult = api.GetPowerThrottling(limited, ref state);
                         var limitedError = api.GetLastWin32Error();
-                        using var full = api.OpenProcess(ProcessAccessFlags.PROCESS_QUERY_INFORMATION, false, (uint)Environment.ProcessId);
+                        using var full = api.OpenProcess((ProcessAccessFlags)0x0400, false, (uint)Environment.ProcessId);
                         state = new PowerThrottlingState { Version = PowerThrottlingState.CurrentVersion };
                         var fullResult = api.GetPowerThrottling(full, ref state);
                         var fullError = api.GetLastWin32Error();
