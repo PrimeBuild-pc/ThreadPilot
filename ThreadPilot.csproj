@@ -16,10 +16,10 @@
     <TrimMode>link</TrimMode>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>CS1998;CS0067;CS0414;WFAC010;IL3000;MVVMTK0034</NoWarn>
-    <Version>1.7.7</Version>
-    <AssemblyVersion>1.7.7.0</AssemblyVersion>
-    <FileVersion>1.7.7.0</FileVersion>
-    <InformationalVersion>1.7.7</InformationalVersion>
+    <Version>1.7.8-beta.1</Version>
+    <AssemblyVersion>1.7.8.0</AssemblyVersion>
+    <FileVersion>1.7.8.0</FileVersion>
+    <InformationalVersion>1.7.8-beta.1</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>

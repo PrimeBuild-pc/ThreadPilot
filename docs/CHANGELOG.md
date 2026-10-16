@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.7.8-beta.1 - Experimental Game Boost preview
+
+- Includes stable v1.7.7 plus all local Game Boost work: game/background CPU Sets, optional priority, rule precedence, restoration, crash journal and Activity diagnostics.
+- Correct Intel P/E classification and use real AMD L3/CCD groups, including 6+6 layouts; full-path background entries now match.
+- Real dual-CCD Ryzen/X3D and supported Intel hybrid validation, gaming benchmarks and protected-game/anti-cheat tests remain pending. No FPS improvement is claimed.
+- Pre-release only: v1.7.7 remains stable/latest; no beta publication to winget/Chocolatey.
+- [Test procedure, limits and issue-reporting checklist](releases/v1.7.8-beta.1.md).
+
 ## v1.7.7 - Stable efficiency mode, rules reliability and UI refresh
 
 - Three-state EcoQoS for running processes and saved rules, independent of CPU priority; hardware-verified in issue #66.

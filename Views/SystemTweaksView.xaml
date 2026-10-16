@@ -132,7 +132,105 @@
         <ScrollViewer Grid.Row="1"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
-            <ItemsControl ItemsSource="{Binding TweakItems}" MaxWidth="980" HorizontalAlignment="Stretch" Margin="0,0,12,12">
+            <StackPanel MaxWidth="980" HorizontalAlignment="Stretch" Margin="0,0,12,12">
+            <!-- Game Boost: CPU Sets for the game and selected background apps while a game runs; off restores at once. -->
+            <Border Background="{DynamicResource CardSurfaceBrush}"
+                    BorderBrush="{DynamicResource BorderSubtleBrush}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="16,12"
+                    Margin="0,0,0,12"
+                    Visibility="{Binding IsGameBoostAvailable, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource GameBoost_Title}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="{DynamicResource GameBoost_Description}"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,2,0,0"/>
+                            <TextBlock Text="{Binding GameBoostDecisionText}"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,6,0,0"/>
+                        </StackPanel>
+                        <ToggleButton Grid.Column="1"
+                                      Style="{StaticResource Win11ToggleSwitchStyle}"
+                                      IsChecked="{Binding GameBoostEnabled, Mode=TwoWay}"
+                                      VerticalAlignment="Center"
+                                      Margin="10,0,0,0"
+                                      AutomationProperties.Name="{DynamicResource GameBoost_Title}"/>
+                    </Grid>
+
+                    <StackPanel Margin="0,12,0,0" IsEnabled="{Binding GameBoostEnabled}">
+                        <TextBlock Text="{DynamicResource GameBoost_Mode}" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <RadioButton GroupName="GameBoostMode"
+                                         Content="{DynamicResource GameBoost_Mode_Automatic}"
+                                         IsChecked="{Binding GameBoostAutomatic, Mode=TwoWay}"
+                                         Margin="0,0,16,0"/>
+                            <RadioButton GroupName="GameBoostMode"
+                                         Content="{DynamicResource GameBoost_Mode_Isolation}"
+                                         IsChecked="{Binding GameBoostIsolation, Mode=TwoWay}"/>
+                        </StackPanel>
+                        <TextBlock Text="{DynamicResource GameBoost_Mode_Description}"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,2,0,0"/>
+
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{DynamicResource GameBoost_AboveNormal_Name}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{DynamicResource GameBoost_AboveNormal_Description}"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <ToggleButton Grid.Column="1"
+                                          Style="{StaticResource Win11ToggleSwitchStyle}"
+                                          IsChecked="{Binding GameBoostAboveNormal, Mode=TwoWay}"
+                                          VerticalAlignment="Center"
+                                          Margin="10,0,0,0"
+                                          AutomationProperties.Name="{DynamicResource GameBoost_AboveNormal_Name}"/>
+                        </Grid>
+
+                        <Expander Header="{DynamicResource GameBoost_Lists}" Margin="0,12,0,0">
+                            <StackPanel Margin="0,8,0,0">
+                                <TextBlock Text="{DynamicResource GameBoost_ManualGames}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                                <TextBox Text="{Binding GameBoostManualGamesText, UpdateSourceTrigger=PropertyChanged}"
+                                         AcceptsReturn="True" TextWrapping="NoWrap" Height="72" VerticalScrollBarVisibility="Auto" Margin="0,4,0,8"
+                                         AutomationProperties.Name="{DynamicResource GameBoost_ManualGames}"/>
+                                <TextBlock Text="{DynamicResource GameBoost_ExcludedGames}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                                <TextBox Text="{Binding GameBoostExcludedGamesText, UpdateSourceTrigger=PropertyChanged}"
+                                         AcceptsReturn="True" TextWrapping="NoWrap" Height="72" VerticalScrollBarVisibility="Auto" Margin="0,4,0,8"
+                                         AutomationProperties.Name="{DynamicResource GameBoost_ExcludedGames}"/>
+                                <TextBlock Text="{DynamicResource GameBoost_Background}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                                <TextBox Text="{Binding GameBoostBackgroundText, UpdateSourceTrigger=PropertyChanged}"
+                                         AcceptsReturn="True" TextWrapping="NoWrap" Height="96" VerticalScrollBarVisibility="Auto" Margin="0,4,0,8"
+                                         AutomationProperties.Name="{DynamicResource GameBoost_Background}"/>
+                                <Button Content="{DynamicResource GameBoost_SaveLists}"
+                                        Command="{Binding SaveGameBoostListsCommand}"
+                                        HorizontalAlignment="Left"
+                                        Padding="10,4"/>
+                            </StackPanel>
+                        </Expander>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <ItemsControl ItemsSource="{Binding TweakItems}" HorizontalAlignment="Stretch">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Border Background="{DynamicResource CardSurfaceBrush}"
@@ -224,6 +322,7 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+            </StackPanel>
         </ScrollViewer>
     </Grid>
 </UserControl>

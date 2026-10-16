@@ -5,7 +5,7 @@
 - **v1.7.7 stable:** EcoQoS, affidabilità regole/backup e redesign UI. Nessun Game Boost né correzioni aggiuntive della topologia introdotte con quel lavoro. Note: `docs/releases/v1.7.7.md`.
 - **v1.7.8-beta.1:** tutto il codice locale Game Boost, comprese le modifiche Attività del 15 ottobre, più le correzioni Intel P/E e gruppi L3/CCD AMD. Deve restare pre-release, senza sostituire la stable/latest o pubblicare su winget/Chocolatey.
 
-La versione combinata preparata prima della separazione è conservata nel commit `ef2ec24` e nel branch locale `feat/game-boost`. Non era stata pubblicata come v1.7.7-beta.2. La pila #68–#71 è stata integrata nella #67; quest'ultima viene separata per consegnare prima la stable senza Game Boost. Il proprietario ha autorizzato il merge amministratore come PrimeBuild-pc dopo CI/CodeQL verdi.
+La versione combinata preparata prima della separazione è conservata nel commit `ef2ec24`. Non era stata pubblicata come v1.7.7-beta.2. La #67 consegna la stable senza Game Boost; la beta ripristina esattamente il codice runtime Game Boost di `6c36ea6` sopra la stable, con metadati separati. Note pubbliche e istruzioni tester: `docs/releases/v1.7.8-beta.1.md`. Il proprietario ha autorizzato il merge amministratore come PrimeBuild-pc dopo CI/CodeQL verdi.
 
 ## CI e validazione
 

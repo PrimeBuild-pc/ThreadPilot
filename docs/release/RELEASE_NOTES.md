@@ -1,3 +1,9 @@
+## ThreadPilot v1.7.8-beta.1
+
+Pre-release with the complete local Game Boost implementation, Activity diagnostics and CPU topology fixes, on top of stable v1.7.7. Real dual-CCD Ryzen/X3D, Intel hybrid, benchmark and anti-cheat validation remain pending.
+
+[Quick test and issue-reporting checklist](../releases/v1.7.8-beta.1.md). v1.7.7 remains stable/latest. No winget/Chocolatey beta publication; artifacts unsigned.
+
 ## ThreadPilot v1.7.7
 
 Stable release: three-state EcoQoS, reliable persistent-rule backup/import and precedence, complete UI refresh and remembered layout. **Experimental Game Boost is not included**; it is reserved for v1.7.8-beta.1.
