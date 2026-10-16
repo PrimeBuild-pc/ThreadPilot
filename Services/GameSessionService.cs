@@ -107,6 +107,7 @@ namespace ThreadPilot.Services
         private readonly ProcessPolicyApplyGate applyGate;
         private readonly IGameBoostProcessProbe processProbe;
         private readonly ILogger<GameSessionService> logger;
+        private readonly IActivityAuditService? activityAuditService;
         private readonly string journalPath;
         private readonly SemaphoreSlim stateLock = new(1, 1);
         private readonly HashSet<(int ProcessId, long StartTimeUtcTicks)> attempted = new();
@@ -132,7 +133,8 @@ namespace ThreadPilot.Services
             ProcessPolicyApplyGate applyGate,
             IGameBoostProcessProbe processProbe,
             ILogger<GameSessionService> logger,
-            string? journalPath = null)
+            string? journalPath = null,
+            IActivityAuditService? activityAuditService = null)
         {
             this.settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
             this.topologyProvider = topologyProvider ?? throw new ArgumentNullException(nameof(topologyProvider));
@@ -147,6 +149,7 @@ namespace ThreadPilot.Services
             this.processProbe = processProbe ?? throw new ArgumentNullException(nameof(processProbe));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.journalPath = journalPath ?? Path.Combine(StoragePaths.AppDataRoot, "game_boost_journal.json");
+            this.activityAuditService = activityAuditService;
 
             this.settingsService.SettingsChanged += this.OnSettingsChanged;
         }
@@ -195,7 +198,11 @@ namespace ThreadPilot.Services
                 if (this.journal.Count > 0)
                 {
                     this.logger.LogInformation("Game Boost: restoring {Count} change(s) left by a previous run", this.journal.Count);
-                    await this.RestoreAllAsync().ConfigureAwait(false);
+                    var (restored, left, failed) = await this.RestoreAllAsync().ConfigureAwait(false);
+                    await this.AuditAsync(
+                        failed.Count > 0 ? ActivityAuditSeverity.Warning : ActivityAuditSeverity.Success,
+                        $"Restored {restored} change(s) left by an unexpected close",
+                        DescribeRestore(restored, left, failed)).ConfigureAwait(false);
                 }
 
                 this.timer ??= new Timer(_ => TaskSafety.FireAndForget(this.TickAsync(), ex => this.logger.LogWarning(ex, "Game Boost tick failed")), null, TickInterval, TickInterval);
@@ -257,7 +264,7 @@ namespace ThreadPilot.Services
 
                 if (!this.IsSameProcessAlive(this.session.Game.ProcessId, this.session.GameStartTimeUtcTicks))
                 {
-                    await this.EndSessionAsync($"{this.session.Game.Name} exited").ConfigureAwait(false);
+                    await this.EndSessionAsync("the game exited").ConfigureAwait(false);
                     return;
                 }
 
@@ -291,7 +298,25 @@ namespace ThreadPilot.Services
             this.session = new GameSession(game, startTicks, sessionId, Path.GetDirectoryName(game.ExecutablePath));
             this.tickCount = 0;
             this.logger.LogInformation("Game Boost session started for {Game} (PID {ProcessId})", game.Name, game.ProcessId);
+            await this.AuditSessionStartAsync(game).ConfigureAwait(false);
             await this.ApplyToSessionAsync(includeGame: true).ConfigureAwait(false);
+        }
+
+        private async Task AuditSessionStartAsync(ProcessModel game)
+        {
+            var decision = await this.GetDecisionAsync().ConfigureAwait(false);
+            var mode = this.Settings.GameBoostMode == GameBoostMode.Isolation ? "Isolation" : "Automatic";
+            var gameCpus = decision.GameSelection?.GlobalLogicalProcessorIndexes.Count ?? 0;
+            var background = decision.BackgroundSelection?.GlobalLogicalProcessorIndexes.Count ?? 0;
+            var policy = decision.Kind switch
+            {
+                GameBoostTopologyKind.AmdAsymmetricCache => $"AMD 3D V-Cache: game on {gameCpus} CPUs, listed background on {background} CPUs",
+                GameBoostTopologyKind.AmdSymmetricMultiL3 when decision.GameSelection != null => $"AMD equal CCDs: game on CCD0 ({gameCpus} CPUs), listed background on {background} CPUs",
+                GameBoostTopologyKind.AmdSymmetricMultiL3 => $"AMD equal CCDs: game left to Windows, listed background on {background} CPUs",
+                GameBoostTopologyKind.IntelHybrid => $"Intel hybrid: game on {gameCpus} P-core CPUs, listed background on {background} E-core CPUs",
+                _ => "CPU Sets unchanged: this CPU topology is not supported, Windows decides the cores",
+            };
+            await this.AuditAsync(ActivityAuditSeverity.Info, $"Session started: {game.Name} ({mode})", policy).ConfigureAwait(false);
         }
 
         private async Task ApplyToSessionAsync(bool includeGame)
@@ -313,7 +338,8 @@ namespace ThreadPilot.Services
                 var game = currentSession.Game;
                 if (decision.GameSelection != null)
                 {
-                    await this.TryApplyCpuSetsAsync(game, currentSession.GameStartTimeUtcTicks, decision.GameSelection, rules).ConfigureAwait(false);
+                    var (outcome, reason) = await this.TryApplyCpuSetsAsync(game, currentSession.GameStartTimeUtcTicks, decision.GameSelection, rules).ConfigureAwait(false);
+                    await this.AuditGameCpuSetsAsync(game.Name, outcome, reason, decision.GameSelection.GlobalLogicalProcessorIndexes.Count).ConfigureAwait(false);
                 }
 
                 if (this.Settings.GameBoostAboveNormalPriority)
@@ -327,6 +353,8 @@ namespace ThreadPilot.Services
                 return;
             }
 
+            var moved = new List<string>();
+            var notMoved = new List<string>();
             var processes = await this.processService.GetProcessesWithPathsAsync().ConfigureAwait(false);
             foreach (var process in processes)
             {
@@ -338,9 +366,47 @@ namespace ThreadPilot.Services
                     continue;
                 }
 
-                await this.TryApplyCpuSetsAsync(process, startTicks, decision.BackgroundSelection, rules).ConfigureAwait(false);
+                var (outcome, reason) = await this.TryApplyCpuSetsAsync(process, startTicks, decision.BackgroundSelection, rules).ConfigureAwait(false);
+                switch (outcome)
+                {
+                    case CpuSetOutcome.Applied:
+                        moved.Add(process.Name);
+                        break;
+                    case CpuSetOutcome.UserRule:
+                        notMoved.Add($"{process.Name} (your rule)");
+                        break;
+                    case CpuSetOutcome.ExistingSelection:
+                        notMoved.Add($"{process.Name} (already has CPU Sets)");
+                        break;
+                    case CpuSetOutcome.Unreadable:
+                    case CpuSetOutcome.Failed:
+                        notMoved.Add($"{process.Name} ({reason})");
+                        break;
+                }
+            }
+
+            // One line per pass and only when something changed, so the 15 s rescan stays quiet.
+            if (moved.Count > 0)
+            {
+                await this.AuditAsync(
+                    ActivityAuditSeverity.Success,
+                    $"Background moved to {decision.BackgroundSelection.GlobalLogicalProcessorIndexes.Count} CPUs: {Summarize(moved)}").ConfigureAwait(false);
+            }
+
+            if (notMoved.Count > 0)
+            {
+                await this.AuditAsync(ActivityAuditSeverity.Info, "Background left unchanged", Summarize(notMoved)).ConfigureAwait(false);
             }
         }
+
+        private Task AuditGameCpuSetsAsync(string game, CpuSetOutcome outcome, string reason, int cpuCount) => outcome switch
+        {
+            CpuSetOutcome.Applied => this.AuditAsync(ActivityAuditSeverity.Success, $"{game}: CPU Sets set to {cpuCount} CPUs"),
+            CpuSetOutcome.UserRule => this.AuditAsync(ActivityAuditSeverity.Info, $"{game}: cores left to your rule"),
+            CpuSetOutcome.ExistingSelection => this.AuditAsync(ActivityAuditSeverity.Info, $"{game}: already has CPU Sets, left unchanged"),
+            CpuSetOutcome.Unreadable or CpuSetOutcome.Failed => this.AuditAsync(ActivityAuditSeverity.Warning, $"{game}: CPU Sets not changed", reason),
+            _ => Task.CompletedTask,
+        };
 
         private bool IsBackgroundCandidate(ProcessModel process, GameSession currentSession) =>
             process.ProcessId != currentSession.Game.ProcessId
@@ -349,24 +415,33 @@ namespace ThreadPilot.Services
             && !this.processFilterService.IsSystemProcess(process)
             && !IsUnderDirectory(process.ExecutablePath, currentSession.GameDirectory);
 
-        private async Task TryApplyCpuSetsAsync(
+        private async Task<(CpuSetOutcome Outcome, string Reason)> TryApplyCpuSetsAsync(
             ProcessModel process,
             long startTicks,
             CpuSelection selection,
             IReadOnlyList<PersistentProcessRule> rules)
         {
             // Applied at most once per process: a later manual change is the user's and is never undone or redone.
-            if (!this.attempted.Add((process.ProcessId, startTicks))
-                || this.HasUserRule(rules, process, GameBoostSetting.CpuSets))
+            if (!this.attempted.Add((process.ProcessId, startTicks)))
             {
-                return;
+                return (CpuSetOutcome.AlreadyAttempted, string.Empty);
+            }
+
+            if (this.HasUserRule(rules, process, GameBoostSetting.CpuSets))
+            {
+                return (CpuSetOutcome.UserRule, string.Empty);
             }
 
             // null: unreadable, so unknown; non-empty: someone else's selection. Only an empty set is ours to change.
             var current = await this.processService.GetCpuAssignmentLogicalProcessorIndexesAsync(process, CpuAssignmentMode.CpuSets).ConfigureAwait(false);
-            if (current == null || current.Count > 0)
+            if (current == null)
             {
-                return;
+                return (CpuSetOutcome.Unreadable, "CPU Sets unreadable: access denied or protected process");
+            }
+
+            if (current.Count > 0)
+            {
+                return (CpuSetOutcome.ExistingSelection, string.Empty);
             }
 
             var entry = new GameBoostJournalEntry
@@ -388,6 +463,7 @@ namespace ThreadPilot.Services
                     process.Name,
                     process.ProcessId,
                     entry.AppliedCpuIndexes.Count);
+                return (CpuSetOutcome.Applied, string.Empty);
             }
             else
             {
@@ -397,15 +473,26 @@ namespace ThreadPilot.Services
                     process.Name,
                     process.ProcessId,
                     result.TechnicalMessage);
+                return (CpuSetOutcome.Failed, string.IsNullOrWhiteSpace(result.UserMessage) ? "not applied" : result.UserMessage.TrimEnd('.'));
             }
         }
 
         private async Task TryApplyAboveNormalAsync(ProcessModel game, long startTicks, IReadOnlyList<PersistentProcessRule> rules)
         {
-            if (game.Priority != ProcessPriorityClass.Normal
-                || this.HasUserRule(rules, game, GameBoostSetting.Priority)
-                || this.journal.Any(e => e.ProcessId == game.ProcessId && e.StartTimeUtcTicks == startTicks && e.Setting == GameBoostSetting.Priority))
+            if (this.journal.Any(e => e.ProcessId == game.ProcessId && e.StartTimeUtcTicks == startTicks && e.Setting == GameBoostSetting.Priority))
             {
+                return;
+            }
+
+            if (this.HasUserRule(rules, game, GameBoostSetting.Priority))
+            {
+                await this.AuditAsync(ActivityAuditSeverity.Info, $"{game.Name}: priority left to your rule").ConfigureAwait(false);
+                return;
+            }
+
+            if (game.Priority != ProcessPriorityClass.Normal)
+            {
+                await this.AuditAsync(ActivityAuditSeverity.Info, $"{game.Name}: priority left at {game.Priority}", "Game Boost only raises Normal to Above Normal").ConfigureAwait(false);
                 return;
             }
 
@@ -424,10 +511,12 @@ namespace ThreadPilot.Services
             {
                 await this.processService.SetProcessPriority(game, ProcessPriorityClass.AboveNormal, ProcessPriorityWriteSource.GameBoost).ConfigureAwait(false);
                 await this.ConfirmJournalEntryAsync(entry).ConfigureAwait(false);
+                await this.AuditAsync(ActivityAuditSeverity.Success, $"{game.Name}: priority set to Above Normal").ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 this.logger.LogInformation(ex, "Game Boost could not raise the priority of {Game}", game.Name);
+                await this.AuditAsync(ActivityAuditSeverity.Warning, $"{game.Name}: priority not changed", ex.Message).ConfigureAwait(false);
             }
         }
 
@@ -438,18 +527,26 @@ namespace ThreadPilot.Services
                 return;
             }
 
-            if (this.session != null)
+            var gameName = this.session?.Game.Name;
+            if (gameName != null)
             {
-                this.logger.LogInformation("Game Boost session for {Game} ended: {Reason}", this.session.Game.Name, reason);
+                this.logger.LogInformation("Game Boost session for {Game} ended: {Reason}", gameName, reason);
             }
 
             this.session = null;
             this.attempted.Clear();
-            await this.RestoreAllAsync().ConfigureAwait(false);
+            var (restored, left, failed) = await this.RestoreAllAsync().ConfigureAwait(false);
+            await this.AuditAsync(
+                failed.Count > 0 ? ActivityAuditSeverity.Warning : ActivityAuditSeverity.Info,
+                gameName == null ? $"Changes restored: {reason}" : $"Session ended for {gameName}: {reason}",
+                DescribeRestore(restored, left, failed)).ConfigureAwait(false);
         }
 
-        private async Task RestoreAllAsync()
+        private async Task<(int Restored, int LeftAlone, List<string> Failed)> RestoreAllAsync()
         {
+            var restored = 0;
+            var left = 0;
+            var failed = new List<string>();
             IReadOnlyList<PersistentProcessRule> rules;
             try
             {
@@ -464,52 +561,111 @@ namespace ThreadPilot.Services
             using var gate = await this.applyGate.EnterAsync().ConfigureAwait(false);
             foreach (var entry in this.journal.ToList())
             {
+                RestoreOutcome outcome;
                 try
                 {
-                    await this.RestoreAsync(entry, rules).ConfigureAwait(false);
+                    outcome = await this.RestoreAsync(entry, rules).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
                     this.logger.LogWarning(ex, "Game Boost could not restore {Setting} of {ProcessName} (PID {ProcessId})", entry.Setting, entry.ProcessName, entry.ProcessId);
+                    outcome = RestoreOutcome.Failed;
+                }
+
+                switch (outcome)
+                {
+                    case RestoreOutcome.Restored:
+                        restored++;
+                        break;
+                    case RestoreOutcome.LeftAlone:
+                        left++;
+                        break;
+                    default:
+                        failed.Add($"{entry.ProcessName} {(entry.Setting == GameBoostSetting.CpuSets ? "CPU Sets" : "priority")}");
+                        break;
                 }
 
                 this.journal.Remove(entry);
             }
 
             await this.SaveJournalAsync().ConfigureAwait(false);
+            return (restored, left, failed);
         }
 
         // Restores only a value that is still exactly what Game Boost set, on the same process instance,
         // and that no user rule has claimed since.
-        private async Task RestoreAsync(GameBoostJournalEntry entry, IReadOnlyList<PersistentProcessRule> rules)
+        private async Task<RestoreOutcome> RestoreAsync(GameBoostJournalEntry entry, IReadOnlyList<PersistentProcessRule> rules)
         {
             if (!this.IsSameProcessAlive(entry.ProcessId, entry.StartTimeUtcTicks))
             {
-                return;
+                return RestoreOutcome.LeftAlone;
             }
 
             var process = await this.processService.GetProcessByIdAsync(entry.ProcessId).ConfigureAwait(false);
             if (process == null || this.HasUserRule(rules, process, entry.Setting))
             {
-                return;
+                return RestoreOutcome.LeftAlone;
             }
 
             if (entry.Setting == GameBoostSetting.CpuSets)
             {
                 var current = await this.processService.GetCpuAssignmentLogicalProcessorIndexesAsync(process, CpuAssignmentMode.CpuSets).ConfigureAwait(false);
-                if (current != null && current.SequenceEqual(entry.AppliedCpuIndexes.OrderBy(index => index)))
+                if (current == null || !current.SequenceEqual(entry.AppliedCpuIndexes.OrderBy(index => index)))
                 {
-                    await this.processService.ClearProcessCpuSetAsync(process).ConfigureAwait(false);
-                    this.logger.LogInformation("Game Boost restored CPU Sets of {ProcessName} (PID {ProcessId})", process.Name, process.ProcessId);
+                    return RestoreOutcome.LeftAlone;
                 }
 
-                return;
+                if (!await this.processService.ClearProcessCpuSetAsync(process).ConfigureAwait(false))
+                {
+                    return RestoreOutcome.Failed;
+                }
+
+                this.logger.LogInformation("Game Boost restored CPU Sets of {ProcessName} (PID {ProcessId})", process.Name, process.ProcessId);
+                return RestoreOutcome.Restored;
             }
 
-            if (entry.OriginalPriority is ProcessPriorityClass original && process.Priority == entry.AppliedPriority)
+            if (entry.OriginalPriority is not ProcessPriorityClass original || process.Priority != entry.AppliedPriority)
             {
-                await this.processService.SetProcessPriority(process, original, ProcessPriorityWriteSource.CleanupOrRestore).ConfigureAwait(false);
+                return RestoreOutcome.LeftAlone;
             }
+
+            await this.processService.SetProcessPriority(process, original, ProcessPriorityWriteSource.CleanupOrRestore).ConfigureAwait(false);
+            return RestoreOutcome.Restored;
+        }
+
+        // "chrome x12, steam x2": the many processes of one app read as one item.
+        private static string Summarize(IEnumerable<string> names) =>
+            string.Join(", ", names
+                .GroupBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(group => group.Count())
+                .Select(group => group.Count() > 1 ? $"{group.Key} x{group.Count()}" : group.Key));
+
+        private static string DescribeRestore(int restored, int left, IReadOnlyCollection<string> failed)
+        {
+            var text = $"Restored {restored} change(s)";
+            if (left > 0)
+            {
+                text += $"; {left} left as they are (changed by you or a rule since, or the process exited)";
+            }
+
+            return failed.Count > 0 ? $"{text}; could not restore: {Summarize(failed)}" : text;
+        }
+
+        private Task AuditAsync(ActivityAuditSeverity severity, string message, string? details = null)
+        {
+            if (this.activityAuditService == null)
+            {
+                return Task.CompletedTask;
+            }
+
+            const string category = ActivityAuditCategories.GameBoost;
+            return severity switch
+            {
+                ActivityAuditSeverity.Success => this.activityAuditService.LogSuccessAsync(category, message, details),
+                ActivityAuditSeverity.Warning => this.activityAuditService.LogWarningAsync(category, message, details),
+                ActivityAuditSeverity.Error => this.activityAuditService.LogErrorAsync(category, message, details),
+                _ => this.activityAuditService.LogInfoAsync(category, message, details),
+            };
         }
 
         private bool HasUserRule(IReadOnlyList<PersistentProcessRule> rules, ProcessModel process, GameBoostSetting setting) =>
@@ -559,6 +715,7 @@ namespace ThreadPilot.Services
 
                 this.session = previous;
                 this.tickCount = 0;
+                await this.AuditSessionStartAsync(previous.Game).ConfigureAwait(false);
                 await this.ApplyToSessionAsync(includeGame: true).ConfigureAwait(false);
             }
             finally
@@ -634,6 +791,23 @@ namespace ThreadPilot.Services
             {
                 // Logging only.
             }
+        }
+
+        private enum CpuSetOutcome
+        {
+            AlreadyAttempted,
+            Applied,
+            UserRule,
+            ExistingSelection,
+            Unreadable,
+            Failed,
+        }
+
+        private enum RestoreOutcome
+        {
+            Restored,
+            LeftAlone,
+            Failed,
         }
 
         private sealed record GameSession(ProcessModel Game, long GameStartTimeUtcTicks, int GameSessionId, string? GameDirectory);

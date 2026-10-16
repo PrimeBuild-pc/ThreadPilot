@@ -21,6 +21,7 @@ namespace ThreadPilot.Core.Tests
         private readonly Mock<IApplicationSettingsService> settingsService = new();
         private readonly FakeProcesses processes = new();
         private readonly List<PersistentProcessRule> rules = new();
+        private readonly ActivityAuditService audit = new(NullLogger<ActivityAuditService>.Instance);
         private int? foregroundPid = GamePid;
 
         public GameSessionServiceTests()
@@ -261,6 +262,58 @@ namespace ThreadPilot.Core.Tests
             Assert.Empty(this.processes.CpuSets[500]);
         }
 
+        [Fact]
+        public async Task Activity_ShowsSessionChangesAndRestore_WithoutRepeatingOnRescans()
+        {
+            this.processes.Add(201, "chrome", @"C:\Program Files\Google\Chrome\Application\chrome.exe");
+            this.rules.Add(new PersistentProcessRule { IsEnabled = true, ProcessName = "steam", LegacyAffinityMask = 0xF });
+            this.processes.Add(202, "steam", @"C:\Program Files (x86)\Steam\steam.exe");
+            using var service = this.CreateService();
+
+            await service.TickAsync();
+            for (var i = 0; i < 10; i++)
+            {
+                await service.TickAsync(); // background rescans with nothing new
+            }
+
+            this.processes.Exit(GamePid);
+            await service.TickAsync();
+
+            var entries = (await this.audit.GetEntriesAsync()).Reverse().ToList();
+            Assert.All(entries, entry => Assert.Equal("Game Boost", entry.Category));
+            Assert.Equal(
+                [
+                    "Session started: Game (Automatic)",
+                    "Game: CPU Sets set to 16 CPUs",
+                    "Background moved to 16 CPUs: chrome x2",
+                    "Background left unchanged",
+                    "Session ended for Game: the game exited",
+                ],
+                entries.Select(entry => entry.Message));
+            Assert.Contains("AMD 3D V-Cache", entries[0].Details, StringComparison.Ordinal);
+            Assert.Equal("steam (your rule)", entries[3].Details);
+            Assert.Equal("Restored 2 change(s); 1 left as they are (changed by you or a rule since, or the process exited)", entries[4].Details);
+        }
+
+        [Fact]
+        public async Task Activity_CrashRecoveryAndSkippedPriority()
+        {
+            this.processes.Priorities[GamePid] = ProcessPriorityClass.BelowNormal;
+            this.settings.GameBoostAboveNormalPriority = true;
+            using (var crashed = this.CreateService())
+            {
+                await crashed.TickAsync();
+            }
+
+            using var service = this.CreateService();
+            await service.StartAsync();
+            await service.StopAsync();
+
+            var messages = (await this.audit.GetEntriesAsync()).Select(entry => entry.Message).ToList();
+            Assert.Contains("Game: priority left at BelowNormal", messages);
+            Assert.Contains("Restored 2 change(s) left by an unexpected close", messages);
+        }
+
         private GameSessionService CreateService(CpuTopologySnapshot? topology = null)
         {
             var snapshot = topology ?? TopologyFixtures.Amd([8, 8], [96 * MB, 32 * MB]);
@@ -286,7 +339,8 @@ namespace ThreadPilot.Core.Tests
                 new ProcessPolicyApplyGate(),
                 this.processes,
                 NullLogger<GameSessionService>.Instance,
-                this.journalPath);
+                this.journalPath,
+                this.audit);
         }
 
         /// <summary>In-memory processes: CPU Sets, priorities and identities the service reads and writes.</summary>
