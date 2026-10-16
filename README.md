@@ -24,7 +24,9 @@
 
 </div>
 
-<img width="1672" height="941" alt="cover" src="https://github.com/user-attachments/assets/858ec350-b997-4683-9df1-cc196307ede8" />
+<a href="assets/screenshots/overview-themes.png"><img width="1600" height="960" alt="ThreadPilot 1.7.8-beta.1: the current Processes interface in dark and light themes" src="assets/screenshots/overview-themes.png"></a>
+
+<p align="center"><sub>Real dark/light screenshots of the preview interface. <a href="assets/screenshots/processes-dark.png">View dark</a> · <a href="assets/screenshots/processes-light.png">View light</a></sub></p>
 
 ## What is ThreadPilot?
 
@@ -38,8 +40,9 @@ It is designed as an open-source alternative for power users who need Process La
 - Topology-aware CPU affinity through `CpuSelection`, including CPU Sets support, processor groups, and safe handling for systems with more than 64 logical processors.
 - Safer CPU indexing in new affinity paths: CPU64 no longer aliases CPU0.
 - Intel hybrid CPU handling through Windows topology and `EfficiencyClass`, not hardcoded SKU lists.
-- AMD CCD/L3-aware preset generation, also topology-driven instead of hardcoded SKU lists.
-- Default gaming-oriented CPU presets for common foreground-game workflows.
+- Reusable CPU mask presets and custom core selections for process and rule workflows.
+- Three-state efficiency mode / EcoQoS for running processes and persistent rules, independently of CPU priority.
+- **Pre-release only:** opt-in Game Boost with topology-aware game/background CPU Sets, optional priority and restoration. Real dual-CCD Ryzen/X3D and supported Intel hybrid validation is still pending.
 - CPU priority controls with guardrails: High priority warning and Realtime priority blocked.
 - Process memory priority support.
 - Persistent process rules with explicit Apply now and Save as rule flows.
@@ -85,8 +88,12 @@ choco upgrade threadpilot
 
 ### Download from GitHub Releases
 
-[![Download Latest Release](https://img.shields.io/badge/Download-Latest%20Release-2ea44f?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest)
-[![Portable ZIP Assets](https://img.shields.io/badge/Portable%20ZIP-Release%20Assets-1f6feb?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest)
+[![Download Latest Stable](https://img.shields.io/badge/Download-Latest%20Stable-2ea44f?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest)
+[![Download Pre-release — Game Boost Preview](https://img.shields.io/badge/Download-Pre--release%20%28Game%20Boost%29-f59e0b?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/tag/v1.7.8-beta.1)
+
+**Stable v1.7.7 does not include Game Boost.** The **v1.7.8-beta.1 pre-release** includes it for volunteers and early adopters; see its [test steps and issue-reporting checklist](docs/releases/v1.7.8-beta.1.md). Preview downloads are manual and do not replace the stable update channel.
+
+Both channels use the same application/settings location. Export a configuration backup before switching; they are not separate side-by-side installations.
 
 | Package | Recommended use |
 |---|---|
@@ -104,7 +111,26 @@ Compare the result with `SHA256SUMS.txt` from the same release.
 
 ## 🖼️ Screenshots
 
-<img width="1672" height="941" alt="banner" src="https://github.com/user-attachments/assets/b8504579-8cff-439d-a6a6-fcc73cfa2994" />
+Captured from the official **v1.7.8-beta.1** installer in a Windows 11 test VM, using real UI and a sample Notepad rule. **Game Boost is preview-only, not part of stable v1.7.7.** These are interface examples, not performance benchmarks. Click any image for full resolution.
+
+<table>
+  <tr>
+    <td width="50%"><a href="assets/screenshots/processes-dark.png"><img src="assets/screenshots/processes-dark.png" alt="Processes in dark theme: selected process, CPU/memory/I/O priority, efficiency mode and core selection" width="800"></a><br><strong>Processes · Dark</strong><br>Live processes, priorities, EcoQoS and CPU cores.</td>
+    <td width="50%"><a href="assets/screenshots/cpu-masks-light.png"><img src="assets/screenshots/cpu-masks-light.png" alt="CPU masks in light theme: reusable masks and the per-core editor" width="800"></a><br><strong>CPU masks · Light</strong><br>Reusable core selections for processes and rules.</td>
+  </tr>
+  <tr>
+    <td><a href="assets/screenshots/power-plans-light.png"><img src="assets/screenshots/power-plans-light.png" alt="Power plans in light theme: installed Windows plans and custom power plan import" width="800"></a><br><strong>Power plans · Light</strong><br>Windows plans and custom .pow imports.</td>
+    <td><a href="assets/screenshots/rules-dark.png"><img src="assets/screenshots/rules-dark.png" alt="Process rules in dark theme: a saved Notepad rule selected in the editor" width="800"></a><br><strong>Process rules · Dark</strong><br>Saved settings and the rule editor.</td>
+  </tr>
+  <tr>
+    <td><a href="assets/screenshots/game-boost-dark.png"><img src="assets/screenshots/game-boost-dark.png" alt="Tweaks in dark theme with the preview-only Game Boost card, shown off by default" width="800"></a><br><strong>Game Boost overview · Dark · Preview only</strong><br>Opt-in controls alongside Windows tweaks.</td>
+    <td><a href="assets/screenshots/game-boost-light.png"><img src="assets/screenshots/game-boost-light.png" alt="Game Boost in light theme, enabled in the test VM with game/background app lists expanded and unsupported CPU fallback shown" width="800"></a><br><strong>Game Boost configuration · Light · Preview only</strong><br>Game lists, exclusions and selected background apps.</td>
+  </tr>
+  <tr>
+    <td><a href="assets/screenshots/activity-light.png"><img src="assets/screenshots/activity-light.png" alt="Activity in light theme: real settings and saved-rule events with filters and export" width="800"></a><br><strong>Activity · Light</strong><br>Changes, results, filters and export.</td>
+    <td><a href="assets/screenshots/settings-dark.png"><img src="assets/screenshots/settings-dark.png" alt="Settings in dark theme: startup, language, theme, automation and CPU assignment preferences" width="800"></a><br><strong>Settings · Dark</strong><br>Startup, language, theme and automation preferences.</td>
+  </tr>
+</table>
 
 ## ⚙️ Requirements
 
