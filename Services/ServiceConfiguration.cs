@@ -78,7 +78,10 @@ namespace ThreadPilot.Services
             services.AddSingleton<ProcessPowerRequestService>();
             services.AddSingleton<IPersistentProcessRuleStore, PersistentProcessRuleJsonStore>();
             services.AddSingleton<IPersistentProcessRuleMatcher, PersistentProcessRuleMatcher>();
+            services.AddSingleton<ProcessPolicyApplyGate>();
             services.AddSingleton<IPersistentRulesEngine, PersistentRulesEngine>();
+            services.AddSingleton<IGameBoostProcessProbe, GameBoostProcessProbe>();
+            services.AddSingleton<IGameSessionService, GameSessionService>();
             services.AddSingleton<IPersistentRulePriorityVerificationService, PersistentRulePriorityVerificationService>();
             services.AddSingleton<IPersistentRuleAutoApplyService, PersistentRuleAutoApplyService>();
             services.AddSingleton<IProcessRuleCreationService, ProcessRuleCreationService>();

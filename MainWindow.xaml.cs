@@ -101,6 +101,7 @@ namespace ThreadPilot
 
                 this.InitializeComponent();
                 System.Diagnostics.Debug.WriteLine("InitializeComponent completed");
+                this.RestoreUiState();
                 this.ConfigureDiagnosticsNavigation();
 
                 // Initialize loading overlay

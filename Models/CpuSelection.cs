@@ -59,6 +59,7 @@ namespace ThreadPilot.Models
         private readonly IReadOnlyDictionary<ProcessorRef, int> lastLevelCacheIndexesByProcessor;
         private readonly IReadOnlyDictionary<ProcessorRef, int> packageIndexesByProcessor;
         private readonly IReadOnlyDictionary<ProcessorRef, IReadOnlyList<int>> smtSiblingGlobalIndexesByProcessor;
+        private readonly IReadOnlyDictionary<int, ulong> lastLevelCacheSizesByIndex;
 
         private CpuTopologySnapshot(
             IReadOnlyList<ProcessorRef> logicalProcessors,
@@ -70,7 +71,8 @@ namespace ThreadPilot.Models
             IReadOnlyDictionary<ProcessorRef, int> packageIndexesByProcessor,
             IReadOnlyDictionary<ProcessorRef, IReadOnlyList<int>> smtSiblingGlobalIndexesByProcessor,
             CpuTopologySignature signature,
-            IReadOnlyList<int> reservedLogicalProcessorIndexes)
+            IReadOnlyList<int> reservedLogicalProcessorIndexes,
+            IReadOnlyDictionary<int, ulong> lastLevelCacheSizesByIndex)
         {
             this.LogicalProcessors = logicalProcessors;
             this.cpuSetIdsByProcessor = cpuSetIdsByProcessor;
@@ -82,6 +84,7 @@ namespace ThreadPilot.Models
             this.smtSiblingGlobalIndexesByProcessor = smtSiblingGlobalIndexesByProcessor;
             this.Signature = signature;
             this.ReservedLogicalProcessorIndexes = reservedLogicalProcessorIndexes;
+            this.lastLevelCacheSizesByIndex = lastLevelCacheSizesByIndex;
         }
 
         public IReadOnlyList<ProcessorRef> LogicalProcessors { get; }
@@ -100,7 +103,8 @@ namespace ThreadPilot.Models
             IReadOnlyDictionary<ProcessorRef, int>? lastLevelCacheIndexes = null,
             IReadOnlyDictionary<ProcessorRef, int>? packageIndexes = null,
             IReadOnlyDictionary<ProcessorRef, IReadOnlyList<int>>? smtSiblingGlobalIndexes = null,
-            IEnumerable<int>? reservedLogicalProcessorIndexes = null)
+            IEnumerable<int>? reservedLogicalProcessorIndexes = null,
+            IReadOnlyDictionary<int, ulong>? lastLevelCacheSizes = null)
         {
             ArgumentNullException.ThrowIfNull(logicalProcessors);
 
@@ -177,7 +181,8 @@ namespace ThreadPilot.Models
                     .Where(knownGlobalIndexes.Contains)
                     .Distinct()
                     .OrderBy(index => index)
-                    .ToList());
+                    .ToList(),
+                lastLevelCacheSizes?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value) ?? new Dictionary<int, ulong>());
         }
 
         public bool TryGetCpuSetId(ProcessorRef processor, out uint cpuSetId) =>
@@ -194,6 +199,9 @@ namespace ThreadPilot.Models
 
         public bool TryGetLastLevelCacheIndex(ProcessorRef processor, out int lastLevelCacheIndex) =>
             this.lastLevelCacheIndexesByProcessor.TryGetValue(processor, out lastLevelCacheIndex);
+
+        public bool TryGetLastLevelCacheSize(int lastLevelCacheIndex, out ulong cacheSizeBytes) =>
+            this.lastLevelCacheSizesByIndex.TryGetValue(lastLevelCacheIndex, out cacheSizeBytes);
 
         public bool TryGetPackageIndex(ProcessorRef processor, out int packageIndex) =>
             this.packageIndexesByProcessor.TryGetValue(processor, out packageIndex);

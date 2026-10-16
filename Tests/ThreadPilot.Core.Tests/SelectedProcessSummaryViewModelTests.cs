@@ -68,6 +68,21 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal("Memory priority: BelowNormal", viewModel.MemoryPriorityText);
         }
 
+        [Theory]
+        [InlineData(false, "Efficiency mode: On")]
+        [InlineData(true, "Efficiency mode: On (no effect: power throttling is disabled in Tweaks)")]
+        public async Task UpdateAsync_FlagsEfficiencyModeVoidedByTheGlobalTweak(bool throttlingOff, string expected)
+        {
+            var service = new Mock<IProcessMemoryPriorityService>();
+            service.Setup(s => s.GetEfficiencyModeAsync(It.IsAny<ProcessModel>())).ReturnsAsync(ProcessEfficiencyMode.On);
+            var viewModel = new SelectedProcessSummaryViewModel(service.Object, isPowerThrottlingOff: () => throttlingOff);
+
+            await viewModel.UpdateAsync(CreateProcess());
+
+            Assert.Equal(ProcessEfficiencyMode.On, viewModel.EfficiencyMode);
+            Assert.Equal(expected, viewModel.EfficiencyModeText);
+        }
+
         [Fact]
         public async Task UpdateAsync_WhenMemoryPriorityUnavailable_ShowsUnavailableWithoutThrowing()
         {

@@ -12,6 +12,30 @@ namespace ThreadPilot.Core.Tests
     public sealed class ProcessMemoryPriorityNativeIntegrationTests
     {
         [Fact]
+        public async Task EfficiencyMode_RoundTripsOnTheCurrentProcess()
+        {
+            // Real SetProcessInformation/GetProcessInformation calls: catches a wrong struct layout or class number.
+            var service = new ThreadPilot.Services.ProcessMemoryPriorityService(
+                ProcessMemoryPriorityNativeApi.Instance,
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<ThreadPilot.Services.ProcessMemoryPriorityService>.Instance);
+            var self = new ThreadPilot.Models.ProcessModel { ProcessId = Environment.ProcessId, Name = "testhost" };
+            try
+            {
+                foreach (var mode in new[] { ThreadPilot.Models.ProcessEfficiencyMode.On, ThreadPilot.Models.ProcessEfficiencyMode.Off })
+                {
+                    Assert.True((await service.SetEfficiencyModeAsync(self, mode)).Success);
+                    Assert.Equal(mode, await service.GetEfficiencyModeAsync(self));
+                }
+            }
+            finally
+            {
+                await service.SetEfficiencyModeAsync(self, ThreadPilot.Models.ProcessEfficiencyMode.SystemManaged);
+            }
+
+            Assert.Equal(ThreadPilot.Models.ProcessEfficiencyMode.SystemManaged, await service.GetEfficiencyModeAsync(self));
+        }
+
+        [Fact]
         public void AcquirePrivilegeScope_WithSeIncreaseBasePriorityPrivilege_RestoresOriginalState()
         {
             const string privilegeName = ProcessMemoryPriorityNativeMethods.SeIncreaseBasePriorityPrivilege;

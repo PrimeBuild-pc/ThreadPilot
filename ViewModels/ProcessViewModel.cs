@@ -37,6 +37,7 @@ namespace ThreadPilot.ViewModels
         private readonly ProcessPowerRequestService? powerRequestService;
         private readonly IProcessRuleCreationService? processRuleCreationService;
         private readonly IApplicationSettingsService? settingsService;
+        private readonly ILocalizationService? uiLocalization;
         private readonly IPersistentProcessRuleStore? persistentRuleStore;
         private readonly IPersistentProcessRuleMatcher? persistentRuleMatcher;
         private readonly Action<string> clipboardSetter;
@@ -224,9 +225,17 @@ namespace ThreadPilot.ViewModels
             this.memoryPriorityService = memoryPriorityService;
             this.powerRequestService = powerRequestService;
             this.settingsService = settingsService;
+            this.uiLocalization = localizationService;
             this.persistentRuleStore = persistentRuleStore;
             this.persistentRuleMatcher = persistentRuleMatcher;
             this.SelectedCpuAssignmentMode = settingsService?.Settings.DefaultCpuAssignmentMode ?? CpuAssignmentMode.Automatic;
+
+            // Fields, not properties: the change handlers would reload and re-save the list during construction.
+            var uiState = UiStateStore.Current;
+            this.showActiveApplicationsOnly = uiState.ShowActiveApplicationsOnly;
+            this.hideSystemProcesses = uiState.HideSystemProcesses;
+            this.hideIdleProcesses = uiState.HideIdleProcesses;
+            this.sortMode = string.IsNullOrWhiteSpace(uiState.SortMode) ? this.sortMode : uiState.SortMode;
             this.IsAutomationMonitoringEnabled = settingsService?.Settings.EnableAutomationMonitoring ?? true;
             if (settingsService != null)
             {
@@ -246,7 +255,9 @@ namespace ThreadPilot.ViewModels
                 memoryPriorityService,
                 persistentRuleStore,
                 persistentRuleMatcher,
-                localizationService);
+                localizationService,
+                SystemTweaksService.IsPowerThrottlingOff);
+            this.SelectedProcessSummary.PropertyChanged += this.OnSelectedProcessSummaryChanged;
 
             // Subscribe to topology detection events
             this.cpuTopologyService.TopologyDetected += this.OnTopologyDetected;
@@ -281,13 +292,6 @@ namespace ThreadPilot.ViewModels
             {
                 this.SetCpuAssignmentMode(e.NewSettings.DefaultCpuAssignmentMode, overriddenByRule: false);
             }
-            if (!this.IsAutomationMonitoringEnabled)
-            {
-                this.SetUiRefreshEnabled(false, refreshImmediately: false);
-                this.SelectedProcess = null;
-                return;
-            }
-
             this.SetUiRefreshEnabled(this.isProcessViewActive && !this.IsProcessListLocked);
         }
 

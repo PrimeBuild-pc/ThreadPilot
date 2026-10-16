@@ -168,6 +168,37 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task UpdateSettingsAsync_EveryOptionSurvivesARestart()
+        {
+            // Flip every on/off option, save, and read it back with a fresh service: nothing may silently
+            // fall back to its default. Migration markers are excluded because loading rewrites them on purpose.
+            var storage = new FakeSettingsStorage();
+            var service = CreateService(storage);
+            await service.LoadSettingsAsync();
+            var settings = service.Settings;
+            var flags = typeof(ApplicationSettingsModel).GetProperties()
+                .Where(property => property.PropertyType == typeof(bool) && property.CanWrite &&
+                    !property.Name.StartsWith("HasMigrated", StringComparison.Ordinal))
+                .ToList();
+            var expected = flags.ToDictionary(property => property.Name, property => !(bool)property.GetValue(settings)!);
+            foreach (var property in flags)
+            {
+                property.SetValue(settings, expected[property.Name]);
+            }
+
+            settings.Language = "de-DE";
+            await service.UpdateSettingsAsync(settings);
+
+            var reloaded = CreateService(storage);
+            await reloaded.LoadSettingsAsync();
+            var lost = flags.Where(property => (bool)property.GetValue(reloaded.Settings)! != expected[property.Name])
+                .Select(property => property.Name)
+                .ToList();
+            Assert.Empty(lost);
+            Assert.Equal("de-DE", reloaded.Settings.Language);
+        }
+
+        [Fact]
         public async Task UpdateSettingsAsync_PersistsAutomationMonitoringDisabled()
         {
             var storage = new FakeSettingsStorage();
