@@ -81,9 +81,13 @@ namespace ThreadPilot.Services
             return ReadProcessorsFromGroupMasks(relationshipPtr, ProcessorGroupMaskOffset, groupCount).ToList();
         }
 
-        public static bool TryReadL3CacheProcessors(IntPtr relationshipPtr, out IReadOnlyList<ProcessorRef> processors)
+        public static bool TryReadL3CacheProcessors(IntPtr relationshipPtr, out IReadOnlyList<ProcessorRef> processors) =>
+            TryReadL3CacheProcessors(relationshipPtr, out processors, out _);
+
+        public static bool TryReadL3CacheProcessors(IntPtr relationshipPtr, out IReadOnlyList<ProcessorRef> processors, out uint cacheSizeBytes)
         {
             var cache = Marshal.PtrToStructure<CacheRelationship>(relationshipPtr);
+            cacheSizeBytes = cache.CacheSize;
             if (cache.Level != 3 || cache.GroupCount == 0)
             {
                 processors = [];

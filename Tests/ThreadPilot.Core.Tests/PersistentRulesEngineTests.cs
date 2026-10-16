@@ -495,6 +495,32 @@ namespace ThreadPilot.Core.Tests
             processService.Verify(s => s.SetProcessPriority(process, ProcessPriorityClass.High, ProcessPriorityWriteSource.PersistentRuleInitialApply), Times.Once);
         }
 
+        [Fact]
+        public async Task ApplyMatchingRulesAsync_WaitsForTheSharedApplyGate()
+        {
+            var rule = CreateRule(legacyAffinityMask: 3, applyAffinity: true);
+            var affinity = CreateAffinityService();
+            var gate = new ProcessPolicyApplyGate();
+            var engine = new PersistentRulesEngine(
+                new FakePersistentProcessRuleStore([rule]),
+                new PersistentProcessRuleMatcher(),
+                affinity.Object,
+                CreateProcessService().Object,
+                CreateMemoryPriorityService().Object,
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<PersistentRulesEngine>.Instance,
+                applyGate: gate);
+            var process = CreateProcess();
+
+            var held = await gate.EnterAsync();
+            var apply = engine.ApplyMatchingRulesAsync(process);
+            await Task.Delay(50);
+            affinity.Verify(s => s.ApplyAsync(It.IsAny<ProcessModel>(), It.IsAny<long>()), Times.Never);
+
+            held.Dispose();
+            await apply;
+            affinity.Verify(s => s.ApplyAsync(process, 3), Times.Once);
+        }
+
         private static PersistentRulesEngine CreateEngine(
             IReadOnlyList<PersistentProcessRule> rules,
             IAffinityApplyService affinityApplyService,
