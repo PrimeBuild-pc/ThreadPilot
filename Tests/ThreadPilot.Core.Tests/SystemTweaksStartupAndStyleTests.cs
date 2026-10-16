@@ -17,44 +17,30 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public void TweaksView_UsesLabelledPillToggle()
+        public void TweaksView_UsesWindows11ToggleWithStateLabel()
         {
-            // The native ui:ToggleSwitch is 40x20 with no text, too quiet to read as a control on
-            // this list. The pill states ON/OFF inside the track and is sized to be obvious.
+            // Native Windows 11 switch (40x20 track, sliding thumb) with "On"/"Off" written beside it,
+            // as in Windows Settings, so the state is readable without decoding colours.
             var document = XDocument.Load(GetRepositoryFilePath("Views", "SystemTweaksView.xaml"));
             var serialized = document.ToString(SaveOptions.DisableFormatting);
 
-            Assert.Contains("PillToggleButtonStyle", serialized, StringComparison.Ordinal);
+            Assert.Contains("Win11ToggleSwitchStyle", serialized, StringComparison.Ordinal);
             Assert.Contains("AutomationProperties.Name=\"{Binding Name}\"", serialized, StringComparison.Ordinal);
             Assert.Contains("SystemTweaks_ToggleOn", serialized, StringComparison.Ordinal);
             Assert.Contains("SystemTweaks_ToggleOff", serialized, StringComparison.Ordinal);
 
-            // The label and the thumb must be docked rather than stacked: a long localized label
-            // (ru "ВЫКЛ") has to widen the pill, not slide underneath the thumb.
             var track = Assert.Single(
                 document.Descendants(),
                 element => element.Name.LocalName == "Border" &&
                     element.Attributes().Any(attribute =>
                         attribute.Name.LocalName == "Name" && attribute.Value == "Track"));
-            Assert.Single(track.Descendants(), element => element.Name.LocalName == "DockPanel");
+            Assert.Equal("40", track.Attribute("Width")?.Value);
+            Assert.Equal("20", track.Attribute("Height")?.Value);
 
-            var pill = Assert.Single(
-                document.Descendants(),
-                element => element.Name.LocalName == "Style" &&
-                    element.Attributes().Any(attribute =>
-                        attribute.Name.LocalName == "Key" && attribute.Value == "PillToggleButtonStyle"));
-            var setters = pill
-                .Elements()
-                .Where(element => element.Name.LocalName == "Setter")
-                .ToDictionary(
-                    element => element.Attribute("Property")!.Value,
-                    element => element.Attribute("Value")?.Value,
-                    StringComparer.Ordinal);
-
-            // MinWidth, never Width: a fixed track clips the wider locales.
-            Assert.Equal("56", setters["MinWidth"]);
-            Assert.Equal("28", setters["Height"]);
-            Assert.False(setters.ContainsKey("Width"));
+            // The label lives outside the track: a long translation ("Disattivato") widens the control
+            // instead of sliding under the thumb.
+            Assert.DoesNotContain(track.Descendants(), element => element.Attributes().Any(attribute =>
+                attribute.Name.LocalName == "Name" && attribute.Value == "StateLabel"));
         }
 
         [Fact]

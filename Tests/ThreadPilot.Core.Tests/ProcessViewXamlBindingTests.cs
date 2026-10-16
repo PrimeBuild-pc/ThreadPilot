@@ -208,24 +208,19 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public void MonitoringDisabledOverlay_CoversProcessControlsWithSinglePrimaryMessage()
+        public void PausedAutomation_ShowsNoticeWithoutBlockingManualControls()
         {
+            // Pausing automation stops saved rules only; manual process control must stay usable.
             var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);
-            var overlay = Assert.Single(
-                document.Descendants(),
-                element => element.Attributes().Any(attribute =>
-                    attribute.Name.LocalName == "Name" &&
-                    attribute.Value == "MonitoringDisabledOverlay"));
-            var serialized = overlay.ToString(SaveOptions.DisableFormatting);
+            var serialized = document.ToString(SaveOptions.DisableFormatting);
 
-            Assert.Equal("Border", overlay.Name.LocalName);
-            Assert.Contains("Grid.RowSpan=\"3\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Panel.ZIndex=\"10\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Background=\"{DynamicResource SurfaceMutedBrush}\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("Foreground=\"{DynamicResource TextPrimaryBrush}\"", serialized, StringComparison.Ordinal);
-            Assert.Contains("InverseBoolToVisibilityConverter", serialized, StringComparison.Ordinal);
-            Assert.Single(overlay.Descendants(), element => element.Name.LocalName == "TextBlock");
-            Assert.DoesNotContain("ProcessView_MonitoringDisabledDescription", serialized, StringComparison.Ordinal);
+            Assert.DoesNotContain("MonitoringDisabledOverlay", serialized, StringComparison.Ordinal);
+            var notice = Assert.Single(
+                document.Descendants(),
+                element => element.Attributes().Any(attribute => attribute.Value == "{DynamicResource ProcessView_AutomationPaused}"));
+            var visibility = notice.Attribute("Visibility")?.Value ?? string.Empty;
+            Assert.Contains("IsAutomationMonitoringEnabled", visibility, StringComparison.Ordinal);
+            Assert.Contains("InverseBoolToVisibilityConverter", visibility, StringComparison.Ordinal);
         }
 
         [Fact]
@@ -306,15 +301,14 @@ namespace ThreadPilot.Core.Tests
             var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);
             var serialized = document.ToString(SaveOptions.DisableFormatting);
 
+            // The core picker holds the primary apply action, so it is a plain card, never collapsed.
             var picker = Assert.Single(
                 document.Descendants(),
-                element => element.Name.LocalName == "Expander" &&
-                    element.Attributes().Any(attribute =>
-                        attribute.Value.Contains("ProcessView_AdvancedAffinityPicker", StringComparison.Ordinal)));
+                element => element.Attributes().Any(attribute =>
+                    attribute.Name.LocalName == "Name" && attribute.Value == "CpuCoresCard"));
             var pickerXml = picker.ToString(SaveOptions.DisableFormatting);
 
-            // The picker now holds the primary apply action, so it must start open.
-            Assert.Equal("True", picker.Attribute("IsExpanded")?.Value);
+            Assert.DoesNotContain(picker.AncestorsAndSelf(), element => element.Name.LocalName == "Expander");
             Assert.Contains("SelectedCpuAssignmentMode", pickerXml, StringComparison.Ordinal);
             Assert.Contains("SetAffinityCommand", pickerXml, StringComparison.Ordinal);
             Assert.Contains("ProcessView_CpuCoresReadOnlyHint", pickerXml, StringComparison.Ordinal);

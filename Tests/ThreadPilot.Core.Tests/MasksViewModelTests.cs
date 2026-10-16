@@ -17,7 +17,7 @@ namespace ThreadPilot.Core.Tests
             var locale = LoadEnglishLocale();
 
             Assert.Contains("MasksView_Subtitle", serialized, StringComparison.Ordinal);
-            Assert.Contains("per-process use", locale, StringComparison.Ordinal);
+            Assert.Contains("for processes and rules", locale, StringComparison.Ordinal);
         }
 
         [Fact]

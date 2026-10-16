@@ -224,6 +224,9 @@ namespace ThreadPilot.Core.Tests
                     ProcessOperationUserMessages.AccessDenied,
                     "Access is denied.",
                     isAccessDenied: true));
+            memoryPriorityService
+                .Setup(service => service.GetMemoryPriorityAsync(It.IsAny<ProcessModel>()))
+                .ReturnsAsync(ProcessMemoryPriority.Normal);
             var process = CreateProcess();
             var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
             var viewModel = CreateViewModel(
@@ -259,6 +262,46 @@ namespace ThreadPilot.Core.Tests
 
             Assert.Equal(ProcessMemoryPriority.BelowNormal, viewModel.SelectedProcessSummary.MemoryPriority);
             Assert.Equal("Memory priority: BelowNormal", viewModel.SelectedProcessSummary.MemoryPriorityText);
+        }
+
+        [Fact]
+        public async Task PriorityPickers_StartFromTheSelectedProcessCurrentValues()
+        {
+            var memoryPriorityService = new Mock<IProcessMemoryPriorityService>();
+            memoryPriorityService
+                .Setup(service => service.GetMemoryPriorityAsync(It.IsAny<ProcessModel>()))
+                .ReturnsAsync(ProcessMemoryPriority.Low);
+            memoryPriorityService
+                .Setup(service => service.GetIoPriorityAsync(It.IsAny<ProcessModel>()))
+                .ReturnsAsync((ProcessIoPriority?)null);
+            var viewModel = CreateViewModel(CreateProcessService().Object, memoryPriorityService: memoryPriorityService.Object);
+            var process = CreateProcess();
+            process.Priority = ProcessPriorityClass.High;
+
+            await viewModel.SelectedProcessSummary.UpdateAsync(process);
+
+            Assert.Equal(ProcessPriorityClass.High, viewModel.PendingCpuPriority);
+            Assert.Equal(ProcessMemoryPriority.Low, viewModel.PendingMemoryPriority);
+            Assert.Null(viewModel.PendingIoPriority); // unreadable: the picker stays empty instead of guessing
+        }
+
+        [Fact]
+        public void ProcessCounter_NeverShowsMoreVisibleThanTotal()
+        {
+            var viewModel = CreateViewModel(CreateProcessService().Object);
+            viewModel.TotalProcessCount = 1; // stale snapshot from an earlier batch load
+            foreach (var pid in new[] { 101, 102, 103 })
+            {
+                viewModel.Processes.Add(new ProcessModel { ProcessId = pid, Name = $"p{pid}" });
+            }
+
+            // Filtering is debounced through the dispatcher in the app; call the filter step directly.
+            typeof(ProcessViewModel)
+                .GetMethod("FilterProcesses", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                .Invoke(viewModel, null);
+
+            Assert.Equal(3, viewModel.FilteredProcesses.Count);
+            Assert.Equal(3, viewModel.TotalProcessCount);
         }
 
         [Fact]

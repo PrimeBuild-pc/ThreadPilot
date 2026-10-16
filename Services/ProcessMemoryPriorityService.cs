@@ -311,6 +311,108 @@ namespace ThreadPilot.Services
             }
         }
 
+        public Task<ProcessEfficiencyMode?> GetEfficiencyModeAsync(ProcessModel process)
+        {
+            if (!this.nativeApi.IsSupported || !IsValidProcess(process))
+            {
+                return Task.FromResult<ProcessEfficiencyMode?>(null);
+            }
+
+            try
+            {
+                using var handle = this.nativeApi.OpenProcess(
+                    ProcessAccessFlags.PROCESS_QUERY_LIMITED_INFORMATION,
+                    inheritHandle: false,
+                    (uint)process.ProcessId);
+                var state = new PowerThrottlingState { Version = PowerThrottlingState.CurrentVersion };
+                if (handle.IsInvalid || !this.nativeApi.GetPowerThrottling(handle, ref state))
+                {
+                    return Task.FromResult<ProcessEfficiencyMode?>(null);
+                }
+
+                return Task.FromResult<ProcessEfficiencyMode?>(
+                    (state.ControlMask & PowerThrottlingState.ExecutionSpeed) == 0 ? ProcessEfficiencyMode.SystemManaged
+                    : (state.StateMask & PowerThrottlingState.ExecutionSpeed) != 0 ? ProcessEfficiencyMode.On
+                    : ProcessEfficiencyMode.Off);
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogDebug(ex, "Could not read efficiency mode for process {ProcessId}", process.ProcessId);
+                return Task.FromResult<ProcessEfficiencyMode?>(null);
+            }
+        }
+
+        public Task<ProcessOperationResult> SetEfficiencyModeAsync(ProcessModel process, ProcessEfficiencyMode mode)
+        {
+            const string FailureMessage = "ThreadPilot could not change the efficiency mode.";
+            if (!IsValidProcess(process))
+            {
+                return Task.FromResult(ProcessOperationResult.Failed(
+                    InvalidProcessErrorCode,
+                    ProcessOperationUserMessages.ProcessExited,
+                    "Process is null or has an invalid PID."));
+            }
+
+            if (!Enum.IsDefined(mode))
+            {
+                return Task.FromResult(ProcessOperationResult.Failed(
+                    "InvalidEfficiencyMode",
+                    "This efficiency mode value is not supported.",
+                    $"Efficiency mode value '{mode}' is not supported."));
+            }
+
+            try
+            {
+                using var handle = this.nativeApi.OpenProcess(
+                    ProcessAccessFlags.PROCESS_SET_INFORMATION,
+                    inheritHandle: false,
+                    (uint)process.ProcessId);
+                if (handle.IsInvalid)
+                {
+                    return Task.FromResult(this.FromLastError("OpenProcess failed before SetProcessInformation(ProcessPowerThrottling).", FailureMessage));
+                }
+
+                var state = new PowerThrottlingState
+                {
+                    Version = PowerThrottlingState.CurrentVersion,
+                    ControlMask = mode == ProcessEfficiencyMode.SystemManaged ? 0 : PowerThrottlingState.ExecutionSpeed,
+                    StateMask = mode == ProcessEfficiencyMode.On ? PowerThrottlingState.ExecutionSpeed : 0,
+                };
+                if (!this.nativeApi.SetPowerThrottling(handle, ref state))
+                {
+                    return Task.FromResult(this.FromLastError("SetProcessInformation(ProcessPowerThrottling) failed.", FailureMessage));
+                }
+
+                return Task.FromResult(ProcessOperationResult.Succeeded(
+                    "Efficiency mode applied.",
+                    $"Process {process.Name} (PID: {process.ProcessId}) efficiency mode set to {mode}."));
+            }
+            catch (Exception ex) when (AffinityApplyExceptionClassifier.IsProcessExited(ex))
+            {
+                return Task.FromResult(ProcessOperationResult.Failed(
+                    AffinityApplyErrorCodes.ProcessExited,
+                    ProcessOperationUserMessages.ProcessExited,
+                    ex.Message,
+                    isProcessExited: true));
+            }
+            catch (Exception ex) when (AffinityApplyExceptionClassifier.IsAccessDenied(ex))
+            {
+                return Task.FromResult(ProcessOperationResult.Failed(
+                    AffinityApplyErrorCodes.AccessDenied,
+                    ProcessOperationUserMessages.AccessDenied,
+                    ex.Message,
+                    isAccessDenied: true));
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogWarning(ex, "Efficiency mode apply failed for process {ProcessId}", process.ProcessId);
+                return Task.FromResult(ProcessOperationResult.Failed(
+                    AffinityApplyErrorCodes.NativeApplyFailed,
+                    FailureMessage,
+                    ex.Message));
+            }
+        }
+
         private static bool IsValidProcess(ProcessModel? process) =>
             process != null && process.ProcessId > 0;
 
@@ -342,7 +444,9 @@ namespace ThreadPilot.Services
                 UnsupportedUserMessage,
                 technicalMessage);
 
-        private ProcessOperationResult FromLastError(string context)
+        private ProcessOperationResult FromLastError(
+            string context,
+            string failureMessage = "ThreadPilot could not apply the memory priority change.")
         {
             var error = this.nativeApi.GetLastWin32Error();
             var technicalMessage = $"{context} Win32 error {error}.";
@@ -362,7 +466,7 @@ namespace ThreadPilot.Services
                     isProcessExited: true),
                 _ => ProcessOperationResult.Failed(
                     AffinityApplyErrorCodes.NativeApplyFailed,
-                    "ThreadPilot could not apply the memory priority change.",
+                    failureMessage,
                     technicalMessage),
             };
         }

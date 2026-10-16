@@ -1,3 +1,9 @@
+## ThreadPilot v1.7.7
+
+Stable release: three-state EcoQoS, reliable persistent-rule backup/import and precedence, complete UI refresh and remembered layout. **Experimental Game Boost is not included**; it is reserved for v1.7.8-beta.1.
+
+[Full release notes](../releases/v1.7.7.md). Artifacts unsigned; verify SHA256 checksums.
+
 ## ThreadPilot v1.7.6
 
 This release fixes power plan discovery on localized Windows installations and makes executable-path rules survive application updates.

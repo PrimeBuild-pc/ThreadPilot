@@ -127,6 +127,19 @@ namespace ThreadPilot.ViewModels
             this.persistentRuleStore = persistentRuleStore;
             this.ruleCreationService = ruleCreationService;
 
+            if (localizationService != null)
+            {
+                localizationService.LanguageChanged += (_, _) =>
+                {
+                    this.OnPropertyChanged(nameof(this.SavedRulePriorityOptions));
+                    this.OnPropertyChanged(nameof(this.SavedRuleMemoryPriorityOptions));
+                    this.OnPropertyChanged(nameof(this.SavedRuleIoPriorityOptions));
+                    this.OnPropertyChanged(nameof(this.SavedRuleEfficiencyModeOptions));
+                    this.OnPropertyChanged(nameof(this.SavedRuleCpuAssignmentModeOptions));
+                    TaskSafety.FireAndForget(this.RefreshSavedProcessRulesAsync(), _ => { });
+                };
+            }
+
             // Subscribe to events
             this.associationService.ConfigurationChanged += this.OnConfigurationChanged;
             this.monitorManagerService.ServiceStatusChanged += this.OnServiceStatusChanged;
@@ -158,7 +171,7 @@ namespace ThreadPilot.ViewModels
                 this.SavedProcessRules.Clear();
                 foreach (var rule in rules.OrderBy(rule => rule.ProcessName, StringComparer.OrdinalIgnoreCase))
                 {
-                    this.SavedProcessRules.Add(SavedProcessRule.From(rule));
+                    this.SavedProcessRules.Add(SavedProcessRule.From(rule, this.Localize));
                 }
 
                 this.HasSavedProcessRules = this.SavedProcessRules.Count > 0;
@@ -196,45 +209,71 @@ namespace ThreadPilot.ViewModels
         private SavedProcessRule? selectedSavedProcessRule;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasPendingRuleChanges))]
         private bool savedRuleIsEnabled = true;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasPendingRuleChanges))]
         private bool savedRulePreventSleep;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasPendingRuleChanges))]
         private string savedRulePriority = NoneOption;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasPendingRuleChanges))]
         private string savedRuleMemoryPriority = NoneOption;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasPendingRuleChanges))]
         private string savedRuleIoPriority = NoneOption;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasPendingRuleChanges))]
+        private string savedRuleEfficiencyMode = NoneOption;
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasPendingRuleChanges))]
         private string savedRuleCpuAssignmentMode = nameof(CpuAssignmentMode.AffinityMask);
 
         public const string NoneOption = "None";
 
         // Realtime is deliberately absent: the service refuses it, so offering it would only
         // produce an error the user cannot resolve.
-        public IReadOnlyList<string> SavedRulePriorityOptions { get; } =
-        [
-            NoneOption,
-            nameof(System.Diagnostics.ProcessPriorityClass.Idle),
-            nameof(System.Diagnostics.ProcessPriorityClass.BelowNormal),
-            nameof(System.Diagnostics.ProcessPriorityClass.Normal),
-            nameof(System.Diagnostics.ProcessPriorityClass.AboveNormal),
-            nameof(System.Diagnostics.ProcessPriorityClass.High),
-        ];
+        // Values stay the enum names the editor already stores; only the labels are localized.
+        public IReadOnlyList<RuleOption> SavedRulePriorityOptions => this.Options(
+            "ProcessView_Priority",
+            [
+                NoneOption,
+                nameof(System.Diagnostics.ProcessPriorityClass.Idle),
+                nameof(System.Diagnostics.ProcessPriorityClass.BelowNormal),
+                nameof(System.Diagnostics.ProcessPriorityClass.Normal),
+                nameof(System.Diagnostics.ProcessPriorityClass.AboveNormal),
+                nameof(System.Diagnostics.ProcessPriorityClass.High),
+            ]);
 
-        public IReadOnlyList<string> SavedRuleMemoryPriorityOptions { get; } =
-            [NoneOption, .. Enum.GetNames<ProcessMemoryPriority>()];
+        public IReadOnlyList<RuleOption> SavedRuleMemoryPriorityOptions =>
+            this.Options("ProcessView_Priority", [NoneOption, .. Enum.GetNames<ProcessMemoryPriority>()]);
 
-        public IReadOnlyList<string> SavedRuleIoPriorityOptions { get; } =
-            [NoneOption, .. Enum.GetNames<ProcessIoPriority>()];
+        public IReadOnlyList<RuleOption> SavedRuleIoPriorityOptions =>
+            this.Options("ProcessView_Priority", [NoneOption, .. Enum.GetNames<ProcessIoPriority>()]);
 
-        public IReadOnlyList<string> SavedRuleCpuAssignmentModeOptions { get; } =
-            [.. Enum.GetNames<CpuAssignmentMode>()];
+        public IReadOnlyList<RuleOption> SavedRuleEfficiencyModeOptions =>
+            this.Options("EfficiencyMode_", [NoneOption, .. Enum.GetNames<ProcessEfficiencyMode>()]);
+
+        public IReadOnlyList<RuleOption> SavedRuleCpuAssignmentModeOptions =>
+            this.Options("CpuAssignmentMode_", [.. Enum.GetNames<CpuAssignmentMode>()]);
+
+        private RuleOption[] Options(string labelPrefix, IReadOnlyList<string> values) =>
+            values.Select(value => new RuleOption(
+                value,
+                value == NoneOption ? this.Localize("Rules_NotSet", "Not set")
+                    // Windows calls the Idle class "Low", as Task Manager does.
+                    : value == nameof(System.Diagnostics.ProcessPriorityClass.Idle) ? this.Localize("ProcessView_PriorityLow", "Low")
+                    : this.Localize(labelPrefix + value, value)))
+                .ToArray();
+
+        public sealed record RuleOption(string Value, string Label);
 
         partial void OnSelectedSavedProcessRuleChanged(SavedProcessRule? value)
         {
@@ -243,12 +282,14 @@ namespace ThreadPilot.ViewModels
                 return;
             }
 
+            this.SavedRuleCoreMask = null;
             var rule = value.Source;
             this.SavedRuleIsEnabled = rule.IsEnabled;
             this.SavedRulePreventSleep = rule.PreventSystemSleepWhileRunning;
             this.SavedRulePriority = rule.Priority?.ToString() ?? NoneOption;
             this.SavedRuleMemoryPriority = rule.MemoryPriority?.ToString() ?? NoneOption;
             this.SavedRuleIoPriority = rule.IoPriority?.ToString() ?? NoneOption;
+            this.SavedRuleEfficiencyMode = rule.EfficiencyMode?.ToString() ?? NoneOption;
             this.SavedRuleCpuAssignmentMode = rule.CpuAssignmentMode.ToString();
         }
 
@@ -257,26 +298,17 @@ namespace ThreadPilot.ViewModels
         // was the one thing you could not change. The vocabulary here is the saved CPU masks, which
         // is what the Masks tab exists to define, rather than a second per-core picker.
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasPendingRuleChanges))]
         private CoreMask? savedRuleCoreMask;
 
-        [RelayCommand]
-        private async Task ApplySavedRuleCoreMaskAsync()
-        {
-            var selected = this.SelectedSavedProcessRule;
-            var mask = this.SavedRuleCoreMask;
-            if (selected == null || mask == null || this.ruleCreationService == null)
-            {
-                return;
-            }
-
-            var result = await this.ruleCreationService
-                .UpdateRuleCoreSelectionAsync(selected.Id, mask.BoolMask)
-                .ConfigureAwait(true);
-            this.SetStatus(result.UserMessage, false);
-            await this.RefreshSavedProcessRulesAsync().ConfigureAwait(true);
-            this.SelectedSavedProcessRule = this.SavedProcessRules
-                .FirstOrDefault(row => string.Equals(row.Id, selected.Id, StringComparison.Ordinal));
-        }
+        public bool HasPendingRuleChanges => this.SelectedSavedProcessRule is { } selected &&
+            (this.SavedRuleCoreMask != null || this.SavedRuleIsEnabled != selected.Source.IsEnabled ||
+             this.SavedRulePreventSleep != selected.Source.PreventSystemSleepWhileRunning ||
+             this.SavedRulePriority != (selected.Source.Priority?.ToString() ?? NoneOption) ||
+             this.SavedRuleMemoryPriority != (selected.Source.MemoryPriority?.ToString() ?? NoneOption) ||
+             this.SavedRuleIoPriority != (selected.Source.IoPriority?.ToString() ?? NoneOption) ||
+             this.SavedRuleEfficiencyMode != (selected.Source.EfficiencyMode?.ToString() ?? NoneOption) ||
+             this.SavedRuleCpuAssignmentMode != selected.Source.CpuAssignmentMode.ToString());
 
         [RelayCommand]
         private async Task SaveSavedProcessRuleAsync()
@@ -294,12 +326,15 @@ namespace ThreadPilot.ViewModels
                 Priority = ParseOption<System.Diagnostics.ProcessPriorityClass>(this.SavedRulePriority),
                 MemoryPriority = ParseOption<ProcessMemoryPriority>(this.SavedRuleMemoryPriority),
                 IoPriority = ParseOption<ProcessIoPriority>(this.SavedRuleIoPriority),
+                EfficiencyMode = ParseOption<ProcessEfficiencyMode>(this.SavedRuleEfficiencyMode),
                 CpuAssignmentMode = Enum.TryParse<CpuAssignmentMode>(this.SavedRuleCpuAssignmentMode, out var mode)
                     ? mode
                     : selected.Source.CpuAssignmentMode,
             };
 
-            var result = await this.ruleCreationService.UpdateRuleAsync(updated).ConfigureAwait(true);
+            var result = this.SavedRuleCoreMask == null
+                ? await this.ruleCreationService.UpdateRuleAsync(updated).ConfigureAwait(true)
+                : await this.ruleCreationService.UpdateRuleWithCoreSelectionAsync(updated, this.SavedRuleCoreMask.BoolMask).ConfigureAwait(true);
             this.SetStatus(result.UserMessage, false);
             await this.RefreshSavedProcessRulesAsync().ConfigureAwait(true);
             this.SelectedSavedProcessRule = this.SavedProcessRules
@@ -322,39 +357,49 @@ namespace ThreadPilot.ViewModels
             string Cores,
             PersistentProcessRule Source)
         {
-            public static SavedProcessRule From(PersistentProcessRule rule)
+            // text(key, fallback) resolves a localized string; the fallbacks keep the list readable without one.
+            public static SavedProcessRule From(PersistentProcessRule rule, Func<string, string, string> text)
             {
+                string Level(object value) => value.ToString() == nameof(System.Diagnostics.ProcessPriorityClass.Idle)
+                    ? text("ProcessView_PriorityLow", "Low")
+                    : text("ProcessView_Priority" + value, value.ToString()!);
+
                 var applies = new List<string>();
                 if (rule.ApplyAffinityOnStart)
                 {
-                    applies.Add("CPU assignment");
+                    applies.Add(text("ProcessView_CoresSection", "CPU cores"));
                 }
 
                 if (rule.ApplyPriorityOnStart && rule.Priority.HasValue)
                 {
-                    applies.Add($"priority {rule.Priority}");
+                    applies.Add($"{text("ProcessView_RowCpu", "CPU")} {Level(rule.Priority.Value)}");
                 }
 
                 if (rule.ApplyMemoryPriorityOnStart && rule.MemoryPriority.HasValue)
                 {
-                    applies.Add($"memory {rule.MemoryPriority}");
+                    applies.Add($"{text("ProcessView_RowMemory", "Memory")} {Level(rule.MemoryPriority.Value)}");
                 }
 
                 if (rule.ApplyIoPriorityOnStart && rule.IoPriority.HasValue)
                 {
-                    applies.Add($"I/O {rule.IoPriority}");
+                    applies.Add($"{text("ProcessView_RowIo", "I/O")} {Level(rule.IoPriority.Value)}");
+                }
+
+                if (rule.ApplyEfficiencyModeOnStart && rule.EfficiencyMode.HasValue)
+                {
+                    applies.Add($"{text("ProcessView_RowEfficiency", "Efficiency")} {text("EfficiencyMode_" + rule.EfficiencyMode.Value, rule.EfficiencyMode.Value.ToString())}");
                 }
 
                 if (rule.PreventSystemSleepWhileRunning)
                 {
-                    applies.Add("keeps the system awake");
+                    applies.Add(text("Rules_AppliesKeepAwake", "keeps the PC awake"));
                 }
 
                 return new SavedProcessRule(
                     rule.Id,
-                    string.IsNullOrWhiteSpace(rule.ProcessName) ? "(unnamed)" : rule.ProcessName,
-                    applies.Count == 0 ? "nothing" : string.Join(", ", applies),
-                    rule.ApplyAffinityOnStart ? rule.CpuAssignmentMode.ToString() : "-",
+                    string.IsNullOrWhiteSpace(rule.ProcessName) ? text("Rules_Unnamed", "(unnamed)") : rule.ProcessName,
+                    applies.Count == 0 ? text("Rules_AppliesNothing", "nothing") : string.Join(", ", applies),
+                    rule.ApplyAffinityOnStart ? text("CpuAssignmentMode_" + rule.CpuAssignmentMode, rule.CpuAssignmentMode.ToString()) : "-",
                     rule.IsEnabled,
                     rule.UpdatedAt.ToLocalTime(),
                     DescribeCores(rule),
@@ -862,8 +907,9 @@ namespace ThreadPilot.ViewModels
             });
         }
 
+        // GetString echoes the key when it is missing, so treat that as "no translation".
         private string Localize(string key, string fallback) =>
-            this.localizationService?.GetString(key) ?? fallback;
+            this.localizationService?.GetString(key) is { Length: > 0 } text && text != key ? text : fallback;
 
         private void UpdateServiceStatus()
         {

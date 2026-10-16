@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.7.7 - Stable efficiency mode, rules reliability and UI refresh
+
+- Three-state EcoQoS for running processes and saved rules, independent of CPU priority; hardware-verified in issue #66.
+- Persistent-rule backups, validated imports with rollback, deterministic rule precedence and conflict reporting.
+- Clearer process/rule editors, priority undo, non-blocking automation pause, Windows 11 settings rows and remembered layout.
+- Updated localization and narrow-window/scaling fixes.
+- CI/release native tests run on Server 2025; Server 2022 build 20348 rejects EcoQoS read-back with error 87.
+- **No experimental Game Boost or its additional topology changes in this stable release.** Those are reserved for v1.7.8-beta.1.
+- [Full release notes](releases/v1.7.7.md).
+
 ## v1.7.6 - Localized power plans and version-proof process rules
 
 ### Fixed

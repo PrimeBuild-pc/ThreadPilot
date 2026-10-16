@@ -21,6 +21,7 @@ namespace ThreadPilot.Services
             CpuAssignmentMode cpuAssignmentMode = CpuAssignmentMode.Automatic,
             ProcessIoPriority? currentIoPriority = null,
             bool preventSystemSleepWhileRunning = false,
+            ProcessEfficiencyMode? currentEfficiencyMode = null,
             CancellationToken cancellationToken = default);
 
         Task<ProcessRuleCreationResult> DeleteRuleAsync(
@@ -35,9 +36,9 @@ namespace ThreadPilot.Services
             PersistentProcessRule rule,
             CancellationToken cancellationToken = default);
 
-        Task<ProcessRuleCreationResult> UpdateRuleCoreSelectionAsync(
-            string ruleId,
-            IReadOnlyList<bool> coreSelection,
+        Task<ProcessRuleCreationResult> UpdateRuleWithCoreSelectionAsync(
+            PersistentProcessRule rule,
+            IReadOnlyList<bool>? coreSelection,
             CancellationToken cancellationToken = default);
 
         Task<IReadOnlyList<string>> GetRulesNeedingTopologyReviewAsync(
@@ -55,6 +56,8 @@ namespace ThreadPilot.Services
         public ProcessMemoryPriority? MemoryPriority { get; init; }
 
         public ProcessIoPriority? IoPriority { get; init; }
+
+        public ProcessEfficiencyMode? EfficiencyMode { get; init; }
 
         public bool PreventSystemSleepWhileRunning { get; init; }
 
@@ -121,6 +124,7 @@ namespace ThreadPilot.Services
             CpuAssignmentMode cpuAssignmentMode = CpuAssignmentMode.Automatic,
             ProcessIoPriority? currentIoPriority = null,
             bool preventSystemSleepWhileRunning = false,
+            ProcessEfficiencyMode? currentEfficiencyMode = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(process);
@@ -132,6 +136,8 @@ namespace ThreadPilot.Services
                     : null,
                 MemoryPriority = currentMemoryPriority,
                 IoPriority = currentIoPriority,
+                // Only an explicit choice is worth saving; "Windows decides" is the default anyway.
+                EfficiencyMode = currentEfficiencyMode is ProcessEfficiencyMode.SystemManaged ? null : currentEfficiencyMode,
                 PreventSystemSleepWhileRunning = preventSystemSleepWhileRunning,
                 CpuAssignmentMode = cpuAssignmentMode,
             };
@@ -207,8 +213,14 @@ namespace ThreadPilot.Services
         // Editing a rule in place, from the saved-rules list. The affinity payload is not editable
         // there - that needs the core picker in the Process tab - so it is carried over untouched
         // rather than rebuilt, and only the fields the editor owns are replaced.
-        public async Task<ProcessRuleCreationResult> UpdateRuleAsync(
+        public Task<ProcessRuleCreationResult> UpdateRuleAsync(
             PersistentProcessRule rule,
+            CancellationToken cancellationToken = default) =>
+            this.UpdateRuleWithCoreSelectionAsync(rule, null, cancellationToken);
+
+        public async Task<ProcessRuleCreationResult> UpdateRuleWithCoreSelectionAsync(
+            PersistentProcessRule rule,
+            IReadOnlyList<bool>? coreSelection,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(rule);
@@ -234,13 +246,36 @@ namespace ThreadPilot.Services
                 Priority = rule.Priority,
                 MemoryPriority = rule.MemoryPriority,
                 IoPriority = rule.IoPriority,
+                EfficiencyMode = rule.EfficiencyMode,
                 CpuAssignmentMode = rule.CpuAssignmentMode,
                 PreventSystemSleepWhileRunning = rule.PreventSystemSleepWhileRunning,
                 ApplyPriorityOnStart = rule.Priority.HasValue,
                 ApplyMemoryPriorityOnStart = rule.MemoryPriority.HasValue,
                 ApplyIoPriorityOnStart = rule.IoPriority.HasValue,
+                ApplyEfficiencyModeOnStart = rule.EfficiencyMode.HasValue,
                 UpdatedAt = DateTime.UtcNow,
             };
+
+            if (coreSelection != null)
+            {
+                var affinity = await this.BuildAffinityPayloadFromCoreSelectionAsync(coreSelection, "Saved rule editor", cancellationToken).ConfigureAwait(false);
+                if (!affinity.Success)
+                {
+                    return affinity;
+                }
+
+                if (affinity.Payload == null)
+                {
+                    return ProcessRuleCreationResult.Failed("NoActionableRulePayload", NoCurrentSettingsMessage);
+                }
+
+                updated = updated with
+                {
+                    CpuSelection = affinity.Payload.CpuSelection,
+                    LegacyAffinityMask = HasSelectionPayload(affinity.Payload.CpuSelection) ? null : affinity.Payload.LegacyAffinityMask,
+                    ApplyAffinityOnStart = true,
+                };
+            }
 
             rules[existingIndex] = updated;
 
@@ -258,71 +293,6 @@ namespace ThreadPilot.Services
                 Updated = true,
                 Rule = updated,
                 UserMessage = $"Updated saved rule for {processName}.",
-            };
-        }
-
-        // Setting a rule's cores without the process being around to select. The bits come from a
-        // saved CPU mask, and go through the same migration path the Process tab uses, so a rule
-        // edited here is indistinguishable from one saved there.
-        public async Task<ProcessRuleCreationResult> UpdateRuleCoreSelectionAsync(
-            string ruleId,
-            IReadOnlyList<bool> coreSelection,
-            CancellationToken cancellationToken = default)
-        {
-            ArgumentNullException.ThrowIfNull(coreSelection);
-
-            if (string.IsNullOrWhiteSpace(ruleId))
-            {
-                return ProcessRuleCreationResult.Failed("NoSavedRuleToUpdate", NoSavedRuleMessage);
-            }
-
-            var affinityPayload = await this.BuildAffinityPayloadFromCoreSelectionAsync(
-                coreSelection,
-                "Set from a saved CPU mask in the Rules tab",
-                cancellationToken).ConfigureAwait(false);
-            if (!affinityPayload.Success)
-            {
-                return affinityPayload;
-            }
-
-            if (affinityPayload.Payload == null)
-            {
-                return ProcessRuleCreationResult.Failed("NoActionableRulePayload", NoCurrentSettingsMessage);
-            }
-
-            var rules = (await this.ruleStore.LoadAsync().ConfigureAwait(false)).ToList();
-            var existingIndex = rules.FindIndex(candidate => string.Equals(candidate.Id, ruleId, StringComparison.Ordinal));
-            if (existingIndex < 0)
-            {
-                return ProcessRuleCreationResult.Failed("NoSavedRuleToUpdate", NoSavedRuleMessage);
-            }
-
-            var selection = affinityPayload.Payload.CpuSelection;
-            var existing = rules[existingIndex];
-            var updated = existing with
-            {
-                CpuSelection = selection,
-                LegacyAffinityMask = HasSelectionPayload(selection) ? null : affinityPayload.Payload.LegacyAffinityMask,
-                ApplyAffinityOnStart = true,
-                UpdatedAt = DateTime.UtcNow,
-            };
-
-            rules[existingIndex] = updated;
-
-            cancellationToken.ThrowIfCancellationRequested();
-            await this.ruleStore.SaveAsync(rules).ConfigureAwait(false);
-
-            var processName = string.IsNullOrWhiteSpace(updated.ProcessName)
-                ? "process"
-                : updated.ProcessName.Trim();
-            this.logger.LogInformation("Updated the CPU selection of saved rule {RuleId} for {ProcessName}", updated.Id, processName);
-
-            return new ProcessRuleCreationResult
-            {
-                Success = true,
-                Updated = true,
-                Rule = updated,
-                UserMessage = $"Updated the cores of the saved rule for {processName}.",
             };
         }
 
@@ -444,6 +414,7 @@ namespace ThreadPilot.Services
             var priority = payload.Priority ?? existing?.Priority;
             var memoryPriority = payload.MemoryPriority ?? existing?.MemoryPriority;
             var ioPriority = payload.IoPriority ?? existing?.IoPriority;
+            var efficiencyMode = payload.EfficiencyMode ?? existing?.EfficiencyMode;
 
             var rule = new PersistentProcessRule
             {
@@ -458,10 +429,12 @@ namespace ThreadPilot.Services
                 Priority = priority,
                 MemoryPriority = memoryPriority,
                 IoPriority = ioPriority,
+                EfficiencyMode = efficiencyMode,
                 ApplyAffinityOnStart = HasSelectionPayload(cpuSelection) || legacyAffinityMask.HasValue,
                 ApplyPriorityOnStart = priority.HasValue,
                 ApplyMemoryPriorityOnStart = memoryPriority.HasValue,
                 ApplyIoPriorityOnStart = ioPriority.HasValue,
+                ApplyEfficiencyModeOnStart = efficiencyMode.HasValue,
                 PreventSystemSleepWhileRunning = payload.PreventSystemSleepWhileRunning,
                 CreatedAt = existing?.CreatedAt ?? now,
                 UpdatedAt = now,
@@ -556,6 +529,7 @@ namespace ThreadPilot.Services
             payload.Priority.HasValue ||
             payload.MemoryPriority.HasValue ||
             payload.IoPriority.HasValue ||
+            payload.EfficiencyMode.HasValue ||
             payload.PreventSystemSleepWhileRunning;
 
         private static bool HasSelectionPayload(CpuSelection? selection) =>

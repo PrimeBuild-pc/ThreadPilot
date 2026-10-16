@@ -19,4 +19,12 @@ namespace ThreadPilot.Models
         Normal = 2,
         High = 3,
     }
+
+    // Windows 11 "efficiency mode" (EcoQoS). Off forces full speed (HighQoS); SystemManaged lets Windows decide.
+    public enum ProcessEfficiencyMode
+    {
+        SystemManaged = 0,
+        On = 1,
+        Off = 2,
+    }
 }

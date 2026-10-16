@@ -517,6 +517,20 @@ namespace ThreadPilot.Services
             }
         }
 
+        // PowerThrottlingOff=1 turns Windows power throttling off system-wide, which also voids per-process efficiency mode.
+        public static bool IsPowerThrottlingOff()
+        {
+            try
+            {
+                using var key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Power\PowerThrottling");
+                return key?.GetValue("PowerThrottlingOff") is int value && value == 1;
+            }
+            catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException)
+            {
+                return false;
+            }
+        }
+
         public Task<TweakStatus> GetPowerThrottlingStatusAsync()
         {
             try

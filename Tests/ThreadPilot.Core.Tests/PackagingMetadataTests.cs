@@ -4,8 +4,8 @@ namespace ThreadPilot.Core.Tests
 
     public sealed partial class PackagingMetadataTests
     {
-        private const string ReleaseVersion = "1.7.6";
-        private const string ReleaseAssemblyVersion = "1.7.6.0";
+        private const string ReleaseVersion = "1.7.7";
+        private const string ReleaseAssemblyVersion = "1.7.7.0";
 
         [Fact]
         public void InnoInstallers_UseStableDisplayNameAndSeparateVersionMetadata()
@@ -97,6 +97,19 @@ namespace ThreadPilot.Core.Tests
             AssertFileContains(Path.Combine(root, "docs", "release", "RELEASE_NOTES.md"), $"v{ReleaseVersion}");
         }
 
+        [Fact]
+        public void ReleaseWorkflow_SeparatesStableAndPreviewChannels()
+        {
+            var root = FindRepositoryRoot();
+            var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "release.yml"));
+            Assert.Contains("prerelease: ${{ needs.build.outputs.prerelease == 'true' }}", workflow, StringComparison.Ordinal);
+            Assert.Contains("make_latest: ${{ needs.build.outputs.prerelease == 'true' && 'false' || 'true' }}", workflow, StringComparison.Ordinal);
+            Assert.Contains("if: needs.release.result == 'success' && needs.build.outputs.prerelease != 'true'", workflow, StringComparison.Ordinal);
+            Assert.Contains("cp \"docs/releases/${{ needs.build.outputs.tag }}.md\" release-notes.md", workflow, StringComparison.Ordinal);
+            AssertFileContains(Path.Combine(root, ".github", "workflows", "ci-devsecops.yml"), "runs-on: windows-2025");
+            Assert.True(File.Exists(Path.Combine(root, "docs", "releases", $"v{ReleaseVersion}.md")));
+        }
+
         private static void AssertFileContains(string path, string expected)
         {
             var content = File.ReadAllText(path);
@@ -120,7 +133,7 @@ namespace ThreadPilot.Core.Tests
             throw new InvalidOperationException("Repository root could not be located.");
         }
 
-        [GeneratedRegex("#define MyAppVersion \"1\\.7\\.6\"", RegexOptions.CultureInvariant)]
+        [GeneratedRegex("#define MyAppVersion \"1\\.7\\.7\"", RegexOptions.CultureInvariant)]
         private static partial Regex MyAppVersionRegex();
     }
 }

@@ -170,6 +170,23 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task ApplyMatchingRulesAsync_WithEfficiencyMode_AppliesIt()
+        {
+            var rule = CreateRule() with { EfficiencyMode = ProcessEfficiencyMode.On, ApplyEfficiencyModeOnStart = true };
+            var memoryPriorityService = new Mock<IProcessMemoryPriorityService>(MockBehavior.Strict);
+            memoryPriorityService
+                .Setup(s => s.SetEfficiencyModeAsync(It.IsAny<ProcessModel>(), ProcessEfficiencyMode.On))
+                .ReturnsAsync(ProcessOperationResult.Succeeded("Efficiency mode applied.", "test"));
+            var engine = CreateEngine([rule], CreateAffinityService().Object, CreateProcessService().Object, memoryPriorityService.Object);
+
+            var result = Assert.Single(await engine.ApplyMatchingRulesAsync(CreateProcess()));
+
+            Assert.True(result.Success);
+            Assert.True(result.EfficiencyModeApplied);
+            memoryPriorityService.Verify(s => s.SetEfficiencyModeAsync(It.IsAny<ProcessModel>(), ProcessEfficiencyMode.On), Times.Once);
+        }
+
+        [Fact]
         public async Task ApplyMatchingRulesAsync_WithRealtimePriority_ReturnsControlledFailure()
         {
             var rule = CreateRule(priority: ProcessPriorityClass.RealTime, applyPriority: true);

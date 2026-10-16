@@ -2196,6 +2196,7 @@ namespace ThreadPilot
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
+            this.SaveWindowPlacement();
             if (this.isPerformingShutdown)
             {
                 base.OnClosing(e);
@@ -2228,6 +2229,7 @@ namespace ThreadPilot
 
         protected override void OnClosed(EventArgs e)
         {
+            this.SaveWindowPlacement();
             try
             {
                 this.Loaded -= this.OnWindowLoaded;

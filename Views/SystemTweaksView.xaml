@@ -8,60 +8,84 @@
              d:DesignHeight="600" d:DesignWidth="800">
 
     <UserControl.Resources>
-        <!-- Larger, labelled pill toggle. The native ui:ToggleSwitch is 40x20 with no text,
-             which reads as a decoration rather than a switch on this dense list. -->
-        <Style x:Key="PillToggleButtonStyle" TargetType="ToggleButton">
-            <Setter Property="MinWidth" Value="56"/>
-            <Setter Property="Height" Value="28"/>
+        <!-- Windows 11 toggle switch: 40x20 track, a thumb that slides and grows on hover, accent when on,
+             and the state written beside it ("On"/"Off") as in Windows Settings. The label sits outside
+             the track, so a long translation widens the control instead of colliding with the thumb. -->
+        <Style x:Key="Win11ToggleSwitchStyle" TargetType="ToggleButton">
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="Focusable" Value="True"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Border x:Name="Track"
-                                Background="{DynamicResource ControlFillColorSecondaryBrush}"
-                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                                BorderThickness="1"
-                                CornerRadius="14"
-                                Padding="3"
-                                SnapsToDevicePixels="True">
-                            <!-- Thumb and label are docked, never stacked, so a long localized
-                                 label (ru "ВЫКЛ") pushes the pill wider instead of colliding with
-                                 the thumb. MinWidth keeps the common case at the intended size. -->
-                            <DockPanel LastChildFill="True">
+                        <DockPanel Background="Transparent">
+                            <TextBlock x:Name="StateLabel"
+                                       DockPanel.Dock="Left"
+                                       Text="{DynamicResource SystemTweaks_ToggleOff}"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,12,0"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <Border x:Name="Track"
+                                    Width="40"
+                                    Height="20"
+                                    CornerRadius="10"
+                                    BorderThickness="1"
+                                    Background="Transparent"
+                                    BorderBrush="{DynamicResource TextSecondaryBrush}"
+                                    SnapsToDevicePixels="True">
                                 <Ellipse x:Name="Thumb"
-                                         DockPanel.Dock="Left"
-                                         Width="20"
-                                         Height="20"
-                                         Fill="{DynamicResource TextSecondaryBrush}"/>
-                                <TextBlock x:Name="StateLabel"
-                                           Text="{DynamicResource SystemTweaks_ToggleOff}"
-                                           FontSize="10"
-                                           FontWeight="SemiBold"
-                                           VerticalAlignment="Center"
-                                           TextAlignment="Center"
-                                           Margin="3,0,4,0"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
-                            </DockPanel>
-                        </Border>
+                                         Width="12"
+                                         Height="12"
+                                         Margin="3,0,0,0"
+                                         HorizontalAlignment="Left"
+                                         VerticalAlignment="Center"
+                                         Fill="{DynamicResource TextSecondaryBrush}">
+                                    <Ellipse.RenderTransform>
+                                        <TranslateTransform x:Name="ThumbOffset" X="0"/>
+                                    </Ellipse.RenderTransform>
+                                </Ellipse>
+                            </Border>
+                        </DockPanel>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="Track" Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
                                 <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
-                                <Setter TargetName="Thumb" Property="DockPanel.Dock" Value="Right"/>
                                 <Setter TargetName="Thumb" Property="Fill" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
                                 <Setter TargetName="StateLabel" Property="Text" Value="{DynamicResource SystemTweaks_ToggleOn}"/>
-                                <Setter TargetName="StateLabel" Property="Margin" Value="4,0,3,0"/>
-                                <Setter TargetName="StateLabel" Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="ThumbOffset" Storyboard.TargetProperty="X" To="20" Duration="0:0:0.15">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="ThumbOffset" Storyboard.TargetProperty="X" To="0" Duration="0:0:0.15">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource SoftSelectionBorderBrush}"/>
+                                <Setter TargetName="Thumb" Property="Width" Value="14"/>
+                                <Setter TargetName="Thumb" Property="Height" Value="14"/>
+                                <Setter TargetName="Thumb" Property="Margin" Value="2,0,0,0"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Track" Property="BorderThickness" Value="2"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Track" Property="Background" Value="{DynamicResource ControlFillColorDisabledBrush}"/>
-                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-                                <Setter TargetName="Track" Property="Opacity" Value="0.6"/>
-                                <Setter TargetName="Thumb" Property="Fill" Value="{DynamicResource TextSecondaryBrush}"/>
+                                <Setter TargetName="Track" Property="Opacity" Value="0.4"/>
                                 <Setter TargetName="StateLabel" Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -70,181 +94,133 @@
             </Setter>
         </Style>
     </UserControl.Resources>
-    <Grid Margin="10">
+    <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-         <!-- Header and Controls -->
-         <Border Grid.Row="0"
-                 Style="{StaticResource StandardCardStyle}"
-                 Margin="0,0,0,16">
-             <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                 <!-- Description and Refresh Button -->
-                 <Grid Grid.Row="0" Margin="0,10,0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0">
-                        <TextBlock Text="{DynamicResource SystemTweaksView_Title}"
-                                   Style="{StaticResource PageTitleTextStyle}"
-                                   Margin="0,0,0,4"/>
-                        <TextBlock Text="{DynamicResource SystemTweaksView_Subtitle}"
-                                   Style="{StaticResource PageSubtitleTextStyle}"/>
-                    </StackPanel>
-
-                    <Button Grid.Column="1"
-                            Content="{DynamicResource SystemTweaksView_RefreshAll}"
-                            Command="{Binding RefreshAllTweaksCommand}"
-                            Padding="12,6"
-                            ToolTip="{DynamicResource SystemTweaksView_RefreshAllTooltip}"
-                            IsEnabled="{Binding IsRefreshing, Converter={StaticResource InverseBooleanConverter}}"/>
-                </Grid>
-
-                <!-- Status Bar -->
-                <Grid Grid.Row="1">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Grid.Column="0"
-                               Text="{DynamicResource SystemTweaksView_Status}"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center"/>
-
-                    <TextBlock Grid.Column="1"
-                               Text="{Binding RefreshStatusText}"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               Margin="10,0"
-                               VerticalAlignment="Center"/>
-
-                    <ProgressBar Grid.Column="2"
-                                 Width="100"
-                                 Height="4"
+        <Grid Grid.Row="0" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="{DynamicResource SystemTweaksView_Title}"
+                           Style="{StaticResource PageTitleTextStyle}"
+                           Margin="0,0,0,4"/>
+                <TextBlock Text="{DynamicResource SystemTweaksView_Subtitle}"
+                           Style="{StaticResource PageSubtitleTextStyle}"/>
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <TextBlock Text="{DynamicResource SystemTweaksView_Status}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <TextBlock Text="{Binding RefreshStatusText}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="6,0,10,0"/>
+                    <ProgressBar Width="100" Height="4" VerticalAlignment="Center"
                                  IsIndeterminate="{Binding IsRefreshing}"
                                  Visibility="{Binding IsRefreshing, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                </Grid>
-            </Grid>
-        </Border>
+                </StackPanel>
+            </StackPanel>
+            <ui:Button Grid.Column="1"
+                       VerticalAlignment="Top"
+                       Icon="{ui:SymbolIcon ArrowClockwise24}"
+                       Content="{DynamicResource SystemTweaksView_RefreshAll}"
+                       Command="{Binding RefreshAllTweaksCommand}"
+                       ToolTip="{DynamicResource SystemTweaksView_RefreshAllTooltip}"
+                       IsEnabled="{Binding IsRefreshing, Converter={StaticResource InverseBooleanConverter}}"/>
+        </Grid>
 
-        <!-- Tweaks List -->
+        <!-- One tweak per row, Windows 11 Settings style: what it does on the left, its switch on the right. -->
         <ScrollViewer Grid.Row="1"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
-            <ItemsControl ItemsSource="{Binding TweakItems}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <UniformGrid Columns="2"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-
+            <ItemsControl ItemsSource="{Binding TweakItems}" MaxWidth="980" HorizontalAlignment="Stretch" Margin="0,0,12,12">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <GroupBox Margin="0,0,12,12" Padding="{DynamicResource CompactCardPadding}">
-                            <GroupBox.Header>
-                                 <TextBlock Text="{Binding Name}"
-                                            FontSize="14"
-                                            FontWeight="SemiBold"
-                                            Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            </GroupBox.Header>
+                        <Border Background="{DynamicResource CardSurfaceBrush}"
+                                BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="16,12"
+                                Margin="0,0,0,4">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
 
-                            <StackPanel>
-                                 <TextBlock Text="{Binding Description}"
-                                            FontSize="11"
-                                            Foreground="{DynamicResource TextSecondaryBrush}"
-                                            TextWrapping="Wrap"
-                                            Margin="0,0,0,8"/>
+                                <Ellipse Grid.Column="0" Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,14,0"
+                                         ToolTip="{Binding StatusText}">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Setter Property="Fill" Value="{DynamicResource SuccessTextBrush}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsAvailable}" Value="False">
+                                                    <Setter Property="Fill" Value="{DynamicResource ErrorTextBrush}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                                                    <Setter Property="Fill" Value="{DynamicResource TextSecondaryBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
 
-                                <Grid Margin="0,0,0,5">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="{Binding Description}"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               TextWrapping="Wrap"
+                                               Margin="0,2,0,0"/>
+                                    <TextBlock Text="{Binding ErrorMessage}"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource ErrorTextBrush}"
+                                               TextWrapping="Wrap"
+                                               Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
+                                </StackPanel>
 
-                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Ellipse Width="8" Height="8"
-                                                 VerticalAlignment="Center"
-                                                 Margin="0,0,8,0">
-                                            <Ellipse.Style>
-                                                <Style TargetType="Ellipse">
-                                                    <Setter Property="Fill" Value="{DynamicResource SuccessTextBrush}"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsAvailable}" Value="False">
-                                                            <Setter Property="Fill" Value="{DynamicResource ErrorTextBrush}"/>
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding IsEnabled}" Value="False">
-                                                            <Setter Property="Fill" Value="{DynamicResource TextSecondaryBrush}"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Ellipse.Style>
-                                        </Ellipse>
+                                <ToggleButton Grid.Column="2"
+                                              IsChecked="{Binding IsEnabled, Mode=OneWay}"
+                                              IsEnabled="{Binding IsAvailable}"
+                                              Command="{Binding ToggleCommand}"
+                                              CommandParameter="{Binding}"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Right"
+                                              Margin="10,0,0,0"
+                                              AutomationProperties.Name="{Binding Name}"
+                                              ToolTip="{DynamicResource SystemTweaksView_TweakTooltip}">
+                                    <ToggleButton.Style>
+                                        <Style TargetType="ToggleButton" BasedOn="{StaticResource Win11ToggleSwitchStyle}">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsGuidedAction}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ToggleButton.Style>
+                                </ToggleButton>
 
-                                        <TextBlock Text="{Binding StatusText}"
-                                                   FontSize="11"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                                   VerticalAlignment="Center"/>
-                                    </StackPanel>
-
-                                    <ToggleButton Grid.Column="1"
-                                                  IsChecked="{Binding IsEnabled, Mode=OneWay}"
-                                                  IsEnabled="{Binding IsAvailable}"
-                                                  Command="{Binding ToggleCommand}"
-                                                  CommandParameter="{Binding}"
-                                                  VerticalAlignment="Center"
-                                                  HorizontalAlignment="Right"
-                                                  Margin="10,0,0,0"
-                                                  AutomationProperties.Name="{Binding Name}"
-                                                  ToolTip="{DynamicResource SystemTweaksView_TweakTooltip}">
-                                        <ToggleButton.Style>
-                                            <Style TargetType="ToggleButton" BasedOn="{StaticResource PillToggleButtonStyle}">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsGuidedAction}" Value="True">
-                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </ToggleButton.Style>
-                                    </ToggleButton>
-
-                                    <Button Grid.Column="1"
-                                            Content="{DynamicResource SystemTweaks_OpenSettings}"
-                                            Command="{Binding ActionCommand}"
-                                            CommandParameter="{Binding}"
-                                            IsEnabled="{Binding IsAvailable}"
-                                            Padding="10,4"
-                                            AutomationProperties.Name="{Binding Name}">
-                                        <Button.Style>
-                                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsGuidedAction}" Value="True">
-                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Button.Style>
-                                    </Button>
-                                </Grid>
-
-                                 <TextBlock Text="{Binding ErrorMessage}"
-                                            FontSize="11"
-                                            Foreground="{DynamicResource ErrorTextBrush}"
-                                            TextWrapping="Wrap"
-                                            Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
-                            </StackPanel>
-                        </GroupBox>
+                                <Button Grid.Column="2"
+                                        Content="{DynamicResource SystemTweaks_OpenSettings}"
+                                        Command="{Binding ActionCommand}"
+                                        CommandParameter="{Binding}"
+                                        IsEnabled="{Binding IsAvailable}"
+                                        Padding="10,4"
+                                        AutomationProperties.Name="{Binding Name}">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsGuidedAction}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </Grid>
+                        </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
