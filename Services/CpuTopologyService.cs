@@ -149,15 +149,19 @@ namespace ThreadPilot.Services
         {
             try
             {
-                using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_Processor");
-                using var collection = searcher.Get();
-
-                foreach (ManagementObject processor in collection)
+                // A cold WMI query takes hundreds of ms; this runs during startup, so keep it off the UI thread.
+                await Task.Run(() =>
                 {
-                    topology.CpuBrand = processor["Name"]?.ToString() ?? "Unknown";
-                    topology.CpuArchitecture = processor["Architecture"]?.ToString() ?? "Unknown";
-                    break; // Take first processor for basic info
-                }
+                    using var searcher = new ManagementObjectSearcher("SELECT Name, Architecture FROM Win32_Processor");
+                    using var collection = searcher.Get();
+
+                    foreach (ManagementObject processor in collection)
+                    {
+                        topology.CpuBrand = processor["Name"]?.ToString() ?? "Unknown";
+                        topology.CpuArchitecture = processor["Architecture"]?.ToString() ?? "Unknown";
+                        break; // Take first processor for basic info
+                    }
+                }).ConfigureAwait(false);
             }
             catch (Exception ex)
             {

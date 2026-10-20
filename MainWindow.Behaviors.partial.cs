@@ -93,7 +93,6 @@ namespace ThreadPilot
 
                 await this.Dispatcher.InvokeAsync(() => this.UpdateLoadingStatus("Finalizing startup...", "Applying final UI state and startup checks."));
                 this.LogDebug("Finalizing startup...");
-                await Task.Delay(500); // Brief delay to show final status
                 this.CompleteInitializationTask("Finalization");
 
                 // All initialization complete
@@ -528,9 +527,7 @@ namespace ThreadPilot
         {
             try
             {
-                await this.settingsService.LoadSettingsAsync();
-
-                // Apply initial settings
+                // App.OnStartup already loaded the settings and applied the theme before creating this window.
                 var settings = this.settingsService.Settings;
                 var useDarkTheme = settings.HasUserThemePreference
                     ? settings.UseDarkTheme
