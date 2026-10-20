@@ -101,7 +101,9 @@ namespace ThreadPilot.Services
                     return true;
                 }
 
-                var taskXmlPath = Path.Combine(Path.GetTempPath(), $"threadpilot-launch-task-{Guid.NewGuid():N}.xml");
+                // schtasks reads the definition from a file: keep it where only admins can change it before it does.
+                var taskXmlDirectory = AdminOnlyDirectory.Create(Path.Combine(AdminOnlyDirectory.DefaultRoot, $"ThreadPilot-task-{Guid.NewGuid():N}"));
+                var taskXmlPath = Path.Combine(taskXmlDirectory, "launch-task.xml");
                 try
                 {
                     WriteLaunchTaskDefinition(
@@ -128,7 +130,7 @@ namespace ThreadPilot.Services
                 }
                 finally
                 {
-                    TryDeleteFile(taskXmlPath, this.logger);
+                    TryDeleteDirectory(taskXmlDirectory, this.logger);
                 }
             }
             catch (Exception ex)
@@ -421,13 +423,13 @@ namespace ThreadPilot.Services
             return this.processRunner.RunAsync(SchTasksExecutablePath, arguments, ScheduledTaskTimeout);
         }
 
-        private static void TryDeleteFile(string path, ILogger logger)
+        private static void TryDeleteDirectory(string path, ILogger logger)
         {
             try
             {
-                if (File.Exists(path))
+                if (Directory.Exists(path))
                 {
-                    File.Delete(path);
+                    Directory.Delete(path, recursive: true);
                 }
             }
             catch (Exception ex)
