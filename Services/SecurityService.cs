@@ -47,6 +47,12 @@ namespace ThreadPilot.Services
             "MsMpEng",
             "SecurityHealthService",
             "audiodg",
+            "Registry",
+            "MemCompression",
+            "Secure System",
+            "LsaIso",
+            "fontdrvhost",
+            "sihost",
         };
 
         private const uint ProcessQueryLimitedInformation = 0x1000;
