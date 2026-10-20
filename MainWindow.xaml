@@ -20,13 +20,6 @@
         KeyboardNavigation.ControlTabNavigation="Cycle">
 
     <ui:FluentWindow.Resources>
-        <!-- Loading Spinner Animation -->
-        <Storyboard x:Key="SpinnerAnimation" RepeatBehavior="Forever">
-            <DoubleAnimation Storyboard.TargetName="SpinnerRotation"
-                           Storyboard.TargetProperty="Angle"
-                           From="0" To="360" Duration="0:0:1"/>
-        </Storyboard>
-
         <!-- Fade In Animation -->
         <Storyboard x:Key="FadeInAnimation">
             <DoubleAnimation Storyboard.TargetName="LoadingOverlay"
@@ -568,7 +561,8 @@
                     </Border>
 
                     <!-- Loading Spinner -->
-                    <ui:ProgressRing IsIndeterminate="True" Margin="0,0,0,15" />
+                    <!-- Animates only while shown: an indeterminate ring keeps WPF rendering every frame even when collapsed. -->
+                    <ui:ProgressRing IsIndeterminate="{Binding IsVisible, RelativeSource={RelativeSource Self}}" Margin="0,0,0,15" />
 
                     <TextBlock Text="{Binding InitializationStage}"
                                FontSize="14"

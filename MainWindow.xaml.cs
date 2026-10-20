@@ -57,7 +57,6 @@ namespace ThreadPilot
         private bool isInitializationComplete = false;
         private readonly List<string> initializationTasks = new();
         private readonly object initializationLock = new();
-        private System.Timers.Timer? initializationTimeoutTimer;
         private readonly string debugLogPath = Path.Combine(Path.GetTempPath(), "ThreadPilot_Debug.log");
 
         // Flag to skip process monitoring during startup if it causes issues
@@ -169,11 +168,6 @@ namespace ThreadPilot
             this.showStartupMinimizedSuggestionOnReady = false;
             this.LoadingOverlay.Visibility = Visibility.Collapsed;
             this.ClearUIContentBlur();
-
-            if (this.FindResource("SpinnerAnimation") is Storyboard spinnerAnimation)
-            {
-                spinnerAnimation.Stop();
-            }
 
             this.isSystemTrayUpdatesSuspended = true;
             this.lastAppliedRefreshState = AppActivityState.TrayHidden;
