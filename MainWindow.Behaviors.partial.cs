@@ -60,21 +60,6 @@ namespace ThreadPilot
                 {
                     this.ApplyUIContentBlur(15);
                 }
-
-                // Start spinner animation if available
-                var spinnerAnimation = this.FindResource("SpinnerAnimation") as Storyboard;
-                if (!this.isSilentStartupMode)
-                {
-                    spinnerAnimation?.Begin();
-                }
-
-                // Set a timeout guard for initialization
-                this.initializationTimeoutTimer = new System.Timers.Timer(15000)
-                {
-                    AutoReset = false,
-                };
-                this.initializationTimeoutTimer.Elapsed += this.OnInitializationTimeout;
-                this.initializationTimeoutTimer.Start();
             }
             catch (Exception ex)
             {
@@ -245,8 +230,6 @@ namespace ThreadPilot
             {
                 System.Diagnostics.Debug.WriteLine("=== Starting HideLoadingOverlay ===");
                 this.isInitializationComplete = true;
-                this.initializationTimeoutTimer?.Stop();
-                this.initializationTimeoutTimer?.Dispose();
 
                 if (this.isSilentStartupMode)
                 {
@@ -261,11 +244,6 @@ namespace ThreadPilot
                     this.ApplyAppRefreshPolicy(AppActivityState.TrayHidden);
                     return;
                 }
-
-                // Stop spinner animation
-                var spinnerAnimation = this.FindResource("SpinnerAnimation") as Storyboard;
-                spinnerAnimation?.Stop();
-                System.Diagnostics.Debug.WriteLine("Spinner animation stopped");
 
                 // Start fade-out animation
                 var fadeOutAnimation = this.FindResource("FadeOutAnimation") as Storyboard;
@@ -354,17 +332,6 @@ namespace ThreadPilot
         private void ClearUIContentBlur()
         {
             this.UIContent.Effect = null;
-        }
-
-        private void OnInitializationTimeout(object? sender, ElapsedEventArgs e)
-        {
-            this.Dispatcher.InvokeAsync(() =>
-            {
-                if (!this.isInitializationComplete)
-                {
-                    this.ShowInitializationError(new TimeoutException("Application initialization timed out after 15 seconds"));
-                }
-            });
         }
 
         private void ShowInitializationError(Exception ex)
@@ -2270,9 +2237,6 @@ namespace ThreadPilot
 
                 this.systemTrayUpdateTimer?.Stop();
                 this.systemTrayUpdateTimer?.Dispose();
-
-                this.initializationTimeoutTimer?.Stop();
-                this.initializationTimeoutTimer?.Dispose();
 
                 this.performanceViewModel?.Dispose();
                 this.settingsViewModel.Dispose();
