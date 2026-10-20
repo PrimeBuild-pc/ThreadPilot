@@ -51,6 +51,11 @@ namespace ThreadPilot.Core.Tests
             {
                 ResultFactory = invocation =>
                 {
+                    if (invocation.Arguments[0] != "/Create")
+                    {
+                        return new ProcessRunResult(1, string.Empty, "not found");
+                    }
+
                     var xmlIndex = invocation.Arguments.IndexOf("/XML");
                     Assert.True(xmlIndex >= 0);
                     xmlPath = invocation.Arguments[xmlIndex + 1];
@@ -64,7 +69,8 @@ namespace ThreadPilot.Core.Tests
                 var service = CreateService(
                     runner,
                     executablePathProvider: () => executablePath,
-                    currentUserProvider: () => @"TEST\User");
+                    currentUserProvider: () => @"TEST\User",
+                    isProtectedInstallPath: _ => true);
 
                 var result = await service.EnsureLaunchTaskAsync();
 
@@ -89,16 +95,113 @@ namespace ThreadPilot.Core.Tests
             }
         }
 
+        [Theory]
+        [InlineData(@"{PF}\ThreadPilot\ThreadPilot.exe", true)]
+        [InlineData(@"{PF}\..\Users\Public\ThreadPilot.exe", false)]
+        [InlineData(@"{PF} Evil\ThreadPilot.exe", false)]
+        [InlineData(@"C:\Users\Someone\Downloads\ThreadPilot\ThreadPilot.exe", false)]
+        [InlineData(@"ThreadPilot.exe", false)]
+        [InlineData(@"\ThreadPilot.exe", false)]
+        [InlineData("", false)]
+        public void IsProtectedInstallPath_OnlyAcceptsProgramFiles(string path, bool expected)
+        {
+            var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+
+            Assert.Equal(expected, ElevatedTaskService.IsProtectedInstallPath(path.Replace("{PF}", programFiles)));
+        }
+
+        [Fact]
+        public async Task EnsureLaunchTaskAsync_FromAWritableFolder_DeletesStaleTasksAndRegistersNothing()
+        {
+            var executablePath = CreateTemporaryExecutablePath();
+            var installed = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "ThreadPilot", "ThreadPilot.exe");
+            var runner = new RecordingProcessRunner
+            {
+                ResultFactory = invocation => invocation.Arguments switch
+                {
+                    ["/Query", "/TN", "ThreadPilot_Launch", "/XML"] => TaskXml(@"C:\Users\Someone\Documents\ThreadPilot.exe"),
+                    ["/Query", "/TN", "ThreadPilot_Startup", "/XML"] => TaskXml($"\"{installed}\""),
+                    _ => new ProcessRunResult(0, string.Empty, string.Empty),
+                },
+            };
+
+            try
+            {
+                var service = CreateService(runner, executablePathProvider: () => executablePath);
+
+                var result = await service.EnsureLaunchTaskAsync();
+
+                Assert.False(result);
+                Assert.Contains(runner.Invocations, invocation => invocation.Arguments.SequenceEqual(new[] { "/Delete", "/TN", "ThreadPilot_Launch", "/F" }));
+                Assert.DoesNotContain(runner.Invocations, invocation => invocation.Arguments.Contains("ThreadPilot_Startup") && invocation.Arguments[0] == "/Delete");
+                Assert.DoesNotContain(runner.Invocations, invocation => invocation.Arguments[0] == "/Create");
+            }
+            finally
+            {
+                File.Delete(executablePath);
+            }
+        }
+
+        [Fact]
+        public async Task EnsureLaunchTaskAsync_TaskAlreadyPointsAtThisExe_NotRegisteredAgain()
+        {
+            var executablePath = CreateTemporaryExecutablePath();
+            var runner = new RecordingProcessRunner
+            {
+                ResultFactory = invocation => invocation.Arguments[0] == "/Query"
+                    ? TaskXml(executablePath.Replace("&", "&amp;"))
+                    : new ProcessRunResult(0, string.Empty, string.Empty),
+            };
+
+            try
+            {
+                var service = CreateService(runner, executablePathProvider: () => executablePath, isProtectedInstallPath: _ => true);
+
+                Assert.True(await service.EnsureLaunchTaskAsync());
+                Assert.All(runner.Invocations, invocation => Assert.Equal("/Query", invocation.Arguments[0]));
+            }
+            finally
+            {
+                File.Delete(executablePath);
+            }
+        }
+
+        [Fact]
+        public async Task EnsureAutostartTaskAsync_FromAWritableFolder_RegistersNothing()
+        {
+            var executablePath = CreateTemporaryExecutablePath();
+            var runner = new RecordingProcessRunner();
+
+            try
+            {
+                var service = CreateService(runner);
+
+                Assert.False(await service.EnsureAutostartTaskAsync(executablePath, "--autostart"));
+                Assert.Empty(runner.Invocations);
+            }
+            finally
+            {
+                File.Delete(executablePath);
+            }
+        }
+
+        private static ProcessRunResult TaskXml(string command) => new(
+            0,
+            $"<?xml version=\"1.0\" encoding=\"UTF-16\"?>\r\r\n<Task><Actions><Exec><Command>{command}</Command></Exec></Actions></Task>",
+            string.Empty);
+
         private static ElevatedTaskService CreateService(
             IProcessRunner runner,
             Func<string?>? executablePathProvider = null,
-            Func<string>? currentUserProvider = null)
+            Func<string>? currentUserProvider = null,
+            Func<string?, bool>? isProtectedInstallPath = null)
         {
             return new ElevatedTaskService(
                 NullLogger<ElevatedTaskService>.Instance,
                 runner,
                 executablePathProvider,
-                currentUserProvider);
+                currentUserProvider,
+                isProtectedInstallPath);
         }
 
         private static string CreateTemporaryExecutablePath()

@@ -4,10 +4,13 @@ namespace ThreadPilot.Services
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.IO;
+    using System.Linq;
+    using System.Net;
     using System.Reflection;
     using System.Security;
     using System.Security.Principal;
     using System.Text;
+    using System.Text.RegularExpressions;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using ThreadPilot.Services.Abstractions;
@@ -21,6 +24,7 @@ namespace ThreadPilot.Services
         private readonly IProcessRunner processRunner;
         private readonly Func<string?>? executablePathProvider;
         private readonly Func<string>? currentUserProvider;
+        private readonly Func<string?, bool> isProtectedInstallPath;
 
         public ElevatedTaskService(ILogger<ElevatedTaskService> logger, IProcessRunner processRunner)
             : this(logger, processRunner, null, null)
@@ -31,27 +35,70 @@ namespace ThreadPilot.Services
             ILogger<ElevatedTaskService> logger,
             IProcessRunner processRunner,
             Func<string?>? executablePathProvider,
-            Func<string>? currentUserProvider)
+            Func<string>? currentUserProvider,
+            Func<string?, bool>? isProtectedInstallPath = null)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.processRunner = processRunner ?? throw new ArgumentNullException(nameof(processRunner));
             this.executablePathProvider = executablePathProvider;
             this.currentUserProvider = currentUserProvider;
+            this.isProtectedInstallPath = isProtectedInstallPath ?? IsProtectedInstallPath;
         }
 
         public string LaunchTaskName => "ThreadPilot_Launch";
 
         public string AutostartTaskName => "ThreadPilot_Startup";
 
+        /// <summary>
+        /// True when the path is inside Program Files. The tasks run with highest privileges and no UAC prompt,
+        /// so they may only point at an exe that a non-admin user cannot replace.
+        /// </summary>
+        public static bool IsProtectedInstallPath(string? executablePath)
+        {
+            if (string.IsNullOrWhiteSpace(executablePath) || !Path.IsPathFullyQualified(executablePath))
+            {
+                return false;
+            }
+
+            string fullPath;
+            try
+            {
+                fullPath = Path.GetFullPath(executablePath);
+            }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                return false;
+            }
+
+            return new[] { Environment.SpecialFolder.ProgramFiles, Environment.SpecialFolder.ProgramFilesX86 }
+                .Select(Environment.GetFolderPath)
+                .Where(root => !string.IsNullOrWhiteSpace(root))
+                .Select(root => Path.TrimEndingDirectorySeparator(root) + Path.DirectorySeparatorChar)
+                .Any(root => fullPath.StartsWith(root, StringComparison.OrdinalIgnoreCase));
+        }
+
         public async Task<bool> EnsureLaunchTaskAsync()
         {
             try
             {
                 var executablePath = this.executablePathProvider?.Invoke() ?? this.GetExecutablePath();
+                await this.RemoveTasksOutsideProtectedLocationsAsync();
+
                 if (!IsValidExecutablePath(executablePath))
                 {
                     LogSkipEnsureLaunchTaskInvalidPath(this.logger, executablePath ?? "(null)");
                     return false;
+                }
+
+                if (!this.isProtectedInstallPath(executablePath))
+                {
+                    LogLaunchTaskNotRegisteredUnprotectedPath(this.logger, executablePath!);
+                    return false;
+                }
+
+                if (string.Equals(await this.QueryTaskCommandAsync(this.LaunchTaskName), executablePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
                 }
 
                 var taskXmlPath = Path.Combine(Path.GetTempPath(), $"threadpilot-launch-task-{Guid.NewGuid():N}.xml");
@@ -124,6 +171,12 @@ namespace ThreadPilot.Services
                 if (!IsValidExecutablePath(executablePath))
                 {
                     LogSkipEnsureAutostartTaskInvalidPath(this.logger, executablePath);
+                    return false;
+                }
+
+                if (!this.isProtectedInstallPath(executablePath))
+                {
+                    LogAutostartTaskNotRegisteredUnprotectedPath(this.logger, executablePath);
                     return false;
                 }
 
@@ -210,6 +263,35 @@ namespace ThreadPilot.Services
             }
         }
 
+        // Deletes ThreadPilot tasks left pointing at a user-writable exe (portable or dev copies, older versions).
+        private async Task RemoveTasksOutsideProtectedLocationsAsync()
+        {
+            foreach (var taskName in new[] { this.LaunchTaskName, this.AutostartTaskName })
+            {
+                var command = await this.QueryTaskCommandAsync(taskName);
+                if (command == null || this.isProtectedInstallPath(command))
+                {
+                    continue;
+                }
+
+                var result = await this.RunSchTasksAsync(new List<string> { "/Delete", "/TN", taskName, "/F" });
+                LogUnprotectedTaskRemoved(this.logger, taskName, command, result.ExitCode);
+            }
+        }
+
+        // schtasks prints the XML in the console code page despite its UTF-16 header, so read it as text.
+        private async Task<string?> QueryTaskCommandAsync(string taskName)
+        {
+            var result = await this.RunSchTasksAsync(new List<string> { "/Query", "/TN", taskName, "/XML" });
+            if (result.ExitCode != 0)
+            {
+                return null;
+            }
+
+            var match = Regex.Match(result.StandardOutput ?? string.Empty, "<Command>(.*?)</Command>", RegexOptions.Singleline);
+            return match.Success ? WebUtility.HtmlDecode(match.Groups[1].Value).Trim().Trim('"') : null;
+        }
+
         private string? GetExecutablePath()
         {
             try
@@ -252,7 +334,7 @@ namespace ThreadPilot.Services
 
         private static bool IsValidExecutablePath(string? executablePath)
         {
-            if (string.IsNullOrWhiteSpace(executablePath) || !Path.IsPathRooted(executablePath))
+            if (string.IsNullOrWhiteSpace(executablePath) || !Path.IsPathFullyQualified(executablePath))
             {
                 return false;
             }
@@ -410,5 +492,14 @@ namespace ThreadPilot.Services
 
         [LoggerMessage(EventId = 4268, Level = LogLevel.Debug, Message = "Failed to delete temporary file '{Path}'")]
         private static partial void LogDeleteTemporaryFileFailed(ILogger logger, string path, Exception ex);
+
+        [LoggerMessage(EventId = 4269, Level = LogLevel.Information, Message = "Elevated launch task not registered: '{ExecutablePath}' is outside Program Files, so a non-admin user could replace it")]
+        private static partial void LogLaunchTaskNotRegisteredUnprotectedPath(ILogger logger, string executablePath);
+
+        [LoggerMessage(EventId = 4270, Level = LogLevel.Warning, Message = "Autostart task not registered: '{ExecutablePath}' is outside Program Files, so a non-admin user could replace it")]
+        private static partial void LogAutostartTaskNotRegisteredUnprotectedPath(ILogger logger, string executablePath);
+
+        [LoggerMessage(EventId = 4271, Level = LogLevel.Warning, Message = "Removed task '{TaskName}' pointing at '{Command}' outside Program Files (schtasks exit code {ExitCode})")]
+        private static partial void LogUnprotectedTaskRemoved(ILogger logger, string taskName, string command, int exitCode);
     }
 }

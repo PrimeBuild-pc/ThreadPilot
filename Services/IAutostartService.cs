@@ -11,6 +11,9 @@ namespace ThreadPilot.Services
 
         string? AutostartPath { get; }
 
+        /// <summary>Gets a value indicating whether this copy can autostart: only an install in Program Files can.</summary>
+        bool IsAutostartSupported { get; }
+
         Task<bool> EnableAutostartAsync(bool startMinimized = true);
 
         Task<bool> DisableAutostartAsync();

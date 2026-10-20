@@ -500,6 +500,7 @@
     <sys:String x:Key="Settings_DialogExportTitle">Exporter la configuration ThreadPilot</sys:String>
     <sys:String x:Key="Settings_DialogImportTitle">Importer la configuration ThreadPilot</sys:String>
     <sys:String x:Key="Settings_WarningAutostartFailed">Échec de la mise à jour du démarrage automatique Windows. Conserver l'état de démarrage automatique précédent.</sys:String>
+    <sys:String x:Key="Settings_WarningAutostartNeedsInstall">Le démarrage automatique nécessite ThreadPilot installé dans Program Files : n'importe quel programme pourrait remplacer une copie portable, qui serait ensuite lancée en administrateur.</sys:String>
 
     <!-- SettingsWindow -->
     <sys:String x:Key="SettingsWindow_Title">ThreadPilot Paramètres</sys:String>
