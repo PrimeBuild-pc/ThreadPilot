@@ -7,6 +7,39 @@ namespace ThreadPilot.Core.Tests
 
     public sealed class ProcessListDeltaUpdaterTests
     {
+        [Theory]
+        [InlineData("ABCDE", "ABCDE")]
+        [InlineData("ABCDE", "EDCBA")]
+        [InlineData("ABCDE", "BXDAY")]
+        [InlineData("", "ABC")]
+        [InlineData("ABC", "")]
+        [InlineData("ABCD", "CAB")]
+        public void SyncInPlace_ReachesTheDesiredOrder_KeepingTheSameInstances(string before, string after)
+        {
+            var pool = "ABCDEXY".ToDictionary(letter => letter, letter => new ProcessModel { ProcessId = letter, Name = letter.ToString() });
+            var target = new ObservableCollection<ProcessModel>(before.Select(letter => pool[letter]));
+            var resets = 0;
+            target.CollectionChanged += (_, e) => resets += e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset ? 1 : 0;
+
+            ProcessListDeltaUpdater.SyncInPlace(target, after.Select(letter => pool[letter]).ToList());
+
+            Assert.Equal(after.Select(letter => pool[letter]), target);
+            Assert.Equal(0, resets);
+        }
+
+        [Fact]
+        public void SyncInPlace_UnchangedOrder_RaisesNoChange()
+        {
+            var items = Enumerable.Range(1, 5).Select(pid => new ProcessModel { ProcessId = pid }).ToList();
+            var target = new ObservableCollection<ProcessModel>(items);
+            var changes = 0;
+            target.CollectionChanged += (_, _) => changes++;
+
+            ProcessListDeltaUpdater.SyncInPlace(target, items);
+
+            Assert.Equal(0, changes);
+        }
+
         [Fact]
         public void ApplyDelta_PreservesExistingInstancesAndUpdatesProperties()
         {
