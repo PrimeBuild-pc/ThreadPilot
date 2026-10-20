@@ -64,6 +64,57 @@ namespace ThreadPilot.Services
             return new ProcessListDeltaResult(selectedProcess, selectedProcessTerminated);
         }
 
+        /// <summary>
+        /// Makes <paramref name="target"/> hold exactly <paramref name="desired"/>, in order, by removing, moving
+        /// and inserting items instead of replacing the collection: the grid keeps its rows, selection and the
+        /// sort the user picked from a column header.
+        /// </summary>
+        public static void SyncInPlace(ObservableCollection<ProcessModel> target, IReadOnlyList<ProcessModel> desired)
+        {
+            ArgumentNullException.ThrowIfNull(target);
+            ArgumentNullException.ThrowIfNull(desired);
+
+            var wanted = new HashSet<ProcessModel>(desired, ReferenceEqualityComparer.Instance);
+            for (var i = target.Count - 1; i >= 0; i--)
+            {
+                if (!wanted.Contains(target[i]))
+                {
+                    target.RemoveAt(i);
+                }
+            }
+
+            for (var i = 0; i < desired.Count; i++)
+            {
+                if (i < target.Count && ReferenceEquals(target[i], desired[i]))
+                {
+                    continue;
+                }
+
+                var current = IndexOf(target, desired[i], i + 1);
+                if (current >= 0)
+                {
+                    target.Move(current, i);
+                }
+                else
+                {
+                    target.Insert(i, desired[i]);
+                }
+            }
+        }
+
+        private static int IndexOf(ObservableCollection<ProcessModel> items, ProcessModel item, int start)
+        {
+            for (var i = start; i < items.Count; i++)
+            {
+                if (ReferenceEquals(items[i], item))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
         private static void CopyProcessState(ProcessModel source, ProcessModel target)
         {
             target.Name = source.Name;

@@ -2222,7 +2222,7 @@ namespace ThreadPilot.ViewModels
                     };
 
                     var filteredResults = this.processFilterService.FilterAndSort(this.Processes, criteria);
-                    this.FilteredProcesses = new ObservableCollection<ProcessModel>(filteredResults);
+                    ProcessListDeltaUpdater.SyncInPlace(this.FilteredProcesses, filteredResults);
 
                     // The batch total is a snapshot from the first load; refreshes add processes, so the
                     // counter showed "157 / 151". Once everything is loaded the list itself is the total.
