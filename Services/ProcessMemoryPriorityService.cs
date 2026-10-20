@@ -364,7 +364,7 @@ namespace ThreadPilot.Services
             try
             {
                 using var handle = this.nativeApi.OpenProcess(
-                    ProcessAccessFlags.PROCESS_SET_INFORMATION,
+                    ProcessAccessFlags.PROCESS_SET_INFORMATION | ProcessAccessFlags.PROCESS_QUERY_LIMITED_INFORMATION,
                     inheritHandle: false,
                     (uint)process.ProcessId);
                 if (handle.IsInvalid)
@@ -372,12 +372,18 @@ namespace ThreadPilot.Services
                     return Task.FromResult(this.FromLastError("OpenProcess failed before SetProcessInformation(ProcessPowerThrottling).", FailureMessage));
                 }
 
-                var state = new PowerThrottlingState
+                // Windows replaces the whole state on set: keep the process's other throttling flags
+                // (e.g. its timer-resolution opt-out) and change only the execution-speed bit.
+                var state = new PowerThrottlingState { Version = PowerThrottlingState.CurrentVersion };
+                if (!this.nativeApi.GetPowerThrottling(handle, ref state))
                 {
-                    Version = PowerThrottlingState.CurrentVersion,
-                    ControlMask = mode == ProcessEfficiencyMode.SystemManaged ? 0 : PowerThrottlingState.ExecutionSpeed,
-                    StateMask = mode == ProcessEfficiencyMode.On ? PowerThrottlingState.ExecutionSpeed : 0,
-                };
+                    state = default;
+                }
+
+                const uint speed = PowerThrottlingState.ExecutionSpeed;
+                state.Version = PowerThrottlingState.CurrentVersion;
+                state.ControlMask = mode == ProcessEfficiencyMode.SystemManaged ? state.ControlMask & ~speed : state.ControlMask | speed;
+                state.StateMask = mode == ProcessEfficiencyMode.On ? state.StateMask | speed : state.StateMask & ~speed;
                 if (!this.nativeApi.SetPowerThrottling(handle, ref state))
                 {
                     return Task.FromResult(this.FromLastError("SetProcessInformation(ProcessPowerThrottling) failed.", FailureMessage));

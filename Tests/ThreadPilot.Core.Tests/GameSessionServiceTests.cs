@@ -22,6 +22,7 @@ namespace ThreadPilot.Core.Tests
         private readonly FakeProcesses processes = new();
         private readonly List<PersistentProcessRule> rules = new();
         private readonly ActivityAuditService audit = new(NullLogger<ActivityAuditService>.Instance);
+        private readonly FakeClock clock = new();
         private int? foregroundPid = GamePid;
 
         public GameSessionServiceTests()
@@ -285,14 +286,15 @@ namespace ThreadPilot.Core.Tests
                 [
                     "Session started: Game (Automatic)",
                     "Game: CPU Sets set to 16 CPUs",
+                    "Game: high QoS, Windows will not power-throttle it",
                     "Background moved to 16 CPUs: chrome x2",
                     "Background left unchanged",
                     "Session ended for Game: the game exited",
                 ],
                 entries.Select(entry => entry.Message));
             Assert.Contains("AMD 3D V-Cache", entries[0].Details, StringComparison.Ordinal);
-            Assert.Equal("steam (your rule)", entries[3].Details);
-            Assert.Equal("Restored 2 change(s); 1 left as they are (changed by you or a rule since, or the process exited)", entries[4].Details);
+            Assert.Equal("steam (your rule)", entries[4].Details);
+            Assert.Equal("Restored 2 change(s); 2 left as they are (changed by you or a rule since, or the process exited)", entries[5].Details);
         }
 
         [Fact]
@@ -311,7 +313,150 @@ namespace ThreadPilot.Core.Tests
 
             var messages = (await this.audit.GetEntriesAsync()).Select(entry => entry.Message).ToList();
             Assert.Contains("Game: priority left at BelowNormal", messages);
-            Assert.Contains("Restored 2 change(s) left by an unexpected close", messages);
+            Assert.Contains("Restored 3 change(s) left by an unexpected close", messages);
+        }
+
+        [Fact]
+        public async Task Game_GetsHighQos_RestoredWhenTheSessionEnds()
+        {
+            using var service = this.CreateService();
+            await service.TickAsync();
+
+            Assert.Equal(ProcessEfficiencyMode.Off, this.processes.Efficiency[GamePid]);
+            Assert.Equal(ProcessEfficiencyMode.SystemManaged, this.processes.Efficiency[ChromePid]); // Automatic: no EcoQoS
+
+            this.settings.GameBoostEnabled = false;
+            await service.TickAsync();
+
+            Assert.Equal(ProcessEfficiencyMode.SystemManaged, this.processes.Efficiency[GamePid]);
+        }
+
+        [Fact]
+        public async Task Game_HighQosEvenWhenTheCpuIsNotSupported()
+        {
+            using var service = this.CreateService(TopologyFixtures.Amd([8], [96 * MB]));
+
+            await service.TickAsync();
+
+            Assert.Empty(this.processes.CpuSets[GamePid]);
+            Assert.Equal(ProcessEfficiencyMode.Off, this.processes.Efficiency[GamePid]);
+        }
+
+        [Fact]
+        public async Task ExplicitQos_FromTheAppOrARule_NotTouched()
+        {
+            this.processes.Efficiency[GamePid] = ProcessEfficiencyMode.On;
+            this.settings.GameBoostMode = GameBoostMode.Isolation;
+            this.rules.Add(new PersistentProcessRule { IsEnabled = true, ProcessName = "chrome", EfficiencyMode = ProcessEfficiencyMode.Off });
+            this.processes.Efficiency[ChromePid] = ProcessEfficiencyMode.Off;
+            using var service = this.CreateService();
+
+            await service.TickAsync();
+            this.processes.Exit(GamePid);
+            await service.TickAsync();
+
+            Assert.Equal(ProcessEfficiencyMode.Off, this.processes.Efficiency[ChromePid]);
+            Assert.Equal(ProcessEfficiencyMode.On, this.processes.Efficiency[GamePid]);
+        }
+
+        [Fact]
+        public async Task Isolation_ListedBackgroundGetsEcoQos_EvenWithoutCpuSets_AndIsRestored()
+        {
+            this.settings.GameBoostMode = GameBoostMode.Isolation;
+            using var service = this.CreateService(TopologyFixtures.Amd([8], [96 * MB]));
+
+            await service.TickAsync();
+
+            Assert.Equal(ProcessEfficiencyMode.On, this.processes.Efficiency[ChromePid]);
+            Assert.Equal(ProcessEfficiencyMode.SystemManaged, this.processes.Efficiency[DiscordPid]);
+            Assert.Empty(this.processes.CpuSets[ChromePid]);
+
+            this.processes.Efficiency[ChromePid] = ProcessEfficiencyMode.Off; // the app changed it itself
+            this.processes.Exit(GamePid);
+            await service.TickAsync();
+
+            Assert.Equal(ProcessEfficiencyMode.Off, this.processes.Efficiency[ChromePid]);
+            Assert.False(File.Exists(this.journalPath));
+        }
+
+        [Fact]
+        public async Task SaturatedGame_CpuSetsReleased_ThenConfinedAgainWhenLoadDrops()
+        {
+            using var service = this.CreateService();
+            await service.TickAsync();
+            Assert.Equal(VCacheCpus, this.processes.CpuSets[GamePid]);
+
+            await this.RunLoadAsync(service, cpusBusy: 15, ticks: GameLoadTracker.ReleaseSamples); // 15 of 16 CPUs
+            Assert.Equal(VCacheCpus, this.processes.CpuSets[GamePid]); // the first tick only sets the baseline
+
+            await this.RunLoadAsync(service, cpusBusy: 15, ticks: 1);
+            Assert.Empty(this.processes.CpuSets[GamePid]);
+            Assert.Equal(OtherCcdCpus, this.processes.CpuSets[ChromePid]); // background stays moved
+
+            await this.RunLoadAsync(service, cpusBusy: 4, ticks: GameLoadTracker.ConfineSamples);
+            Assert.Equal(VCacheCpus, this.processes.CpuSets[GamePid]);
+
+            this.processes.Exit(GamePid);
+            await service.TickAsync();
+            Assert.False(File.Exists(this.journalPath));
+            var messages = (await this.audit.GetEntriesAsync()).Select(entry => entry.Message).ToList();
+            Assert.Contains("Game: kept its 16 CPUs busy, CPU Sets released so Windows can use every core", messages);
+            Assert.Contains("Game: load is low again, CPU Sets set back to 16 CPUs", messages);
+        }
+
+        [Fact]
+        public async Task SaturatedGame_AfterTheSecondRelease_StaysOnAllCores()
+        {
+            using var service = this.CreateService();
+            await service.TickAsync();
+
+            await this.RunLoadAsync(service, cpusBusy: 16, ticks: GameLoadTracker.ReleaseSamples + 1);
+            await this.RunLoadAsync(service, cpusBusy: 2, ticks: GameLoadTracker.ConfineSamples);
+            await this.RunLoadAsync(service, cpusBusy: 16, ticks: GameLoadTracker.ReleaseSamples);
+            Assert.Empty(this.processes.CpuSets[GamePid]);
+
+            await this.RunLoadAsync(service, cpusBusy: 1, ticks: GameLoadTracker.ConfineSamples * 2);
+            Assert.Empty(this.processes.CpuSets[GamePid]);
+        }
+
+        [Fact]
+        public async Task SaturatedGame_UserChangedItsCores_NotReleasedNorConfinedAgain()
+        {
+            using var service = this.CreateService();
+            await service.TickAsync();
+            this.processes.CpuSets[GamePid] = [0, 1, 2, 3];
+
+            await this.RunLoadAsync(service, cpusBusy: 16, ticks: GameLoadTracker.ReleaseSamples + 1);
+            await this.RunLoadAsync(service, cpusBusy: 1, ticks: GameLoadTracker.ConfineSamples + 1);
+
+            Assert.Equal([0, 1, 2, 3], this.processes.CpuSets[GamePid]);
+        }
+
+        [Fact]
+        public async Task ShortSpikes_DoNotReleaseTheGame()
+        {
+            using var service = this.CreateService();
+            await service.TickAsync();
+
+            for (var i = 0; i < 10; i++)
+            {
+                await this.RunLoadAsync(service, cpusBusy: 16, ticks: GameLoadTracker.ReleaseSamples - 1);
+                await this.RunLoadAsync(service, cpusBusy: 3, ticks: 1);
+            }
+
+            Assert.Equal(VCacheCpus, this.processes.CpuSets[GamePid]);
+        }
+
+        // One tick every 3 s; over each one the game uses as much CPU time as cpusBusy fully busy CPUs.
+        private async Task RunLoadAsync(GameSessionService service, double cpusBusy, int ticks)
+        {
+            for (var i = 0; i < ticks; i++)
+            {
+                var interval = TimeSpan.FromSeconds(3);
+                this.clock.Advance(interval);
+                this.processes.CpuTime[GamePid] += interval * cpusBusy;
+                await service.TickAsync();
+            }
         }
 
         private GameSessionService CreateService(CpuTopologySnapshot? topology = null)
@@ -338,9 +483,23 @@ namespace ThreadPilot.Core.Tests
                 new ProcessFilterService(),
                 new ProcessPolicyApplyGate(),
                 this.processes,
+                this.processes.EfficiencyService,
                 NullLogger<GameSessionService>.Instance,
                 this.journalPath,
-                this.audit);
+                this.audit,
+                this.clock);
+        }
+
+        /// <summary>Timestamps in TimeSpan ticks, moved by hand.</summary>
+        private sealed class FakeClock : TimeProvider
+        {
+            public long Now { get; private set; }
+
+            public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+            public override long GetTimestamp() => this.Now;
+
+            public void Advance(TimeSpan by) => this.Now += by.Ticks;
         }
 
         /// <summary>In-memory processes: CPU Sets, priorities and identities the service reads and writes.</summary>
@@ -380,7 +539,24 @@ namespace ThreadPilot.Core.Tests
                             : AffinityApplyResult.SucceededWithCpuSets("ok");
                     });
                 this.AffinityService = affinityService.Object;
+
+                var efficiencyService = new Mock<IProcessMemoryPriorityService>();
+                efficiencyService.Setup(s => s.GetEfficiencyModeAsync(It.IsAny<ProcessModel>()))
+                    .ReturnsAsync((ProcessModel p) => this.Unreadable.Contains(p.ProcessId) ? null : this.Efficiency[p.ProcessId]);
+                efficiencyService.Setup(s => s.SetEfficiencyModeAsync(It.IsAny<ProcessModel>(), It.IsAny<ProcessEfficiencyMode>()))
+                    .ReturnsAsync((ProcessModel p, ProcessEfficiencyMode mode) =>
+                    {
+                        this.Efficiency[p.ProcessId] = mode;
+                        return ProcessOperationResult.Succeeded("ok", "ok");
+                    });
+                this.EfficiencyService = efficiencyService.Object;
             }
+
+            public IProcessMemoryPriorityService EfficiencyService { get; }
+
+            public Dictionary<int, ProcessEfficiencyMode> Efficiency { get; } = new();
+
+            public Dictionary<int, TimeSpan> CpuTime { get; } = new();
 
             public IProcessService ProcessService { get; }
 
@@ -402,6 +578,8 @@ namespace ThreadPilot.Core.Tests
                 this.startTimes[pid] = 1000 + pid;
                 this.CpuSets[pid] = [];
                 this.Priorities[pid] = ProcessPriorityClass.Normal;
+                this.Efficiency[pid] = ProcessEfficiencyMode.SystemManaged;
+                this.CpuTime[pid] = TimeSpan.Zero;
             }
 
             public void Exit(int pid) => this.startTimes.Remove(pid);
@@ -413,6 +591,9 @@ namespace ThreadPilot.Core.Tests
                 sessionId = 1;
                 return this.startTimes.TryGetValue(processId, out startTimeUtcTicks);
             }
+
+            public bool TryGetCpuTime(int processId, out TimeSpan totalProcessorTime) =>
+                this.CpuTime.TryGetValue(processId, out totalProcessorTime) && this.startTimes.ContainsKey(processId);
 
             private ProcessModel Snapshot(int pid)
             {

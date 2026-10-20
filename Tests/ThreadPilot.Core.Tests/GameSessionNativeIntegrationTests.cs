@@ -6,6 +6,7 @@ namespace ThreadPilot.Core.Tests
     using Microsoft.Win32.SafeHandles;
     using Moq;
     using ThreadPilot.Models;
+    using ThreadPilot.Platforms.Windows;
     using ThreadPilot.Services;
     using Xunit.Abstractions;
 
@@ -20,6 +21,7 @@ namespace ThreadPilot.Core.Tests
 
         private readonly string root = Path.Combine(Path.GetTempPath(), $"tp-gb-{Guid.NewGuid():N}");
         private readonly List<Process> children = new();
+        private readonly ProcessMemoryPriorityService efficiency = new(ProcessMemoryPriorityNativeApi.Instance, NullLogger<ProcessMemoryPriorityService>.Instance);
 
         public void Dispose()
         {
@@ -81,6 +83,7 @@ namespace ThreadPilot.Core.Tests
             {
                 GameBoostEnabled = true,
                 GameBoostAboveNormalPriority = true,
+                GameBoostMode = GameBoostMode.Isolation,
                 GameBoostBackgroundProcesses = [browserPath],
             };
 
@@ -90,6 +93,8 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal(gameCpus, ReadDefaultCpuSetIndexes(game, topology));
             Assert.Equal(backgroundCpus, ReadDefaultCpuSetIndexes(browser, topology));
             Assert.Equal(ProcessPriorityClass.AboveNormal, ReadPriority(game));
+            Assert.Equal(ProcessEfficiencyMode.Off, await this.ReadEfficiencyAsync(game));
+            Assert.Equal(ProcessEfficiencyMode.On, await this.ReadEfficiencyAsync(browser));
             Assert.True(File.Exists(journal));
 
             // 2. Turned off: everything restored without a restart.
@@ -98,6 +103,8 @@ namespace ThreadPilot.Core.Tests
             Assert.Empty(ReadDefaultCpuSetIndexes(game, topology));
             Assert.Empty(ReadDefaultCpuSetIndexes(browser, topology));
             Assert.Equal(ProcessPriorityClass.Normal, ReadPriority(game));
+            Assert.Equal(ProcessEfficiencyMode.SystemManaged, await this.ReadEfficiencyAsync(game));
+            Assert.Equal(ProcessEfficiencyMode.SystemManaged, await this.ReadEfficiencyAsync(browser));
             Assert.False(File.Exists(journal));
 
             // 3. On again, then a "crash": the service is dropped without StopAsync.
@@ -112,6 +119,7 @@ namespace ThreadPilot.Core.Tests
             Assert.Empty(ReadDefaultCpuSetIndexes(game, topology));
             Assert.Empty(ReadDefaultCpuSetIndexes(browser, topology));
             Assert.Equal(ProcessPriorityClass.Normal, ReadPriority(game));
+            Assert.Equal(ProcessEfficiencyMode.SystemManaged, await this.ReadEfficiencyAsync(browser));
             Assert.False(File.Exists(journal));
             await second.StopAsync();
         }
@@ -147,6 +155,7 @@ namespace ThreadPilot.Core.Tests
                 new ProcessFilterService(),
                 new ProcessPolicyApplyGate(),
                 new GameBoostProcessProbe(),
+                this.efficiency,
                 NullLogger<GameSessionService>.Instance,
                 journal);
         }
@@ -165,6 +174,9 @@ namespace ThreadPilot.Core.Tests
             this.children.Add(process);
             return process;
         }
+
+        private Task<ProcessEfficiencyMode?> ReadEfficiencyAsync(Process process) =>
+            this.efficiency.GetEfficiencyModeAsync(new ProcessModel { ProcessId = process.Id, Name = process.ProcessName });
 
         private static ProcessPriorityClass ReadPriority(Process process)
         {

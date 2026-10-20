@@ -559,11 +559,11 @@
     <sys:String x:Key="SystemTweaks_ToggleOn">开</sys:String>
     <sys:String x:Key="SystemTweaks_ToggleOff">关</sys:String>
     <sys:String x:Key="GameBoost_Title">游戏加速</sys:String>
-    <sys:String x:Key="GameBoost_Description">游戏运行时，为游戏和选定的后台应用设置默认 CPU 集，使它们运行在不同的核心上。Windows 仍在其中调度每个线程，游戏关闭后一切都会恢复。</sys:String>
+    <sys:String x:Key="GameBoost_Description">游戏运行时，为游戏和选定的后台应用设置默认 CPU 集，使它们运行在不同的核心上，并请求 Windows 不对游戏进行节能限速。Windows 仍调度每个线程：如果游戏持续占满它的所有核心，游戏加速会让它使用全部核心，直到负载下降。游戏关闭后一切都会恢复。</sys:String>
     <sys:String x:Key="GameBoost_Mode">模式</sys:String>
     <sys:String x:Key="GameBoost_Mode_Automatic">自动</sys:String>
     <sys:String x:Key="GameBoost_Mode_Isolation">隔离</sys:String>
-    <sys:String x:Key="GameBoost_Mode_Description">隔离模式还会移动更多次要应用（启动器辅助进程、媒体播放器、办公应用），并在两个 CCD 相同的 CPU 上让游戏保持在 CCD0。</sys:String>
+    <sys:String x:Key="GameBoost_Mode_Description">隔离模式还会移动更多次要应用（启动器辅助进程、媒体播放器、办公应用），让选定的后台应用进入效率模式（EcoQoS），并在两个 CCD 相同的 CPU 上让游戏保持在 CCD0。</sys:String>
     <sys:String x:Key="GameBoost_AboveNormal_Name">将游戏优先级提高到“高于正常”</sys:String>
     <sys:String x:Key="GameBoost_AboveNormal_Description">实验性功能：请在你的游戏中实测。绝不使用“高”或“实时”。</sys:String>
     <sys:String x:Key="GameBoost_Lists">游戏和应用</sys:String>
@@ -576,7 +576,7 @@
     <sys:String x:Key="GameBoost_Decision_AmdCcd0">游戏在 CCD0 上（{0} 个 CPU），后台应用在另一个 CCD 上（{1} 个 CPU）。</sys:String>
     <sys:String x:Key="GameBoost_Decision_AmdBackgroundOnly">游戏由 Windows 放置；选定的后台应用移出 CCD0（{0} 个 CPU）。隔离模式还会让游戏保持在 CCD0。</sys:String>
     <sys:String x:Key="GameBoost_Decision_IntelHybrid">游戏在 P 核上（{0} 个 CPU），选定的后台应用在 E 核上（{1} 个 CPU）。</sys:String>
-    <sys:String x:Key="GameBoost_Decision_Unsupported">在此 CPU 上由 Windows 决定核心；游戏加速只应用可选的优先级。</sys:String>
+    <sys:String x:Key="GameBoost_Decision_Unsupported">在此 CPU 上由 Windows 决定核心；游戏加速会请求 Windows 不对游戏限速，并应用可选的优先级，在隔离模式下还会让后台应用进入效率模式。</sys:String>
     <sys:String x:Key="SystemTweaks_StatusManagedByWindows">由 Windows 管理</sys:String>
     <sys:String x:Key="SystemTweaks_StatusOpenSettingsFailed">无法打开 Windows 设置</sys:String>
     <sys:String x:Key="SystemTweaks_StatusSettingsOpenedFormat">已打开 {0} 的设置</sys:String>
