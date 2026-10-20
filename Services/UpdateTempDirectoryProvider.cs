@@ -6,12 +6,18 @@ namespace ThreadPilot.Services
     using System;
     using System.IO;
 
+    /// <summary>
+    /// Each download gets its own admin-only folder directly under the root, with an unguessable name, so a
+    /// non-admin process cannot swap the verified installer (or plant DLLs beside it) before it runs elevated.
+    /// </summary>
     public sealed class UpdateTempDirectoryProvider : IUpdateTempDirectoryProvider
     {
+        private const string FolderPrefix = "ThreadPilot-update-";
+
         private readonly string rootDirectory;
 
         public UpdateTempDirectoryProvider()
-            : this(Path.Combine(Path.GetTempPath(), "ThreadPilot", "Updates"))
+            : this(AdminOnlyDirectory.DefaultRoot)
         {
         }
 
@@ -22,9 +28,7 @@ namespace ThreadPilot.Services
 
         public string CreateUpdateTempDirectory(SemanticVersion version)
         {
-            var directory = Path.Combine(this.rootDirectory, version.ToString(), Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(directory);
-            return directory;
+            return AdminOnlyDirectory.Create(Path.Combine(this.rootDirectory, $"{FolderPrefix}{version}-{Guid.NewGuid():N}"));
         }
 
         public bool IsSafeUpdateTempPath(string path)
@@ -35,9 +39,8 @@ namespace ThreadPilot.Services
             }
 
             var fullPath = Path.GetFullPath(path);
-            var rootWithSeparator = this.rootDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-                + Path.DirectorySeparatorChar;
-            return fullPath.StartsWith(rootWithSeparator, StringComparison.OrdinalIgnoreCase);
+            var prefix = Path.TrimEndingDirectorySeparator(this.rootDirectory) + Path.DirectorySeparatorChar + FolderPrefix;
+            return fullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
         }
 
         public void Cleanup(string path)
@@ -48,21 +51,6 @@ namespace ThreadPilot.Services
             }
 
             Directory.Delete(path, recursive: true);
-            this.DeleteEmptyParentsUntilRoot(Path.GetDirectoryName(Path.GetFullPath(path)));
-        }
-
-        private void DeleteEmptyParentsUntilRoot(string? directory)
-        {
-            while (!string.IsNullOrWhiteSpace(directory) && this.IsSafeUpdateTempPath(directory))
-            {
-                if (Directory.GetFileSystemEntries(directory).Length > 0)
-                {
-                    return;
-                }
-
-                Directory.Delete(directory);
-                directory = Path.GetDirectoryName(directory);
-            }
         }
     }
 }
