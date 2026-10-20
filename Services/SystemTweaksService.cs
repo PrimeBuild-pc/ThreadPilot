@@ -830,15 +830,18 @@ namespace ThreadPilot.Services
 
                 if (changedBackups)
                 {
-                    this.SaveRegistryBackups(backups);
+                    await SaveRegistryBackupsAsync(backups);
                 }
 
                 foreach (var target in targets)
                 {
                     var backupKey = target.BackupKey;
+
+                    // The backup file is user-writable: only restore a value this tweak itself could have written.
                     var desiredValue = enabled
                         ? enabledValue
                         : restoreOriginalWhenDisabled && backups.TryGetValue(backupKey, out var backup)
+                            && (backup.Value == enabledValue || backup.Value == disabledValue)
                             ? backup.Value
                             : disabledValue;
                     using var key = Registry.LocalMachine.OpenSubKey(target.Path, writable: true);
@@ -917,10 +920,10 @@ namespace ThreadPilot.Services
             }
         }
 
-        private void SaveRegistryBackups(Dictionary<string, RegistryValueBackup> backups)
+        private static async Task SaveRegistryBackupsAsync(Dictionary<string, RegistryValueBackup> backups)
         {
             StoragePaths.EnsureAppDataDirectories();
-            File.WriteAllText(
+            await AtomicFileWriter.WriteAllTextAsync(
                 StoragePaths.DeviceTweakBackupsFilePath,
                 JsonSerializer.Serialize(backups, new JsonSerializerOptions { WriteIndented = true }));
         }

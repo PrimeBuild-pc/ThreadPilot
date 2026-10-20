@@ -26,6 +26,7 @@ namespace ThreadPilot.Services
         private const string PriorityNotObservedErrorCode = "PriorityNotObserved";
         private const string PriorityVerificationUnavailableErrorCode = "PriorityVerificationUnavailable";
         private const string RealtimePriorityBlockedErrorCode = "RealtimePriorityBlocked";
+        private const string ProtectedProcessErrorCode = "PersistentRuleProtectedProcess";
 
         private readonly IPersistentProcessRuleStore ruleStore;
         private readonly IPersistentProcessRuleMatcher matcher;
@@ -34,6 +35,7 @@ namespace ThreadPilot.Services
         private readonly IProcessMemoryPriorityService memoryPriorityService;
         private readonly ProcessPowerRequestService? powerRequestService;
         private readonly ProcessPolicyApplyGate? applyGate;
+        private readonly ISecurityService? securityService;
         private readonly ILogger<PersistentRulesEngine> logger;
 
         public PersistentRulesEngine(
@@ -44,7 +46,8 @@ namespace ThreadPilot.Services
             IProcessMemoryPriorityService memoryPriorityService,
             ILogger<PersistentRulesEngine> logger,
             ProcessPowerRequestService? powerRequestService = null,
-            ProcessPolicyApplyGate? applyGate = null)
+            ProcessPolicyApplyGate? applyGate = null,
+            ISecurityService? securityService = null)
         {
             this.ruleStore = ruleStore ?? throw new ArgumentNullException(nameof(ruleStore));
             this.matcher = matcher ?? throw new ArgumentNullException(nameof(matcher));
@@ -54,6 +57,7 @@ namespace ThreadPilot.Services
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.powerRequestService = powerRequestService;
             this.applyGate = applyGate;
+            this.securityService = securityService;
         }
 
         public async Task<IReadOnlyList<PersistentRuleApplyResult>> ApplyMatchingRulesAsync(
@@ -97,6 +101,18 @@ namespace ThreadPilot.Services
                     rule,
                     NoActionsErrorCode,
                     "This saved rule has no actions to apply.");
+            }
+
+            if (this.IsProtectedProcess(process))
+            {
+                const string message = "Saved rules never change protected system processes.";
+                return result with
+                {
+                    Success = false,
+                    ErrorCode = ProtectedProcessErrorCode,
+                    UserMessage = message,
+                    TechnicalMessage = $"Persistent rule '{rule.Name}' ({rule.Id}) skipped for protected process {process.Name} ({process.ProcessId}).",
+                };
             }
 
             if (rule.ApplyAffinityOnStart)
@@ -389,6 +405,26 @@ namespace ThreadPilot.Services
             }
 
             return Task.FromResult(AffinityApplyResult.Succeeded(0, process.ProcessorAffinity));
+        }
+
+        // Rules come from a file any program of the user can edit, so the elevated engine checks the live
+        // process (critical-process list + PPL) itself instead of relying on each setter to do it.
+        private bool IsProtectedProcess(ProcessModel process)
+        {
+            if (this.securityService == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                using var liveProcess = Process.GetProcessById(process.ProcessId);
+                return this.securityService.IsProtected(liveProcess);
+            }
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+            {
+                return false; // Exited: the apply calls below report it.
+            }
         }
 
         private static PersistentRuleApplyResult MarkRuleConfigurationFailure(

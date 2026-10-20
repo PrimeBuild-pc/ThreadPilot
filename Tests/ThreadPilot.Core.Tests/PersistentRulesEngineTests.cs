@@ -521,6 +521,31 @@ namespace ThreadPilot.Core.Tests
             affinity.Verify(s => s.ApplyAsync(process, 3), Times.Once);
         }
 
+        [Fact]
+        public async Task ApplyMatchingRulesAsync_ProtectedProcess_ChangesNothing()
+        {
+            var rule = CreateRule(legacyAffinityMask: 3, applyAffinity: true);
+            var affinity = new Mock<IAffinityApplyService>(MockBehavior.Strict);
+            var security = new Mock<ISecurityService>(MockBehavior.Strict);
+            security.Setup(s => s.IsProtected(It.IsAny<System.Diagnostics.Process>())).Returns(true);
+            var engine = new PersistentRulesEngine(
+                new FakePersistentProcessRuleStore([rule]),
+                new PersistentProcessRuleMatcher(),
+                affinity.Object,
+                new Mock<IProcessService>(MockBehavior.Strict).Object,
+                new Mock<IProcessMemoryPriorityService>(MockBehavior.Strict).Object,
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<PersistentRulesEngine>.Instance,
+                securityService: security.Object);
+            var process = CreateProcess();
+            process.ProcessId = Environment.ProcessId;
+
+            var result = Assert.Single(await engine.ApplyMatchingRulesAsync(process));
+
+            Assert.False(result.Success);
+            Assert.Equal("PersistentRuleProtectedProcess", result.ErrorCode);
+            security.Verify(s => s.IsProtected(It.IsAny<System.Diagnostics.Process>()), Times.Once);
+        }
+
         private static PersistentRulesEngine CreateEngine(
             IReadOnlyList<PersistentProcessRule> rules,
             IAffinityApplyService affinityApplyService,
