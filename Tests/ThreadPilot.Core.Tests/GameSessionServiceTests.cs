@@ -62,6 +62,24 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task NonGameForeground_IsNotReexaminedEveryTick_ButIsAfterAWhile()
+        {
+            this.foregroundPid = ChromePid;
+            using var service = this.CreateService();
+            await service.TickAsync();
+
+            // Changed behind the service's back (no settings event), so only a fresh look can notice it.
+            this.settings.GameBoostManualGames.Add("chrome");
+            this.clock.Advance(TimeSpan.FromSeconds(3));
+            await service.TickAsync();
+            Assert.Null(service.ActiveGameName);
+
+            this.clock.Advance(TimeSpan.FromSeconds(30));
+            await service.TickAsync();
+            Assert.Equal("chrome", service.ActiveGameName);
+        }
+
+        [Fact]
         public async Task GameExit_RestoresBackground_AndDeletesJournal()
         {
             using var service = this.CreateService();
