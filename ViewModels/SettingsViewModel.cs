@@ -339,7 +339,14 @@ namespace ThreadPilot.ViewModels
                         autostartUpdated = await this.autostartService.DisableAutostartAsync();
                     }
 
-                    if (!autostartUpdated)
+                    if (!autostartUpdated && this.Settings.AutostartWithWindows && !this.autostartService.IsAutostartSupported)
+                    {
+                        warnings.Add(this.GetLocalizedString(
+                            "Settings_WarningAutostartNeedsInstall",
+                            "Autostart needs ThreadPilot installed in Program Files: a portable copy could be replaced by any program and then started as administrator."));
+                        this.Settings.AutostartWithWindows = currentAutostartState;
+                    }
+                    else if (!autostartUpdated)
                     {
                         warnings.Add(this.GetLocalizedString(
                             "Settings_WarningAutostartFailed",

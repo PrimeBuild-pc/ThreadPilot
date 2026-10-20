@@ -500,6 +500,7 @@
     <sys:String x:Key="Settings_DialogExportTitle">Export ThreadPilot Configuration</sys:String>
     <sys:String x:Key="Settings_DialogImportTitle">Import ThreadPilot Configuration</sys:String>
     <sys:String x:Key="Settings_WarningAutostartFailed">Failed to update Windows autostart. Keeping previous autostart state.</sys:String>
+    <sys:String x:Key="Settings_WarningAutostartNeedsInstall">Autostart needs ThreadPilot installed in Program Files: a portable copy could be replaced by any program and then started as administrator.</sys:String>
 
     <!-- SettingsWindow -->
     <sys:String x:Key="SettingsWindow_Title">ThreadPilot Settings</sys:String>

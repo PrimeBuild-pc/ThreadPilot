@@ -500,6 +500,7 @@
     <sys:String x:Key="Settings_DialogExportTitle">Экспорт конфигурации ThreadPilot</sys:String>
     <sys:String x:Key="Settings_DialogImportTitle">Импорт конфигурации ThreadPilot</sys:String>
     <sys:String x:Key="Settings_WarningAutostartFailed">Не удалось обновить автозапуск Windows. Сохранение предыдущего состояния автозапуска.</sys:String>
+    <sys:String x:Key="Settings_WarningAutostartNeedsInstall">Для автозапуска ThreadPilot должен быть установлен в Program Files: портативную копию может подменить любая программа, и она запустится от имени администратора.</sys:String>
 
     <!-- SettingsWindow -->
     <sys:String x:Key="SettingsWindow_Title">ThreadPilot Настройки</sys:String>
