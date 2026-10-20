@@ -38,7 +38,7 @@ namespace ThreadPilot.Core.Tests
             var result = await CreateService(nativeApi).SetEfficiencyModeAsync(CreateProcess(), mode);
 
             Assert.True(result.Success);
-            Assert.Equal(ProcessAccessFlags.PROCESS_SET_INFORMATION, nativeApi.LastOpenAccess);
+            Assert.Equal(ProcessAccessFlags.PROCESS_SET_INFORMATION | ProcessAccessFlags.PROCESS_QUERY_LIMITED_INFORMATION, nativeApi.LastOpenAccess);
             Assert.Equal(PowerThrottlingState.CurrentVersion, nativeApi.LastSetThrottling!.Value.Version);
             Assert.Equal(control, nativeApi.LastSetThrottling.Value.ControlMask);
             Assert.Equal(state, nativeApi.LastSetThrottling.Value.StateMask);
@@ -46,6 +46,24 @@ namespace ThreadPilot.Core.Tests
             var readBack = await CreateService(new FakeProcessMemoryPriorityNativeApi { ThrottlingToReturn = nativeApi.LastSetThrottling.Value })
                 .GetEfficiencyModeAsync(CreateProcess());
             Assert.Equal(mode, readBack);
+        }
+
+        [Theory]
+        [InlineData(ProcessEfficiencyMode.On, 5u, 5u)]
+        [InlineData(ProcessEfficiencyMode.Off, 5u, 4u)]
+        [InlineData(ProcessEfficiencyMode.SystemManaged, 4u, 4u)]
+        public async Task SetEfficiencyModeAsync_KeepsTheProcessesOtherThrottlingFlags(ProcessEfficiencyMode mode, uint control, uint state)
+        {
+            // 0x4 = PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION, set by the process itself.
+            var nativeApi = new FakeProcessMemoryPriorityNativeApi
+            {
+                ThrottlingToReturn = new PowerThrottlingState { Version = 1, ControlMask = 0x5, StateMask = 0x5 },
+            };
+
+            await CreateService(nativeApi).SetEfficiencyModeAsync(CreateProcess(), mode);
+
+            Assert.Equal(control, nativeApi.LastSetThrottling!.Value.ControlMask);
+            Assert.Equal(state, nativeApi.LastSetThrottling.Value.StateMask);
         }
 
         [Fact]

@@ -559,11 +559,11 @@
     <sys:String x:Key="SystemTweaks_ToggleOn">Attivato</sys:String>
     <sys:String x:Key="SystemTweaks_ToggleOff">Disattivato</sys:String>
     <sys:String x:Key="GameBoost_Title">Game Boost</sys:String>
-    <sys:String x:Key="GameBoost_Description">Mentre un gioco è in esecuzione, imposta i CPU Set predefiniti del gioco e delle app in background selezionate, così girano su core separati. Windows continua a gestire ogni thread al loro interno, e tutto viene ripristinato quando il gioco si chiude.</sys:String>
+    <sys:String x:Key="GameBoost_Description">Mentre un gioco è in esecuzione, imposta i CPU Set predefiniti del gioco e delle app in background selezionate, così girano su core separati, e chiede a Windows di non limitare il gioco per risparmio energetico. Windows continua a gestire ogni thread: se il gioco tiene occupati tutti i suoi core, Game Boost gli lascia usare tutti i core finché il carico non scende. Tutto viene ripristinato quando il gioco si chiude.</sys:String>
     <sys:String x:Key="GameBoost_Mode">Modalità</sys:String>
     <sys:String x:Key="GameBoost_Mode_Automatic">Automatico</sys:String>
     <sys:String x:Key="GameBoost_Mode_Isolation">Isolamento</sys:String>
-    <sys:String x:Key="GameBoost_Mode_Description">Isolamento sposta anche altre app secondarie (helper dei launcher, lettori multimediali, app per ufficio) e, sulle CPU con due CCD uguali, tiene il gioco sul CCD0.</sys:String>
+    <sys:String x:Key="GameBoost_Mode_Description">Isolamento sposta anche altre app secondarie (helper dei launcher, lettori multimediali, app per ufficio), mette le app in background selezionate in modalità efficienza (EcoQoS) e, sulle CPU con due CCD uguali, tiene il gioco sul CCD0.</sys:String>
     <sys:String x:Key="GameBoost_AboveNormal_Name">Alza la priorità del gioco a Superiore al normale</sys:String>
     <sys:String x:Key="GameBoost_AboveNormal_Description">Sperimentale: misuralo sui tuoi giochi. Mai Alta o Tempo reale.</sys:String>
     <sys:String x:Key="GameBoost_Lists">Giochi e app</sys:String>
@@ -576,7 +576,7 @@
     <sys:String x:Key="GameBoost_Decision_AmdCcd0">Gioco sul CCD0 ({0} CPU), app in background sull'altro CCD ({1} CPU).</sys:String>
     <sys:String x:Key="GameBoost_Decision_AmdBackgroundOnly">Il gioco lo posiziona Windows; le app in background selezionate lasciano il CCD0 ({0} CPU). Isolamento tiene anche il gioco sul CCD0.</sys:String>
     <sys:String x:Key="GameBoost_Decision_IntelHybrid">Gioco sui P-core ({0} CPU), app in background selezionate sugli E-core ({1} CPU).</sys:String>
-    <sys:String x:Key="GameBoost_Decision_Unsupported">Su questa CPU i core li decide Windows; Game Boost applica solo la priorità facoltativa.</sys:String>
+    <sys:String x:Key="GameBoost_Decision_Unsupported">Su questa CPU i core li decide Windows; Game Boost chiede a Windows di non limitare il gioco, più la priorità facoltativa e, in Isolamento, la modalità efficienza per le app in background.</sys:String>
     <sys:String x:Key="SystemTweaks_StatusManagedByWindows">Gestito da Windows</sys:String>
     <sys:String x:Key="SystemTweaks_StatusOpenSettingsFailed">Impossibile aprire le impostazioni di Windows</sys:String>
     <sys:String x:Key="SystemTweaks_StatusSettingsOpenedFormat">Impostazioni aperte per {0}</sys:String>

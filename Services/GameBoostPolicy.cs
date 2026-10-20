@@ -181,4 +181,71 @@ namespace ThreadPilot.Services
                 .Distinct()
                 .Count();
     }
+
+    public enum GameLoadAction
+    {
+        None = 0,
+
+        /// <summary>The game keeps its CPU Set busy: drop it so Windows can use every core.</summary>
+        Release,
+
+        /// <summary>The load has been low for a while: put the CPU Set back.</summary>
+        Confine,
+    }
+
+    /// <summary>
+    /// Decides when a confined game's CPU Set gets in the way. Fed one CPU-time sample per tick, it releases
+    /// the CPU Set after a sustained high load and restores it after a longer low one. The two thresholds and
+    /// the different lengths are the hysteresis; after <see cref="MaxReleases"/> the game stays on all cores.
+    /// </summary>
+    public sealed class GameLoadTracker
+    {
+        // shortcut: thresholds are first guesses, not measured; tune them with the beta testers' frame-time data.
+        public const double ReleaseLoad = 0.8;
+        public const double ConfineLoad = 0.5;
+        public const int ReleaseSamples = 4;
+        public const int ConfineSamples = 20;
+        public const int MaxReleases = 2;
+
+        private readonly int gameCpuCount;
+        private int streak;
+
+        public GameLoadTracker(int gameCpuCount)
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(gameCpuCount, 1);
+            this.gameCpuCount = gameCpuCount;
+        }
+
+        public bool Released { get; private set; }
+
+        public int Releases { get; private set; }
+
+        /// <summary>Adds one load sample and says whether the game's CPU Set should change now.</summary>
+        /// <param name="cpusUsed">CPU time the game used over the sample divided by its length (2.0 = two CPUs busy).</param>
+        public GameLoadAction Observe(double cpusUsed)
+        {
+            if (this.Released && this.Releases >= MaxReleases)
+            {
+                return GameLoadAction.None;
+            }
+
+            var load = cpusUsed / this.gameCpuCount;
+            var pressing = this.Released ? load <= ConfineLoad : load >= ReleaseLoad;
+            this.streak = pressing ? this.streak + 1 : 0;
+            if (this.streak < (this.Released ? ConfineSamples : ReleaseSamples))
+            {
+                return GameLoadAction.None;
+            }
+
+            this.streak = 0;
+            this.Released = !this.Released;
+            if (this.Released)
+            {
+                this.Releases++;
+                return GameLoadAction.Release;
+            }
+
+            return GameLoadAction.Confine;
+        }
+    }
 }

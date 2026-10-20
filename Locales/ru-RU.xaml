@@ -559,11 +559,11 @@
     <sys:String x:Key="SystemTweaks_ToggleOn">Вкл.</sys:String>
     <sys:String x:Key="SystemTweaks_ToggleOff">Откл.</sys:String>
     <sys:String x:Key="GameBoost_Title">Game Boost</sys:String>
-    <sys:String x:Key="GameBoost_Description">Пока запущена игра, задаёт наборы ЦП (CPU Sets) по умолчанию для игры и выбранных фоновых приложений, чтобы они работали на разных ядрах. Windows по-прежнему распределяет каждый поток внутри них, а после закрытия игры всё восстанавливается.</sys:String>
+    <sys:String x:Key="GameBoost_Description">Пока запущена игра, задаёт наборы ЦП (CPU Sets) по умолчанию для игры и выбранных фоновых приложений, чтобы они работали на разных ядрах, и просит Windows не ограничивать игру ради энергосбережения. Windows по-прежнему распределяет каждый поток: если игра загружает все свои ядра, Game Boost разрешает ей использовать все ядра, пока нагрузка не снизится. После закрытия игры всё восстанавливается.</sys:String>
     <sys:String x:Key="GameBoost_Mode">Режим</sys:String>
     <sys:String x:Key="GameBoost_Mode_Automatic">Автоматически</sys:String>
     <sys:String x:Key="GameBoost_Mode_Isolation">Изоляция</sys:String>
-    <sys:String x:Key="GameBoost_Mode_Description">Изоляция также переносит другие второстепенные приложения (помощники лаунчеров, медиаплееры, офисные приложения), а на ЦП с двумя одинаковыми CCD оставляет игру на CCD0.</sys:String>
+    <sys:String x:Key="GameBoost_Mode_Description">Изоляция также переносит другие второстепенные приложения (помощники лаунчеров, медиаплееры, офисные приложения), включает для выбранных фоновых приложений режим эффективности (EcoQoS), а на ЦП с двумя одинаковыми CCD оставляет игру на CCD0.</sys:String>
     <sys:String x:Key="GameBoost_AboveNormal_Name">Повысить приоритет игры до «Выше среднего»</sys:String>
     <sys:String x:Key="GameBoost_AboveNormal_Description">Экспериментально: проверьте на своих играх. Никогда «Высокий» или «Реального времени».</sys:String>
     <sys:String x:Key="GameBoost_Lists">Игры и приложения</sys:String>
@@ -576,7 +576,7 @@
     <sys:String x:Key="GameBoost_Decision_AmdCcd0">Игра на CCD0 ({0} ЦП), фоновые приложения на другом CCD ({1} ЦП).</sys:String>
     <sys:String x:Key="GameBoost_Decision_AmdBackgroundOnly">Игру размещает Windows; выбранные фоновые приложения уходят с CCD0 ({0} ЦП). Изоляция также оставляет игру на CCD0.</sys:String>
     <sys:String x:Key="GameBoost_Decision_IntelHybrid">Игра на P-ядрах ({0} ЦП), выбранные фоновые приложения на E-ядрах ({1} ЦП).</sys:String>
-    <sys:String x:Key="GameBoost_Decision_Unsupported">На этом ЦП ядра выбирает Windows; Game Boost применяет только необязательный приоритет.</sys:String>
+    <sys:String x:Key="GameBoost_Decision_Unsupported">На этом ЦП ядра выбирает Windows; Game Boost просит Windows не ограничивать игру, применяет необязательный приоритет, а в режиме изоляции — режим эффективности для фоновых приложений.</sys:String>
     <sys:String x:Key="SystemTweaks_StatusManagedByWindows">Управляется Windows</sys:String>
     <sys:String x:Key="SystemTweaks_StatusOpenSettingsFailed">Не удалось открыть параметры Windows</sys:String>
     <sys:String x:Key="SystemTweaks_StatusSettingsOpenedFormat">Открыты параметры для {0}</sys:String>
