@@ -17,10 +17,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: "8.0.x"
 
@@ -76,7 +76,7 @@ jobs:
           }
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4.6.0
         with:
           files: '**/coverage.cobertura.xml'
           fail_ci_if_error: false
@@ -103,22 +103,21 @@ jobs:
           $version = "8.24.3"
           $baseUrl = "https://github.com/gitleaks/gitleaks/releases/download/v$version"
           $zipAsset = "gitleaks_${version}_windows_x64.zip"
-          $tarAsset = "gitleaks_${version}_windows_x64.tar.gz"
           $toolDir = Join-Path $env:RUNNER_TEMP "gitleaks-bin"
 
           if (Test-Path $toolDir) {
             Remove-Item -Path $toolDir -Recurse -Force
           }
 
-          try {
-            Invoke-WebRequest -Uri "$baseUrl/$zipAsset" -OutFile "gitleaks.zip"
-            Expand-Archive -Path "gitleaks.zip" -DestinationPath $toolDir -Force
+          # Pinned hash from gitleaks_8.24.3_checksums.txt: refuse a swapped binary.
+          $expectedZipSha256 = "3f1a35578631dbfe633cc5b49e6c906e55ff14a4bfd7336a10fb27fe33b6dcd2"
+          Invoke-WebRequest -Uri "$baseUrl/$zipAsset" -OutFile "gitleaks.zip"
+          $actualZipSha256 = (Get-FileHash -Path "gitleaks.zip" -Algorithm SHA256).Hash
+          if ($actualZipSha256 -ne $expectedZipSha256) {
+            throw "Gitleaks archive checksum mismatch: $actualZipSha256"
           }
-          catch {
-            Invoke-WebRequest -Uri "$baseUrl/$tarAsset" -OutFile "gitleaks.tar.gz"
-            New-Item -ItemType Directory -Force -Path $toolDir | Out-Null
-            tar -xzf "gitleaks.tar.gz" -C $toolDir
-          }
+
+          Expand-Archive -Path "gitleaks.zip" -DestinationPath $toolDir -Force
 
           # Remove vendored tool docs from scan scope to avoid known upstream sample false positives.
           if (Test-Path ".\\gitleaks-bin") {
@@ -130,7 +129,7 @@ jobs:
 
       - name: Upload security artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: security-reports
           path: |

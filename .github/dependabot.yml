@@ -8,3 +8,11 @@ updates:
     labels:
       - dependencies
       - security
+  # Keeps the SHA-pinned workflow actions current.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - security
