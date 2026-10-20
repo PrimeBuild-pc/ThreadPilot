@@ -3,7 +3,9 @@
     <Deterministic>true</Deterministic>
     <DebugType>embedded</DebugType>
     <PublishTrimmed>false</PublishTrimmed>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <!-- false: WPF native DLLs ship next to the exe (admin-only install folder) instead of being
+         extracted to the user-writable %TEMP%\.net and loaded from there by the elevated process. -->
+    <IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
     <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
   </PropertyGroup>
 
