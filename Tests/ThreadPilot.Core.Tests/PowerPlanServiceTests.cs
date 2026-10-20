@@ -119,6 +119,39 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task SetActivePowerPlanByGuidAsync_SwitchesWithOneListAndOneSetActive()
+        {
+            const string balanced = "381b4222-f694-41f0-9685-ff5bb260df2e";
+            const string ultimate = "e9a42b02-d5df-448d-aa00-03f14749eb61";
+            var runner = new RecordingProcessRunner
+            {
+                ResultFactory = invocation => invocation.Arguments[0] == "/list"
+                    ? new ProcessRunResult(
+                        0,
+                        string.Join(
+                            Environment.NewLine,
+                            "Existing Power Schemes (* Active)",
+                            "-----------------------------------",
+                            $"Power Scheme GUID: {balanced}  (Balanced) *",
+                            $"Power Scheme GUID: {ultimate}  (Ultimate Performance)"),
+                        string.Empty)
+                    : new ProcessRunResult(0, string.Empty, string.Empty),
+            };
+            var service = CreateService(runner);
+            PowerPlanChangedEventArgs? changed = null;
+            service.PowerPlanChanged += (_, e) => changed = e;
+
+            var result = await service.SetActivePowerPlanByGuidAsync(ultimate, preventDuplicateChanges: false);
+
+            Assert.True(result);
+            Assert.Equal(
+                new[] { new[] { "/list" }, new[] { "/setactive", ultimate } },
+                runner.Invocations.Select(invocation => invocation.Arguments.ToArray()));
+            Assert.Equal("Balanced", changed?.PreviousPowerPlan?.Name);
+            Assert.Equal("Ultimate Performance", changed?.NewPowerPlan?.Name);
+        }
+
+        [Fact]
         public async Task DeletePowerPlanAsync_InvokesPowerCfgDelete_WhenPlanIsNotActive()
         {
             const string activeGuid = "381b4222-f694-41f0-9685-ff5bb260df2e";

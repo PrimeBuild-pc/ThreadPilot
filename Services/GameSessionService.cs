@@ -112,6 +112,7 @@ namespace ThreadPilot.Services
     public sealed class GameSessionService : IGameSessionService
     {
         private static readonly TimeSpan TickInterval = TimeSpan.FromSeconds(3);
+        private static readonly TimeSpan RejectedForegroundMemory = TimeSpan.FromSeconds(30);
 
         // Background is rescanned every few ticks (about 15 s), not on every one.
         private const int BackgroundRescanTicks = 5;
@@ -136,9 +137,12 @@ namespace ThreadPilot.Services
         private readonly string journalPath;
         private readonly SemaphoreSlim stateLock = new(1, 1);
         private readonly HashSet<(int ProcessId, long StartTimeUtcTicks, GameBoostSetting Setting)> attempted = new();
+        private readonly object timerGate = new();
 
         private List<GameBoostJournalEntry> journal = new();
         private Timer? timer;
+        private bool started;
+        private (int ProcessId, long Timestamp)? rejectedForeground;
         private GameSession? session;
         private GameBoostDecision? cachedDecision;
         private GameBoostMode cachedDecisionMode;
@@ -236,7 +240,8 @@ namespace ThreadPilot.Services
                         DescribeRestore(restored, left, failed)).ConfigureAwait(false);
                 }
 
-                this.timer ??= new Timer(_ => TaskSafety.FireAndForget(this.TickAsync(), ex => this.logger.LogWarning(ex, "Game Boost tick failed")), null, TickInterval, TickInterval);
+                this.started = true;
+                this.SyncTimer();
             }
             finally
             {
@@ -246,8 +251,13 @@ namespace ThreadPilot.Services
 
         public async Task StopAsync()
         {
-            this.timer?.Dispose();
-            this.timer = null;
+            lock (this.timerGate)
+            {
+                this.started = false;
+                this.timer?.Dispose();
+                this.timer = null;
+            }
+
             await this.stateLock.WaitAsync().ConfigureAwait(false);
             try
             {
@@ -268,8 +278,27 @@ namespace ThreadPilot.Services
 
             this.disposed = true;
             this.settingsService.SettingsChanged -= this.OnSettingsChanged;
-            this.timer?.Dispose();
-            this.timer = null;
+            lock (this.timerGate)
+            {
+                this.timer?.Dispose();
+                this.timer = null;
+            }
+        }
+
+        // Ticks only while Game Boost is on (it is off by default); turning it off restores through ReapplyAsync.
+        private void SyncTimer()
+        {
+            lock (this.timerGate)
+            {
+                if (this.started && !this.disposed && this.Settings.GameBoostEnabled)
+                {
+                    this.timer ??= new Timer(_ => TaskSafety.FireAndForget(this.TickAsync(), ex => this.logger.LogWarning(ex, "Game Boost tick failed")), null, TickInterval, TickInterval);
+                    return;
+                }
+
+                this.timer?.Dispose();
+                this.timer = null;
+            }
         }
 
         internal async Task TickAsync()
@@ -320,10 +349,24 @@ namespace ThreadPilot.Services
                 return;
             }
 
+            // The browser or desktop usually stays in front for minutes: building its full process model every
+            // 3 s only to reject it again costs ~8 process queries and a window enumeration per tick.
+            if (this.rejectedForeground is { } rejected
+                && rejected.ProcessId == processId
+                && this.timeProvider.GetElapsedTime(rejected.Timestamp) < RejectedForegroundMemory)
+            {
+                return;
+            }
+
             var game = await this.processService.GetProcessByIdAsync(processId).ConfigureAwait(false);
-            if (game == null
-                || !GameBoostProcessLists.IsGame(game.Name, game.ExecutablePath, this.Settings.GameBoostManualGames, this.Settings.GameBoostExcludedGames)
-                || !this.processProbe.TryGetIdentity(processId, out var startTicks, out var sessionId))
+            if (game != null
+                && !GameBoostProcessLists.IsGame(game.Name, game.ExecutablePath, this.Settings.GameBoostManualGames, this.Settings.GameBoostExcludedGames))
+            {
+                this.rejectedForeground = (processId, this.timeProvider.GetTimestamp());
+                return;
+            }
+
+            if (game == null || !this.processProbe.TryGetIdentity(processId, out var startTicks, out var sessionId))
             {
                 return;
             }
@@ -933,6 +976,8 @@ namespace ThreadPilot.Services
                 || !oldSettings.GameBoostExcludedGames.SequenceEqual(newSettings.GameBoostExcludedGames);
             if (changed)
             {
+                this.rejectedForeground = null;
+                this.SyncTimer();
                 TaskSafety.FireAndForget(this.ReapplyAsync(), ex => this.logger.LogWarning(ex, "Game Boost could not apply the new settings"));
             }
         }

@@ -172,8 +172,11 @@ namespace ThreadPilot.Services
                     }
                 }
 
-                var previousPowerPlan = await this.GetActivePowerPlan().ConfigureAwait(false);
-                var targetPowerPlan = await this.GetPowerPlanByGuidAsync(powerPlanGuid).ConfigureAwait(false);
+                // One "/list" names both plans and marks the active one: no separate /getactivescheme, and no
+                // second /list after the switch (each call starts powercfg.exe).
+                var plans = await this.GetPowerPlansAsync().ConfigureAwait(false);
+                var previousPowerPlan = plans.FirstOrDefault(plan => plan.IsActive);
+                var targetPowerPlan = plans.FirstOrDefault(plan => string.Equals(plan.Guid, powerPlanGuid, StringComparison.OrdinalIgnoreCase));
 
                 this.logger.LogInformation(
                     "Attempting to change power plan from '{FromPlan}' to '{ToPlan}'",
@@ -194,7 +197,9 @@ namespace ThreadPilot.Services
                         this.lastActivePowerPlanGuid = powerPlanGuid;
                     }
 
-                    var newPowerPlan = await this.GetPowerPlanByGuidAsync(powerPlanGuid).ConfigureAwait(false);
+                    var newPowerPlan = targetPowerPlan == null
+                        ? null
+                        : new PowerPlanModel { Guid = targetPowerPlan.Guid, Name = targetPowerPlan.Name, IsActive = true };
 
                     this.logger.LogInformation("Power plan successfully changed to '{PowerPlan}'", newPowerPlan?.Name ?? "Unknown");
 
