@@ -35,6 +35,10 @@ namespace ThreadPilot.Services
                 throw new InvalidOperationException("Release does not contain a ThreadPilot installer asset.");
             }
 
+            // The installer runs elevated and silent: never without a checksum to check it against.
+            var checksumAsset = UpdateAssetSelector.SelectChecksumAsset(release)
+                ?? throw new InvalidOperationException("Release has no SHA256SUMS.txt, so the installer cannot be verified.");
+
             var tempDirectory = this.tempDirectoryProvider.CreateUpdateTempDirectory(release.Version);
             try
             {
@@ -42,24 +46,17 @@ namespace ThreadPilot.Services
                 await this.downloadClient.DownloadFileAsync(installerAsset.DownloadUrl, installerPath, cancellationToken)
                     .ConfigureAwait(false);
 
-                var checksumVerified = false;
-                var checksumAsset = UpdateAssetSelector.SelectChecksumAsset(release);
-                if (checksumAsset != null)
+                var checksumText = await this.downloadClient.TryDownloadStringAsync(checksumAsset.DownloadUrl, cancellationToken)
+                    .ConfigureAwait(false);
+                if (string.IsNullOrWhiteSpace(checksumText) ||
+                    !UpdateChecksumVerifier.TryFindExpectedHash(checksumText, installerAsset.Name, out var expectedHash))
                 {
-                    var checksumText = await this.downloadClient.TryDownloadStringAsync(checksumAsset.DownloadUrl, cancellationToken)
-                        .ConfigureAwait(false);
-                    if (string.IsNullOrWhiteSpace(checksumText) ||
-                        !UpdateChecksumVerifier.TryFindExpectedHash(checksumText, installerAsset.Name, out var expectedHash))
-                    {
-                        throw new InvalidOperationException("SHA256SUMS.txt did not contain the installer checksum.");
-                    }
+                    throw new InvalidOperationException("SHA256SUMS.txt did not contain the installer checksum.");
+                }
 
-                    if (!UpdateChecksumVerifier.Verify(installerPath, expectedHash))
-                    {
-                        throw new InvalidOperationException("Installer SHA256 checksum did not match SHA256SUMS.txt.");
-                    }
-
-                    checksumVerified = true;
+                if (!UpdateChecksumVerifier.Verify(installerPath, expectedHash))
+                {
+                    throw new InvalidOperationException("Installer SHA256 checksum did not match SHA256SUMS.txt.");
                 }
 
                 var signatureStatus = this.signatureVerifier.Verify(installerPath);
@@ -69,17 +66,16 @@ namespace ThreadPilot.Services
                 }
 
                 this.logger.LogInformation(
-                    "Downloaded ThreadPilot update installer {InstallerName}; checksum verified: {ChecksumVerified}; signature: {SignatureStatus}",
+                    "Downloaded ThreadPilot update installer {InstallerName}; checksum verified; signature: {SignatureStatus}",
                     installerAsset.Name,
-                    checksumVerified,
                     signatureStatus);
 
                 return new UpdateDownloadResult(
                     installerPath,
                     tempDirectory,
-                    checksumVerified,
+                    true,
                     signatureStatus,
-                    checksumVerified ? "Installer checksum verified." : "No SHA256SUMS.txt asset was available.");
+                    "Installer checksum verified.");
             }
             catch
             {

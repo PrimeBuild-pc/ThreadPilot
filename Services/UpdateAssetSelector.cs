@@ -23,7 +23,8 @@ namespace ThreadPilot.Services
         public static UpdateAsset? SelectChecksumAsset(UpdateReleaseInfo release)
         {
             return release.Assets.FirstOrDefault(asset =>
-                string.Equals(asset.Name, "SHA256SUMS.txt", StringComparison.OrdinalIgnoreCase));
+                string.Equals(asset.Name, "SHA256SUMS.txt", StringComparison.OrdinalIgnoreCase) &&
+                IsSafeGitHubAssetUrl(asset.DownloadUrl));
         }
 
         public static bool IsSafeGitHubAssetUrl(Uri uri)

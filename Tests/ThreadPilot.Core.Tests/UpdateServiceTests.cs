@@ -104,6 +104,20 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task DownloadInstallerAsync_WithoutChecksumAsset_RefusesBeforeDownloading()
+        {
+            using var tempRoot = new TempDirectory();
+            var client = new FakeUpdateDownloadClient(Encoding.UTF8.GetBytes("installer-content"), null);
+            var service = CreateDownloadService(tempRoot.Path, client);
+            var release = CreateRelease(
+                new UpdateAsset("ThreadPilot_v1.4.0_Setup.exe", new Uri("https://github.com/PrimeBuild-pc/ThreadPilot/releases/download/v1.4.0/ThreadPilot_v1.4.0_Setup.exe"), 10),
+                new UpdateAsset("SHA256SUMS.txt", new Uri("https://example.com/SHA256SUMS.txt"), 10));
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.DownloadInstallerAsync(release));
+            Assert.Empty(Directory.GetFileSystemEntries(tempRoot.Path));
+        }
+
+        [Fact]
         public void UpdateTempDirectoryProvider_DoesNotDeleteOutsideUpdateRoot()
         {
             using var tempRoot = new TempDirectory();
