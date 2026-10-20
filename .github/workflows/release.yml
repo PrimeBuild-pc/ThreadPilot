@@ -10,9 +10,14 @@ on:
         description: "Build and validate release without winget publication"
         required: false
         default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
 
+# Read-only by default: only the job that publishes the GitHub release gets write access.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -25,20 +30,22 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: "8.0.x"
 
       - name: Resolve version
         id: version
         shell: pwsh
+        env:
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          $refName = "${{ github.ref_name }}"
+          $refName = $env:REF_NAME
           if ($refName -match '^v\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') {
             $version = $refName.TrimStart('v')
             $tag = $refName
@@ -75,7 +82,7 @@ jobs:
 
       - name: Install Inno Setup
         shell: pwsh
-        run: choco install innosetup --no-progress -y
+        run: choco install innosetup --version=6.7.1 --no-progress -y
 
       - name: Build Inno Setup installer
         shell: pwsh
@@ -234,7 +241,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          dotnet tool install --global Microsoft.Sbom.DotNetTool
+          dotnet tool install --global Microsoft.Sbom.DotNetTool --version 4.1.13
           $env:PATH += ";$env:USERPROFILE\.dotnet\tools"
           sbom-tool generate -b ./artifacts -bc . -pn ThreadPilot -pv "${{ steps.version.outputs.version }}" -ps PrimeBuild -nsb https://github.com/PrimeBuild-pc/ThreadPilot
 
@@ -253,38 +260,38 @@ jobs:
           Copy-Item -LiteralPath $sbomManifest.FullName -Destination (Join-Path $sbomReleaseDir "manifest.spdx.json") -Force
 
       - name: Upload portable artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-portable
           path: artifacts/release/singlefile
 
       - name: Upload installer artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-installer
           path: artifacts/release/installer
 
       - name: Upload packages artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-packages
           path: artifacts/release/packages
 
       - name: Upload checksums artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-checksums
           path: artifacts/release/SHA256SUMS.txt
 
       - name: Upload winget manifests
         if: steps.version.outputs.prerelease != 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: winget-manifests
           path: winget-manifests
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: sbom
           path: artifacts/release/sbom/manifest.spdx.json
@@ -295,7 +302,7 @@ jobs:
     needs: build
 
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release-portable
           path: smoke
@@ -320,43 +327,45 @@ jobs:
     runs-on: ubuntu-latest
     # Protected environment: waits for the maintainer's approval before it can write the release.
     environment: release
+    permissions:
+      contents: write
     needs:
       - build
       - smoke-test
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
       - name: Download installer artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release-installer
           path: release-assets/installer
 
       - name: Download packages artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release-packages
           path: release-assets/packages
 
       - name: Download checksums artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release-checksums
           path: release-assets
 
       - name: Download winget manifests
         if: needs.build.outputs.prerelease != 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: winget-manifests
           path: winget-manifests
 
       - name: Download SBOM artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: sbom
           path: sbom
@@ -395,7 +404,7 @@ jobs:
           fi
 
       - name: Install git-cliff
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
           tool: git-cliff@2.10.0
 
@@ -426,7 +435,7 @@ jobs:
           Write-Host "CONTRIBUTORS.md is maintained manually in this workflow."
 
       - name: Publish GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: ${{ needs.build.outputs.tag }}
           name: ThreadPilot ${{ needs.build.outputs.tag }}
@@ -451,9 +460,12 @@ jobs:
       - name: Resolve winget publish policy
         id: policy
         shell: pwsh
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DRY_RUN_INPUT: ${{ github.event.inputs.dry_run_publish }}
         run: |
           $ErrorActionPreference = "Stop"
-          $dryRun = "${{ github.event_name }}" -eq "workflow_dispatch" -and "${{ github.event.inputs.dry_run_publish }}" -eq "true"
+          $dryRun = $env:EVENT_NAME -eq "workflow_dispatch" -and $env:DRY_RUN_INPUT -eq "true"
           "dry_run=$($dryRun.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Check winget publish policy
@@ -505,11 +517,11 @@ jobs:
 
       - name: Checkout
         if: steps.gate.outputs.enabled == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Download winget manifests
         if: steps.gate.outputs.enabled == 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: winget-manifests
           path: winget-manifests
@@ -561,7 +573,7 @@ jobs:
 
       - name: Upload winget publish logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: winget-publish-logs
           path: release-channel-logs/winget-submit-log.txt
