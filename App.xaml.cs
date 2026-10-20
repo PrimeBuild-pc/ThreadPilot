@@ -78,11 +78,16 @@ namespace ThreadPilot
             {
                 logger.LogInformation("Application is running with administrator privileges");
 
-                var launchTaskEnsured = Task.Run(async () => await elevatedTaskService.EnsureLaunchTaskAsync()).GetAwaiter().GetResult();
-                if (!launchTaskEnsured)
-                {
-                    logger.LogWarning("Failed to ensure managed elevated launch task during startup. Future launches may require one-time elevation again.");
-                }
+                // Only the next launch needs the task, so the schtasks calls no longer hold up the first window.
+                TaskSafety.FireAndForget(
+                    Task.Run(async () =>
+                    {
+                        if (!await elevatedTaskService.EnsureLaunchTaskAsync())
+                        {
+                            logger.LogInformation("Elevated launch task not available; the next launch will ask for elevation.");
+                        }
+                    }),
+                    ex => logger.LogWarning(ex, "Failed to ensure managed elevated launch task during startup"));
             }
             else
             {
