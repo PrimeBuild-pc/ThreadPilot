@@ -114,7 +114,7 @@ namespace ThreadPilot.Services
                 new ObservableCollection<ProcessModel>(this.EnumerateProcessModels())).ConfigureAwait(false);
         }
 
-        private List<ProcessModel> EnumerateProcessModels(Func<ProcessModel, bool>? filter = null)
+        private List<ProcessModel> EnumerateProcessModels(Func<ProcessModel, bool>? filter = null, Func<string, bool>? nameFilter = null)
         {
             var foregroundProcessId = this.foregroundProcessService?.TryGetForegroundProcessId();
             var models = new List<ProcessModel>();
@@ -122,6 +122,12 @@ namespace ThreadPilot.Services
             {
                 using (process)
                 {
+                    // The name is already in the snapshot GetProcesses took, so skipping here costs no query.
+                    if (nameFilter != null && !nameFilter(process.ProcessName))
+                    {
+                        continue;
+                    }
+
                     var model = this.TryCreateProcessModel(process, foregroundProcessId);
                     if (model != null && (filter == null || filter(model)))
                     {
@@ -1037,10 +1043,10 @@ namespace ThreadPilot.Services
             return processes.Any();
         }
 
-        public async Task<IEnumerable<ProcessModel>> GetProcessesWithPathsAsync()
+        public async Task<IEnumerable<ProcessModel>> GetProcessesWithPathsAsync(Func<string, bool> nameFilter)
         {
             return await Task.Run<IEnumerable<ProcessModel>>(() =>
-                this.EnumerateProcessModels(process => !string.IsNullOrEmpty(process.ExecutablePath))).ConfigureAwait(false);
+                this.EnumerateProcessModels(process => !string.IsNullOrEmpty(process.ExecutablePath), nameFilter)).ConfigureAwait(false);
         }
 
         public async Task<ObservableCollection<ProcessModel>> GetActiveApplicationsAsync()

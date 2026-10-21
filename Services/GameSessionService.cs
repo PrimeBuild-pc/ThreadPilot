@@ -5,6 +5,7 @@ namespace ThreadPilot.Services
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
+    using System.Runtime.InteropServices;
     using System.Text.Json;
     using System.Threading;
     using System.Threading.Tasks;
@@ -51,6 +52,18 @@ namespace ThreadPilot.Services
 
         /// <summary>Total CPU time a running process has used; false when it is gone or unreadable.</summary>
         bool TryGetCpuTime(int processId, out TimeSpan totalProcessorTime);
+
+        /// <summary>
+        /// Holds the process open and calls <paramref name="onExited"/> once when it ends. Null when it cannot be
+        /// opened (anti-cheat, protected, gone) or the PID now belongs to a process with another start time.
+        /// </summary>
+        IGameProcessHandle? TryOpen(int processId, long startTimeUtcTicks, Func<Task> onExited);
+    }
+
+    /// <summary>The game held open for its session: the PID cannot be reused while this is alive.</summary>
+    public interface IGameProcessHandle : IDisposable
+    {
+        bool TryGetCpuTime(out TimeSpan totalProcessorTime);
     }
 
     public sealed class GameBoostProcessProbe : IGameBoostProcessProbe
@@ -61,7 +74,13 @@ namespace ThreadPilot.Services
             {
                 using var process = Process.GetProcessById(processId);
                 startTimeUtcTicks = process.StartTime.ToUniversalTime().Ticks;
-                sessionId = process.SessionId;
+
+                // Process.SessionId would take a snapshot of every process on the machine for this one value.
+                if (!ProcessIdToSessionId(processId, out sessionId))
+                {
+                    return false;
+                }
+
                 return !process.HasExited;
             }
             catch
@@ -86,6 +105,65 @@ namespace ThreadPilot.Services
                 return false;
             }
         }
+
+        public IGameProcessHandle? TryOpen(int processId, long startTimeUtcTicks, Func<Task> onExited)
+        {
+            Process? process = null;
+            try
+            {
+                process = Process.GetProcessById(processId);
+
+                // Holds the handle the exit wait will use. shortcut: Process opens it with PROCESS_ALL_ACCESS, so a
+                // protected (PPL) game falls back to polling; a SYNCHRONIZE|QUERY_LIMITED handle would cover it too.
+                _ = process.SafeHandle;
+
+                // One wait on that handle first: an anti-cheat that stripped SYNCHRONIZE throws here, into the catch,
+                // instead of on the runtime's shared wait thread. The start time read through it proves the identity.
+                if (process.WaitForExit(0) || process.StartTime.ToUniversalTime().Ticks != startTimeUtcTicks)
+                {
+                    process.Dispose();
+                    return null;
+                }
+
+                // Exited is raised inside the Process object's lock: the session restore runs outside it.
+                process.Exited += (_, _) => _ = Task.Run(onExited);
+                process.EnableRaisingEvents = true;
+                if (!process.HasExited)
+                {
+                    return new GameProcessHandle(process);
+                }
+            }
+            catch
+            {
+                // Denied (anti-cheat, protected) or gone: the caller polls instead.
+            }
+
+            process?.Dispose();
+            return null;
+        }
+
+        private sealed class GameProcessHandle(Process process) : IGameProcessHandle
+        {
+            public bool TryGetCpuTime(out TimeSpan totalProcessorTime)
+            {
+                try
+                {
+                    totalProcessorTime = process.TotalProcessorTime;
+                    return true;
+                }
+                catch
+                {
+                    totalProcessorTime = TimeSpan.Zero;
+                    return false;
+                }
+            }
+
+            public void Dispose() => process.Dispose();
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool ProcessIdToSessionId(int processId, out int sessionId);
     }
 
     public interface IGameSessionService : IDisposable
@@ -144,6 +222,7 @@ namespace ThreadPilot.Services
         private bool started;
         private (int ProcessId, long Timestamp)? rejectedForeground;
         private GameSession? session;
+        private IGameProcessHandle? gameHandle;
         private GameBoostDecision? cachedDecision;
         private GameBoostMode cachedDecisionMode;
         private int tickCount;
@@ -283,6 +362,8 @@ namespace ThreadPilot.Services
                 this.timer?.Dispose();
                 this.timer = null;
             }
+
+            this.gameHandle?.Dispose();
         }
 
         // Ticks only while Game Boost is on (it is off by default); turning it off restores through ReapplyAsync.
@@ -322,7 +403,8 @@ namespace ThreadPilot.Services
                     return;
                 }
 
-                if (!this.IsSameProcessAlive(this.session.Game.ProcessId, this.session.GameStartTimeUtcTicks))
+                // A held game reports its exit through OnGameExitedAsync; only a game that denied the handle is polled.
+                if (this.gameHandle == null && !this.IsSameProcessAlive(this.session.Game.ProcessId, this.session.GameStartTimeUtcTicks))
                 {
                     await this.EndSessionAsync("the game exited").ConfigureAwait(false);
                     return;
@@ -452,7 +534,8 @@ namespace ThreadPilot.Services
             var moved = new List<string>();
             var eco = new List<string>();
             var notMoved = new List<string>();
-            var processes = await this.processService.GetProcessesWithPathsAsync().ConfigureAwait(false);
+            var listedNames = GameBoostProcessLists.BackgroundNames(this.Settings.GameBoostMode, this.Settings.GameBoostBackgroundProcesses);
+            var processes = await this.processService.GetProcessesWithPathsAsync(name => listedNames.Contains(GameBoostProcessLists.Normalize(name))).ConfigureAwait(false);
             foreach (var process in processes)
             {
                 if (!this.IsBackgroundCandidate(process, currentSession)
@@ -525,6 +608,30 @@ namespace ThreadPilot.Services
             this.tickCount = 0;
             this.loadTracker = null;
             this.lastLoadSample = null;
+            this.gameHandle?.Dispose();
+            var current = this.session!;
+            this.gameHandle = this.processProbe.TryOpen(current.Game.ProcessId, current.GameStartTimeUtcTicks, () => this.OnGameExitedAsync(current));
+        }
+
+        // Raised on a thread-pool thread by the held game handle, so it takes the same lock as the tick.
+        private async Task OnGameExitedAsync(GameSession exited)
+        {
+            await this.stateLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                if (this.session == exited && !this.disposed)
+                {
+                    await this.EndSessionAsync("the game exited").ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogWarning(ex, "Game Boost could not end the session after the game exited");
+            }
+            finally
+            {
+                this.stateLock.Release();
+            }
         }
 
         // The dynamic part: a confined game that keeps its cores saturated gets every core back from Windows,
@@ -539,7 +646,10 @@ namespace ThreadPilot.Services
 
             var game = currentSession.Game;
             var now = this.timeProvider.GetTimestamp();
-            if (!this.processProbe.TryGetCpuTime(game.ProcessId, out var cpuTime))
+            var read = this.gameHandle != null
+                ? this.gameHandle.TryGetCpuTime(out var cpuTime)
+                : this.processProbe.TryGetCpuTime(game.ProcessId, out cpuTime);
+            if (!read)
             {
                 return;
             }
@@ -807,6 +917,8 @@ namespace ThreadPilot.Services
             }
 
             this.session = null;
+            this.gameHandle?.Dispose();
+            this.gameHandle = null;
             this.attempted.Clear();
             var (restored, left, failed) = await this.RestoreAllAsync().ConfigureAwait(false);
             await this.AuditAsync(

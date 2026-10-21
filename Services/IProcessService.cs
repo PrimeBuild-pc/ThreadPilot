@@ -1,5 +1,6 @@
 namespace ThreadPilot.Services
 {
+    using System;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.Diagnostics;
@@ -34,7 +35,8 @@ namespace ThreadPilot.Services
 
         Task<bool> IsProcessRunningAsync(string executableName);
 
-        Task<IEnumerable<ProcessModel>> GetProcessesWithPathsAsync();
+        /// <summary>Models only for processes whose snapshot name (no ".exe") passes <paramref name="nameFilter"/>, so the rest cost no queries.</summary>
+        Task<IEnumerable<ProcessModel>> GetProcessesWithPathsAsync(Func<string, bool> nameFilter);
 
         Task<ObservableCollection<ProcessModel>> GetActiveApplicationsAsync();
 

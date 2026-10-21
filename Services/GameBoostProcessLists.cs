@@ -91,6 +91,12 @@ namespace ThreadPilot.Services
                     || (mode == GameBoostMode.Isolation && IsolationExtraProcesses.Any(entry => Normalize(entry).Equals(name, StringComparison.OrdinalIgnoreCase))));
         }
 
+        /// <summary>Every name <see cref="IsListedBackground"/> can match (path entries by file name): a cheap prefilter, not the decision.</summary>
+        public static HashSet<string> BackgroundNames(GameBoostMode mode, IReadOnlyCollection<string>? userBackground) =>
+            new HashSet<string>(
+                (userBackground ?? []).Concat(mode == GameBoostMode.Isolation ? IsolationExtraProcesses : []).Select(Normalize).Where(name => name.Length > 0),
+                StringComparer.OrdinalIgnoreCase);
+
         /// <summary>Process name without directory and ".exe", so "C:\x\Game.exe", "Game.exe" and "game" all match.</summary>
         public static string Normalize(string? processName)
         {

@@ -122,6 +122,37 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal(ProcessEfficiencyMode.SystemManaged, await this.ReadEfficiencyAsync(browser));
             Assert.False(File.Exists(journal));
             await second.StopAsync();
+
+            // 5. The game exits: its held handle ends the session and restores without waiting for a tick.
+            using var third = this.CreateService(topology, settings, game.Id, journal);
+            await third.TickAsync();
+            Assert.Equal(backgroundCpus, ReadDefaultCpuSetIndexes(browser, topology));
+            game.Kill();
+            await WaitUntilAsync(() => !File.Exists(journal));
+            Assert.Empty(ReadDefaultCpuSetIndexes(browser, topology));
+            Assert.Null(third.ActiveGameName);
+        }
+
+        [Fact]
+        public async Task Probe_HoldsTheSameProcess_ReportsItsExit_AndRejectsAnotherStartTime()
+        {
+            var game = this.StartCopyOfPing(Path.Combine(this.root, "game"), "FakeGame.exe");
+            var probe = new GameBoostProcessProbe();
+            Assert.True(probe.TryGetIdentity(game.Id, out var startTicks, out _));
+            var exited = new TaskCompletionSource();
+
+            Assert.Null(probe.TryOpen(game.Id, startTicks + 1, () => Task.CompletedTask)); // the PID now names another process
+            using var handle = probe.TryOpen(game.Id, startTicks, () =>
+            {
+                exited.TrySetResult();
+                return Task.CompletedTask;
+            });
+            Assert.NotNull(handle);
+            Assert.True(handle.TryGetCpuTime(out _));
+            Assert.False(exited.Task.IsCompleted);
+
+            game.Kill();
+            await exited.Task.WaitAsync(TimeSpan.FromSeconds(10));
         }
 
         private GameSessionService CreateService(CpuTopologySnapshot topology, ApplicationSettingsModel settings, int gamePid, string journal)
@@ -173,6 +204,16 @@ namespace ThreadPilot.Core.Tests
             })!;
             this.children.Add(process);
             return process;
+        }
+
+        private static async Task WaitUntilAsync(Func<bool> condition)
+        {
+            for (var i = 0; i < 100 && !condition(); i++)
+            {
+                await Task.Delay(100);
+            }
+
+            Assert.True(condition());
         }
 
         private Task<ProcessEfficiencyMode?> ReadEfficiencyAsync(Process process) =>
