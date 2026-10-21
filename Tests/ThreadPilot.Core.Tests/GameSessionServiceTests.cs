@@ -94,6 +94,128 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task HeldGame_ExitEvent_EndsTheSessionAndRestores_WithoutATick()
+        {
+            this.processes.HandleAllowed = true;
+            using var service = this.CreateService();
+            await service.TickAsync();
+            Assert.Equal(1, this.processes.OpenHandles);
+
+            await this.processes.ExitWithEventAsync(GamePid);
+
+            Assert.Null(service.ActiveGameName);
+            Assert.Empty(this.processes.CpuSets[ChromePid]);
+            Assert.False(File.Exists(this.journalPath));
+            Assert.Equal(0, this.processes.OpenHandles);
+            var messages = (await this.audit.GetEntriesAsync()).Select(entry => entry.Message).ToList();
+            Assert.Contains("Session ended for Game: the game exited", messages);
+        }
+
+        [Fact]
+        public async Task HeldGame_TicksDoNotLookItUp_AndItsLoadIsReadFromTheHandle()
+        {
+            this.processes.HandleAllowed = true;
+            using var service = this.CreateService();
+            await service.TickAsync();
+            this.processes.Lookups.Clear();
+
+            await this.RunLoadAsync(service, cpusBusy: 8, ticks: GameLoadTracker.ReleaseSamples);
+            Assert.False(this.processes.Lookups.ContainsKey(GamePid));
+
+            await this.RunLoadAsync(service, cpusBusy: 16, ticks: GameLoadTracker.ReleaseSamples + 1);
+            Assert.Empty(this.processes.CpuSets[GamePid]);
+        }
+
+        [Fact]
+        public async Task HeldGame_SettingsChange_KeepsWatchingTheSameGame()
+        {
+            this.processes.HandleAllowed = true;
+            using var service = this.CreateService();
+            await service.TickAsync();
+
+            this.settings.GameBoostMode = GameBoostMode.Isolation;
+            await service.ReapplyAsync();
+            Assert.Equal(1, this.processes.OpenHandles);
+
+            await this.processes.ExitWithEventAsync(GamePid);
+            Assert.Null(service.ActiveGameName);
+            Assert.False(File.Exists(this.journalPath));
+        }
+
+        [Fact]
+        public async Task HeldGame_HandleReleased_WhenDisposedOrStopped()
+        {
+            this.processes.HandleAllowed = true;
+            using (var crashed = this.CreateService())
+            {
+                await crashed.TickAsync();
+            }
+
+            Assert.Equal(0, this.processes.OpenHandles);
+
+            using var service = this.CreateService();
+            await service.StartAsync();
+            await service.TickAsync();
+            Assert.Equal(1, this.processes.OpenHandles);
+            await service.StopAsync();
+            Assert.Equal(0, this.processes.OpenHandles);
+            Assert.False(File.Exists(this.journalPath));
+        }
+
+        [Fact]
+        public async Task HeldGame_LateExitEventOfAnEndedSession_DoesNotEndTheNextOne()
+        {
+            this.processes.HandleAllowed = true;
+            this.processes.Add(500, "Other", @"D:\SteamLibrary\steamapps\common\Other\Other.exe");
+            using var service = this.CreateService();
+            await service.TickAsync();
+            var lateExit = this.processes.ExitCallbacks.Single();
+
+            this.settings.GameBoostEnabled = false;
+            await service.ReapplyAsync();
+            this.settings.GameBoostEnabled = true;
+            this.foregroundPid = 500;
+            await service.TickAsync();
+            await lateExit();
+
+            Assert.Equal("Other", service.ActiveGameName);
+            Assert.Equal(VCacheCpus, this.processes.CpuSets[500]);
+        }
+
+        [Fact]
+        public async Task HandleDenied_PidReusedDuringTheSession_EndsIt_WithoutTouchingTheNewProcess()
+        {
+            using var service = this.CreateService(); // the handle is denied, as by an anti-cheat: polled every tick
+            await service.TickAsync();
+            Assert.Equal(0, this.processes.OpenHandles);
+
+            this.processes.Restart(GamePid);
+            await service.TickAsync();
+
+            Assert.Null(service.ActiveGameName);
+            Assert.Equal(VCacheCpus, this.processes.CpuSets[GamePid]); // the new process is not ours
+            Assert.Empty(this.processes.CpuSets[ChromePid]);
+            Assert.False(File.Exists(this.journalPath));
+        }
+
+        [Fact]
+        public async Task Rescan_BuildsModelsOnlyForListedNames_ThenChecksTheExactPath()
+        {
+            this.settings.GameBoostBackgroundProcesses = ["chrome", @"C:\Tools\Sync\sync.exe"];
+            this.processes.Add(600, "sync", @"C:\Tools\Sync\sync.exe");
+            this.processes.Add(601, "sync", @"D:\Other\sync.exe"); // same name, another executable
+            this.processes.Add(602, "notepad", @"C:\Windows\notepad.exe");
+            using var service = this.CreateService();
+
+            await service.TickAsync();
+
+            Assert.Equal(["chrome", "sync", "sync"], this.processes.ScannedModels.Order());
+            Assert.Equal(OtherCcdCpus, this.processes.CpuSets[ChromePid]);
+            Assert.Equal(OtherCcdCpus, this.processes.CpuSets[600]);
+            Assert.Empty(this.processes.CpuSets[601]);
+        }
+
+        [Fact]
         public async Task AltTab_KeepsTheSession()
         {
             using var service = this.CreateService();
@@ -525,14 +647,20 @@ namespace ThreadPilot.Core.Tests
         {
             private readonly Dictionary<int, ProcessModel> models = new();
             private readonly Dictionary<int, long> startTimes = new();
+            private readonly Dictionary<int, FakeHandle> handles = new();
 
             public FakeProcesses()
             {
                 var processService = new Mock<IProcessService>();
                 processService.Setup(s => s.GetProcessByIdAsync(It.IsAny<int>()))
                     .ReturnsAsync((int pid) => this.startTimes.ContainsKey(pid) ? this.Snapshot(pid) : null);
-                processService.Setup(s => s.GetProcessesWithPathsAsync())
-                    .ReturnsAsync(() => this.startTimes.Keys.Select(this.Snapshot).ToList());
+                processService.Setup(s => s.GetProcessesWithPathsAsync(It.IsAny<Func<string, bool>>()))
+                    .ReturnsAsync((Func<string, bool> nameFilter) =>
+                    {
+                        var listed = this.startTimes.Keys.Where(pid => nameFilter(this.models[pid].Name)).ToList();
+                        this.ScannedModels.AddRange(listed.Select(pid => this.models[pid].Name));
+                        return listed.Select(this.Snapshot).ToList();
+                    });
                 processService.Setup(s => s.GetCpuAssignmentLogicalProcessorIndexesAsync(It.IsAny<ProcessModel>(), CpuAssignmentMode.CpuSets))
                     .ReturnsAsync((ProcessModel p, CpuAssignmentMode _) => this.Unreadable.Contains(p.ProcessId) ? null : this.CpuSets[p.ProcessId].ToList());
                 processService.Setup(s => s.ClearProcessCpuSetAsync(It.IsAny<ProcessModel>()))
@@ -590,6 +718,9 @@ namespace ThreadPilot.Core.Tests
 
             public List<int> ApplyCalls { get; } = new();
 
+            /// <summary>Gets the names the background rescans built a full model for.</summary>
+            public List<string> ScannedModels { get; } = new();
+
             public void Add(int pid, string name, string path)
             {
                 this.models[pid] = new ProcessModel { ProcessId = pid, Name = name, ExecutablePath = path };
@@ -600,18 +731,67 @@ namespace ThreadPilot.Core.Tests
                 this.CpuTime[pid] = TimeSpan.Zero;
             }
 
+            /// <summary>Gets or sets a value indicating whether the game can be held open; false acts like an anti-cheat that denies the handle.</summary>
+            public bool HandleAllowed { get; set; }
+
+            public int OpenHandles => this.handles.Count;
+
+            /// <summary>Gets every exit callback handed out, including those of handles already released.</summary>
+            public List<Func<Task>> ExitCallbacks { get; } = new();
+
+            public Dictionary<int, int> Lookups { get; } = new();
+
             public void Exit(int pid) => this.startTimes.Remove(pid);
+
+            /// <summary>The game exits and its held handle raises the exit event; completes when the service has handled it.</summary>
+            public Task ExitWithEventAsync(int pid)
+            {
+                this.Exit(pid);
+                return this.handles.TryGetValue(pid, out var handle) ? handle.OnExited() : Task.CompletedTask;
+            }
 
             public void Restart(int pid) => this.startTimes[pid] += 1;
 
             public bool TryGetIdentity(int processId, out long startTimeUtcTicks, out int sessionId)
             {
+                this.Lookups[processId] = this.Lookups.GetValueOrDefault(processId) + 1;
                 sessionId = 1;
                 return this.startTimes.TryGetValue(processId, out startTimeUtcTicks);
             }
 
-            public bool TryGetCpuTime(int processId, out TimeSpan totalProcessorTime) =>
-                this.CpuTime.TryGetValue(processId, out totalProcessorTime) && this.startTimes.ContainsKey(processId);
+            public bool TryGetCpuTime(int processId, out TimeSpan totalProcessorTime)
+            {
+                this.Lookups[processId] = this.Lookups.GetValueOrDefault(processId) + 1;
+                return this.CpuTime.TryGetValue(processId, out totalProcessorTime) && this.startTimes.ContainsKey(processId);
+            }
+
+            public IGameProcessHandle? TryOpen(int processId, long startTimeUtcTicks, Func<Task> onExited)
+            {
+                if (!this.HandleAllowed || !this.startTimes.TryGetValue(processId, out var current) || current != startTimeUtcTicks)
+                {
+                    return null;
+                }
+
+                var handle = new FakeHandle(this, processId, onExited);
+                this.ExitCallbacks.Add(onExited);
+                this.handles[processId] = handle;
+                return handle;
+            }
+
+            private sealed class FakeHandle(FakeProcesses owner, int pid, Func<Task> onExited) : IGameProcessHandle
+            {
+                public Func<Task> OnExited { get; } = onExited;
+
+                public bool TryGetCpuTime(out TimeSpan totalProcessorTime) => owner.CpuTime.TryGetValue(pid, out totalProcessorTime);
+
+                public void Dispose()
+                {
+                    if (owner.handles.TryGetValue(pid, out var held) && held == this)
+                    {
+                        owner.handles.Remove(pid);
+                    }
+                }
+            }
 
             private ProcessModel Snapshot(int pid)
             {
