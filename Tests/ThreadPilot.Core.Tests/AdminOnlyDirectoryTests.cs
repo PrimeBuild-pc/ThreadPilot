@@ -27,7 +27,11 @@ namespace ThreadPilot.Core.Tests
                     new(WellKnownSidType.BuiltinAdministratorsSid, null),
                 };
                 using var identity = WindowsIdentity.GetCurrent();
-                if (!new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator))
+                if (new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator))
+                {
+                    Assert.Equal(new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null), security.GetOwner(typeof(SecurityIdentifier)));
+                }
+                else
                 {
                     expected.Add(identity.User!);
                 }

@@ -143,22 +143,24 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public async Task EnsureLaunchTaskAsync_TaskAlreadyPointsAtThisExe_NotRegisteredAgain()
+        public async Task EnsureLaunchTaskAsync_KeepsATaskInProgramFiles_AndParsesQuotedEscapedCommands()
         {
             var executablePath = CreateTemporaryExecutablePath();
+            var installed = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Tools & Co", "ThreadPilot.exe");
             var runner = new RecordingProcessRunner
             {
                 ResultFactory = invocation => invocation.Arguments[0] == "/Query"
-                    ? TaskXml(executablePath.Replace("&", "&amp;"))
+                    ? TaskXml($"\"{installed.Replace("&", "&amp;")}\"")
                     : new ProcessRunResult(0, string.Empty, string.Empty),
             };
 
             try
             {
-                var service = CreateService(runner, executablePathProvider: () => executablePath, isProtectedInstallPath: _ => true);
+                var service = CreateService(runner, executablePathProvider: () => executablePath);
 
-                Assert.True(await service.EnsureLaunchTaskAsync());
-                Assert.All(runner.Invocations, invocation => Assert.Equal("/Query", invocation.Arguments[0]));
+                await service.EnsureLaunchTaskAsync();
+
+                Assert.DoesNotContain(runner.Invocations, invocation => invocation.Arguments[0] == "/Delete");
             }
             finally
             {
