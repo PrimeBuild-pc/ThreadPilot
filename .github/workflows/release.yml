@@ -318,6 +318,8 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
+    # Protected environment: waits for the maintainer's approval before it can write the release.
+    environment: release
     needs:
       - build
       - smoke-test
@@ -439,6 +441,7 @@ jobs:
 
   publish-winget:
     runs-on: windows-2022
+    environment: release
     needs:
       - build
       - release
