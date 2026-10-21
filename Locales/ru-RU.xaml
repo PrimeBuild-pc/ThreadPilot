@@ -501,6 +501,8 @@
     <sys:String x:Key="Settings_DialogImportTitle">Импорт конфигурации ThreadPilot</sys:String>
     <sys:String x:Key="Settings_WarningAutostartFailed">Не удалось обновить автозапуск Windows. Сохранение предыдущего состояния автозапуска.</sys:String>
     <sys:String x:Key="Settings_WarningAutostartNeedsInstall">Для автозапуска ThreadPilot должен быть установлен в Program Files: портативную копию может подменить любая программа, и она запустится от имени администратора.</sys:String>
+    <sys:String x:Key="Settings_AutostartInstallConfirmTitle">Установить ThreadPilot для автозапуска</sys:String>
+    <sys:String x:Key="Settings_AutostartInstallConfirmMessage">Для автозапуска ThreadPilot должен быть установлен в Program Files. Скачать, проверить и установить официальную версию сейчас? ThreadPilot перезапустится из Program Files с включённым автозапуском; после этого портативную папку можно удалить.</sys:String>
 
     <!-- SettingsWindow -->
     <sys:String x:Key="SettingsWindow_Title">ThreadPilot Настройки</sys:String>

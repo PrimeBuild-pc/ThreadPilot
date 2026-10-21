@@ -501,6 +501,8 @@
     <sys:String x:Key="Settings_DialogImportTitle">Importar configuración ThreadPilot</sys:String>
     <sys:String x:Key="Settings_WarningAutostartFailed">No se pudo actualizar el inicio automático Windows. Manteniendo el estado de inicio automático anterior.</sys:String>
     <sys:String x:Key="Settings_WarningAutostartNeedsInstall">El inicio automático requiere ThreadPilot instalado en Archivos de programa: cualquier programa podría reemplazar una copia portable y ejecutarla como administrador.</sys:String>
+    <sys:String x:Key="Settings_AutostartInstallConfirmTitle">Instalar ThreadPilot para el inicio automático</sys:String>
+    <sys:String x:Key="Settings_AutostartInstallConfirmMessage">El inicio automático requiere ThreadPilot instalado en Archivos de programa. ¿Descargar, verificar e instalar ahora la versión oficial? ThreadPilot se reiniciará desde Archivos de programa con el inicio automático activado; después podrás eliminar esta carpeta portable.</sys:String>
 
     <!-- SettingsWindow -->
     <sys:String x:Key="SettingsWindow_Title">ThreadPilot Configuración</sys:String>
