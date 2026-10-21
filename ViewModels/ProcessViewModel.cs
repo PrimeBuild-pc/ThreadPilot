@@ -309,7 +309,7 @@ namespace ThreadPilot.ViewModels
         {
             var startInfo = new ProcessStartInfo
             {
-                FileName = "explorer.exe",
+                FileName = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe"),
                 Arguments = $"/select,\"{executablePath}\"",
                 UseShellExecute = true,
             };

@@ -87,7 +87,6 @@ namespace ThreadPilot.Services
             services.AddSingleton<IProcessRuleCreationService, ProcessRuleCreationService>();
             services.AddSingleton<ProcessFilterService>();
             services.AddSingleton<IVirtualizedProcessService, VirtualizedProcessService>();
-            services.AddSingleton<IConditionalProfileService, ConditionalProfileService>();
             services.AddSingleton<IPowerPlanService, PowerPlanService>();
             services.AddSingleton<PowerPlanTransitionGate>();
             services.AddSingleton<ICpuTopologyService, CpuTopologyService>();
@@ -134,7 +133,6 @@ namespace ThreadPilot.Services
 
             // User interface services
             services.AddSingleton<INotificationService, NotificationService>();
-            services.AddSingleton<ISmartNotificationService, SmartNotificationService>();
             services.AddSingleton<ISystemTrayService, SystemTrayService>();
 
             // System integration services

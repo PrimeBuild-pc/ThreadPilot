@@ -329,6 +329,20 @@ namespace ThreadPilot.Core.Tests
             }
         }
 
+        [Theory]
+        [InlineData("Gaming", true)]
+        [InlineData("My profile 2", true)]
+        [InlineData(@"..\..\Windows\evil", false)]
+        [InlineData(@"C:\Temp\evil", false)]
+        [InlineData("sub/evil", false)]
+        [InlineData("..", false)]
+        [InlineData("", false)]
+        [InlineData("bad|name", false)]
+        public void IsValidProfileName_KeepsProfilesInsideTheirFolder(string name, bool expected)
+        {
+            Assert.Equal(expected, ProcessService.IsValidProfileName(name));
+        }
+
         [Fact]
         public async Task SetRegistryPriorityAsync_WithRealtime_ReturnsFalse()
         {

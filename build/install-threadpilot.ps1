@@ -25,8 +25,21 @@ if (-not $asset) {
 
 $exePath = Join-Path $destPath $asset.name
 
+$checksumAsset = $release.assets | Where-Object { $_.name -eq "SHA256SUMS.txt" } | Select-Object -First 1
+if (-not $checksumAsset) {
+    throw "The latest release has no SHA256SUMS.txt, so the installer cannot be verified."
+}
+
 Write-Host "Downloading installer $($asset.name)..."
 Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $exePath -UseBasicParsing
+
+$checksums = (Invoke-WebRequest -Uri $checksumAsset.browser_download_url -UseBasicParsing).Content
+$expected = ($checksums -split "`n" | Where-Object { $_ -match "^([0-9a-fA-F]{64})\s+\*?$([regex]::Escape($asset.name))\s*$" } | ForEach-Object { $Matches[1] } | Select-Object -First 1)
+$actual = (Get-FileHash -Path $exePath -Algorithm SHA256).Hash
+if (-not $expected -or $actual -ne $expected) {
+    Remove-Item -LiteralPath $exePath -Force
+    throw "Installer checksum does not match SHA256SUMS.txt; the download was deleted."
+}
 
 # Optional machine PATH update for command-line convenience.
 $currentPath = [Environment]::GetEnvironmentVariable("Path", "Machine")

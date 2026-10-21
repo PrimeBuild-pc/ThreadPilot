@@ -638,6 +638,11 @@ namespace ThreadPilot.Services
                 this.cpuSelectionMigrationService.PrepareProcessProfileForSave(profile, topology);
             }
 
+            if (!IsValidProfileName(profileName))
+            {
+                return false;
+            }
+
             var filePath = Path.Combine(this.ProfilesDirectory, $"{profileName}.json");
             var json = JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true });
             await AtomicFileWriter.WriteAllTextAsync(filePath, json, Encoding.UTF8).ConfigureAwait(false);
@@ -646,6 +651,11 @@ namespace ThreadPilot.Services
 
         public async Task<bool> LoadProcessProfile(string profileName, ProcessModel process)
         {
+            if (!IsValidProfileName(profileName))
+            {
+                return false;
+            }
+
             var filePath = Path.Combine(this.ProfilesDirectory, $"{profileName}.json");
             if (!File.Exists(filePath))
             {
@@ -1079,34 +1089,42 @@ namespace ThreadPilot.Services
 
             this.EnsureProcessOperationAllowed(process, "SetProcessPriority");
 
+            // Without an image name the key below would be the IFEO root itself.
+            var imageName = Path.GetFileName(process.ExecutablePath);
+            if (string.IsNullOrWhiteSpace(imageName))
+            {
+                this.AuditProcessOperation("SetProcessPriority", process.Name, success: false);
+                return false;
+            }
+
             return await Task.Run(() =>
             {
                 try
                 {
-                    using var key = Microsoft.Win32.Registry.LocalMachine.CreateSubKey(
-                        @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\" +
-                        Path.GetFileName(process.ExecutablePath));
+                    var imageKeyPath = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\" + imageName;
+                    using (var legacyKey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(imageKeyPath, writable: true))
+                    {
+                        // Earlier versions wrote this value, which Windows never reads.
+                        legacyKey?.DeleteValue("PriorityClass", false);
+                    }
 
+                    using var key = Microsoft.Win32.Registry.LocalMachine.CreateSubKey(imageKeyPath + @"\PerfOptions");
                     if (enable)
                     {
-                        // Convert ProcessPriorityClass to registry priority value
                         int priorityValue = priority switch
                         {
-                            ProcessPriorityClass.Idle => 4,
-                            ProcessPriorityClass.BelowNormal => 6,
-                            ProcessPriorityClass.Normal => 8,
-                            ProcessPriorityClass.AboveNormal => 10,
-                            ProcessPriorityClass.High => 13,
-                            ProcessPriorityClass.RealTime => 24,
-                            _ => 8, // Default to Normal
+                            ProcessPriorityClass.Idle => 1,
+                            ProcessPriorityClass.BelowNormal => 5,
+                            ProcessPriorityClass.AboveNormal => 6,
+                            ProcessPriorityClass.High => 3,
+                            _ => 2, // Normal
                         };
 
-                        key.SetValue("PriorityClass", priorityValue, Microsoft.Win32.RegistryValueKind.DWord);
+                        key.SetValue("CpuPriorityClass", priorityValue, Microsoft.Win32.RegistryValueKind.DWord);
                     }
                     else
                     {
-                        // Remove the registry entry to disable enforcement
-                        key.DeleteValue("PriorityClass", false);
+                        key.DeleteValue("CpuPriorityClass", false);
                     }
 
                     this.AuditProcessOperation("SetProcessPriority", process.Name, success: true);
@@ -1120,6 +1138,13 @@ namespace ThreadPilot.Services
                 }
             }).ConfigureAwait(false);
         }
+
+        // A plain file name: no folders, no "..", nothing Windows rejects in a file name.
+        internal static bool IsValidProfileName(string? profileName) =>
+            !string.IsNullOrWhiteSpace(profileName)
+            && profileName.Trim('.').Length > 0
+            && string.Equals(Path.GetFileName(profileName), profileName, StringComparison.Ordinal)
+            && profileName.IndexOfAny(Path.GetInvalidFileNameChars()) < 0;
 
         private void EnsureProcessOperationAllowed(ProcessModel process, string operation)
         {
