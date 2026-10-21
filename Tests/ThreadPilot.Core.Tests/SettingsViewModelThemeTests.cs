@@ -152,6 +152,47 @@ namespace ThreadPilot.Core.Tests
             Assert.False(viewModel.HasUnsavedChanges);
         }
 
+        [Theory]
+        [InlineData(true, 1, 4, 0, true)]   // accepted, release 1.4.0 >= current 1.3.1: installs, autostart stays on
+        [InlineData(false, 1, 4, 0, false)] // declined: nothing installed, autostart back off
+        [InlineData(true, 1, 2, 0, false)]  // only an older release exists: never downgrade
+        public async Task SaveSettingsCommand_PortableAutostart_OffersTheVerifiedInstaller(
+            bool accept, int major, int minor, int patch, bool expectInstall)
+        {
+            var harness = new Harness();
+            harness.Autostart.Setup(service => service.CheckAutostartStatusAsync()).ReturnsAsync(false);
+            harness.Autostart.Setup(service => service.EnableAutostartAsync(It.IsAny<bool>())).ReturnsAsync(false);
+            harness.Autostart.SetupGet(service => service.IsAutostartSupported).Returns(false);
+            var release = new UpdateReleaseInfo(
+                new SemanticVersion(major, minor, patch),
+                $"v{major}.{minor}.{patch}",
+                new Uri("https://github.com/PrimeBuild-pc/ThreadPilot/releases"),
+                false,
+                []);
+            harness.Updates
+                .Setup(service => service.CheckForUpdatesAsync(It.IsAny<UpdateCheckRequest>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new UpdateCheckResult(UpdateCheckStatus.UpdateAvailable, new SemanticVersion(1, 3, 1), release, "ok"));
+            harness.Updates
+                .Setup(service => service.DownloadAndInstallAsync(release, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new UpdateInstallResult(UpdateInstallStatus.Started, "started"));
+            var viewModel = harness.CreateViewModel();
+            var prompts = 0;
+            viewModel.ConfirmPrompt = (_, _) =>
+            {
+                prompts++;
+                return accept;
+            };
+            viewModel.Settings.AutostartWithWindows = true;
+
+            await ((IAsyncRelayCommand)viewModel.SaveSettingsCommand).ExecuteAsync(null);
+
+            Assert.Equal(1, prompts);
+            harness.Updates.Verify(
+                service => service.DownloadAndInstallAsync(It.IsAny<UpdateReleaseInfo>(), It.IsAny<CancellationToken>()),
+                expectInstall ? Times.Once() : Times.Never());
+            Assert.Equal(expectInstall, viewModel.Settings.AutostartWithWindows);
+        }
+
         [Fact]
         public async Task SaveSettingsCommand_WhenStartMinimizedIsDisabled_UpdatesEnabledAutostart()
         {

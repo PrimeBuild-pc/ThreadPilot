@@ -77,17 +77,6 @@ namespace ThreadPilot
             if (isRunningAsAdministrator)
             {
                 logger.LogInformation("Application is running with administrator privileges");
-
-                // Only the next launch needs the task, so the schtasks calls no longer hold up the first window.
-                TaskSafety.FireAndForget(
-                    Task.Run(async () =>
-                    {
-                        if (!await elevatedTaskService.EnsureLaunchTaskAsync())
-                        {
-                            logger.LogInformation("Elevated launch task not available; the next launch will ask for elevation.");
-                        }
-                    }),
-                    ex => logger.LogWarning(ex, "Failed to ensure managed elevated launch task during startup"));
             }
             else
             {
@@ -200,6 +189,30 @@ namespace ThreadPilot
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "Failed to preload theme settings during startup");
+            }
+
+            if (isRunningAsAdministrator)
+            {
+                // Off the UI thread and in this order: the launch-task pass deletes tasks pointing outside Program
+                // Files, then autostart is restored for this copy if the user asked for it (e.g. right after a
+                // portable copy installed itself in Program Files).
+                var autostartService = this.ServiceProvider.GetRequiredService<IAutostartService>();
+                var wantsAutostart = loadedSettings?.AutostartWithWindows == true;
+                var autostartMinimized = loadedSettings?.StartMinimized ?? true;
+                TaskSafety.FireAndForget(
+                    Task.Run(async () =>
+                    {
+                        if (!await elevatedTaskService.EnsureLaunchTaskAsync())
+                        {
+                            logger.LogInformation("Elevated launch task not available; the next launch will ask for elevation.");
+                        }
+
+                        if (wantsAutostart)
+                        {
+                            await autostartService.EnsureAutostartAsync(autostartMinimized);
+                        }
+                    }),
+                    ex => logger.LogWarning(ex, "Failed to ensure elevated tasks during startup"));
             }
 
             var mainWindow = this.ServiceProvider.GetRequiredService<MainWindow>();

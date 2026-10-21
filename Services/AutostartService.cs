@@ -38,6 +38,16 @@ namespace ThreadPilot.Services
 
         public bool IsAutostartSupported => ElevatedTaskService.IsProtectedInstallPath(this.GetExecutablePath());
 
+        public async Task EnsureAutostartAsync(bool startMinimized)
+        {
+            if (!this.IsAutostartSupported || await this.CheckAutostartStatusAsync())
+            {
+                return;
+            }
+
+            await this.EnableAutostartAsync(startMinimized);
+        }
+
         public async Task<bool> EnableAutostartAsync(bool startMinimized = true)
         {
             try

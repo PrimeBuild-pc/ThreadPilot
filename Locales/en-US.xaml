@@ -501,6 +501,8 @@
     <sys:String x:Key="Settings_DialogImportTitle">Import ThreadPilot Configuration</sys:String>
     <sys:String x:Key="Settings_WarningAutostartFailed">Failed to update Windows autostart. Keeping previous autostart state.</sys:String>
     <sys:String x:Key="Settings_WarningAutostartNeedsInstall">Autostart needs ThreadPilot installed in Program Files: a portable copy could be replaced by any program and then started as administrator.</sys:String>
+    <sys:String x:Key="Settings_AutostartInstallConfirmTitle">Install ThreadPilot for autostart</sys:String>
+    <sys:String x:Key="Settings_AutostartInstallConfirmMessage">Autostart needs ThreadPilot installed in Program Files. Download, verify and install the official version now? ThreadPilot restarts from Program Files with autostart on; you can delete this portable folder afterwards.</sys:String>
 
     <!-- SettingsWindow -->
     <sys:String x:Key="SettingsWindow_Title">ThreadPilot Settings</sys:String>

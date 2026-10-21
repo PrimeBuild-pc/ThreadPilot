@@ -22,6 +22,9 @@ namespace ThreadPilot.Services
 
         Task<bool> UpdateAutostartAsync(bool startMinimized = true);
 
+        /// <summary>Turns autostart on when the user asked for it but this copy has no task yet (e.g. just installed).</summary>
+        Task EnsureAutostartAsync(bool startMinimized);
+
         string GetAutostartArguments(bool startMinimized = true);
     }
 

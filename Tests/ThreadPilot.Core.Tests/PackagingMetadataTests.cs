@@ -30,6 +30,22 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void PrimaryInstaller_AlwaysInstallsInProgramFiles_AndMovesOldFoldersWithoutTheOldUninstaller()
+        {
+            var root = FindRepositoryRoot();
+            var script = File.ReadAllText(Path.Combine(root, "Installer", "setup.iss"));
+
+            Assert.Contains(@"DefaultDirName={autopf}\{#MyAppName}", script, StringComparison.Ordinal);
+            Assert.Contains("DisableDirPage=yes", script, StringComparison.Ordinal);
+            Assert.Contains("UsePreviousAppDir=no", script, StringComparison.Ordinal);
+            Assert.Contains("MovePreviousInstall", script, StringComparison.Ordinal);
+
+            // The old uninstaller would also delete %AppData%\ThreadPilot, the user's settings.
+            Assert.DoesNotContain("unins000.exe'", script.Replace("DeleteFile(AddBackslash(OldDir) + 'unins000.exe');", string.Empty), StringComparison.Ordinal);
+            Assert.DoesNotContain("DelTree", script, StringComparison.Ordinal);
+        }
+
+        [Fact]
         public void PrimaryInstaller_RemovesThreadPilotOwnedDataOnlyDuringUninstall()
         {
             var root = FindRepositoryRoot();

@@ -43,6 +43,10 @@ ArchitecturesAllowed=x64compatible
 MinVersion=10.0.17763
 UninstallDisplayIcon={app}\{#MyAppExeName}
 DisableReadyPage=yes
+; Always Program Files: ThreadPilot runs elevated, and only there can a non-admin program not replace it.
+; Installs in another folder move here on upgrade (see MovePreviousInstall below).
+DisableDirPage=yes
+UsePreviousAppDir=no
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -81,6 +85,10 @@ Type: filesandordirs; Name: "{userappdata}\ThreadPilot"
 const
   LegacyBetaUninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A2A4C8B5-4A9A-4B1B-93F4-5F8B1C7E8C2A}_is1';
   LegacyBetaDisplayName = 'ThreadPilot 0.1.0-beta';
+  CurrentUninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{E8F7A3B2-5C4D-4E6F-8A9B-1C2D3E4F5A6B}_is1';
+
+var
+  PreviousInstallDir: string;
 
 function IsLegacyThreadPilotInstallPath(InstallLocation: string): Boolean;
 var
@@ -110,7 +118,39 @@ function InitializeSetup(): Boolean;
 begin
   DeleteLegacyBetaUninstallEntry(HKLM);
   DeleteLegacyBetaUninstallEntry(HKCU);
+  if not RegQueryStringValue(HKLM, CurrentUninstallKey, 'InstallLocation', PreviousInstallDir) then
+    PreviousInstallDir := '';
   Result := True;
+end;
+
+// An earlier install in another folder: remove only the program files ThreadPilot put there.
+// The old uninstaller is not run because it also deletes the user's settings in AppData.
+procedure MovePreviousInstall();
+var
+  OldDir: string;
+begin
+  OldDir := RemoveBackslashUnlessRoot(RemoveQuotes(PreviousInstallDir));
+  if (OldDir = '') or (CompareText(OldDir, RemoveBackslashUnlessRoot(ExpandConstant('{app}'))) = 0) or
+     not FileExists(AddBackslash(OldDir) + '{#MyAppExeName}') then
+    exit;
+
+  DeleteFile(AddBackslash(OldDir) + '{#MyAppExeName}');
+  DeleteFile(AddBackslash(OldDir) + 'ThreadPilot.pdb');
+  DeleteFile(AddBackslash(OldDir) + 'D3DCompiler_47_cor3.dll');
+  DeleteFile(AddBackslash(OldDir) + 'PenImc_cor3.dll');
+  DeleteFile(AddBackslash(OldDir) + 'PresentationNative_cor3.dll');
+  DeleteFile(AddBackslash(OldDir) + 'vcruntime140_cor3.dll');
+  DeleteFile(AddBackslash(OldDir) + 'wpfgfx_cor3.dll');
+  DeleteFile(AddBackslash(OldDir) + 'unins000.exe');
+  DeleteFile(AddBackslash(OldDir) + 'unins000.dat');
+  DeleteFile(AddBackslash(OldDir) + 'unins000.msg');
+  RemoveDir(OldDir);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+    MovePreviousInstall();
 end;
 
 function IsThreadPilotUpdate(): Boolean;

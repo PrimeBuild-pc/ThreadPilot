@@ -341,10 +341,17 @@ namespace ThreadPilot.ViewModels
 
                     if (!autostartUpdated && this.Settings.AutostartWithWindows && !this.autostartService.IsAutostartSupported)
                     {
-                        warnings.Add(this.GetLocalizedString(
-                            "Settings_WarningAutostartNeedsInstall",
-                            "Autostart needs ThreadPilot installed in Program Files: a portable copy could be replaced by any program and then started as administrator."));
-                        this.Settings.AutostartWithWindows = currentAutostartState;
+                        if (await this.TryInstallForAutostartAsync())
+                        {
+                            this.StatusMessage = this.GetLocalizedString("Settings_StatusUpdateInstallerStarted", "Update installer started.");
+                        }
+                        else
+                        {
+                            warnings.Add(this.GetLocalizedString(
+                                "Settings_WarningAutostartNeedsInstall",
+                                "Autostart needs ThreadPilot installed in Program Files: a portable copy could be replaced by any program and then started as administrator."));
+                            this.Settings.AutostartWithWindows = currentAutostartState;
+                        }
                     }
                     else if (!autostartUpdated)
                     {
@@ -743,6 +750,38 @@ namespace ThreadPilot.ViewModels
             {
                 this.Logger.LogError(ex, "Failed to refresh power plans");
             }
+        }
+
+        internal Func<string, string, bool> ConfirmPrompt { get; set; } = (message, title) =>
+            System.Windows.MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
+
+        // A portable copy cannot autostart safely, so offer the official installer through the verified update
+        // path; the installed copy turns autostart on at its first start (App.OnStartup).
+        private async Task<bool> TryInstallForAutostartAsync()
+        {
+            var confirmed = this.ConfirmPrompt(
+                this.GetLocalizedString(
+                    "Settings_AutostartInstallConfirmMessage",
+                    "Autostart needs ThreadPilot installed in Program Files. Download, verify and install the official version now? ThreadPilot restarts from Program Files with autostart on; you can delete this portable folder afterwards."),
+                this.GetLocalizedString("Settings_AutostartInstallConfirmTitle", "Install ThreadPilot for autostart"));
+            if (!confirmed)
+            {
+                return false;
+            }
+
+            var check = await this.updateService.CheckForUpdatesAsync(new UpdateCheckRequest(UpdateCheckTrigger.Manual));
+
+            // Never downgrade: a portable copy newer than the latest release (a beta or dev build) has nothing to install.
+            if (check.Release == null || check.Release.Version < check.CurrentVersion)
+            {
+                return false;
+            }
+
+            // Saved before the installer starts, since this copy is closed for it.
+            this.Settings.AutostartWithWindows = true;
+            await this.settingsService.UpdateSettingsAsync(this.Settings);
+            var result = await this.updateService.DownloadAndInstallAsync(check.Release);
+            return result.Status == UpdateInstallStatus.Started;
         }
 
         private async Task CheckUpdatesAsync()
