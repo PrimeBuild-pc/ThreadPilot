@@ -21,6 +21,7 @@ permissions:
 jobs:
   publish-chocolatey:
     runs-on: windows-2022
+    environment: release
 
     steps:
       - name: Resolve release metadata
