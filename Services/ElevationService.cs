@@ -5,7 +5,6 @@ namespace ThreadPilot.Services
     using System.IO;
     using System.Linq;
     using System.Security.Principal;
-    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using System.Windows;
@@ -85,17 +84,21 @@ namespace ThreadPilot.Services
                 // Combine current arguments with any additional arguments
                 var currentArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
                 var allArgs = arguments != null ? currentArgs.Concat(arguments).ToArray() : currentArgs;
-                var argumentString = string.Join(" ", allArgs.Select(EscapeCommandLineArgument));
+                var argumentString = string.Join(" ", allArgs);
                 var workingDirectory = Path.GetDirectoryName(executablePath);
 
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = executablePath,
-                    Arguments = argumentString,
                     UseShellExecute = true,
                     Verb = "runas", // This triggers UAC elevation
                     WorkingDirectory = string.IsNullOrWhiteSpace(workingDirectory) ? Environment.SystemDirectory : workingDirectory,
                 };
+
+                foreach (var argument in allArgs)
+                {
+                    startInfo.ArgumentList.Add(argument);
+                }
 
                 LogStartingElevatedProcess(this.logger, executablePath, argumentString);
 
@@ -155,32 +158,6 @@ namespace ThreadPilot.Services
             return this.IsRunningAsAdministrator()
                 ? "Running with Administrator privileges"
                 : "Running with limited privileges";
-        }
-
-        private static string EscapeCommandLineArgument(string argument)
-        {
-            if (string.IsNullOrEmpty(argument))
-            {
-                return "\"\"";
-            }
-
-            var escaped = new StringBuilder();
-            escaped.Append('"');
-
-            foreach (var c in argument)
-            {
-                if (c == '"')
-                {
-                    escaped.Append("\\\"");
-                }
-                else
-                {
-                    escaped.Append(c);
-                }
-            }
-
-            escaped.Append('"');
-            return escaped.ToString();
         }
 
         [LoggerMessage(EventId = 4100, Level = LogLevel.Debug, Message = "Administrator privilege check: {IsAdmin}")]

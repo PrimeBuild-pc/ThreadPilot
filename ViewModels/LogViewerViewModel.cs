@@ -304,7 +304,9 @@ namespace ThreadPilot.ViewModels
                 var logDirectory = this.loggingService.LogDirectoryPath;
                 if (Directory.Exists(logDirectory))
                 {
-                    System.Diagnostics.Process.Start("explorer.exe", logDirectory);
+                    System.Diagnostics.Process.Start(
+                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe"),
+                        logDirectory);
                 }
                 else
                 {

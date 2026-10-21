@@ -135,7 +135,16 @@ namespace ThreadPilot
 
             // Enforce single-instance after elevation bootstrap logic to avoid mutex races during handoff.
             bool createdNew;
-            this.singleInstanceMutex = new Mutex(initiallyOwned: true, name: "Global\\ThreadPilot_SingleInstance", createdNew: out createdNew);
+            try
+            {
+                this.singleInstanceMutex = new Mutex(initiallyOwned: true, name: "Global\\ThreadPilot_SingleInstance", createdNew: out createdNew);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Created by another user's session with an ACL we cannot open: an instance is already running there.
+                createdNew = false;
+            }
+
             if (!createdNew)
             {
                 System.Windows.MessageBox.Show(

@@ -321,7 +321,7 @@ namespace ThreadPilot.Services
         private async Task CheckLogRotationAsync()
         {
             var fileInfo = new FileInfo(this.currentLogFilePath);
-            var maxSizeBytes = this.settingsService.Settings.MaxLogFileSizeMb * 1024 * 1024;
+            var maxSizeBytes = Math.Clamp(this.settingsService.Settings.MaxLogFileSizeMb, 1, 1024) * 1024L * 1024L;
 
             if (fileInfo.Exists && fileInfo.Length > maxSizeBytes)
             {
@@ -430,7 +430,7 @@ namespace ThreadPilot.Services
             await this.fileLock.WaitAsync();
             try
             {
-                var retentionDate = DateTime.UtcNow.AddDays(-this.settingsService.Settings.LogRetentionDays);
+                var retentionDate = DateTime.UtcNow.AddDays(-Math.Clamp(this.settingsService.Settings.LogRetentionDays, 1, 365));
                 var logFiles = Directory.GetFiles(this.logDirectory, "*.log");
 
                 foreach (var logFile in logFiles)

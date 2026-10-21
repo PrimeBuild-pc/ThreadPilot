@@ -18,6 +18,9 @@
     <!-- Fully optimize each method once instead of re-JITting hot ones in the background: measured on a
          5800X3D, startup CPU 8.8 s -> 5.5 s and settled at ~7.7 s instead of 9-18 s, same idle CPU, window +0.3 s. -->
     <TieredCompilation>false</TieredCompilation>
+    <!-- The WindowsDesktop SDK turns BinaryFormatter on for legacy clipboard/drag-drop formats; the app only
+         copies text, and an elevated process should not deserialize data another program can put there. -->
+    <EnableUnsafeBinaryFormatterSerialization>false</EnableUnsafeBinaryFormatterSerialization>
     <NoWarn>CS1998;CS0067;CS0414;WFAC010;IL3000;MVVMTK0034</NoWarn>
     <Version>1.7.8-beta.1</Version>
     <AssemblyVersion>1.7.8.0</AssemblyVersion>
