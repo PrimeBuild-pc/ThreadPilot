@@ -15,6 +15,7 @@ namespace ThreadPilot.Services
         private const string FolderPrefix = "ThreadPilot-update-";
 
         private readonly string rootDirectory;
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> created = new(StringComparer.OrdinalIgnoreCase);
 
         public UpdateTempDirectoryProvider()
             : this(AdminOnlyDirectory.DefaultRoot)
@@ -28,7 +29,9 @@ namespace ThreadPilot.Services
 
         public string CreateUpdateTempDirectory(SemanticVersion version)
         {
-            return AdminOnlyDirectory.Create(Path.Combine(this.rootDirectory, $"{FolderPrefix}{version}-{Guid.NewGuid():N}"));
+            var directory = AdminOnlyDirectory.Create(Path.Combine(this.rootDirectory, $"{FolderPrefix}{version}-{Guid.NewGuid():N}"));
+            this.created[directory] = 0;
+            return directory;
         }
 
         public bool IsSafeUpdateTempPath(string path)
@@ -38,9 +41,11 @@ namespace ThreadPilot.Services
                 return false;
             }
 
-            var fullPath = Path.GetFullPath(path);
-            var prefix = Path.TrimEndingDirectorySeparator(this.rootDirectory) + Path.DirectorySeparatorChar + FolderPrefix;
-            return fullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+            // Only folders this instance created: anyone may create a ThreadPilot-update-* folder in the root.
+            var fullPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+            return this.created.Keys.Any(directory =>
+                string.Equals(fullPath, directory, StringComparison.OrdinalIgnoreCase)
+                || fullPath.StartsWith(directory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase));
         }
 
         public void Cleanup(string path)
@@ -51,6 +56,7 @@ namespace ThreadPilot.Services
             }
 
             Directory.Delete(path, recursive: true);
+            this.created.TryRemove(Path.TrimEndingDirectorySeparator(Path.GetFullPath(path)), out _);
         }
     }
 }

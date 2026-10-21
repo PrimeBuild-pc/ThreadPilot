@@ -362,7 +362,12 @@ namespace ThreadPilot.Services
             if (game != null
                 && !GameBoostProcessLists.IsGame(game.Name, game.ExecutablePath, this.Settings.GameBoostManualGames, this.Settings.GameBoostExcludedGames))
             {
-                this.rejectedForeground = (processId, this.timeProvider.GetTimestamp());
+                // Remembered only when the path was readable: a game just starting may not expose it yet.
+                if (!string.IsNullOrEmpty(game.ExecutablePath))
+                {
+                    this.rejectedForeground = (processId, this.timeProvider.GetTimestamp());
+                }
+
                 return;
             }
 

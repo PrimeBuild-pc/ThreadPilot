@@ -96,11 +96,6 @@ namespace ThreadPilot.Services
                     return false;
                 }
 
-                if (string.Equals(await this.QueryTaskCommandAsync(this.LaunchTaskName), executablePath, StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-
                 // schtasks reads the definition from a file: keep it where only admins can change it before it does.
                 var taskXmlDirectory = AdminOnlyDirectory.Create(Path.Combine(AdminOnlyDirectory.DefaultRoot, $"ThreadPilot-task-{Guid.NewGuid():N}"));
                 var taskXmlPath = Path.Combine(taskXmlDirectory, "launch-task.xml");

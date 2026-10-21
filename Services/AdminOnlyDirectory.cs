@@ -27,7 +27,12 @@ namespace ThreadPilot.Services
             // Not elevated (tests, dev runs): there is no privilege gap to protect, and without this the
             // process could not write its own files.
             using var identity = WindowsIdentity.GetCurrent();
-            if (!new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator) && identity.User != null)
+            if (new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator))
+            {
+                // Owned by the group, not the user: with UAC off or another owner policy the user could otherwise rewrite the DACL.
+                security.SetOwner(new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null));
+            }
+            else if (identity.User != null)
             {
                 Allow(security, identity.User);
             }
