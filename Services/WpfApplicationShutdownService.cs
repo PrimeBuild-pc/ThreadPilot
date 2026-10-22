@@ -15,7 +15,17 @@ namespace ThreadPilot.Services
                 return;
             }
 
-            application.Dispatcher.InvokeAsync(application.Shutdown);
+            // The graceful path restores Game Boost, process changes and the power plan, then always exits.
+            application.Dispatcher.InvokeAsync(async () =>
+            {
+                if (application.MainWindow is MainWindow window)
+                {
+                    await window.ShutdownForUpdateAsync();
+                    return;
+                }
+
+                application.Shutdown();
+            });
         }
     }
 }

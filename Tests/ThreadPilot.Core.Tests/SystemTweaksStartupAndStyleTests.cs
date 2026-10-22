@@ -32,6 +32,18 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void UpdateShutdown_GoesThroughTheGracefulShutdown()
+        {
+            // Application.Shutdown ignores the window's cancel, so the restore of Game Boost, process
+            // changes and power plan in PerformGracefulShutdownAsync never ran before an update.
+            var service = File.ReadAllText(GetRepositoryFilePath("Services", "WpfApplicationShutdownService.cs"));
+            var window = File.ReadAllText(GetRepositoryFilePath("MainWindow.Behaviors.partial.cs"));
+
+            Assert.Contains("ShutdownForUpdateAsync()", service, StringComparison.Ordinal);
+            Assert.Contains("internal Task ShutdownForUpdateAsync() => this.PerformGracefulShutdownAsync(validateUnsavedChanges: false);", window, StringComparison.Ordinal);
+        }
+
+        [Fact]
         public void TweaksView_UsesWindows11ToggleWithStateLabel()
         {
             // Native Windows 11 switch (40x20 track, sliding thumb) with "On"/"Off" written beside it,

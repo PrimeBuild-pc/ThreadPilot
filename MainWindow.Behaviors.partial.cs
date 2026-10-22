@@ -691,6 +691,9 @@ namespace ThreadPilot
             this.ShowWindowFromTray("Process");
         }
 
+        // An update must not stop at the unsaved-settings prompt: the installer is already running.
+        internal Task ShutdownForUpdateAsync() => this.PerformGracefulShutdownAsync(validateUnsavedChanges: false);
+
         private async Task PerformGracefulShutdownAsync(bool validateUnsavedChanges = true)
         {
             if (this.isPerformingShutdown)
