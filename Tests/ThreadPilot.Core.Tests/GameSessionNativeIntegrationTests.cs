@@ -155,6 +155,25 @@ namespace ThreadPilot.Core.Tests
             await exited.Task.WaitAsync(TimeSpan.FromSeconds(10));
         }
 
+        [Fact]
+        public void Probe_HoldsAProtectedProcess_WithLimitedRights()
+        {
+            // A protected (PPL) process refuses full access, as an anti-cheat-protected game may: only the minimal
+            // rights an anti-cheat leaves to outside tools can open it, and only those are held for a session.
+            var csrss = Process.GetProcessesByName("csrss").First();
+            var probe = new GameBoostProcessProbe();
+            if (!probe.TryGetIdentity(csrss.Id, out var startTicks, out _))
+            {
+                output.WriteLine("Skipped: not elevated, csrss cannot be queried.");
+                return;
+            }
+
+            using var handle = probe.TryOpen(csrss.Id, startTicks, () => Task.CompletedTask);
+            Assert.NotNull(handle);
+            Assert.True(handle.TryGetCpuTime(out var cpu));
+            Assert.True(cpu > TimeSpan.Zero);
+        }
+
         private GameSessionService CreateService(CpuTopologySnapshot topology, ApplicationSettingsModel settings, int gamePid, string journal)
         {
             var settingsService = new Mock<IApplicationSettingsService>();
