@@ -27,20 +27,33 @@ namespace ThreadPilot.Views
                 item.Checked += save;
                 item.Unchecked += save;
             }
+
+            // The table follows its columns when one is shown, hidden or resized by the user.
+            foreach (var column in this.ProcessList.Columns)
+            {
+                foreach (var property in new[] { DataGridColumn.ActualWidthProperty, DataGridColumn.VisibilityProperty })
+                {
+                    System.ComponentModel.DependencyPropertyDescriptor.FromProperty(property, typeof(DataGridColumn))
+                        .AddValueChanged(column, (_, _) => this.SizeTable());
+                }
+            }
         }
 
         private const double DetailMinWidth = 400;
 
+        private bool wideLayout;
+        private double workspaceWidth;
+
         private void ProcessWorkspace_SizeChanged(object sender, System.Windows.SizeChangedEventArgs e)
         {
             var wide = e.NewSize.Width >= 960;
+            this.wideLayout = wide;
+            this.workspaceWidth = e.NewSize.Width;
 
             // Wide: the table is only as wide as its visible columns and the details panel takes the rest.
             // Narrow: the table fills the width (Priority stretches) and the details go below it.
-            var star = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star);
-            this.TableColumn.Width = wide ? System.Windows.GridLength.Auto : star;
-            this.DetailColumn.Width = wide ? star : new System.Windows.GridLength(0);
-            this.ProcessTable.MaxWidth = wide ? e.NewSize.Width - DetailMinWidth : double.PositiveInfinity;
+            this.SizeTable();
+            this.DetailColumn.Width = wide ? new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) : new System.Windows.GridLength(0);
             this.PriorityColumn.Width = wide ? new DataGridLength(120) : new DataGridLength(1, DataGridLengthUnitType.Star);
             this.SelectProcessHint.HorizontalAlignment = wide ? System.Windows.HorizontalAlignment.Center : System.Windows.HorizontalAlignment.Stretch;
             this.SelectProcessHint.VerticalAlignment = wide ? System.Windows.VerticalAlignment.Center : System.Windows.VerticalAlignment.Top;
@@ -54,6 +67,21 @@ namespace ThreadPilot.Views
             Grid.SetRow(this.ToolbarActions, stacked ? 1 : 0);
             Grid.SetColumn(this.ToolbarActions, stacked ? 0 : 1);
             this.ToolbarActions.Margin = stacked ? new System.Windows.Thickness(-8, 8, 0, 0) : default;
+        }
+
+        // A pixel width, not Auto: an Auto column re-measured the DataGrid at infinite width on every list
+        // refresh, which doubled the CPU with the window open (~2.5% -> ~5% of a core).
+        private void SizeTable()
+        {
+            if (!this.wideLayout)
+            {
+                this.TableColumn.Width = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star);
+                return;
+            }
+
+            var columns = this.ProcessList.Columns.Where(c => c.Visibility == System.Windows.Visibility.Visible).Sum(c => c.ActualWidth);
+            var chrome = System.Windows.SystemParameters.VerticalScrollBarWidth + this.ProcessList.BorderThickness.Left + this.ProcessList.BorderThickness.Right + 4;
+            this.TableColumn.Width = new System.Windows.GridLength(Math.Max(0, Math.Min(columns + chrome, this.workspaceWidth - DetailMinWidth)));
         }
 
         private void ProcessDetails_SizeChanged(object sender, System.Windows.SizeChangedEventArgs e)
