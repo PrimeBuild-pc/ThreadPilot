@@ -180,6 +180,36 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void CleanupStale_DeletesOnlyOldAdminOwnedUpdateFolders()
+        {
+            // A successful update exits right after launching the installer, so its folder (~55 MB) was never deleted.
+            using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+            if (!new System.Security.Principal.WindowsPrincipal(identity).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator))
+            {
+                return; // only an elevated process creates Administrators-owned folders
+            }
+
+            using var tempRoot = new TempDirectory();
+            var old = new UpdateTempDirectoryProvider(tempRoot.Path).CreateUpdateTempDirectory(new SemanticVersion(1, 5, 0));
+            var recent = new UpdateTempDirectoryProvider(tempRoot.Path).CreateUpdateTempDirectory(new SemanticVersion(1, 6, 0));
+            var userOwned = Directory.CreateDirectory(Path.Combine(tempRoot.Path, "ThreadPilot-update-planted")).FullName;
+            var userSecurity = new DirectoryInfo(userOwned).GetAccessControl();
+            userSecurity.SetOwner(identity.User!);
+            new DirectoryInfo(userOwned).SetAccessControl(userSecurity);
+            File.WriteAllText(Path.Combine(old, "setup.exe"), "installer");
+            foreach (var directory in new[] { old, userOwned })
+            {
+                Directory.SetCreationTimeUtc(directory, DateTime.UtcNow.AddDays(-2));
+            }
+
+            new UpdateTempDirectoryProvider(tempRoot.Path).CleanupStale(TimeSpan.FromDays(1));
+
+            Assert.False(Directory.Exists(old));
+            Assert.True(Directory.Exists(recent));
+            Assert.True(Directory.Exists(userOwned));
+        }
+
+        [Fact]
         public async Task UpdateInstallerService_UsesSilentRestartingUpdateMode()
         {
             using var tempRoot = new TempDirectory();
