@@ -96,6 +96,25 @@ namespace ThreadPilot.Core.Tests
             elevatedTaskService.Verify(x => x.RemoveAutostartTaskAsync(), Times.Once);
         }
 
+        [Fact]
+        public async Task LegacyRunEntryAlone_DoesNotCountAsAutostart()
+        {
+            // Windows does not start an admin-only exe from HKCU\Run at logon, so a leftover entry from an
+            // old version must not stop the scheduled task from being created or show autostart as on.
+            var elevatedTask = new Mock<IElevatedTaskService>(MockBehavior.Loose);
+            elevatedTask.Setup(x => x.IsAutostartTaskRegisteredAsync()).ReturnsAsync(false);
+            var service = new LegacyRunEntryAutostartService(new Mock<IElevationService>().Object, elevatedTask.Object);
+
+            Assert.False(await service.CheckAutostartStatusAsync());
+            Assert.False(service.IsAutostartEnabled);
+        }
+
+        private sealed class LegacyRunEntryAutostartService(IElevationService elevation, IElevatedTaskService elevatedTask)
+            : AutostartService(NullLogger<AutostartService>.Instance, elevation, elevatedTask)
+        {
+            internal override string? TryReadLegacyRegistryAutostart() => @"""C:\Apps\ThreadPilot\ThreadPilot.exe"" --autostart";
+        }
+
         private static AutostartService CreateService(
             Mock<IElevationService>? elevationService = null,
             Mock<IElevatedTaskService>? elevatedTaskService = null)

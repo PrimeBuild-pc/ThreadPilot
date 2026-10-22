@@ -163,7 +163,8 @@ namespace ThreadPilot.Services
                 var taskRegistered = await this.elevatedTaskService.IsAutostartTaskRegisteredAsync();
                 var legacyRegistryValue = this.TryReadLegacyRegistryAutostart();
 
-                this.isAutostartEnabled = taskRegistered || !string.IsNullOrWhiteSpace(legacyRegistryValue);
+                // Only the task starts an admin-only exe at logon; a leftover HKCU\Run entry does not.
+                this.isAutostartEnabled = taskRegistered;
                 this.autostartPath = taskRegistered
                     ? $"task://{this.elevatedTaskService.AutostartTaskName}"
                     : legacyRegistryValue;
@@ -233,7 +234,7 @@ namespace ThreadPilot.Services
             }
         }
 
-        private string? TryReadLegacyRegistryAutostart()
+        internal virtual string? TryReadLegacyRegistryAutostart()
         {
             try
             {
