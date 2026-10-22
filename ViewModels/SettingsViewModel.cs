@@ -341,7 +341,8 @@ namespace ThreadPilot.ViewModels
 
                     if (!autostartUpdated && this.Settings.AutostartWithWindows && !this.autostartService.IsAutostartSupported)
                     {
-                        if (await this.TryInstallForAutostartAsync())
+                        var installFailure = await this.TryInstallForAutostartAsync();
+                        if (installFailure == null)
                         {
                             this.StatusMessage = this.GetLocalizedString("Settings_StatusUpdateInstallerStarted", "Update installer started.");
                         }
@@ -350,6 +351,11 @@ namespace ThreadPilot.ViewModels
                             warnings.Add(this.GetLocalizedString(
                                 "Settings_WarningAutostartNeedsInstall",
                                 "Autostart needs ThreadPilot installed in Program Files: a portable copy could be replaced by any program and then started as administrator."));
+                            if (installFailure.Length > 0)
+                            {
+                                warnings.Add(installFailure);
+                            }
+
                             this.Settings.AutostartWithWindows = currentAutostartState;
                         }
                     }
@@ -757,7 +763,8 @@ namespace ThreadPilot.ViewModels
 
         // A portable copy cannot autostart safely, so offer the official installer through the verified update
         // path; the installed copy turns autostart on at its first start (App.OnStartup).
-        private async Task<bool> TryInstallForAutostartAsync()
+        // Null when the installer started; otherwise why not (empty when the user declined).
+        private async Task<string?> TryInstallForAutostartAsync()
         {
             var confirmed = this.ConfirmPrompt(
                 this.GetLocalizedString(
@@ -766,22 +773,28 @@ namespace ThreadPilot.ViewModels
                 this.GetLocalizedString("Settings_AutostartInstallConfirmTitle", "Install ThreadPilot for autostart"));
             if (!confirmed)
             {
-                return false;
+                return string.Empty;
             }
 
             var check = await this.updateService.CheckForUpdatesAsync(new UpdateCheckRequest(UpdateCheckTrigger.Manual));
+            if (check.Release == null)
+            {
+                return check.Message;
+            }
 
             // Never downgrade: a portable copy newer than the latest release (a beta or dev build) has nothing to install.
-            if (check.Release == null || check.Release.Version < check.CurrentVersion)
+            if (check.Release.Version < check.CurrentVersion)
             {
-                return false;
+                return this.GetLocalizedString(
+                    "Settings_WarningAutostartNoInstallableRelease",
+                    "No official installer of this version or newer was found. For a preview version, turn on \"Include prerelease updates\" and save again.");
             }
 
             // Saved before the installer starts, since this copy is closed for it.
             this.Settings.AutostartWithWindows = true;
             await this.settingsService.UpdateSettingsAsync(this.Settings);
             var result = await this.updateService.DownloadAndInstallAsync(check.Release);
-            return result.Status == UpdateInstallStatus.Started;
+            return result.Status == UpdateInstallStatus.Started ? null : result.Message;
         }
 
         private async Task CheckUpdatesAsync()

@@ -194,6 +194,34 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task SaveSettingsCommand_PortableBetaAutostart_SaysWhyNothingWasInstalled()
+        {
+            // A beta copy with prerelease updates off finds only the older stable release: it must say so
+            // instead of repeating the generic "needs Program Files" warning.
+            var harness = new Harness();
+            harness.Autostart.Setup(service => service.CheckAutostartStatusAsync()).ReturnsAsync(false);
+            harness.Autostart.Setup(service => service.EnableAutostartAsync(It.IsAny<bool>())).ReturnsAsync(false);
+            harness.Autostart.SetupGet(service => service.IsAutostartSupported).Returns(false);
+            var stable = new UpdateReleaseInfo(
+                new SemanticVersion(1, 7, 7),
+                "v1.7.7",
+                new Uri("https://github.com/PrimeBuild-pc/ThreadPilot/releases"),
+                false,
+                []);
+            harness.Updates
+                .Setup(service => service.CheckForUpdatesAsync(It.IsAny<UpdateCheckRequest>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new UpdateCheckResult(UpdateCheckStatus.UpToDate, new SemanticVersion(1, 7, 8, "beta.1"), stable, "ok"));
+            var viewModel = harness.CreateViewModel();
+            viewModel.ConfirmPrompt = (_, _) => true;
+            viewModel.Settings.AutostartWithWindows = true;
+
+            await ((IAsyncRelayCommand)viewModel.SaveSettingsCommand).ExecuteAsync(null);
+
+            Assert.Contains("Include prerelease updates", viewModel.StatusMessage, StringComparison.Ordinal);
+            Assert.False(viewModel.Settings.AutostartWithWindows);
+        }
+
+        [Fact]
         public async Task SaveSettingsCommand_WhenStartMinimizedIsDisabled_UpdatesEnabledAutostart()
         {
             var harness = new Harness(initialStartMinimized: true);

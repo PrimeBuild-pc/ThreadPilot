@@ -501,6 +501,7 @@
     <sys:String x:Key="Settings_DialogImportTitle">Importer la configuration ThreadPilot</sys:String>
     <sys:String x:Key="Settings_WarningAutostartFailed">Échec de la mise à jour du démarrage automatique Windows. Conserver l'état de démarrage automatique précédent.</sys:String>
     <sys:String x:Key="Settings_WarningAutostartNeedsInstall">Le démarrage automatique nécessite ThreadPilot installé dans Program Files : n'importe quel programme pourrait remplacer une copie portable, qui serait ensuite lancée en administrateur.</sys:String>
+    <sys:String x:Key="Settings_WarningAutostartNoInstallableRelease">Aucun programme d'installation officiel de cette version ou d'une version plus récente n'a été trouvé. Pour une préversion, activez « Inclure les mises à jour préliminaires » et enregistrez à nouveau.</sys:String>
     <sys:String x:Key="Settings_AutostartInstallConfirmTitle">Installer ThreadPilot pour le démarrage automatique</sys:String>
     <sys:String x:Key="Settings_AutostartInstallConfirmMessage">Le démarrage automatique nécessite ThreadPilot installé dans Program Files. Télécharger, vérifier et installer la version officielle maintenant ? ThreadPilot redémarrera depuis Program Files avec le démarrage automatique activé ; vous pourrez ensuite supprimer ce dossier portable.</sys:String>
 
