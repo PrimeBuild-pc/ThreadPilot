@@ -62,6 +62,24 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task RejectedPid_ReusedByAGame_StartsASessionAtTheNextTick()
+        {
+            // The 30 s memory of a rejected foreground process was keyed by PID only.
+            this.processes.Add(700, "notepad", @"C:\Windows\notepad.exe");
+            this.foregroundPid = 700;
+            using var service = this.CreateService();
+            await service.TickAsync();
+            Assert.Null(service.ActiveGameName);
+
+            this.processes.Add(700, "Game2", @"D:\SteamLibrary\steamapps\common\Game2\Game2.exe");
+            this.processes.Restart(700);
+            this.clock.Advance(TimeSpan.FromSeconds(3));
+            await service.TickAsync();
+
+            Assert.Equal("Game2", service.ActiveGameName);
+        }
+
+        [Fact]
         public async Task NonGameForeground_IsNotReexaminedEveryTick_ButIsAfterAWhile()
         {
             this.foregroundPid = ChromePid;
