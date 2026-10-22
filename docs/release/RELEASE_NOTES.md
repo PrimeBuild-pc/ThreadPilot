@@ -1,3 +1,9 @@
+## ThreadPilot v1.7.8-beta.2
+
+Pre-release on top of v1.7.8-beta.1: a full security and performance audit (window-open CPU ~25–30% → ~2.3% of a core, near-zero in the tray), Game Boost orchestration with a minimal-rights game handle, an installer that always installs in Program Files, and portable copies that can install themselves for autostart. Dual-CCD Ryzen and Intel hybrid testers wanted.
+
+[Full notes, performance table and tester checklist](../releases/v1.7.8-beta.2.md). v1.7.7 remains stable/latest. No winget/Chocolatey beta publication; artifacts unsigned.
+
 ## ThreadPilot v1.7.8-beta.1
 
 Pre-release with the complete local Game Boost implementation, Activity diagnostics and CPU topology fixes, on top of stable v1.7.7. Real dual-CCD Ryzen/X3D, Intel hybrid, benchmark and anti-cheat validation remain pending.

@@ -89,9 +89,9 @@ choco upgrade threadpilot
 ### Download from GitHub Releases
 
 [![Download Latest Stable](https://img.shields.io/badge/Download-Latest%20Stable-2ea44f?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest)
-[![Download Pre-release — Game Boost Preview](https://img.shields.io/badge/Download-Pre--release%20%28Game%20Boost%29-f59e0b?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/tag/v1.7.8-beta.1)
+[![Download Pre-release — Game Boost Preview](https://img.shields.io/badge/Download-Pre--release%20%28Game%20Boost%29-f59e0b?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/tag/v1.7.8-beta.2)
 
-**Stable v1.7.7 does not include Game Boost.** The **v1.7.8-beta.1 pre-release** includes it for volunteers and early adopters; see its [test steps and issue-reporting checklist](docs/releases/v1.7.8-beta.1.md). Preview downloads are manual and do not replace the stable update channel.
+**Stable v1.7.7 does not include Game Boost.** The **v1.7.8-beta.2 pre-release** includes it for volunteers and early adopters; see its [test steps and issue-reporting checklist](docs/releases/v1.7.8-beta.2.md). Preview downloads are manual and do not replace the stable update channel.
 
 Both channels use the same application/settings location. Export a configuration backup before switching; they are not separate side-by-side installations.
 

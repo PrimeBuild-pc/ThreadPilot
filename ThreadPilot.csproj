@@ -23,10 +23,10 @@
          copies text, and an elevated process should not deserialize data another program can put there. -->
     <EnableUnsafeBinaryFormatterSerialization>false</EnableUnsafeBinaryFormatterSerialization>
     <NoWarn>CS1998;CS0067;CS0414;WFAC010;IL3000;MVVMTK0034</NoWarn>
-    <Version>1.7.8-beta.1</Version>
+    <Version>1.7.8-beta.2</Version>
     <AssemblyVersion>1.7.8.0</AssemblyVersion>
     <FileVersion>1.7.8.0</FileVersion>
-    <InformationalVersion>1.7.8-beta.1</InformationalVersion>
+    <InformationalVersion>1.7.8-beta.2</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
