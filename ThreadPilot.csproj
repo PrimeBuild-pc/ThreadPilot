@@ -54,6 +54,8 @@
     <Compile Remove="Tests\ThreadPilot.Core.Tests\**\*.cs" />
     <EmbeddedResource Remove="Tests\ThreadPilot.Core.Tests\**\*.*" />
     <None Remove="Tests\ThreadPilot.Core.Tests\**\*.*" />
+    <!-- The old in-app test harness runs only in Debug with the test switch; keep it out of the shipped exe. -->
+    <Compile Remove="Tests\*.cs" Condition="'$(Configuration)' == 'Release'" />
   </ItemGroup>
 
   <Import Project="Directory.Publish.props" Condition="Exists('Directory.Publish.props')" />
