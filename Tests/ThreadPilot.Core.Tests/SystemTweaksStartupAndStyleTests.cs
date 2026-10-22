@@ -17,6 +17,21 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void Shutdown_ResetsTrackedChangesBeforeTheMonitorForgetsThem()
+        {
+            // ProcessMonitorManagerService.StopAsync untracks every process it changed, so
+            // "reset process changes on exit" found nothing to reset when it ran afterwards.
+            var source = File.ReadAllText(GetRepositoryFilePath("MainWindow.Behaviors.partial.cs"));
+            var start = source.IndexOf("private async Task PerformGracefulShutdownAsync(", StringComparison.Ordinal);
+            var shutdown = source[start..source.IndexOf("// 3. Restore default power plan", start, StringComparison.Ordinal)];
+
+            var reset = shutdown.IndexOf("await processService.ClearAllAppliedMasksAsync();", StringComparison.Ordinal);
+            var stopMonitor = shutdown.IndexOf("await this.processMonitorManagerService.StopAsync();", StringComparison.Ordinal);
+            Assert.True(reset >= 0 && stopMonitor >= 0);
+            Assert.True(reset < stopMonitor);
+        }
+
+        [Fact]
         public void TweaksView_UsesWindows11ToggleWithStateLabel()
         {
             // Native Windows 11 switch (40x20 track, sliding thumb) with "On"/"Off" written beside it,
