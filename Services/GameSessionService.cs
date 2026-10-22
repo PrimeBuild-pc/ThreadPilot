@@ -237,6 +237,9 @@ namespace ThreadPilot.Services
         private List<GameBoostJournalEntry> journal = new();
         private Timer? timer;
         private bool started;
+
+        // Set by StopAsync: a tick already queued when the timer was disposed must not begin a session.
+        private bool stopped;
         private (int ProcessId, long Timestamp)? rejectedForeground;
         private GameSession? session;
         private IGameProcessHandle? gameHandle;
@@ -337,6 +340,7 @@ namespace ThreadPilot.Services
                 }
 
                 this.started = true;
+                this.stopped = false;
                 this.SyncTimer();
             }
             finally
@@ -350,6 +354,7 @@ namespace ThreadPilot.Services
             lock (this.timerGate)
             {
                 this.started = false;
+                this.stopped = true;
                 this.timer?.Dispose();
                 this.timer = null;
             }
@@ -408,6 +413,11 @@ namespace ThreadPilot.Services
 
             try
             {
+                if (this.stopped || this.disposed)
+                {
+                    return;
+                }
+
                 if (!this.Settings.GameBoostEnabled)
                 {
                     await this.EndSessionAsync("Game Boost turned off").ConfigureAwait(false);

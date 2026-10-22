@@ -163,6 +163,27 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task TickQueuedBeforeStopOrDispose_StartsNoSession()
+        {
+            // Timer.Dispose does not wait for a callback already queued on the thread pool.
+            var stopped = this.CreateService();
+            await stopped.StartAsync();
+            await stopped.StopAsync();
+            await stopped.TickAsync();
+            Assert.Null(stopped.ActiveGameName);
+
+            var disposed = this.CreateService();
+            disposed.Dispose();
+            await disposed.TickAsync();
+            Assert.Null(disposed.ActiveGameName);
+
+            Assert.Equal(0, this.processes.OpenHandles);
+            Assert.Empty(this.processes.ApplyCalls);
+            Assert.False(File.Exists(this.journalPath));
+            stopped.Dispose();
+        }
+
+        [Fact]
         public async Task HeldGame_LateExitEventOfAnEndedSession_DoesNotEndTheNextOne()
         {
             this.processes.HandleAllowed = true;
