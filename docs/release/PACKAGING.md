@@ -263,12 +263,6 @@ Moderation note:
 - Moderation delay is an external queue, not automatically evidence of a repo or workflow failure.
 - Do not run the manual publish workflow for a new version while prior ThreadPilot versions are still blocked or pending in Chocolatey moderation.
 
-Optional automation for publishing the GitHub release after artifacts are ready:
-
-```powershell
-./build/create-github-release.ps1 -Version "<version>" -NotesFile "docs/release/RELEASE_NOTES.md"
-```
-
 ## CI/CD
 
 The release workflow (`.github/workflows/release.yml`) now builds:

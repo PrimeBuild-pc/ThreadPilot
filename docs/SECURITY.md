@@ -3,9 +3,8 @@
 ## Supported Versions
 | Version | Supported |
 | --- | --- |
-| 1.1.x | Yes |
-| 1.0.x | Best effort |
-| < 1.0 | No |
+| Latest stable (1.7.x) | Yes |
+| Older versions | No, please update |
 
 ## Reporting a Vulnerability
 If you discover a security issue, do not disclose it publicly before a fix is available.
