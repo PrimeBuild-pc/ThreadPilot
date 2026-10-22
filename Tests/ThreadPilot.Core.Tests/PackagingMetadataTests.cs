@@ -43,6 +43,17 @@ namespace ThreadPilot.Core.Tests
             // The old uninstaller would also delete %AppData%\ThreadPilot, the user's settings.
             Assert.DoesNotContain("unins000.exe'", script.Replace("DeleteFile(AddBackslash(OldDir) + 'unins000.exe');", string.Empty), StringComparison.Ordinal);
             Assert.DoesNotContain("DelTree", script, StringComparison.Ordinal);
+
+            // The old folder may be user-writable: swapped for a junction, admin deletes would land elsewhere.
+            var move = script[script.IndexOf("procedure MovePreviousInstall()", StringComparison.Ordinal)..];
+            Assert.True(
+                move.IndexOf("if HasReparsePointOnPath(OldDir) then", StringComparison.Ordinal)
+                < move.IndexOf("DelayDeleteFile(", StringComparison.Ordinal));
+            Assert.Contains("external 'GetFileAttributesW@kernel32.dll stdcall'", script, StringComparison.Ordinal);
+
+            // A copy still closing (in-app update) holds the exe for a moment; the rest goes only once it is gone.
+            Assert.Contains("DelayDeleteFile(AddBackslash(OldDir) + '{#MyAppExeName}', 40);", move, StringComparison.Ordinal);
+            Assert.Contains("if FileExists(AddBackslash(OldDir) + '{#MyAppExeName}') then", move, StringComparison.Ordinal);
         }
 
         [Fact]

@@ -123,6 +123,29 @@ begin
   Result := True;
 end;
 
+function GetFileAttributes(lpFileName: string): Cardinal;
+  external 'GetFileAttributesW@kernel32.dll stdcall';
+
+// True when the folder or any folder above it is a junction/symlink (or unreadable).
+function HasReparsePointOnPath(Dir: string): Boolean;
+var
+  Attributes: Cardinal;
+  Parent: string;
+begin
+  Result := True;
+  while True do
+  begin
+    Attributes := GetFileAttributes(Dir);
+    if (Attributes = $FFFFFFFF) or ((Attributes and $400) <> 0) then
+      exit;
+    Parent := ExtractFileDir(Dir);
+    if (Parent = '') or (Length(Parent) >= Length(Dir)) then
+      break;
+    Dir := Parent;
+  end;
+  Result := False;
+end;
+
 // An earlier install in another folder: remove only the program files ThreadPilot put there.
 // The old uninstaller is not run because it also deletes the user's settings in AppData.
 procedure MovePreviousInstall();
@@ -134,7 +157,15 @@ begin
      not FileExists(AddBackslash(OldDir) + '{#MyAppExeName}') then
     exit;
 
-  DeleteFile(AddBackslash(OldDir) + '{#MyAppExeName}');
+  // The old folder may be user-writable: if it was swapped for a junction, admin deletes would land elsewhere.
+  if HasReparsePointOnPath(OldDir) then
+    exit;
+
+  // A copy that is still closing (in-app update) holds the exe for a moment.
+  DelayDeleteFile(AddBackslash(OldDir) + '{#MyAppExeName}', 40);
+  if FileExists(AddBackslash(OldDir) + '{#MyAppExeName}') then
+    exit;
+
   DeleteFile(AddBackslash(OldDir) + 'ThreadPilot.pdb');
   DeleteFile(AddBackslash(OldDir) + 'D3DCompiler_47_cor3.dll');
   DeleteFile(AddBackslash(OldDir) + 'PenImc_cor3.dll');
