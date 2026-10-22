@@ -103,7 +103,6 @@ namespace ThreadPilot.Core.Tests
 
             var result = await service.DownloadInstallerAsync(CreateReleaseWithInstallerAndChecksum());
 
-            Assert.True(result.ChecksumVerified);
             Assert.True(File.Exists(result.InstallerPath));
         }
 
@@ -166,7 +165,6 @@ namespace ThreadPilot.Core.Tests
                 .ReturnsAsync(new UpdateDownloadResult(
                     Path.Combine(harness.TempDirectory, "ThreadPilot_v1.4.0_Setup.exe"),
                     harness.TempDirectory,
-                    true,
                     UpdateSignatureStatus.Unknown,
                     "ok"));
             File.WriteAllText(Path.Combine(harness.TempDirectory, "ThreadPilot_v1.4.0_Setup.exe"), "installer");
