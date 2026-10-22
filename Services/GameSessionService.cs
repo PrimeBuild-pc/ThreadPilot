@@ -355,8 +355,7 @@ namespace ThreadPilot.Services
             {
                 this.started = false;
                 this.stopped = true;
-                this.timer?.Dispose();
-                this.timer = null;
+                this.SyncTimer();
             }
 
             await this.stateLock.WaitAsync().ConfigureAwait(false);
@@ -379,12 +378,7 @@ namespace ThreadPilot.Services
 
             this.disposed = true;
             this.settingsService.SettingsChanged -= this.OnSettingsChanged;
-            lock (this.timerGate)
-            {
-                this.timer?.Dispose();
-                this.timer = null;
-            }
-
+            this.SyncTimer();
             this.gameHandle?.Dispose();
         }
 

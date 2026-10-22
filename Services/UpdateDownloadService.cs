@@ -73,7 +73,6 @@ namespace ThreadPilot.Services
                 return new UpdateDownloadResult(
                     installerPath,
                     tempDirectory,
-                    true,
                     signatureStatus,
                     "Installer checksum verified.");
             }

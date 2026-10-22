@@ -58,7 +58,6 @@ namespace ThreadPilot.Services
     public sealed record UpdateDownloadResult(
         string InstallerPath,
         string TempDirectory,
-        bool ChecksumVerified,
         UpdateSignatureStatus SignatureStatus,
         string Message);
 
