@@ -229,7 +229,7 @@ namespace ThreadPilot
                     throw new InvalidOperationException("MainWindow could not be created");
                 }
 
-                var startupWindowBehavior = StartupWindowBehavior.Resolve(startupMode.IsAutostart, effectiveStartMinimized);
+                var startupWindowBehavior = StartupWindowBehavior.Resolve(startupMode.IsAutostart, effectiveStartMinimized, UiStateStore.Current.WindowMaximized);
                 var showStartupSuggestion = loadedSettings != null
                     && StartupMinimizedSuggestionPolicy.ShouldShow(loadedSettings, startupWindowBehavior);
                 mainWindow.ConfigureStartupMode(

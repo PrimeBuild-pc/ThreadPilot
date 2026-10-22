@@ -19,6 +19,18 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void Resolve_KeepsAWindowTheUserLeftMaximized()
+        {
+            // App applies this state after MainWindow restored its saved placement, so a plain
+            // Normal here turned every saved maximized window back into a normal one.
+            var visible = StartupWindowBehavior.Resolve(isAutostart: false, startMinimized: false, restoreMaximized: true);
+            var hidden = StartupWindowBehavior.Resolve(isAutostart: false, startMinimized: true, restoreMaximized: true);
+
+            Assert.Equal(WindowState.Maximized, visible.WindowState);
+            Assert.Equal(WindowState.Minimized, hidden.WindowState);
+        }
+
+        [Fact]
         public void Resolve_HidesToTray_ForManualLaunchWithStartMinimized()
         {
             var behavior = StartupWindowBehavior.Resolve(isAutostart: false, startMinimized: true);
