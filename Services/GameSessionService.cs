@@ -1132,7 +1132,9 @@ namespace ThreadPilot.Services
                     return;
                 }
 
-                this.session = previous;
+                // The restore just changed the live process; the old model still shows what Game Boost had applied.
+                var fresh = await this.processService.GetProcessByIdAsync(previous.Game.ProcessId).ConfigureAwait(false);
+                this.session = fresh == null ? previous : previous with { Game = fresh };
                 this.ResetSessionState();
                 await this.AuditSessionStartAsync(previous.Game).ConfigureAwait(false);
                 await this.ApplyToSessionAsync(includeGame: true).ConfigureAwait(false);

@@ -670,7 +670,12 @@ namespace ThreadPilot.Core.Tests
                         return true;
                     });
                 processService.Setup(s => s.SetProcessPriority(It.IsAny<ProcessModel>(), It.IsAny<ProcessPriorityClass>(), It.IsAny<ProcessPriorityWriteSource>()))
-                    .Callback((ProcessModel p, ProcessPriorityClass priority, ProcessPriorityWriteSource _) => this.Priorities[p.ProcessId] = priority)
+                    .Callback((ProcessModel p, ProcessPriorityClass priority, ProcessPriorityWriteSource _) =>
+                    {
+                        // Like ProcessService: the write also updates the model it was given.
+                        this.Priorities[p.ProcessId] = priority;
+                        p.Priority = priority;
+                    })
                     .Returns(Task.CompletedTask);
                 this.ProcessService = processService.Object;
 
