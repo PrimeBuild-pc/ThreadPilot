@@ -10,7 +10,7 @@ namespace ThreadPilot.Helpers
         bool HideAfterShow,
         bool ActivateAfterShow)
     {
-        public static StartupWindowBehavior Resolve(bool isAutostart, bool startMinimized)
+        public static StartupWindowBehavior Resolve(bool isAutostart, bool startMinimized, bool restoreMaximized = false)
         {
             if (isAutostart && startMinimized)
             {
@@ -38,7 +38,7 @@ namespace ThreadPilot.Helpers
                 ShouldShowWindow: true,
                 ShowInTaskbar: true,
                 Visibility: Visibility.Visible,
-                WindowState: WindowState.Normal,
+                WindowState: restoreMaximized ? WindowState.Maximized : WindowState.Normal,
                 HideAfterShow: false,
                 ActivateAfterShow: true);
         }
