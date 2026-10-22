@@ -29,10 +29,21 @@ namespace ThreadPilot.Views
             }
         }
 
+        private const double DetailMinWidth = 400;
+
         private void ProcessWorkspace_SizeChanged(object sender, System.Windows.SizeChangedEventArgs e)
         {
             var wide = e.NewSize.Width >= 960;
-            this.DetailColumn.Width = new System.Windows.GridLength(wide ? 400 : 0);
+
+            // Wide: the table is only as wide as its visible columns and the details panel takes the rest.
+            // Narrow: the table fills the width (Priority stretches) and the details go below it.
+            var star = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star);
+            this.TableColumn.Width = wide ? System.Windows.GridLength.Auto : star;
+            this.DetailColumn.Width = wide ? star : new System.Windows.GridLength(0);
+            this.ProcessTable.MaxWidth = wide ? e.NewSize.Width - DetailMinWidth : double.PositiveInfinity;
+            this.PriorityColumn.Width = wide ? new DataGridLength(120) : new DataGridLength(1, DataGridLengthUnitType.Star);
+            this.SelectProcessHint.HorizontalAlignment = wide ? System.Windows.HorizontalAlignment.Center : System.Windows.HorizontalAlignment.Stretch;
+            this.SelectProcessHint.VerticalAlignment = wide ? System.Windows.VerticalAlignment.Center : System.Windows.VerticalAlignment.Top;
             Grid.SetRow(this.ProcessDetails, wide ? 1 : 2);
             Grid.SetColumn(this.ProcessDetails, wide ? 1 : 0);
             this.ProcessDetails.MaxHeight = wide ? double.PositiveInfinity : Math.Max(160, e.NewSize.Height * 0.48);
@@ -43,6 +54,16 @@ namespace ThreadPilot.Views
             Grid.SetRow(this.ToolbarActions, stacked ? 1 : 0);
             Grid.SetColumn(this.ToolbarActions, stacked ? 0 : 1);
             this.ToolbarActions.Margin = stacked ? new System.Windows.Thickness(-8, 8, 0, 0) : default;
+        }
+
+        private void ProcessDetails_SizeChanged(object sender, System.Windows.SizeChangedEventArgs e)
+        {
+            // A wide details panel puts Priority and CPU cores side by side instead of stretching every picker.
+            var twoColumns = this.DetailColumn.Width.IsStar && e.NewSize.Width >= 880;
+            this.DetailSecondColumn.Width = twoColumns ? new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) : new System.Windows.GridLength(0);
+            Grid.SetRow(this.CpuCoresCard, twoColumns ? 1 : 2);
+            Grid.SetColumn(this.CpuCoresCard, twoColumns ? 1 : 0);
+            this.PriorityCard.Margin = new System.Windows.Thickness(0, 0, twoColumns ? 10 : 0, 10);
         }
 
         private void ProcessRow_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)

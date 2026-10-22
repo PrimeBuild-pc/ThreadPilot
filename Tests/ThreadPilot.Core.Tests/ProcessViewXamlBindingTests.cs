@@ -293,6 +293,29 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void WideLayout_TableSizesToItsColumnsAndLeavesTheRestToTheDetails()
+        {
+            // A star column in the process table swallowed all free width and left a wide empty strip
+            // next to a fixed 400 px details panel. The table must size to its columns; the code-behind
+            // switches Priority to star only in the narrow layout, where the details sit below the table.
+            var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);
+            var columns = document.Descendants()
+                .Single(element => element.Attribute(XName.Get("Name", "http://schemas.microsoft.com/winfx/2006/xaml"))?.Value == "ProcessList")
+                .Descendants()
+                .Where(element => element.Name.LocalName.StartsWith("DataGrid", StringComparison.Ordinal)
+                    && element.Name.LocalName.EndsWith("Column", StringComparison.Ordinal))
+                .ToList();
+
+            Assert.NotEmpty(columns);
+            Assert.All(columns, column => Assert.DoesNotContain("*", column.Attribute("Width")?.Value ?? string.Empty, StringComparison.Ordinal));
+
+            var codeBehind = File.ReadAllText(ProcessViewPath + ".cs");
+            Assert.Contains("this.TableColumn.Width = wide ? System.Windows.GridLength.Auto", codeBehind, StringComparison.Ordinal);
+            Assert.Contains("this.ProcessTable.MaxWidth = wide ? e.NewSize.Width - DetailMinWidth", codeBehind, StringComparison.Ordinal);
+            Assert.Contains("private const double DetailMinWidth = 400;", codeBehind, StringComparison.Ordinal);
+        }
+
+        [Fact]
         public void LegacyActionSidePanel_IsGoneAndItsControlsLiveInTheVisiblePicker()
         {
             // The legacy side panel was Visibility="Collapsed" from v1.2.0 onwards, so the CPU

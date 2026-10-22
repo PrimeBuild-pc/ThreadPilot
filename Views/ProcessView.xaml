@@ -180,7 +180,7 @@
 
             <Grid x:Name="ProcessWorkspace" SizeChanged="ProcessWorkspace_SizeChanged">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition x:Name="TableColumn" Width="*"/>
                     <ColumnDefinition x:Name="DetailColumn" Width="0"/>
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
@@ -259,7 +259,7 @@
                 </Grid>
 
 
-                <Grid Grid.Row="1">
+                <Grid x:Name="ProcessTable" Grid.Row="1">
                     <DataGrid x:Name="ProcessList" ItemsSource="{Binding FilteredProcesses}"
                               SelectedItem="{Binding SelectedProcess}"
                               AutoGenerateColumns="False"
@@ -442,7 +442,7 @@
                             <DataGridTextColumn Header="{DynamicResource ProcessView_ColCpuUsage}" Binding="{Binding CpuUsage, StringFormat={}{0:N1}%}" Width="90"/>
                             <DataGridTextColumn Header="{DynamicResource ProcessView_MemoryMb}" Width="110"
                                                 Binding="{Binding MemoryUsage, Converter={StaticResource BytesToMbConverter}}"/>
-                            <DataGridTextColumn Header="{DynamicResource ProcessView_Priority}" Binding="{Binding Priority}" Width="*"/>
+                            <DataGridTextColumn x:Name="PriorityColumn" Header="{DynamicResource ProcessView_Priority}" Binding="{Binding Priority}" Width="120"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
@@ -471,16 +471,33 @@
                     </Border>
                 </Grid>
 
-                <ScrollViewer x:Name="ProcessDetails" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="380">
-                <StackPanel>
-                    <Border Style="{StaticResource ProcessDetailCardStyle}"
+                <ScrollViewer x:Name="ProcessDetails" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="380"
+                              SizeChanged="ProcessDetails_SizeChanged">
+                <Grid>
+                    <!-- Nothing selected: in the wide layout the hint sits in the middle of the free panel. -->
+                    <Border x:Name="SelectProcessHint" Style="{StaticResource ProcessDetailCardStyle}" VerticalAlignment="Top"
                             Visibility="{Binding SelectedProcessSummary.HasSelection, Converter={StaticResource InverseBoolToVisibilityConverter}}">
-                        <TextBlock Text="{DynamicResource ProcessView_SelectProcessHint}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="AppsListDetail24" FontSize="24" Margin="0,0,12,0" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <TextBlock Text="{DynamicResource ProcessView_SelectProcessHint}" TextWrapping="Wrap" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        </StackPanel>
                     </Border>
 
-                    <StackPanel Visibility="{Binding SelectedProcessSummary.HasSelection, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Grid Visibility="{Binding SelectedProcessSummary.HasSelection, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition x:Name="DetailSecondColumn" Width="0"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
                     <!-- Process -->
-                    <Border Style="{StaticResource ProcessDetailCardStyle}">
+                    <Border Grid.ColumnSpan="2" Style="{StaticResource ProcessDetailCardStyle}">
                         <StackPanel>
                             <TextBlock Text="{Binding SelectedProcessSummary.ProcessTitle}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                             <TextBlock Text="{Binding SelectedProcessSummary.ExecutablePath}"
@@ -507,7 +524,7 @@
                     </Border>
 
                     <!-- Priority: each picker starts at the process's current value. -->
-                    <Border Style="{StaticResource ProcessDetailCardStyle}">
+                    <Border x:Name="PriorityCard" Grid.Row="1" Style="{StaticResource ProcessDetailCardStyle}">
                         <StackPanel>
                             <TextBlock Text="{DynamicResource ProcessView_PrioritySection}" Style="{StaticResource ProcessDetailHeaderStyle}"/>
                             <Grid>
@@ -580,7 +597,7 @@
                     </Border>
 
                     <!-- CPU cores: the main ThreadPilot action, always visible. -->
-                    <Border x:Name="CpuCoresCard" Style="{StaticResource ProcessDetailCardStyle}">
+                    <Border x:Name="CpuCoresCard" Grid.Row="2" Style="{StaticResource ProcessDetailCardStyle}">
                         <StackPanel>
                             <TextBlock Text="{DynamicResource ProcessView_CoresSection}" Style="{StaticResource ProcessDetailHeaderStyle}"/>
                             <Grid Margin="0,0,0,8">
@@ -703,7 +720,7 @@
                     </Border>
 
                     <!-- Rule -->
-                    <Border Style="{StaticResource ProcessDetailCardStyle}">
+                    <Border Grid.Row="3" Grid.ColumnSpan="2" Style="{StaticResource ProcessDetailCardStyle}">
                         <StackPanel>
                             <TextBlock Text="{DynamicResource ProcessView_RuleSection}" Style="{StaticResource ProcessDetailHeaderStyle}"/>
                             <TextBlock Text="{Binding SelectedProcessSummary.RuleStatusText}" TextWrapping="Wrap" FontSize="{StaticResource ProcessFontSmall}"
@@ -714,8 +731,8 @@
                                     CommandParameter="{Binding SelectedProcess}"/>
                         </StackPanel>
                     </Border>
-                    </StackPanel>
-                </StackPanel>
+                    </Grid>
+                </Grid>
 
                 </ScrollViewer>
             </Grid>
