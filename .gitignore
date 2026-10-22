@@ -28,7 +28,6 @@ uninstall.bat
 
 # Local worktrees and planning docs
 .worktrees/
-docs/superpowers/plans/
 /FINAL_RELEASE_PLAN*.md
 /RELEASE_PLAN*.md
 /LOCAL_VALIDATION*.md

@@ -1,33 +1,22 @@
 # Documentation
 
-This folder contains release and engineering documentation for ThreadPilot.
+## Contributing
+- [Contributing guide](CONTRIBUTING.md)
+- [Code of conduct](CODE_OF_CONDUCT.md)
+- [Architecture decisions](adr/)
 
-## Core Documents
-- Architecture: reference/ARCHITECTURE_GUIDE.md
-- API reference: reference/API_REFERENCE.md
-- Developer guide: reference/DEVELOPER_GUIDE.md
-- Project structure: reference/PROJECT_STRUCTURE.md
-- UI style guide: reference/UI_STYLE_GUIDE.md
-- Advanced CPU features: reference/ADVANCED_CPU_FEATURES.md
-- Game boost validation: reference/GAME_BOOST_VALIDATION.md
-- Exception handling policy: reference/EXCEPTION_HANDLING_POLICY.md
-- Safe Win32 interop examples: reference/SAFE_WIN32_INTEROP_EXAMPLES.md
-- Performance guide: reference/PERFORMANCE.md
-- Development operations guide: reference/DEVELOPMENT.md
-- Runtime GC template: reference/runtimeconfig.template.json
-- Packaging guide: release/PACKAGING.md
-- Release runbook: release/RELEASE_RUNBOOK.md
-- Release notes template: release/RELEASE_NOTES_TEMPLATE.md
-- Go/No-Go matrix: release/GO_NO_GO_MATRIX.md
-- Release signing guide: RELEASE_SIGNING.md
-- Code-signing policy: CODE_SIGNING_POLICY.md
-- Bundled power-plan licensing audit: POWER_PLAN_LICENSING.md
-- Privacy policy: PRIVACY.md
+## Users
+- [Troubleshooting](TROUBLESHOOTING.md)
+- [In-app updates](UPDATES.md)
+- [Privacy](PRIVACY.md)
+- [Security policy](SECURITY.md)
 
-## Release and Governance
-- Gitleaks scan report: audits/GITLEAKS_REPORT_2026-04-15.json
-- README audit report: audits/README_AUDIT_REPORT_2026-04-15.md
+## Releases
+- [Changelog](CHANGELOG.md)
+- [Release notes per version](releases/)
+- [Packaging and distribution](release/PACKAGING.md)
+- [Release signing](RELEASE_SIGNING.md) and [code-signing policy](CODE_SIGNING_POLICY.md)
 
-- Release execution log (2026-04-15): release/RELEASE_EXECUTION_LOG_2026-04-15.md
-## Migration Note
-Repository documentation is maintained under docs/ and updated with each release.
+## Legal
+- [Trademark policy](legal/TRADEMARK.md)
+- [Bundled power-plan licensing](POWER_PLAN_LICENSING.md)

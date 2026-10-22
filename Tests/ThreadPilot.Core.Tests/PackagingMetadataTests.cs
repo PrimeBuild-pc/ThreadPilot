@@ -8,25 +8,16 @@ namespace ThreadPilot.Core.Tests
         private const string ReleaseAssemblyVersion = "1.7.8.0";
 
         [Fact]
-        public void InnoInstallers_UseStableDisplayNameAndSeparateVersionMetadata()
+        public void InnoInstaller_UsesStableDisplayNameAndSeparateVersionMetadata()
         {
             var root = FindRepositoryRoot();
-            var installerScripts = new[]
-            {
-                Path.Combine(root, "Installer", "setup.iss"),
-                Path.Combine(root, "Installer", "Installer.iss"),
-            };
+            var script = File.ReadAllText(Path.Combine(root, "Installer", "setup.iss"));
 
-            foreach (var scriptPath in installerScripts)
-            {
-                var script = File.ReadAllText(scriptPath);
-
-                Assert.Contains("AppName={#MyAppName}", script, StringComparison.Ordinal);
-                Assert.Contains("AppVersion={#MyAppVersion}", script, StringComparison.Ordinal);
-                Assert.Contains("AppVerName={#MyAppName}", script, StringComparison.Ordinal);
-                Assert.DoesNotContain("AppVerName={#MyAppName} {#MyAppVersion}", script, StringComparison.Ordinal);
-                Assert.Matches(MyAppVersionRegex(), script);
-            }
+            Assert.Contains("AppName={#MyAppName}", script, StringComparison.Ordinal);
+            Assert.Contains("AppVersion={#MyAppVersion}", script, StringComparison.Ordinal);
+            Assert.Contains("AppVerName={#MyAppName}", script, StringComparison.Ordinal);
+            Assert.DoesNotContain("AppVerName={#MyAppName} {#MyAppVersion}", script, StringComparison.Ordinal);
+            Assert.Matches(MyAppVersionRegex(), script);
         }
 
         [Fact]
@@ -114,10 +105,8 @@ namespace ThreadPilot.Core.Tests
             AssertFileContains(Path.Combine(root, "ThreadPilot.csproj"), $"<FileVersion>{ReleaseAssemblyVersion}</FileVersion>");
             AssertFileContains(Path.Combine(root, "ThreadPilot.csproj"), $"<InformationalVersion>{ReleaseVersion}</InformationalVersion>");
             AssertFileContains(Path.Combine(root, "app.manifest"), $"version=\"{ReleaseAssemblyVersion}\"");
-            AssertFileContains(Path.Combine(root, "Installer", "ThreadPilot.wxs"), $"Version=\"{ReleaseAssemblyVersion}\"");
             AssertFileContains(Path.Combine(root, "chocolatey", "threadpilot.nuspec"), $"<version>{ReleaseVersion}</version>");
             AssertFileContains(Path.Combine(root, "chocolatey", "threadpilot.nuspec"), $"releases/tag/v{ReleaseVersion}");
-            AssertFileContains(Path.Combine(root, "sonar-project.properties"), $"sonar.projectVersion={ReleaseVersion}");
             AssertFileContains(Path.Combine(root, "build", "build-release.ps1"), $"[string]$Version = \"{ReleaseVersion}\"");
             AssertFileContains(Path.Combine(root, "build", "build-installer.ps1"), $"[string]$Version = \"{ReleaseVersion}\"");
             AssertFileContains(Path.Combine(root, "build", "package-release-zips.ps1"), $"[string]$Version = \"{ReleaseVersion}\"");

@@ -205,7 +205,6 @@ Build release artifacts with the project script:
 - [`docs/PRIVACY.md`](docs/PRIVACY.md)
 - [`docs/release/PACKAGING.md`](docs/release/PACKAGING.md)
 - [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)
-- [`docs/QUALITY_GATES.md`](docs/QUALITY_GATES.md)
 - [`docs/adr/`](docs/adr/)
 - [`docs/releases/`](docs/releases/)
 
