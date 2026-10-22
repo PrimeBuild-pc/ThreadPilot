@@ -84,7 +84,26 @@ namespace ThreadPilot.Services
                 return -1;
             }
 
-            return string.Compare(this.Prerelease, other.Prerelease, StringComparison.OrdinalIgnoreCase);
+            return ComparePrerelease(this.Prerelease ?? string.Empty, other.Prerelease ?? string.Empty);
+        }
+
+        // SemVer: dot-separated parts, numeric parts by value (beta.10 > beta.9), more parts wins a tie.
+        private static int ComparePrerelease(string left, string right)
+        {
+            var a = left.Split('.');
+            var b = right.Split('.');
+            for (var i = 0; i < Math.Min(a.Length, b.Length); i++)
+            {
+                var result = long.TryParse(a[i], out var x) && long.TryParse(b[i], out var y)
+                    ? x.CompareTo(y)
+                    : string.Compare(a[i], b[i], StringComparison.OrdinalIgnoreCase);
+                if (result != 0)
+                {
+                    return result;
+                }
+            }
+
+            return a.Length.CompareTo(b.Length);
         }
 
         public override string ToString()

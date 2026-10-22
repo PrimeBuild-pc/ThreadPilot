@@ -21,6 +21,21 @@ namespace ThreadPilot.Core.Tests
             Assert.True(SemanticVersion.TryParse("1.4.0", out var stable));
 
             Assert.True(stable > prerelease);
+            Assert.Equal(0, stable.CompareTo(new SemanticVersion(1, 4, 0)));
+        }
+
+        [Theory]
+        [InlineData("1.7.8-beta.10", "1.7.8-beta.9")]
+        [InlineData("1.7.8-rc.1", "1.7.8-beta.10")]
+        [InlineData("1.7.8-beta.1.1", "1.7.8-beta.1")]
+        public void SemanticVersion_ComparesNumericPrereleasePartsAsNumbers(string newer, string older)
+        {
+            // Text order put beta.10 before beta.9, so a beta.9 user was never offered beta.10.
+            Assert.True(SemanticVersion.TryParse(newer, out var high));
+            Assert.True(SemanticVersion.TryParse(older, out var low));
+
+            Assert.True(high > low);
+            Assert.True(low < high);
         }
 
         [Fact]
