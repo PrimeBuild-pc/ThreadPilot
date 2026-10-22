@@ -501,6 +501,7 @@
     <sys:String x:Key="Settings_DialogImportTitle">ThreadPilot-Konfiguration importieren</sys:String>
     <sys:String x:Key="Settings_WarningAutostartFailed">Der Autostart von Windows konnte nicht aktualisiert werden. Den vorherigen Autostart-Status beibehalten.</sys:String>
     <sys:String x:Key="Settings_WarningAutostartNeedsInstall">Der Autostart erfordert eine Installation von ThreadPilot unter „Programme“: Eine portable Kopie könnte von jedem Programm ersetzt und dann als Administrator gestartet werden.</sys:String>
+    <sys:String x:Key="Settings_WarningAutostartNoInstallableRelease">Es wurde kein offizielles Installationsprogramm dieser oder einer neueren Version gefunden. Bei einer Vorabversion aktivieren Sie „Fügen Sie Vorabversionsaktualisierungen hinzu“ und speichern Sie erneut.</sys:String>
     <sys:String x:Key="Settings_AutostartInstallConfirmTitle">ThreadPilot für den Autostart installieren</sys:String>
     <sys:String x:Key="Settings_AutostartInstallConfirmMessage">Der Autostart erfordert ThreadPilot unter „Programme“. Jetzt die offizielle Version herunterladen, prüfen und installieren? ThreadPilot startet danach aus „Programme“ mit aktivem Autostart neu; diesen portablen Ordner kannst du anschließend löschen.</sys:String>
 

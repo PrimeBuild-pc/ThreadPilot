@@ -501,6 +501,7 @@
     <sys:String x:Key="Settings_DialogImportTitle">导入 ThreadPilot 配置</sys:String>
     <sys:String x:Key="Settings_WarningAutostartFailed">无法更新 Windows 自启动。将保留之前的自启动状态。</sys:String>
     <sys:String x:Key="Settings_WarningAutostartNeedsInstall">自启动需要将 ThreadPilot 安装在 Program Files 中：便携版可能被任何程序替换，并以管理员身份启动。</sys:String>
+    <sys:String x:Key="Settings_WarningAutostartNoInstallableRelease">未找到此版本或更新版本的官方安装程序。如果是预览版，请开启“包含预发布版本”后再次保存。</sys:String>
     <sys:String x:Key="Settings_AutostartInstallConfirmTitle">安装 ThreadPilot 以启用自启动</sys:String>
     <sys:String x:Key="Settings_AutostartInstallConfirmMessage">自启动需要将 ThreadPilot 安装在 Program Files 中。现在下载、验证并安装官方版本吗？ThreadPilot 将从 Program Files 重新启动并启用自启动；之后可以删除此便携版文件夹。</sys:String>
 

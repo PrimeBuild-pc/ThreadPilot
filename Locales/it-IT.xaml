@@ -501,6 +501,7 @@
     <sys:String x:Key="Settings_DialogImportTitle">Importa ThreadPilot Configurazione</sys:String>
     <sys:String x:Key="Settings_WarningAutostartFailed">Impossibile aggiornare l'avvio automatico Windows. Mantenimento dello stato di avvio automatico precedente.</sys:String>
     <sys:String x:Key="Settings_WarningAutostartNeedsInstall">L'avvio automatico richiede ThreadPilot installato in Programmi: una copia portable potrebbe essere sostituita da qualsiasi programma e poi avviata come amministratore.</sys:String>
+    <sys:String x:Key="Settings_WarningAutostartNoInstallableRelease">Non è stato trovato un installer ufficiale di questa versione o di una più recente. Per una versione di anteprima, attiva «Includere aggiornamenti preliminari» e salva di nuovo.</sys:String>
     <sys:String x:Key="Settings_AutostartInstallConfirmTitle">Installa ThreadPilot per l'avvio automatico</sys:String>
     <sys:String x:Key="Settings_AutostartInstallConfirmMessage">L'avvio automatico richiede ThreadPilot installato in Programmi. Scaricare, verificare e installare ora la versione ufficiale? ThreadPilot si riavvierà da Programmi con l'avvio automatico attivo; poi potrai eliminare questa cartella portable.</sys:String>
 
