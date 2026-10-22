@@ -211,6 +211,8 @@ namespace ThreadPilot
                         {
                             await autostartService.EnsureAutostartAsync(autostartMinimized);
                         }
+
+                        new UpdateTempDirectoryProvider().CleanupStale(TimeSpan.FromDays(1));
                     }),
                     ex => logger.LogWarning(ex, "Failed to ensure elevated tasks during startup"));
             }

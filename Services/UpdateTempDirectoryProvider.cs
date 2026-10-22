@@ -5,6 +5,7 @@ namespace ThreadPilot.Services
 {
     using System;
     using System.IO;
+    using System.Security.Principal;
 
     /// <summary>
     /// Each download gets its own admin-only folder directly under the root, with an unguessable name, so a
@@ -57,6 +58,33 @@ namespace ThreadPilot.Services
 
             Directory.Delete(path, recursive: true);
             this.created.TryRemove(Path.TrimEndingDirectorySeparator(Path.GetFullPath(path)), out _);
+        }
+
+        /// <summary>
+        /// Deletes update folders left by earlier runs (a successful update exits before it can clean up).
+        /// Only Administrators-owned folders: a user cannot create one, nor change what is inside it.
+        /// </summary>
+        public void CleanupStale(TimeSpan olderThan)
+        {
+            var administrators = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
+            foreach (var directory in new DirectoryInfo(this.rootDirectory).EnumerateDirectories(FolderPrefix + "*"))
+            {
+                try
+                {
+                    if (directory.Attributes.HasFlag(FileAttributes.ReparsePoint)
+                        || DateTime.UtcNow - directory.CreationTimeUtc < olderThan
+                        || !administrators.Equals(directory.GetAccessControl().GetOwner(typeof(SecurityIdentifier))))
+                    {
+                        continue;
+                    }
+
+                    directory.Delete(recursive: true);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+                {
+                    // In use or not ours: the next start tries again.
+                }
+            }
         }
     }
 }
