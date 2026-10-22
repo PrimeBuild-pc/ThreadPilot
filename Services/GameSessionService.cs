@@ -11,6 +11,7 @@ namespace ThreadPilot.Services
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Microsoft.Win32;
+    using Microsoft.Win32.SafeHandles;
     using ThreadPilot.Models;
 
     public enum GameBoostSetting
@@ -108,62 +109,78 @@ namespace ThreadPilot.Services
 
         public IGameProcessHandle? TryOpen(int processId, long startTimeUtcTicks, Func<Task> onExited)
         {
-            Process? process = null;
+            // Only the rights anti-cheats leave to outside tools: a full-access handle held for the whole game is
+            // what they look for, and a protected (PPL) game refuses it.
+            var wait = new ProcessWaitHandle(OpenProcess(Synchronize | ProcessQueryLimitedInformation, false, processId));
             try
             {
-                process = Process.GetProcessById(processId);
-
-                // Holds the handle the exit wait will use. shortcut: Process opens it with PROCESS_ALL_ACCESS, so a
-                // protected (PPL) game falls back to polling; a SYNCHRONIZE|QUERY_LIMITED handle would cover it too.
-                _ = process.SafeHandle;
-
-                // One wait on that handle first: an anti-cheat that stripped SYNCHRONIZE throws here, into the catch,
-                // instead of on the runtime's shared wait thread. The start time read through it proves the identity.
-                if (process.WaitForExit(0) || process.StartTime.ToUniversalTime().Ticks != startTimeUtcTicks)
+                // One wait first: a handle stripped of SYNCHRONIZE throws here, not on the runtime's shared wait thread.
+                // The start time read through the handle proves it is the same process.
+                if (!wait.SafeWaitHandle.IsInvalid
+                    && !wait.WaitOne(0)
+                    && GetProcessTimes(wait.SafeWaitHandle, out var created, out _, out _, out _)
+                    && DateTime.FromFileTime(created).ToUniversalTime().Ticks == startTimeUtcTicks)
                 {
-                    process.Dispose();
-                    return null;
-                }
-
-                // Exited is raised inside the Process object's lock: the session restore runs outside it.
-                process.Exited += (_, _) => _ = Task.Run(onExited);
-                process.EnableRaisingEvents = true;
-                if (!process.HasExited)
-                {
-                    return new GameProcessHandle(process);
+                    var registration = ThreadPool.RegisterWaitForSingleObject(wait, (_, _) => _ = onExited(), null, Timeout.Infinite, executeOnlyOnce: true);
+                    return new GameProcessHandle(wait, registration);
                 }
             }
             catch
             {
-                // Denied (anti-cheat, protected) or gone: the caller polls instead.
+                // Rights stripped: the caller polls instead.
             }
 
-            process?.Dispose();
+            wait.Dispose();
             return null;
         }
 
-        private sealed class GameProcessHandle(Process process) : IGameProcessHandle
+        private const uint Synchronize = 0x00100000;
+        private const uint ProcessQueryLimitedInformation = 0x1000;
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern SafeWaitHandle OpenProcess(uint access, bool inheritHandle, int processId);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetProcessTimes(SafeWaitHandle process, out long creationTime, out long exitTime, out long kernelTime, out long userTime);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool ProcessIdToSessionId(int processId, out int sessionId);
+
+        private sealed class ProcessWaitHandle : WaitHandle
+        {
+            public ProcessWaitHandle(SafeWaitHandle process) => this.SafeWaitHandle = process;
+        }
+
+        private sealed class GameProcessHandle(ProcessWaitHandle wait, RegisteredWaitHandle registration) : IGameProcessHandle
         {
             public bool TryGetCpuTime(out TimeSpan totalProcessorTime)
             {
                 try
                 {
-                    totalProcessorTime = process.TotalProcessorTime;
-                    return true;
+                    if (GetProcessTimes(wait.SafeWaitHandle, out _, out _, out var kernel, out var user))
+                    {
+                        totalProcessorTime = TimeSpan.FromTicks(kernel + user);
+                        return true;
+                    }
                 }
-                catch
+                catch (ObjectDisposedException)
                 {
-                    totalProcessorTime = TimeSpan.Zero;
-                    return false;
+                    // Disposed by a concurrent shutdown.
                 }
+
+                totalProcessorTime = TimeSpan.Zero;
+                return false;
             }
 
-            public void Dispose() => process.Dispose();
+            // The registration keeps its own reference to the handle, so closing it here is safe while a wait ends.
+            public void Dispose()
+            {
+                registration.Unregister(null);
+                wait.Dispose();
+            }
         }
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool ProcessIdToSessionId(int processId, out int sessionId);
     }
 
     public interface IGameSessionService : IDisposable
