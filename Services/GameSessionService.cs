@@ -240,7 +240,7 @@ namespace ThreadPilot.Services
 
         // Set by StopAsync: a tick already queued when the timer was disposed must not begin a session.
         private bool stopped;
-        private (int ProcessId, long Timestamp)? rejectedForeground;
+        private (int ProcessId, long StartTicks, long Timestamp)? rejectedForeground;
         private GameSession? session;
         private IGameProcessHandle? gameHandle;
         private GameBoostDecision? cachedDecision;
@@ -454,8 +454,11 @@ namespace ThreadPilot.Services
 
             // The browser or desktop usually stays in front for minutes: building its full process model every
             // 3 s only to reject it again costs ~8 process queries and a window enumeration per tick.
+            // Keyed by start time too: Windows soon reuses the PID of an exited process, possibly for a game.
+            this.processProbe.TryGetIdentity(processId, out var foregroundStartTicks, out _);
             if (this.rejectedForeground is { } rejected
                 && rejected.ProcessId == processId
+                && rejected.StartTicks == foregroundStartTicks
                 && this.timeProvider.GetElapsedTime(rejected.Timestamp) < RejectedForegroundMemory)
             {
                 return;
@@ -468,7 +471,7 @@ namespace ThreadPilot.Services
                 // Remembered only when the path was readable: a game just starting may not expose it yet.
                 if (!string.IsNullOrEmpty(game.ExecutablePath))
                 {
-                    this.rejectedForeground = (processId, this.timeProvider.GetTimestamp());
+                    this.rejectedForeground = (processId, foregroundStartTicks, this.timeProvider.GetTimestamp());
                 }
 
                 return;
