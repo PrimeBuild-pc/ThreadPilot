@@ -710,7 +710,7 @@ namespace ThreadPilot
                 this.LogDebug("Starting graceful shutdown...");
                 this.selfResourceManagementService.RestoreForegroundMode();
 
-                // 1. Stop monitoring services; Game Boost first restores what it changed
+                // 1. Game Boost restores what it changed
                 try
                 {
                     await this.serviceProvider.GetRequiredService<IGameSessionService>().StopAsync();
@@ -720,18 +720,7 @@ namespace ThreadPilot
                     this.LogDebug($"Error stopping Game Boost: {ex.Message}");
                 }
 
-                try
-                {
-                    this.LogDebug("Stopping process monitoring manager...");
-                    await this.processMonitorManagerService.StopAsync();
-                    this.LogDebug("Process monitoring manager stopped");
-                }
-                catch (Exception ex)
-                {
-                    this.LogDebug($"Error stopping process monitoring: {ex.Message}");
-                }
-
-                // 2. Cleanup applied CPU masks (like CPU Set Setter's ClearAllProcessMasksNoSave)
+                // 2. Reset tracked masks/priorities before the monitor stops: stopping it untracks every process
                 if (this.settingsService.Settings.ClearMasksOnClose)
                 {
                     try
@@ -758,6 +747,17 @@ namespace ThreadPilot
                     {
                         this.LogDebug($"Error resetting priorities: {ex.Message}");
                     }
+                }
+
+                try
+                {
+                    this.LogDebug("Stopping process monitoring manager...");
+                    await this.processMonitorManagerService.StopAsync();
+                    this.LogDebug("Process monitoring manager stopped");
+                }
+                catch (Exception ex)
+                {
+                    this.LogDebug($"Error stopping process monitoring: {ex.Message}");
                 }
 
                 // 3. Restore default power plan if configured
