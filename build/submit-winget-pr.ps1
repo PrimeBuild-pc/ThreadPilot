@@ -102,7 +102,7 @@ try {
   & git commit -m "Add $PackageIdentifier version $Version"
   & git push -u origin $branch --force
 
-  $existingPr = (& gh pr list --repo microsoft/winget-pkgs --state open --head "$ForkOwner`:$branch" --json number | Out-String).Trim()
+  $existingPr = (& gh pr list --repo microsoft/winget-pkgs --state open --head $branch --author $ForkOwner --json number | Out-String).Trim()
   if (-not [string]::IsNullOrWhiteSpace($existingPr) -and $existingPr -ne '[]') {
     Write-Host "Winget PR already exists for branch $branch."
     exit 0
