@@ -1,3 +1,9 @@
+## ThreadPilot v1.7.8
+
+Stable release with everything from beta.1 and beta.2: Game Boost (off by default), a full security and performance audit (window-open CPU ~25–30% → ~2.3% of a core, near-zero in the tray), an installer that always installs in Program Files, and portable copies that can install themselves for autostart. Game Boost is not yet validated on real dual-CCD Ryzen and Intel hybrid CPUs; testers wanted.
+
+[Full notes, performance table and tester checklist](../releases/v1.7.8.md). Artifacts unsigned; verify SHA256 checksums.
+
 ## ThreadPilot v1.7.8-beta.2
 
 Pre-release on top of v1.7.8-beta.1: a full security and performance audit (window-open CPU ~25–30% → ~2.3% of a core, near-zero in the tray), Game Boost orchestration with a minimal-rights game handle, an installer that always installs in Program Files, and portable copies that can install themselves for autostart. Dual-CCD Ryzen and Intel hybrid testers wanted.
