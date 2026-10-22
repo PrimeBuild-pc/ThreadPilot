@@ -259,7 +259,7 @@
                 </Grid>
 
 
-                <Grid x:Name="ProcessTable" Grid.Row="1">
+                <Grid Grid.Row="1">
                     <DataGrid x:Name="ProcessList" ItemsSource="{Binding FilteredProcesses}"
                               SelectedItem="{Binding SelectedProcess}"
                               AutoGenerateColumns="False"

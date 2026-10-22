@@ -309,9 +309,11 @@ namespace ThreadPilot.Core.Tests
             Assert.NotEmpty(columns);
             Assert.All(columns, column => Assert.DoesNotContain("*", column.Attribute("Width")?.Value ?? string.Empty, StringComparison.Ordinal));
 
+            // A pixel width from the visible columns, never Auto: an Auto column re-measured the DataGrid at
+            // infinite width on every list refresh and doubled the CPU with the window open.
             var codeBehind = File.ReadAllText(ProcessViewPath + ".cs");
-            Assert.Contains("this.TableColumn.Width = wide ? System.Windows.GridLength.Auto", codeBehind, StringComparison.Ordinal);
-            Assert.Contains("this.ProcessTable.MaxWidth = wide ? e.NewSize.Width - DetailMinWidth", codeBehind, StringComparison.Ordinal);
+            Assert.DoesNotContain("GridLength.Auto", codeBehind, StringComparison.Ordinal);
+            Assert.Contains("Math.Min(columns + chrome, this.workspaceWidth - DetailMinWidth)", codeBehind, StringComparison.Ordinal);
             Assert.Contains("private const double DetailMinWidth = 400;", codeBehind, StringComparison.Ordinal);
         }
 
