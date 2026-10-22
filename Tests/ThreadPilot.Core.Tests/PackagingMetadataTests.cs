@@ -4,7 +4,7 @@ namespace ThreadPilot.Core.Tests
 
     public sealed partial class PackagingMetadataTests
     {
-        private const string ReleaseVersion = "1.7.8-beta.2";
+        private const string ReleaseVersion = "1.7.8";
         private const string ReleaseAssemblyVersion = "1.7.8.0";
 
         [Fact]
@@ -160,7 +160,7 @@ namespace ThreadPilot.Core.Tests
             throw new InvalidOperationException("Repository root could not be located.");
         }
 
-        [GeneratedRegex("#define MyAppVersion \"1\\.7\\.8-beta\\.2\"", RegexOptions.CultureInvariant)]
+        [GeneratedRegex("#define MyAppVersion \"1\\.7\\.8\"", RegexOptions.CultureInvariant)]
         private static partial Regex MyAppVersionRegex();
     }
 }

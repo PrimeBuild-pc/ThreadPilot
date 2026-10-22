@@ -26,7 +26,7 @@
 
 <a href="assets/screenshots/overview-themes.png"><img width="1600" height="960" alt="ThreadPilot 1.7.8-beta.1: the current Processes interface in dark and light themes" src="assets/screenshots/overview-themes.png"></a>
 
-<p align="center"><sub>Real dark/light screenshots of the preview interface. <a href="assets/screenshots/processes-dark.png">View dark</a> · <a href="assets/screenshots/processes-light.png">View light</a></sub></p>
+<p align="center"><sub>Real dark/light screenshots of the interface. <a href="assets/screenshots/processes-dark.png">View dark</a> · <a href="assets/screenshots/processes-light.png">View light</a></sub></p>
 
 ## What is ThreadPilot?
 
@@ -42,7 +42,7 @@ It is designed as an open-source alternative for power users who need Process La
 - Intel hybrid CPU handling through Windows topology and `EfficiencyClass`, not hardcoded SKU lists.
 - Reusable CPU mask presets and custom core selections for process and rule workflows.
 - Three-state efficiency mode / EcoQoS for running processes and persistent rules, independently of CPU priority.
-- **Pre-release only:** opt-in Game Boost with topology-aware game/background CPU Sets, optional priority and restoration. Real dual-CCD Ryzen/X3D and supported Intel hybrid validation is still pending.
+- Opt-in Game Boost (off by default) with topology-aware game/background CPU Sets, optional priority and restoration. Real dual-CCD Ryzen/X3D and supported Intel hybrid validation is still pending.
 - CPU priority controls with guardrails: High priority warning and Realtime priority blocked.
 - Process memory priority support.
 - Persistent process rules with explicit Apply now and Save as rule flows.
@@ -89,9 +89,7 @@ choco upgrade threadpilot
 ### Download from GitHub Releases
 
 [![Download Latest Stable](https://img.shields.io/badge/Download-Latest%20Stable-2ea44f?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest)
-[![Download Pre-release — Game Boost Preview](https://img.shields.io/badge/Download-Pre--release%20%28Game%20Boost%29-f59e0b?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/tag/v1.7.8-beta.2)
-
-**Stable v1.7.7 does not include Game Boost.** The **v1.7.8-beta.2 pre-release** includes it for volunteers and early adopters; see its [test steps and issue-reporting checklist](docs/releases/v1.7.8-beta.2.md). Preview downloads are manual and do not replace the stable update channel.
+**Stable v1.7.8 includes Game Boost** (off by default). It is not yet validated on real dual-CCD Ryzen and Intel hybrid CPUs; if you have one, see the [test steps and issue-reporting checklist](docs/releases/v1.7.8.md#help-us-test-dual-ccd-ryzen-and-intel-hybrid).
 
 Both channels use the same application/settings location. Export a configuration backup before switching; they are not separate side-by-side installations.
 
@@ -111,7 +109,7 @@ Compare the result with `SHA256SUMS.txt` from the same release.
 
 ## 🖼️ Screenshots
 
-Captured from the official **v1.7.8-beta.1** installer in a Windows 11 test VM, using real UI and a sample Notepad rule. **Game Boost is preview-only, not part of stable v1.7.7.** These are interface examples, not performance benchmarks. Click any image for full resolution.
+Captured from the official **v1.7.8-beta.1** installer in a Windows 11 test VM, using real UI and a sample Notepad rule. These are interface examples, not performance benchmarks. Click any image for full resolution.
 
 <table>
   <tr>
@@ -123,8 +121,8 @@ Captured from the official **v1.7.8-beta.1** installer in a Windows 11 test VM, 
     <td><a href="assets/screenshots/rules-dark.png"><img src="assets/screenshots/rules-dark.png" alt="Process rules in dark theme: a saved Notepad rule selected in the editor" width="800"></a><br><strong>Process rules · Dark</strong><br>Saved settings and the rule editor.</td>
   </tr>
   <tr>
-    <td><a href="assets/screenshots/game-boost-dark.png"><img src="assets/screenshots/game-boost-dark.png" alt="Tweaks in dark theme with the preview-only Game Boost card, shown off by default" width="800"></a><br><strong>Game Boost overview · Dark · Preview only</strong><br>Opt-in controls alongside Windows tweaks.</td>
-    <td><a href="assets/screenshots/game-boost-light.png"><img src="assets/screenshots/game-boost-light.png" alt="Game Boost in light theme, enabled in the test VM with game/background app lists expanded and unsupported CPU fallback shown" width="800"></a><br><strong>Game Boost configuration · Light · Preview only</strong><br>Game lists, exclusions and selected background apps.</td>
+    <td><a href="assets/screenshots/game-boost-dark.png"><img src="assets/screenshots/game-boost-dark.png" alt="Tweaks in dark theme with the Game Boost card, shown off by default" width="800"></a><br><strong>Game Boost overview · Dark</strong><br>Opt-in controls alongside Windows tweaks.</td>
+    <td><a href="assets/screenshots/game-boost-light.png"><img src="assets/screenshots/game-boost-light.png" alt="Game Boost in light theme, enabled in the test VM with game/background app lists expanded and unsupported CPU fallback shown" width="800"></a><br><strong>Game Boost configuration · Light</strong><br>Game lists, exclusions and selected background apps.</td>
   </tr>
   <tr>
     <td><a href="assets/screenshots/activity-light.png"><img src="assets/screenshots/activity-light.png" alt="Activity in light theme: real settings and saved-rule events with filters and export" width="800"></a><br><strong>Activity · Light</strong><br>Changes, results, filters and export.</td>

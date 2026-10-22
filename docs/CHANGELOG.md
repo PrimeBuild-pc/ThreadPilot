@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.7.8 - Game Boost, security hardening and a much lighter app
+
+- Stable release with everything from v1.7.8-beta.1 and v1.7.8-beta.2.
+- Game Boost (off by default): game/background CPU Sets, high QoS for the game, EcoQoS for listed background apps in Isolation, dynamic release under heavy load, a minimal-rights game handle and restoration on exit.
+- Security and performance audit: window-open CPU ~25–30% → ~2.3% of a core, near-zero in the tray; elevated tasks only for Program Files installs, no native DLLs extracted to %TEMP%, updates require a trusted SHA256SUMS.txt.
+- Installer always installs in Program Files and moves old installs without deleting settings; portable copies can install themselves for autostart.
+- Game Boost is not yet validated on real dual-CCD Ryzen/X3D and Intel hybrid CPUs. No FPS improvement is claimed.
+- [Full release notes](releases/v1.7.8.md).
+
 ## v1.7.8-beta.1 - Experimental Game Boost preview
 
 - Includes stable v1.7.7 plus all local Game Boost work: game/background CPU Sets, optional priority, rule precedence, restoration, crash journal and Activity diagnostics.
