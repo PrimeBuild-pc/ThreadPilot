@@ -9,6 +9,7 @@
   </p>
   <p>
     <a href="https://github.com/PrimeBuild-pc/ThreadPilot/actions/workflows/ci-devsecops.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/PrimeBuild-pc/ThreadPilot/ci-devsecops.yml?branch=main&amp;style=plastic&amp;logo=githubactions&amp;label=build"></a>
+    <a href="https://app.codecov.io/gh/PrimeBuild-pc/ThreadPilot"><img alt="Coverage" src="https://img.shields.io/codecov/c/github/PrimeBuild-pc/ThreadPilot/main?style=plastic&amp;logo=codecov"></a>
     <a href="https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/PrimeBuild-pc/ThreadPilot?style=plastic&amp;logo=github"></a>
     <a href="https://github.com/PrimeBuild-pc/ThreadPilot/releases"><img alt="Total downloads" src="https://img.shields.io/github/downloads/PrimeBuild-pc/ThreadPilot/total?style=plastic&amp;logo=github&amp;label=downloads&amp;color=2ea44f"></a>
     <a href="https://github.com/microsoft/winget-pkgs/tree/master/manifests/p/PrimeBuild/ThreadPilot"><img alt="WinGet version" src="https://img.shields.io/winget/v/PrimeBuild.ThreadPilot?style=plastic&amp;label=winget"></a>
