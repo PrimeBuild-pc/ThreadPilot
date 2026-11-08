@@ -13,6 +13,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      # CodeQL init/analyze must always run the same action version.
+      codeql:
+        patterns:
+          - "github/codeql-action*"
     labels:
       - dependencies
       - security
