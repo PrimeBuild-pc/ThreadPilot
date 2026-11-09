@@ -102,6 +102,15 @@ namespace ThreadPilot.Services
 
                 this.automationLifetime.Dispose();
                 this.automationLifetime = new CancellationTokenSource();
+                try
+                {
+                    await this.enhancedLogger.InitializeAsync();
+                }
+                catch (Exception ex)
+                {
+                    this.logger.LogWarning(ex, "File diagnostics could not be initialized; automation monitoring will continue");
+                }
+
                 this.logger.LogInformation("Starting Process Monitor Manager Service");
                 await this.enhancedLogger.LogSystemEventAsync(
                     LogEventTypes.System.ServiceStarted,

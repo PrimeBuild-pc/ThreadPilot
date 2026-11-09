@@ -15,6 +15,57 @@ namespace ThreadPilot.Core.Tests
     public sealed class ProcessMonitorManagerServiceTests
     {
         [Fact]
+        public async Task StartAsync_WhenFileLoggingCannotInitialize_StillStartsMonitoring()
+        {
+            var monitor = new FakeProcessMonitorService();
+            var diagnostics = CreateEnhancedLogger();
+            diagnostics.Setup(x => x.InitializeAsync()).ThrowsAsync(new IOException("Log directory unavailable"));
+            using var manager = CreateService(
+                monitor,
+                CreateAssociationService(new ProcessMonitorConfiguration()),
+                CreatePowerPlanService(),
+                CreateNotificationService(),
+                CreateProcessService(),
+                CreateCoreMaskService(),
+                CreateAffinityApplyService(),
+                enhancedLogger: diagnostics);
+
+            await manager.StartAsync();
+
+            Assert.True(manager.IsRunning);
+            Assert.True(monitor.IsMonitoring);
+        }
+
+        [Fact]
+        public async Task StartAsync_InitializesPersistentLoggingBeforeMonitoring()
+        {
+            var monitor = new FakeProcessMonitorService();
+            var diagnostics = CreateEnhancedLogger();
+            var initialized = false;
+            diagnostics.Setup(x => x.InitializeAsync())
+                .Callback(() => initialized = true)
+                .Returns(Task.CompletedTask);
+            diagnostics.Setup(x => x.LogSystemEventAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<LogLevel>()))
+                .Callback(() => Assert.True(initialized))
+                .Returns(Task.CompletedTask);
+            using var manager = CreateService(
+                monitor,
+                CreateAssociationService(new ProcessMonitorConfiguration()),
+                CreatePowerPlanService(),
+                CreateNotificationService(),
+                CreateProcessService(),
+                CreateCoreMaskService(),
+                CreateAffinityApplyService(),
+                enhancedLogger: diagnostics);
+
+            await manager.StartAsync();
+
+            diagnostics.Verify(x => x.InitializeAsync(), Times.Once);
+            Assert.True(monitor.IsMonitoring);
+        }
+
+        [Fact]
         public async Task StartAsync_LoadsConfiguration_AndStartsMonitoring()
         {
             var processMonitor = new FakeProcessMonitorService();
