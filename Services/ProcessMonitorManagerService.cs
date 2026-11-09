@@ -31,6 +31,7 @@ namespace ThreadPilot.Services
         private readonly SemaphoreSlim powerPlanChangeSemaphore = new(1, 1);
         private readonly SemaphoreSlim stateMutationSemaphore = new(1, 1);
 
+        private CancellationTokenSource automationLifetime = new();
         private bool isRunning;
         private string status = "Stopped";
         private bool disposed;
@@ -99,6 +100,8 @@ namespace ThreadPilot.Services
                     return;
                 }
 
+                this.automationLifetime.Dispose();
+                this.automationLifetime = new CancellationTokenSource();
                 this.logger.LogInformation("Starting Process Monitor Manager Service");
                 await this.enhancedLogger.LogSystemEventAsync(
                     LogEventTypes.System.ServiceStarted,
@@ -141,6 +144,7 @@ namespace ThreadPilot.Services
                 await this.enhancedLogger.LogErrorAsync(ex, "ProcessMonitorManagerService.StartAsync",
                     new Dictionary<string, object> { ["ServiceName"] = "ProcessMonitorManagerService" });
                 this.isRunning = false;
+                this.automationLifetime.Cancel();
                 this.SetStatus(false, "Failed to start", $"Error: {ex.Message}", ex);
                 throw;
             }
@@ -167,6 +171,7 @@ namespace ThreadPilot.Services
 
                 // Mark as stopped early to prevent new event handling while shutting down
                 this.isRunning = false;
+                this.automationLifetime.Cancel();
                 Interlocked.Exchange(ref this.pendingPowerPlanReevaluation, 0);
 
                 // Stop process monitoring
@@ -633,7 +638,7 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var results = await this.persistentRuleAutoApplyService.ApplyForDiscoveredProcessesAsync(processes);
+                var results = await this.persistentRuleAutoApplyService.ApplyForDiscoveredProcessesAsync(processes, this.automationLifetime.Token);
                 await this.LogPersistentRuleResultsAsync(results);
             }
             catch (OperationCanceledException)
@@ -649,7 +654,7 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var results = await this.persistentRuleAutoApplyService.ApplyForProcessStartAsync(process);
+                var results = await this.persistentRuleAutoApplyService.ApplyForProcessStartAsync(process, this.automationLifetime.Token);
                 await this.LogPersistentRuleResultsAsync(results);
             }
             catch (OperationCanceledException)
@@ -911,6 +916,7 @@ namespace ThreadPilot.Services
                 this.powerPlanChangeSemaphore?.Dispose();
                 this.stateMutationSemaphore?.Dispose();
                 this.processMonitorService?.Dispose();
+                this.automationLifetime.Dispose();
 
                 this.disposed = true;
             }

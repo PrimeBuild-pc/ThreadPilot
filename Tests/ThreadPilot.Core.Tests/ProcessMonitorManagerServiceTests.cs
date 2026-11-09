@@ -843,6 +843,42 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal(1, processMonitor.DisposeCalls);
         }
 
+        [Fact]
+        public async Task StopAsync_CancelsUnassociatedAutomationAndRestartGetsFreshLifetime()
+        {
+            var monitor = new FakeProcessMonitorService();
+            var automation = CreateAutoApplyService();
+            var tokens = new List<CancellationToken>();
+            automation.Setup(x => x.ApplyForProcessStartAsync(
+                It.IsAny<ProcessModel>(), It.IsAny<CancellationToken>()))
+                .Callback<ProcessModel, CancellationToken>((_, token) => tokens.Add(token))
+                .ReturnsAsync(Array.Empty<PersistentRuleAutoApplyResult>());
+            using var manager = CreateService(
+                monitor,
+                CreateAssociationService(new ProcessMonitorConfiguration()),
+                CreatePowerPlanService(),
+                CreateNotificationService(),
+                CreateProcessService(),
+                CreateCoreMaskService(),
+                CreateAffinityApplyService(),
+                automation);
+
+            await manager.StartAsync();
+            monitor.RaiseProcessStarted(new ProcessModel { ProcessId = 42, Name = "game" });
+            Assert.Single(tokens);
+            Assert.True(tokens[0].CanBeCanceled);
+            Assert.False(tokens[0].IsCancellationRequested);
+
+            await manager.StopAsync();
+            Assert.True(tokens[0].IsCancellationRequested);
+            await manager.StartAsync();
+            monitor.RaiseProcessStarted(new ProcessModel { ProcessId = 43, Name = "game" });
+            Assert.Equal(2, tokens.Count);
+            Assert.False(tokens[1].IsCancellationRequested);
+            await manager.StopAsync();
+            Assert.True(tokens[1].IsCancellationRequested);
+        }
+
         private static ProcessMonitorManagerService CreateService(
             FakeProcessMonitorService processMonitorService,
             Mock<IProcessPowerPlanAssociationService> associationService,

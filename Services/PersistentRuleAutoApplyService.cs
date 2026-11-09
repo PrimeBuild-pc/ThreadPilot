@@ -4,6 +4,7 @@
 namespace ThreadPilot.Services
 {
     using System.Collections.Concurrent;
+    using System.Diagnostics;
     using System.IO;
     using Microsoft.Extensions.Logging;
     using ThreadPilot.Models;
@@ -90,6 +91,9 @@ namespace ThreadPilot.Services
         private readonly IProcessService? processService;
         private readonly Func<DateTimeOffset> nowProvider;
         private readonly TimeSpan cooldown;
+        private readonly IEnhancedLoggingService? enhancedLogger;
+        private readonly object attemptLock = new();
+        private readonly Dictionary<int, CancellationTokenSource> activeApplications = new();
         private readonly ConcurrentDictionary<RuleAttemptKey, DateTimeOffset> recentAttempts = new();
 
         public PersistentRuleAutoApplyService(
@@ -100,8 +104,9 @@ namespace ThreadPilot.Services
             ILogger<PersistentRuleAutoApplyService> logger,
             IActivityAuditService? activityAuditService = null,
             IPersistentRulePriorityVerificationService? priorityVerificationService = null,
-            IProcessService? processService = null)
-            : this(ruleStore, matcher, rulesEngine, settingsService, logger, () => DateTimeOffset.UtcNow, DefaultCooldown, activityAuditService, priorityVerificationService, processService)
+            IProcessService? processService = null,
+            IEnhancedLoggingService? enhancedLogger = null)
+            : this(ruleStore, matcher, rulesEngine, settingsService, logger, () => DateTimeOffset.UtcNow, DefaultCooldown, activityAuditService, priorityVerificationService, processService, enhancedLogger)
         {
         }
 
@@ -115,7 +120,8 @@ namespace ThreadPilot.Services
             TimeSpan cooldown,
             IActivityAuditService? activityAuditService = null,
             IPersistentRulePriorityVerificationService? priorityVerificationService = null,
-            IProcessService? processService = null)
+            IProcessService? processService = null,
+            IEnhancedLoggingService? enhancedLogger = null)
         {
             this.ruleStore = ruleStore ?? throw new ArgumentNullException(nameof(ruleStore));
             this.matcher = matcher ?? throw new ArgumentNullException(nameof(matcher));
@@ -127,6 +133,7 @@ namespace ThreadPilot.Services
             this.activityAuditService = activityAuditService;
             this.priorityVerificationService = priorityVerificationService;
             this.processService = processService;
+            this.enhancedLogger = enhancedLogger;
         }
 
         public async Task<IReadOnlyList<PersistentRuleAutoApplyResult>> ApplyForDiscoveredProcessesAsync(
@@ -180,6 +187,14 @@ namespace ThreadPilot.Services
 
         public void MarkProcessExited(int processId)
         {
+            lock (this.attemptLock)
+            {
+                if (this.activeApplications.Remove(processId, out var application))
+                {
+                    application.Cancel();
+                }
+            }
+
             foreach (var key in this.recentAttempts.Keys.Where(key => key.ProcessId == processId))
             {
                 this.recentAttempts.TryRemove(key, out _);
@@ -194,6 +209,38 @@ namespace ThreadPilot.Services
             string source,
             CancellationToken cancellationToken)
         {
+            using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            lock (this.attemptLock)
+            {
+                if (!this.activeApplications.TryAdd(process.ProcessId, lifetime))
+                {
+                    return Array.Empty<PersistentRuleAutoApplyResult>();
+                }
+            }
+
+            try
+            {
+                return await this.ApplyForProcessCoreAsync(process, rules, source, lifetime.Token).ConfigureAwait(false);
+            }
+            finally
+            {
+                lock (this.attemptLock)
+                {
+                    if (this.activeApplications.TryGetValue(process.ProcessId, out var current) && ReferenceEquals(current, lifetime))
+                    {
+                        this.activeApplications.Remove(process.ProcessId);
+                    }
+                }
+            }
+        }
+
+        private async Task<IReadOnlyList<PersistentRuleAutoApplyResult>> ApplyForProcessCoreAsync(
+            ProcessModel process,
+            IReadOnlyList<PersistentProcessRule> rules,
+            string source,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
             var now = this.nowProvider();
             var potentialRules = rules
                 .Where(rule => rule.IsEnabled && IsPotentialNameMatch(rule, process.Name))
@@ -208,23 +255,77 @@ namespace ThreadPilot.Services
                 string.IsNullOrWhiteSpace(process.ExecutablePath) &&
                 potentialRules.Any(rule => !string.IsNullOrWhiteSpace(rule.ExecutablePath)))
             {
-                try
+                // Capture creation time with query-only access so a reused PID cannot receive this retry.
+                var identity = TryGetProcessStartTime(process.ProcessId);
+                await this.TryRefreshPathAsync(process).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                if (identity != null && !IsOriginalProcessRunning(process.ProcessId, identity.Value))
                 {
-                    await this.processService.RefreshProcessInfo(process).ConfigureAwait(false);
+                    return Array.Empty<PersistentRuleAutoApplyResult>();
                 }
-                catch (Exception ex)
+
+                if (string.IsNullOrWhiteSpace(process.ExecutablePath) && identity != null)
                 {
-                    this.logger.LogDebug(
-                        ex,
-                        "Could not enrich process {ProcessName} (PID: {ProcessId}) for path-based persistent rule matching",
-                        process.Name,
-                        process.ProcessId);
+                    source += "/PathRetry";
+                    await this.LogPathRetryAsync(process, "scheduled (up to 3 retries over 3 seconds)").ConfigureAwait(false);
+                    try
+                    {
+                        foreach (var delay in new[] { 250, 750, 2000 })
+                        {
+                            await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                            if (!this.IsEnabled() || !IsOriginalProcessRunning(process.ProcessId, identity.Value))
+                            {
+                                await this.LogPathRetryAsync(process, "stopped: process exited or automation disabled").ConfigureAwait(false);
+                                return Array.Empty<PersistentRuleAutoApplyResult>();
+                            }
+
+                            rules = await this.ruleStore.LoadAsync().ConfigureAwait(false);
+                            potentialRules = rules.Where(rule => rule.IsEnabled && IsPotentialNameMatch(rule, process.Name)).ToList();
+                            if (!potentialRules.Any(rule => !string.IsNullOrWhiteSpace(rule.ExecutablePath)))
+                            {
+                                break;
+                            }
+
+                            await this.TryRefreshPathAsync(process).ConfigureAwait(false);
+                            cancellationToken.ThrowIfCancellationRequested();
+                            if (!IsOriginalProcessRunning(process.ProcessId, identity.Value))
+                            {
+                                await this.LogPathRetryAsync(process, "stopped: original process exited").ConfigureAwait(false);
+                                return Array.Empty<PersistentRuleAutoApplyResult>();
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(process.ExecutablePath))
+                            {
+                                break;
+                            }
+                        }
+
+                        await this.LogPathRetryAsync(process, string.IsNullOrWhiteSpace(process.ExecutablePath)
+                            ? "finished: path still unavailable or rule removed"
+                            : "recovered: matching current rules against refreshed path").ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        await this.LogPathRetryAsync(process, "cancelled: monitoring stopped or process exited").ConfigureAwait(false);
+                        throw;
+                    }
+                }
+                else if (string.IsNullOrWhiteSpace(process.ExecutablePath))
+                {
+                    await this.LogPathRetryAsync(process, "skipped: original process identity unavailable").ConfigureAwait(false);
                 }
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             var candidates = potentialRules
                 .Where(rule => this.matcher.IsMatch(rule, process))
                 .ToList();
+
+            if (source.EndsWith("/PathRetry", StringComparison.Ordinal))
+            {
+                await this.LogPathRetryAsync(process, $"matched {candidates.Count} current rules").ConfigureAwait(false);
+            }
 
             if (candidates.Count == 0)
             {
@@ -266,6 +367,11 @@ namespace ThreadPilot.Services
                     this.priorityVerificationService?.ScheduleDelayedVerification(result, process, source);
                 }
 
+                if (source.EndsWith("/PathRetry", StringComparison.Ordinal))
+                {
+                    await this.LogPathRetryAsync(process, $"completed: {results.Count(result => result.Success)} succeeded, {results.Count(result => !result.Success)} failed").ConfigureAwait(false);
+                }
+
                 return results;
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -275,6 +381,11 @@ namespace ThreadPilot.Services
                     "Persistent rule auto-apply failed for process {ProcessName} (PID: {ProcessId})",
                     process.Name,
                     process.ProcessId);
+
+                if (source.EndsWith("/PathRetry", StringComparison.Ordinal))
+                {
+                    await this.LogPathRetryAsync(process, $"apply failed: {ex.Message}").ConfigureAwait(false);
+                }
 
                 return selectedRules
                     .Select(rule => new PersistentRuleAutoApplyResult
@@ -287,6 +398,63 @@ namespace ThreadPilot.Services
                         TechnicalMessage = ex.Message,
                     })
                     .ToList();
+            }
+        }
+
+        private static DateTime? TryGetProcessStartTime(int processId)
+        {
+            try
+            {
+                using var process = Process.GetProcessById(processId);
+                return process.StartTime;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static bool IsOriginalProcessRunning(int processId, DateTime originalStartTime)
+        {
+            try
+            {
+                using var current = Process.GetProcessById(processId);
+                return !current.HasExited && current.StartTime == originalStartTime;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private async Task TryRefreshPathAsync(ProcessModel process)
+        {
+            try
+            {
+                await this.processService!.RefreshProcessInfo(process).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                this.logger.LogDebug(ex, "Could not enrich process {ProcessId} for path-based rule matching", process.ProcessId);
+            }
+        }
+
+        private async Task LogPathRetryAsync(ProcessModel process, string outcome)
+        {
+            try
+            {
+                if (this.enhancedLogger != null)
+                {
+                    await this.enhancedLogger.LogProcessMonitoringEventAsync(
+                        "PersistentRulePathRetry",
+                        process.Name,
+                        process.ProcessId,
+                        $"Path-based saved rule metadata retry: {outcome}; path: {process.ExecutablePath}").ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogWarning(ex, "Could not persist path retry diagnostic");
             }
         }
 
@@ -305,6 +473,14 @@ namespace ThreadPilot.Services
 
         private void ClearAttemptsForMissingProcesses(HashSet<int> currentProcessIds)
         {
+            lock (this.attemptLock)
+            {
+                foreach (var pair in this.activeApplications.Where(pair => !currentProcessIds.Contains(pair.Key)).ToList())
+                {
+                    pair.Value.Cancel();
+                }
+            }
+
             foreach (var key in this.recentAttempts.Keys.Where(key => !currentProcessIds.Contains(key.ProcessId)))
             {
                 this.recentAttempts.TryRemove(key, out _);
