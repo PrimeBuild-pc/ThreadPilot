@@ -1,3 +1,9 @@
+## ThreadPilot v1.7.9
+
+Saved rules recover after sleep and hibernation: process monitoring renews WMI subscriptions, rescans running processes, and evaluates rules after resume/unlock. Includes a watchdog, independent WMI retries, polling fallback and retries for temporarily unavailable executable paths.
+
+[Full release notes](../releases/v1.7.9.md). Artifacts unsigned; verify SHA256 checksums.
+
 ## ThreadPilot v1.7.8
 
 Stable release with everything from beta.1 and beta.2: Game Boost (off by default), a full security and performance audit (window-open CPU ~25–30% → ~2.3% of a core, near-zero in the tray), an installer that always installs in Program Files, and portable copies that can install themselves for autostart. Game Boost is not yet validated on real dual-CCD Ryzen and Intel hybrid CPUs; testers wanted.

@@ -24,6 +24,11 @@ What to do:
 - Reboot if repository consistency is suspected to be corrupted.
 - Keep fallback polling enabled (default behavior).
 
+## Saved Rules and Unavailable Executable Paths
+A path-based saved rule can wait for executable metadata when a process first appears. ThreadPilot retries metadata lookup up to three times, with delays totaling three seconds, independently of WMI or fallback polling. It stops when the path is available, the process exits, monitoring stops, or the relevant rule is removed or disabled. The refreshed path must still match the current rule.
+
+Look for `PersistentRulePathRetry` events in `%LOCALAPPDATA%\ThreadPilot\Logs` for scheduling, recovery, cancellation, exhausted retries, and matching/application outcomes. If the path stays inaccessible, the rule remains unapplied; retries do not run indefinitely.
+
 ## Performance Counter Access Denied
 Some performance counters may fail on restricted systems.
 

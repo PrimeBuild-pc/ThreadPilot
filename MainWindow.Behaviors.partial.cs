@@ -1287,7 +1287,7 @@ namespace ThreadPilot
 
                 this.LogDebug("Starting process monitoring manager service...");
                 // Start the process monitoring manager service with internal timeout
-                var startTask = this.processMonitorManagerService.StartAsync();
+                var startTask = this.processMonitorManagerService.SetAutomationMonitoringEnabledAsync(true);
                 var timeoutTask = Task.Delay(6000); // 6 second internal timeout
                 var completedTask = await Task.WhenAny(startTask, timeoutTask);
 

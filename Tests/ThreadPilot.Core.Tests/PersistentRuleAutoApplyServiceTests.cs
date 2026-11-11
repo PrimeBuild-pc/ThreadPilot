@@ -478,6 +478,190 @@ namespace ThreadPilot.Core.Tests
                 Times.Once);
         }
 
+        [Fact]
+        public async Task ApplyForProcessStartAsync_WhenPathBecomesAvailable_RetriesWithoutAnotherEvent()
+        {
+            var process = CreateProcess();
+            process.ProcessId = Environment.ProcessId;
+            process.ExecutablePath = string.Empty;
+            var rule = CreateRule() with { ExecutablePath = @"C:\Games\Game.exe" };
+            var engine = CreateEngine(rule, CreateSuccess(rule, process));
+            var processes = new Mock<IProcessService>(MockBehavior.Strict);
+            int refreshes = 0;
+            processes.Setup(x => x.RefreshProcessInfo(process)).Returns(() =>
+            {
+                if (Interlocked.Increment(ref refreshes) == 1)
+                {
+                    throw new InvalidOperationException("Metadata not ready");
+                }
+
+                process.ExecutablePath = rule.ExecutablePath!;
+                return Task.CompletedTask;
+            });
+            var diagnostics = new Mock<IEnhancedLoggingService>();
+            var service = CreateService([rule], engine.Object, processService: processes.Object, enhancedLogger: diagnostics.Object);
+
+            var results = await service.ApplyForProcessStartAsync(process);
+
+            Assert.Single(results);
+            Assert.Equal(2, refreshes);
+            diagnostics.Verify(
+                x => x.LogProcessMonitoringEventAsync(
+                    "PersistentRulePathRetry", process.Name, process.ProcessId,
+                    It.Is<string>(message => message.Contains("completed: 1 succeeded, 0 failed"))), Times.Once);
+            await service.ApplyForProcessStartAsync(process);
+            engine.Verify(
+                x => x.ApplyMatchingRulesAsync(
+                    process,
+                    It.IsAny<Predicate<PersistentProcessRule>?>(), It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Theory]
+        [InlineData("cancel")]
+        [InlineData("exit")]
+        [InlineData("missing")]
+        public async Task PathRetry_WhenLifetimeEnds_DoesNotRefreshOrApply(string reason)
+        {
+            var process = CreateProcess();
+            process.ProcessId = Environment.ProcessId;
+            process.ExecutablePath = string.Empty;
+            var rule = CreateRule() with { ExecutablePath = @"C:\Games\Game.exe" };
+            var engine = CreateEngine(rule, CreateSuccess(rule, process));
+            var processes = new Mock<IProcessService>(MockBehavior.Strict);
+            processes.Setup(x => x.RefreshProcessInfo(process)).Returns(Task.CompletedTask);
+            var scheduled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var diagnostics = new Mock<IEnhancedLoggingService>();
+            diagnostics.Setup(x => x.LogProcessMonitoringEventAsync(
+                "PersistentRulePathRetry", process.Name, process.ProcessId, It.IsAny<string>()))
+                .Callback<string, string, int, string>((_, _, _, message) =>
+                {
+                    if (message.Contains("scheduled", StringComparison.Ordinal))
+                    {
+                        scheduled.TrySetResult();
+                    }
+                }).Returns(Task.CompletedTask);
+            using var lifetime = new CancellationTokenSource();
+            var service = CreateService([rule], engine.Object, processService: processes.Object, enhancedLogger: diagnostics.Object);
+            var pending = service.ApplyForProcessStartAsync(process, lifetime.Token);
+            await scheduled.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            // A duplicate discovery must not start another retry loop.
+            Assert.Empty(await service.ApplyForProcessStartAsync(process));
+            if (reason == "cancel")
+            {
+                lifetime.Cancel();
+            }
+            else if (reason == "exit")
+            {
+                service.MarkProcessExited(process.ProcessId);
+            }
+            else
+            {
+                await service.ApplyForDiscoveredProcessesAsync([]);
+            }
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
+            processes.Verify(x => x.RefreshProcessInfo(process), Times.Once);
+            engine.Verify(
+                x => x.ApplyMatchingRulesAsync(
+                    It.IsAny<ProcessModel>(), It.IsAny<Predicate<PersistentProcessRule>?>(),
+                    It.IsAny<CancellationToken>()), Times.Never);
+            diagnostics.Verify(
+                x => x.LogProcessMonitoringEventAsync(
+                    "PersistentRulePathRetry", process.Name, process.ProcessId,
+                    It.Is<string>(message => message.Contains("cancelled"))), Times.Once);
+
+            // A later process with the same PID can be evaluated normally.
+            process.ExecutablePath = rule.ExecutablePath!;
+            Assert.Single(await service.ApplyForProcessStartAsync(process));
+        }
+
+        [Theory]
+        [InlineData(false, false, 4)]
+        [InlineData(true, false, 1)]
+        [InlineData(false, true, 2)]
+        public async Task PathRetry_IsBoundedAndUsesCurrentRules(bool removeRule, bool wrongPath, int expectedRefreshes)
+        {
+            var process = CreateProcess();
+            process.ProcessId = Environment.ProcessId;
+            process.ExecutablePath = string.Empty;
+            var rule = CreateRule() with { ExecutablePath = @"C:\Games\Game.exe" };
+            var rules = new List<PersistentProcessRule> { rule };
+            var engine = CreateEngine(rule, CreateSuccess(rule, process));
+            var processes = new Mock<IProcessService>(MockBehavior.Strict);
+            int refreshes = 0;
+            processes.Setup(x => x.RefreshProcessInfo(process)).Returns(() =>
+            {
+                if (++refreshes == 1 && removeRule)
+                {
+                    rules.Clear();
+                }
+
+                if (refreshes > 1 && wrongPath)
+                {
+                    process.ExecutablePath = @"C:\Other\Game.exe";
+                }
+
+                return Task.CompletedTask;
+            });
+            var service = CreateService(rules, engine.Object, processService: processes.Object);
+
+            Assert.Empty(await service.ApplyForProcessStartAsync(process));
+            Assert.Equal(expectedRefreshes, refreshes);
+            await Task.Delay(300);
+            Assert.Equal(expectedRefreshes, refreshes);
+            engine.Verify(
+                x => x.ApplyMatchingRulesAsync(
+                    It.IsAny<ProcessModel>(), It.IsAny<Predicate<PersistentProcessRule>?>(),
+                    It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task PathRetry_WhenOriginalProcessExitsWithoutEvent_DoesNotApply()
+        {
+            using var child = Process.Start(new ProcessStartInfo("cmd.exe", "/d /c ping -n 60 127.0.0.1 >nul")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            })!;
+            try
+            {
+                var process = CreateProcess();
+                process.ProcessId = child.Id;
+                process.ExecutablePath = string.Empty;
+                var rule = CreateRule() with { ExecutablePath = @"C:\Games\Game.exe" };
+                var engine = CreateEngine(rule, CreateSuccess(rule, process));
+                var processes = new Mock<IProcessService>(MockBehavior.Strict);
+                processes.Setup(x => x.RefreshProcessInfo(process)).Returns(Task.CompletedTask);
+                var scheduled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                var diagnostics = new Mock<IEnhancedLoggingService>();
+                diagnostics.Setup(x => x.LogProcessMonitoringEventAsync(
+                    "PersistentRulePathRetry", process.Name, process.ProcessId, It.IsAny<string>()))
+                    .Callback(() => scheduled.TrySetResult()).Returns(Task.CompletedTask);
+                var service = CreateService([rule], engine.Object, processService: processes.Object, enhancedLogger: diagnostics.Object);
+                var pending = service.ApplyForProcessStartAsync(process);
+                await scheduled.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+                child.Kill(entireProcessTree: true);
+                await child.WaitForExitAsync();
+
+                Assert.Empty(await pending);
+                processes.Verify(x => x.RefreshProcessInfo(process), Times.Once);
+                engine.Verify(
+                    x => x.ApplyMatchingRulesAsync(
+                        It.IsAny<ProcessModel>(), It.IsAny<Predicate<PersistentProcessRule>?>(),
+                        It.IsAny<CancellationToken>()), Times.Never);
+            }
+            finally
+            {
+                if (!child.HasExited)
+                {
+                    child.Kill(entireProcessTree: true);
+                    await child.WaitForExitAsync();
+                }
+            }
+        }
+
         private static PersistentRuleAutoApplyService CreateService(
             IReadOnlyList<PersistentProcessRule> rules,
             IPersistentRulesEngine engine,
@@ -485,7 +669,8 @@ namespace ThreadPilot.Core.Tests
             Func<DateTimeOffset>? nowProvider = null,
             IActivityAuditService? audit = null,
             IPersistentRulePriorityVerificationService? priorityVerifier = null,
-            IProcessService? processService = null) =>
+            IProcessService? processService = null,
+            IEnhancedLoggingService? enhancedLogger = null) =>
             new(
                 new FakePersistentProcessRuleStore(rules),
                 new PersistentProcessRuleMatcher(),
@@ -496,7 +681,8 @@ namespace ThreadPilot.Core.Tests
                 TimeSpan.FromSeconds(30),
                 audit,
                 priorityVerifier,
-                processService);
+                processService,
+                enhancedLogger);
 
         private static Mock<IPersistentRulesEngine> CreateEngine(
             PersistentProcessRule rule,

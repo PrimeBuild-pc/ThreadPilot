@@ -14,6 +14,99 @@ namespace ThreadPilot.Core.Tests
 
     public sealed class ProcessMonitorManagerServiceTests
     {
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Start_AppliesRulesToAlreadyRunningProcesses_AndRecoveryReevaluatesSnapshot(bool manual)
+        {
+            var process = new ProcessModel { ProcessId = 41, Name = "game" };
+            var monitor = new FakeProcessMonitorService();
+            monitor.RunningProcesses.Add(process);
+            var autoApply = CreateAutoApplyService();
+            using var manager = CreateService(
+                monitor,
+                CreateAssociationService(new ProcessMonitorConfiguration()),
+                CreatePowerPlanService(), CreateNotificationService(), CreateProcessService(),
+                CreateCoreMaskService(), CreateAffinityApplyService(), autoApply);
+
+            if (manual)
+            {
+                await manager.SetAutomationMonitoringEnabledAsync(true);
+            }
+            else
+            {
+                await manager.StartAsync();
+            }
+
+            autoApply.Verify(
+                x => x.ApplyForDiscoveredProcessesAsync(
+                It.Is<IEnumerable<ProcessModel>>(ps => ps.Any(p => p.ProcessId == 41)),
+                It.IsAny<CancellationToken>()), Times.Once);
+            autoApply.Verify(x => x.MarkProcessExited(41), Times.Once);
+            var applied = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            autoApply.Setup(x => x.ApplyForDiscoveredProcessesAsync(
+                It.Is<IEnumerable<ProcessModel>>(ps => ps.Any(p => p.ProcessId == 42)),
+                It.IsAny<CancellationToken>()))
+                .Callback(() => applied.TrySetResult())
+                .ReturnsAsync(Array.Empty<PersistentRuleAutoApplyResult>());
+            monitor.RunningProcesses.Add(new ProcessModel { ProcessId = 42, Name = "missed-during-sleep" });
+            monitor.RaiseSnapshotRefreshed();
+            await applied.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            autoApply.Verify(x => x.MarkProcessExited(41), Times.Exactly(2));
+            autoApply.Verify(x => x.MarkProcessExited(42), Times.Once);
+        }
+
+        [Fact]
+        public async Task StartAsync_WhenFileLoggingCannotInitialize_StillStartsMonitoring()
+        {
+            var monitor = new FakeProcessMonitorService();
+            var diagnostics = CreateEnhancedLogger();
+            diagnostics.Setup(x => x.InitializeAsync()).ThrowsAsync(new IOException("Log directory unavailable"));
+            using var manager = CreateService(
+                monitor,
+                CreateAssociationService(new ProcessMonitorConfiguration()),
+                CreatePowerPlanService(),
+                CreateNotificationService(),
+                CreateProcessService(),
+                CreateCoreMaskService(),
+                CreateAffinityApplyService(),
+                enhancedLogger: diagnostics);
+
+            await manager.StartAsync();
+
+            Assert.True(manager.IsRunning);
+            Assert.True(monitor.IsMonitoring);
+        }
+
+        [Fact]
+        public async Task StartAsync_InitializesPersistentLoggingBeforeMonitoring()
+        {
+            var monitor = new FakeProcessMonitorService();
+            var diagnostics = CreateEnhancedLogger();
+            var initialized = false;
+            diagnostics.Setup(x => x.InitializeAsync())
+                .Callback(() => initialized = true)
+                .Returns(Task.CompletedTask);
+            diagnostics.Setup(x => x.LogSystemEventAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<LogLevel>()))
+                .Callback(() => Assert.True(initialized))
+                .Returns(Task.CompletedTask);
+            using var manager = CreateService(
+                monitor,
+                CreateAssociationService(new ProcessMonitorConfiguration()),
+                CreatePowerPlanService(),
+                CreateNotificationService(),
+                CreateProcessService(),
+                CreateCoreMaskService(),
+                CreateAffinityApplyService(),
+                enhancedLogger: diagnostics);
+
+            await manager.StartAsync();
+
+            diagnostics.Verify(x => x.InitializeAsync(), Times.Once);
+            Assert.True(monitor.IsMonitoring);
+        }
+
         [Fact]
         public async Task StartAsync_LoadsConfiguration_AndStartsMonitoring()
         {
@@ -843,6 +936,42 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal(1, processMonitor.DisposeCalls);
         }
 
+        [Fact]
+        public async Task StopAsync_CancelsUnassociatedAutomationAndRestartGetsFreshLifetime()
+        {
+            var monitor = new FakeProcessMonitorService();
+            var automation = CreateAutoApplyService();
+            var tokens = new List<CancellationToken>();
+            automation.Setup(x => x.ApplyForProcessStartAsync(
+                It.IsAny<ProcessModel>(), It.IsAny<CancellationToken>()))
+                .Callback<ProcessModel, CancellationToken>((_, token) => tokens.Add(token))
+                .ReturnsAsync(Array.Empty<PersistentRuleAutoApplyResult>());
+            using var manager = CreateService(
+                monitor,
+                CreateAssociationService(new ProcessMonitorConfiguration()),
+                CreatePowerPlanService(),
+                CreateNotificationService(),
+                CreateProcessService(),
+                CreateCoreMaskService(),
+                CreateAffinityApplyService(),
+                automation);
+
+            await manager.StartAsync();
+            monitor.RaiseProcessStarted(new ProcessModel { ProcessId = 42, Name = "game" });
+            Assert.Single(tokens);
+            Assert.True(tokens[0].CanBeCanceled);
+            Assert.False(tokens[0].IsCancellationRequested);
+
+            await manager.StopAsync();
+            Assert.True(tokens[0].IsCancellationRequested);
+            await manager.StartAsync();
+            monitor.RaiseProcessStarted(new ProcessModel { ProcessId = 43, Name = "game" });
+            Assert.Equal(2, tokens.Count);
+            Assert.False(tokens[1].IsCancellationRequested);
+            await manager.StopAsync();
+            Assert.True(tokens[1].IsCancellationRequested);
+        }
+
         private static ProcessMonitorManagerService CreateService(
             FakeProcessMonitorService processMonitorService,
             Mock<IProcessPowerPlanAssociationService> associationService,
@@ -975,11 +1104,11 @@ namespace ThreadPilot.Core.Tests
 
             public event EventHandler<ProcessEventArgs>? ProcessStopped;
 
-            public event EventHandler<MonitoringStatusEventArgs>? MonitoringStatusChanged
-            {
-                add { }
-                remove { }
-            }
+            public event EventHandler<MonitoringStatusEventArgs>? MonitoringStatusChanged;
+
+            public void RaiseSnapshotRefreshed() => this.MonitoringStatusChanged?.Invoke(
+                this,
+                new MonitoringStatusEventArgs(true, true, false, snapshotRefreshed: true));
 
             public List<ProcessModel> RunningProcesses { get; } = new();
 
