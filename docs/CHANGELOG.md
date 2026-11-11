@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.7.9 - Saved rules recover after sleep
+
+- Recreate process monitoring after sleep/hibernation resume and session unlock, then rescan running processes and apply saved rules.
+- Recover stopped or silent WMI subscriptions automatically, with polling fallback and independent WMI retries when enabled.
+- Use the same monitoring startup path for app startup and manual Start; record monitoring recovery in diagnostics.
+- Retry path-based rule matching when a newly started process's executable path is temporarily unavailable.
+
 ## v1.7.8 - Game Boost, security hardening and a much lighter app
 
 - Stable release with everything from v1.7.8-beta.1 and v1.7.8-beta.2.

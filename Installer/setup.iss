@@ -11,7 +11,7 @@
 #endif
 
 #ifndef MyAppVersion
-	#define MyAppVersion "1.7.8"
+	#define MyAppVersion "1.7.9"
 #endif
 
 #ifndef MyAppSourceDir

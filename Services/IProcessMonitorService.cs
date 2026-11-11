@@ -54,13 +54,16 @@ namespace ThreadPilot.Services
 
         public Exception? Error { get; }
 
-        public MonitoringStatusEventArgs(bool isMonitoring, bool isWmiAvailable, bool isFallbackPollingActive, string? statusMessage = null, Exception? error = null)
+        public bool SnapshotRefreshed { get; }
+
+        public MonitoringStatusEventArgs(bool isMonitoring, bool isWmiAvailable, bool isFallbackPollingActive, string? statusMessage = null, Exception? error = null, bool snapshotRefreshed = false)
         {
             this.IsMonitoring = isMonitoring;
             this.IsWmiAvailable = isWmiAvailable;
             this.IsFallbackPollingActive = isFallbackPollingActive;
             this.StatusMessage = statusMessage;
             this.Error = error;
+            this.SnapshotRefreshed = snapshotRefreshed;
         }
     }
 }

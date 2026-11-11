@@ -480,6 +480,20 @@ namespace ThreadPilot.Services
 
         private void OnMonitoringStatusChanged(object? sender, MonitoringStatusEventArgs e)
         {
+            if (e.StatusMessage != null)
+            {
+                TaskSafety.FireAndForget(
+                    this.enhancedLogger.LogProcessMonitoringEventAsync(
+                    "MonitoringHealth", "ProcessMonitorService", 0, e.StatusMessage), ex =>
+                    this.logger.LogWarning(ex, "Could not persist monitoring health diagnostics"));
+            }
+
+            if (e.SnapshotRefreshed && this.isRunning)
+            {
+                TaskSafety.FireAndForget(this.EvaluateCurrentProcessesAsync(), ex =>
+                    this.logger.LogWarning(ex, "Could not apply rules after monitoring recovery"));
+            }
+
             var details = e.StatusMessage ?? (e.IsMonitoring ? "Monitoring active" : "Monitoring inactive");
             this.SetStatus(this.isRunning, $"Monitor: {details}", e.StatusMessage, e.Error);
         }

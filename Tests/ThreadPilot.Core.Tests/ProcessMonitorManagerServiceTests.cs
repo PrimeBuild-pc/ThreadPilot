@@ -14,6 +14,45 @@ namespace ThreadPilot.Core.Tests
 
     public sealed class ProcessMonitorManagerServiceTests
     {
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Start_AppliesRulesToAlreadyRunningProcesses_AndRecoveryReevaluatesSnapshot(bool manual)
+        {
+            var process = new ProcessModel { ProcessId = 41, Name = "game" };
+            var monitor = new FakeProcessMonitorService();
+            monitor.RunningProcesses.Add(process);
+            var autoApply = CreateAutoApplyService();
+            using var manager = CreateService(
+                monitor,
+                CreateAssociationService(new ProcessMonitorConfiguration()),
+                CreatePowerPlanService(), CreateNotificationService(), CreateProcessService(),
+                CreateCoreMaskService(), CreateAffinityApplyService(), autoApply);
+
+            if (manual)
+            {
+                await manager.SetAutomationMonitoringEnabledAsync(true);
+            }
+            else
+            {
+                await manager.StartAsync();
+            }
+
+            autoApply.Verify(
+                x => x.ApplyForDiscoveredProcessesAsync(
+                It.Is<IEnumerable<ProcessModel>>(ps => ps.Any(p => p.ProcessId == 41)),
+                It.IsAny<CancellationToken>()), Times.Once);
+            var applied = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            autoApply.Setup(x => x.ApplyForDiscoveredProcessesAsync(
+                It.Is<IEnumerable<ProcessModel>>(ps => ps.Any(p => p.ProcessId == 42)),
+                It.IsAny<CancellationToken>()))
+                .Callback(() => applied.TrySetResult())
+                .ReturnsAsync(Array.Empty<PersistentRuleAutoApplyResult>());
+            monitor.RunningProcesses.Add(new ProcessModel { ProcessId = 42, Name = "missed-during-sleep" });
+            monitor.RaiseSnapshotRefreshed();
+            await applied.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        }
+
         [Fact]
         public async Task StartAsync_WhenFileLoggingCannotInitialize_StillStartsMonitoring()
         {
@@ -1062,11 +1101,11 @@ namespace ThreadPilot.Core.Tests
 
             public event EventHandler<ProcessEventArgs>? ProcessStopped;
 
-            public event EventHandler<MonitoringStatusEventArgs>? MonitoringStatusChanged
-            {
-                add { }
-                remove { }
-            }
+            public event EventHandler<MonitoringStatusEventArgs>? MonitoringStatusChanged;
+
+            public void RaiseSnapshotRefreshed() => this.MonitoringStatusChanged?.Invoke(
+                this,
+                new MonitoringStatusEventArgs(true, true, false, snapshotRefreshed: true));
 
             public List<ProcessModel> RunningProcesses { get; } = new();
 
