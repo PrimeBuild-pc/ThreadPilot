@@ -42,6 +42,7 @@ namespace ThreadPilot.Core.Tests
                 x => x.ApplyForDiscoveredProcessesAsync(
                 It.Is<IEnumerable<ProcessModel>>(ps => ps.Any(p => p.ProcessId == 41)),
                 It.IsAny<CancellationToken>()), Times.Once);
+            autoApply.Verify(x => x.MarkProcessExited(41), Times.Once);
             var applied = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             autoApply.Setup(x => x.ApplyForDiscoveredProcessesAsync(
                 It.Is<IEnumerable<ProcessModel>>(ps => ps.Any(p => p.ProcessId == 42)),
@@ -51,6 +52,8 @@ namespace ThreadPilot.Core.Tests
             monitor.RunningProcesses.Add(new ProcessModel { ProcessId = 42, Name = "missed-during-sleep" });
             monitor.RaiseSnapshotRefreshed();
             await applied.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            autoApply.Verify(x => x.MarkProcessExited(41), Times.Exactly(2));
+            autoApply.Verify(x => x.MarkProcessExited(42), Times.Once);
         }
 
         [Fact]

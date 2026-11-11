@@ -163,7 +163,7 @@ namespace ThreadPilot.Services
             }
 
             // Evaluate current processes after startup lock is released
-            await this.EvaluateCurrentProcessesAsync();
+            await this.EvaluateCurrentProcessesAsync(resetRuleAttempts: true);
         }
 
         public async Task StopAsync()
@@ -230,7 +230,9 @@ namespace ThreadPilot.Services
             await this.settingsService.UpdateSettingsAsync(settings);
         }
 
-        public async Task EvaluateCurrentProcessesAsync()
+        public Task EvaluateCurrentProcessesAsync() => this.EvaluateCurrentProcessesAsync(resetRuleAttempts: false);
+
+        private async Task EvaluateCurrentProcessesAsync(bool resetRuleAttempts)
         {
             if (!this.isRunning || this.configuration == null)
             {
@@ -240,6 +242,16 @@ namespace ThreadPilot.Services
             try
             {
                 var currentProcesses = (await this.processMonitorService.GetRunningProcessesAsync()).ToList();
+                if (resetRuleAttempts)
+                {
+                    // A fresh monitoring lifetime or resume must also reapply rules after a short sleep,
+                    // even if the last application is still inside the normal duplicate-event cooldown.
+                    foreach (var process in currentProcesses)
+                    {
+                        this.persistentRuleAutoApplyService.MarkProcessExited(process.ProcessId);
+                    }
+                }
+
                 await this.ApplyPersistentRulesForDiscoveredProcessesAsync(currentProcesses);
                 var associatedProcesses = new List<ProcessModel>();
                 var currentProcessIds = new HashSet<int>(currentProcesses.Select(p => p.ProcessId));
@@ -490,7 +502,7 @@ namespace ThreadPilot.Services
 
             if (e.SnapshotRefreshed && this.isRunning)
             {
-                TaskSafety.FireAndForget(this.EvaluateCurrentProcessesAsync(), ex =>
+                TaskSafety.FireAndForget(this.EvaluateCurrentProcessesAsync(resetRuleAttempts: true), ex =>
                     this.logger.LogWarning(ex, "Could not apply rules after monitoring recovery"));
             }
 
