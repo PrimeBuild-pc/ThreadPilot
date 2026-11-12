@@ -233,8 +233,7 @@
                                                 <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                           FontSize="11"
                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                                          MinWidth="60"
-                                                          AutomationProperties.Name="{Binding Content.Text, RelativeSource={RelativeSource Self}}">
+                                                          MinWidth="60">
                                                     <CheckBox.Content>
                                                         <TextBlock>
                                                             <Run Text="{DynamicResource MasksView_Cpu}"/>
