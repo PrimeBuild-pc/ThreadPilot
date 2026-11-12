@@ -54,6 +54,16 @@
     <sys:String x:Key="LogViewerView_ExportActivity">Экспортировать журнал</sys:String>
     <sys:String x:Key="LogViewerView_CleanupDiagnostics">Очистка диагностических файлов</sys:String>
     <sys:String x:Key="LogViewerView_OpenFolder">Открыть папку диагностики</sys:String>
+    <sys:String x:Key="LogViewerView_SearchAutomationName">Поиск записей журнала</sys:String>
+    <sys:String x:Key="LogViewerView_CategoryFilterAutomationName">Фильтр по категории</sys:String>
+    <sys:String x:Key="LogViewerView_LevelFilterAutomationName">Фильтр по уровню журнала</sys:String>
+    <sys:String x:Key="LogViewerView_FromDateAutomationName">Начальная дата записей журнала</sys:String>
+    <sys:String x:Key="LogViewerView_ToDateAutomationName">Конечная дата записей журнала</sys:String>
+    <sys:String x:Key="LogViewerView_RefreshAutomationName">Обновить записи журнала</sys:String>
+    <sys:String x:Key="LogViewerView_EntryListAutomationName">Записи журнала действий</sys:String>
+    <sys:String x:Key="LogViewerView_DetailsSplitterAutomationName">Изменить размер панели сведений о действиях</sys:String>
+    <sys:String x:Key="LogViewerView_MessageAutomationName">Сообщение выбранной записи журнала</sys:String>
+    <sys:String x:Key="LogViewerView_DetailsAutomationName">Сведения о выбранной записи журнала</sys:String>
 
     <!-- LogViewerView Grid Headers -->
     <sys:String x:Key="LogViewerView_HeaderTime">Время</sys:String>
@@ -103,6 +113,12 @@
     <sys:String x:Key="MasksView_CpusHeader">CPUs</sys:String>
     <sys:String x:Key="MasksView_Cpu">CPU</sys:String>
     <sys:String x:Key="MasksView_Options">Параметры маски</sys:String>
+    <sys:String x:Key="MasksView_CreateMaskAutomationName">Создать маску CPU</sys:String>
+    <sys:String x:Key="MasksView_DeleteMaskAutomationName">Удалить выбранную маску CPU</sys:String>
+    <sys:String x:Key="MasksView_MaskListAutomationName">Предустановки масок CPU</sys:String>
+    <sys:String x:Key="MasksView_MaskListSplitterAutomationName">Изменить размер списка масок и редактора</sys:String>
+    <sys:String x:Key="MasksView_MaskNameAutomationName">Имя маски CPU</sys:String>
+    <sys:String x:Key="MasksView_MaskDescriptionAutomationName">Описание маски CPU</sys:String>
 
     <!-- PerformanceView -->
     <sys:String x:Key="PerformanceView_OptionalDiagnostics">Дополнительная диагностика</sys:String>

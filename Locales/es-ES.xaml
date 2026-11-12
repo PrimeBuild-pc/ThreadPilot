@@ -54,6 +54,16 @@
     <sys:String x:Key="LogViewerView_ExportActivity">Exportar actividad</sys:String>
     <sys:String x:Key="LogViewerView_CleanupDiagnostics">Limpiar archivos de diagnóstico</sys:String>
     <sys:String x:Key="LogViewerView_OpenFolder">Abrir carpeta de diagnóstico</sys:String>
+    <sys:String x:Key="LogViewerView_SearchAutomationName">Buscar entradas del registro</sys:String>
+    <sys:String x:Key="LogViewerView_CategoryFilterAutomationName">Filtrar por categoría</sys:String>
+    <sys:String x:Key="LogViewerView_LevelFilterAutomationName">Filtrar por nivel del registro</sys:String>
+    <sys:String x:Key="LogViewerView_FromDateAutomationName">Fecha inicial de las entradas</sys:String>
+    <sys:String x:Key="LogViewerView_ToDateAutomationName">Fecha final de las entradas</sys:String>
+    <sys:String x:Key="LogViewerView_RefreshAutomationName">Actualizar entradas del registro</sys:String>
+    <sys:String x:Key="LogViewerView_EntryListAutomationName">Entradas del registro de actividad</sys:String>
+    <sys:String x:Key="LogViewerView_DetailsSplitterAutomationName">Cambiar el tamaño del panel de detalles de actividad</sys:String>
+    <sys:String x:Key="LogViewerView_MessageAutomationName">Mensaje de la entrada seleccionada</sys:String>
+    <sys:String x:Key="LogViewerView_DetailsAutomationName">Detalles de la entrada seleccionada</sys:String>
 
     <!-- LogViewerView Grid Headers -->
     <sys:String x:Key="LogViewerView_HeaderTime">tiempo</sys:String>
@@ -103,6 +113,12 @@
     <sys:String x:Key="MasksView_CpusHeader">CPUs</sys:String>
     <sys:String x:Key="MasksView_Cpu">CPU</sys:String>
     <sys:String x:Key="MasksView_Options">Opciones de máscara</sys:String>
+    <sys:String x:Key="MasksView_CreateMaskAutomationName">Crear una nueva máscara de CPU</sys:String>
+    <sys:String x:Key="MasksView_DeleteMaskAutomationName">Eliminar la máscara de CPU seleccionada</sys:String>
+    <sys:String x:Key="MasksView_MaskListAutomationName">Preajustes de máscaras de CPU</sys:String>
+    <sys:String x:Key="MasksView_MaskListSplitterAutomationName">Cambiar el tamaño de la lista de máscaras y el editor</sys:String>
+    <sys:String x:Key="MasksView_MaskNameAutomationName">Nombre de la máscara de CPU</sys:String>
+    <sys:String x:Key="MasksView_MaskDescriptionAutomationName">Descripción de la máscara de CPU</sys:String>
 
     <!-- PerformanceView -->
     <sys:String x:Key="PerformanceView_OptionalDiagnostics">Diagnóstico opcional</sys:String>

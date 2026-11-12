@@ -54,6 +54,16 @@
     <sys:String x:Key="LogViewerView_ExportActivity">Export Activity</sys:String>
     <sys:String x:Key="LogViewerView_CleanupDiagnostics">Cleanup Diagnostic Files</sys:String>
     <sys:String x:Key="LogViewerView_OpenFolder">Open Diagnostic Folder</sys:String>
+    <sys:String x:Key="LogViewerView_SearchAutomationName">Search log entries</sys:String>
+    <sys:String x:Key="LogViewerView_CategoryFilterAutomationName">Filter by category</sys:String>
+    <sys:String x:Key="LogViewerView_LevelFilterAutomationName">Filter by log level</sys:String>
+    <sys:String x:Key="LogViewerView_FromDateAutomationName">Start date for log entries</sys:String>
+    <sys:String x:Key="LogViewerView_ToDateAutomationName">End date for log entries</sys:String>
+    <sys:String x:Key="LogViewerView_RefreshAutomationName">Refresh log entries</sys:String>
+    <sys:String x:Key="LogViewerView_EntryListAutomationName">Activity log entries</sys:String>
+    <sys:String x:Key="LogViewerView_DetailsSplitterAutomationName">Resize activity details panel</sys:String>
+    <sys:String x:Key="LogViewerView_MessageAutomationName">Selected log entry message</sys:String>
+    <sys:String x:Key="LogViewerView_DetailsAutomationName">Selected log entry details</sys:String>
     
     <!-- LogViewerView Grid Headers -->
     <sys:String x:Key="LogViewerView_HeaderTime">Time</sys:String>
@@ -103,6 +113,12 @@
     <sys:String x:Key="MasksView_CpusHeader">CPUs</sys:String>
     <sys:String x:Key="MasksView_Cpu">CPU</sys:String>
     <sys:String x:Key="MasksView_Options">Mask Options</sys:String>
+    <sys:String x:Key="MasksView_CreateMaskAutomationName">Create new CPU mask</sys:String>
+    <sys:String x:Key="MasksView_DeleteMaskAutomationName">Delete selected CPU mask</sys:String>
+    <sys:String x:Key="MasksView_MaskListAutomationName">CPU mask presets</sys:String>
+    <sys:String x:Key="MasksView_MaskListSplitterAutomationName">Resize mask list and editor</sys:String>
+    <sys:String x:Key="MasksView_MaskNameAutomationName">CPU mask name</sys:String>
+    <sys:String x:Key="MasksView_MaskDescriptionAutomationName">CPU mask description</sys:String>
 
     <!-- PerformanceView -->
     <sys:String x:Key="PerformanceView_OptionalDiagnostics">Optional Diagnostics</sys:String>
