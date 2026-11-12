@@ -30,13 +30,9 @@
 
 </div>
 
-<p align="center"><img src="docs/media/threadpilot-demo.gif" alt="ThreadPilot demo: CPU masks, saved rules, activity log and Windows tweaks" width="860"></p>
+<p align="center"><a href="assets/screenshots/overview-themes.png"><img src="assets/screenshots/overview-themes.png" alt="ThreadPilot v1.7.9: the Processes page in dark and light themes" width="900"></a></p>
 
-<p align="center"><sub>Real screen recording of v1.7.9: CPU masks, saved rules, Activity and Tweaks.</sub></p>
-
-<a href="assets/screenshots/overview-themes.png"><img width="1600" height="960" alt="ThreadPilot 1.7.8-beta.1: the current Processes interface in dark and light themes" src="assets/screenshots/overview-themes.png"></a>
-
-<p align="center"><sub>Real dark/light screenshots of the interface. <a href="assets/screenshots/processes-dark.png">View dark</a> · <a href="assets/screenshots/processes-light.png">View light</a></sub></p>
+<p align="center"><sub>ThreadPilot v1.7.9, real screenshot in dark and light themes. More in the <a href="#-screenshots">gallery</a>.</sub></p>
 
 ## What is ThreadPilot?
 
@@ -140,24 +136,23 @@ Compare the result with `SHA256SUMS.txt` from the same release.
 
 ## 🖼️ Screenshots
 
-Captured from the official **v1.7.8-beta.1** installer in a Windows 11 test VM, using real UI and a sample Notepad rule. These are interface examples, not performance benchmarks. Click any image for full resolution.
+Real captures of ThreadPilot v1.7.9 (see [`assets/screenshots/README.md`](assets/screenshots/README.md)). They show the interface, not benchmarks. Click a thumbnail for the full-size image.
 
 <table>
   <tr>
-    <td width="50%"><a href="assets/screenshots/processes-dark.png"><img src="assets/screenshots/processes-dark.png" alt="Processes in dark theme: selected process, CPU/memory/I/O priority, efficiency mode and core selection" width="800"></a><br><strong>Processes · Dark</strong><br>Live processes, priorities, EcoQoS and CPU cores.</td>
-    <td width="50%"><a href="assets/screenshots/cpu-masks-light.png"><img src="assets/screenshots/cpu-masks-light.png" alt="CPU masks in light theme: reusable masks and the per-core editor" width="800"></a><br><strong>CPU masks · Light</strong><br>Reusable core selections for processes and rules.</td>
+    <td align="center" width="33%"><a href="docs/media/threadpilot-demo.gif"><img src="docs/media/threadpilot-demo.gif" alt="Demo: masks, rules, activity and tweaks" width="260"></a><br><sub>Demo</sub></td>
+    <td align="center" width="33%"><a href="assets/screenshots/processes-dark.png"><img src="assets/screenshots/processes-dark.png" alt="Processes in dark theme with priority, efficiency mode and core selection" width="260"></a><br><sub>Processes · Dark</sub></td>
+    <td align="center" width="33%"><a href="assets/screenshots/processes-light.png"><img src="assets/screenshots/processes-light.png" alt="Processes in light theme" width="260"></a><br><sub>Processes · Light</sub></td>
   </tr>
   <tr>
-    <td><a href="assets/screenshots/power-plans-light.png"><img src="assets/screenshots/power-plans-light.png" alt="Power plans in light theme: installed Windows plans and custom power plan import" width="800"></a><br><strong>Power plans · Light</strong><br>Windows plans and custom .pow imports.</td>
-    <td><a href="assets/screenshots/rules-dark.png"><img src="assets/screenshots/rules-dark.png" alt="Process rules in dark theme: a saved Notepad rule selected in the editor" width="800"></a><br><strong>Process rules · Dark</strong><br>Saved settings and the rule editor.</td>
+    <td align="center" width="33%"><a href="assets/screenshots/cpu-masks-light.png"><img src="assets/screenshots/cpu-masks-light.png" alt="CPU masks: reusable core selections and the per-core editor" width="260"></a><br><sub>CPU masks</sub></td>
+    <td align="center" width="33%"><a href="assets/screenshots/rules-dark.png"><img src="assets/screenshots/rules-dark.png" alt="Rules: a saved Notepad rule in the editor" width="260"></a><br><sub>Rules</sub></td>
+    <td align="center" width="33%"><a href="assets/screenshots/power-plans-light.png"><img src="assets/screenshots/power-plans-light.png" alt="Power plans: Windows plans and custom .pow import" width="260"></a><br><sub>Power plans</sub></td>
   </tr>
   <tr>
-    <td><a href="assets/screenshots/game-boost-dark.png"><img src="assets/screenshots/game-boost-dark.png" alt="Tweaks in dark theme with the Game Boost card, shown off by default" width="800"></a><br><strong>Game Boost overview · Dark</strong><br>Opt-in controls alongside Windows tweaks.</td>
-    <td><a href="assets/screenshots/game-boost-light.png"><img src="assets/screenshots/game-boost-light.png" alt="Game Boost in light theme, enabled in the test VM with game/background app lists expanded and unsupported CPU fallback shown" width="800"></a><br><strong>Game Boost configuration · Light</strong><br>Game lists, exclusions and selected background apps.</td>
-  </tr>
-  <tr>
-    <td><a href="assets/screenshots/activity-light.png"><img src="assets/screenshots/activity-light.png" alt="Activity in light theme: real settings and saved-rule events with filters and export" width="800"></a><br><strong>Activity · Light</strong><br>Changes, results, filters and export.</td>
-    <td><a href="assets/screenshots/settings-dark.png"><img src="assets/screenshots/settings-dark.png" alt="Settings in dark theme: startup, language, theme, automation and CPU assignment preferences" width="800"></a><br><strong>Settings · Dark</strong><br>Startup, language, theme and automation preferences.</td>
+    <td align="center" width="33%"><a href="assets/screenshots/activity-light.png"><img src="assets/screenshots/activity-light.png" alt="Activity: changes and results with filters and export" width="260"></a><br><sub>Activity</sub></td>
+    <td align="center" width="33%"><a href="assets/screenshots/game-boost-dark.png"><img src="assets/screenshots/game-boost-dark.png" alt="Tweaks with the Game Boost card, off by default" width="260"></a><br><sub>Game Boost · off by default</sub></td>
+    <td align="center" width="33%"><a href="assets/screenshots/settings-dark.png"><img src="assets/screenshots/settings-dark.png" alt="Settings: startup, language, theme and automation" width="260"></a><br><sub>Settings</sub></td>
   </tr>
 </table>
 

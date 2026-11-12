@@ -51,6 +51,8 @@ ThreadPilot gives Windows 11 users precise control over how apps use the CPU. It
 | Rules | [rules-dark.png](https://raw.githubusercontent.com/PrimeBuild-pc/ThreadPilot/main/assets/screenshots/rules-dark.png) |
 | Activity log | [activity-light.png](https://raw.githubusercontent.com/PrimeBuild-pc/ThreadPilot/main/assets/screenshots/activity-light.png) |
 | Power plans | [power-plans-light.png](https://raw.githubusercontent.com/PrimeBuild-pc/ThreadPilot/main/assets/screenshots/power-plans-light.png) |
+| Game Boost (off by default) | [game-boost-dark.png](https://raw.githubusercontent.com/PrimeBuild-pc/ThreadPilot/main/assets/screenshots/game-boost-dark.png) |
+| Settings | [settings-dark.png](https://raw.githubusercontent.com/PrimeBuild-pc/ThreadPilot/main/assets/screenshots/settings-dark.png) |
 | App icon | [ico.ico](https://raw.githubusercontent.com/PrimeBuild-pc/ThreadPilot/main/assets/icons/ico.ico) |
 
 ## Contact
