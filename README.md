@@ -1,7 +1,7 @@
 <div align="center">
   <img src="assets/icons/ico.ico" alt="ThreadPilot app icon" width="128">
   <h1>ThreadPilot ✈️</h1>
-  <p><strong>A free, open-source Windows process control center for deterministic CPU, priority, memory and power-plan workflows.</strong></p>
+  <p><strong>Free, open-source CPU scheduling control for Windows 11: CPU Sets, priorities and saved rules, with no limits or nags.</strong><br>Built for the CPUs where scheduling matters: Intel hybrid and AMD X3D / multi-CCD.</p>
   <p>
     <a href="https://github.com/PrimeBuild-pc/ThreadPilot/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/PrimeBuild-pc/ThreadPilot?style=plastic&amp;logo=git&amp;logoColor=white"></a>
     <a href="https://github.com/PrimeBuild-pc/ThreadPilot/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/PrimeBuild-pc/ThreadPilot?style=plastic&amp;logo=github"></a>
@@ -21,9 +21,18 @@
     <a href="Locales/"><img alt="Seven interface languages" src="https://img.shields.io/badge/UI%20languages-7-5B5FC7?style=plastic&amp;logo=googletranslate&amp;logoColor=white"></a>
     <a href="LICENSE"><img alt="AGPL v3 license" src="https://img.shields.io/badge/license-AGPLv3-2ea44f?style=plastic"></a>
   </p>
-  <p><a href="#-install">Install</a> · <a href="#-features">Features</a> · <a href="#-screenshots">Screenshots</a> · <a href="#-build-from-source">Build</a> · <a href="#-support-the-project">Support</a></p>
+  <p>
+    <a href="https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest"><img alt="Download the latest release" src="https://img.shields.io/badge/Download-Latest%20release-2ea44f?style=for-the-badge&amp;logo=github"></a>
+    <a href="#install-with-winget"><img alt="Install with WinGet" src="https://img.shields.io/badge/WinGet-PrimeBuild.ThreadPilot-0078D4?style=for-the-badge&amp;logo=windows&amp;logoColor=white"></a>
+    <a href="#install-with-chocolatey"><img alt="Install with Chocolatey" src="https://img.shields.io/badge/Chocolatey-threadpilot-80B5E3?style=for-the-badge&amp;logo=chocolatey&amp;logoColor=white"></a>
+  </p>
+  <p><a href="#-install">Install</a> · <a href="#-features">Features</a> · <a href="#-how-it-compares">How it compares</a> · <a href="#-screenshots">Screenshots</a> · <a href="#-faq">FAQ</a> · <a href="#-build-from-source">Build</a> · <a href="#-support-the-project">Support</a></p>
 
 </div>
+
+<p align="center"><img src="docs/media/threadpilot-demo.gif" alt="ThreadPilot demo: CPU masks, saved rules, activity log and Windows tweaks" width="860"></p>
+
+<p align="center"><sub>Real screen recording of v1.7.9: CPU masks, saved rules, Activity and Tweaks.</sub></p>
 
 <a href="assets/screenshots/overview-themes.png"><img width="1600" height="960" alt="ThreadPilot 1.7.8-beta.1: the current Processes interface in dark and light themes" src="assets/screenshots/overview-themes.png"></a>
 
@@ -34,6 +43,27 @@
 ThreadPilot is a modern Windows process control center for users who want predictable control over process behavior, CPU affinity, CPU Sets, priority, memory priority, power plans, and saved process rules.
 
 It is designed as an open-source alternative for power users who need Process Lasso-style capabilities, automation support, system tray controls, and a Windows 11-first experience. ThreadPilot is not a performance overlay: its primary job is applying explicit process controls safely and making the result visible.
+
+## ⚖️ How it compares
+
+ThreadPilot started as an open-source alternative to [Process Lasso](https://bitsum.com/). Here is the honest version of how they differ. Check each product's own site for its current features and pricing.
+
+**What ThreadPilot does**
+
+- Open source (AGPL-3.0) and free, with no feature limits and no nag screens. The code is here, so you can check.
+- CPU Sets support and topology-aware core selection, including processor groups and more than 64 logical processors; Intel hybrid handling comes from Windows topology (`EfficiencyClass`), not hardcoded CPU lists.
+- Saved rules are shown in an editor you can read, and every change lands in an Activity log with filters and export.
+- Windows 11 Fluent interface, seven UI languages, plus a Tweaks page for a few basic Windows performance settings.
+- No telemetry ([`PRIVACY.md`](docs/PRIVACY.md)). Updated through WinGet and Chocolatey.
+
+**What it does not do (yet)**
+
+- It applies the rules you set. It has no automatic responsiveness management like Process Lasso's ProBalance.
+- Saved rules apply only while ThreadPilot is running: no Windows service, no registry or IFEO persistence.
+- Windows 11 only (build 22000 or newer), and it always asks for administrator rights.
+- Releases are unsigned for now, so SmartScreen may warn ([details](#-faq)).
+- Game Boost is still unvalidated on real dual-CCD Ryzen and Intel hybrid CPUs.
+- Process Lasso is the older, more established tool with a much longer track record. ThreadPilot is younger and moves fast.
 
 ## ✨ Features
 
@@ -90,7 +120,7 @@ choco upgrade threadpilot
 ### Download from GitHub Releases
 
 [![Download Latest Stable](https://img.shields.io/badge/Download-Latest%20Stable-2ea44f?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest)
-**Stable v1.7.8 includes Game Boost** (off by default). It is not yet validated on real dual-CCD Ryzen and Intel hybrid CPUs; if you have one, see the [test steps and issue-reporting checklist](docs/releases/v1.7.8.md#help-us-test-dual-ccd-ryzen-and-intel-hybrid).
+**Stable releases include Game Boost** (off by default). It is not yet validated on real dual-CCD Ryzen and Intel hybrid CPUs; if you have one, see the [test steps and issue-reporting checklist](docs/releases/v1.7.8.md#help-us-test-dual-ccd-ryzen-and-intel-hybrid).
 
 Both channels use the same application/settings location. Export a configuration backup before switching; they are not separate side-by-side installations.
 
@@ -130,6 +160,47 @@ Captured from the official **v1.7.8-beta.1** installer in a Windows 11 test VM, 
     <td><a href="assets/screenshots/settings-dark.png"><img src="assets/screenshots/settings-dark.png" alt="Settings in dark theme: startup, language, theme, automation and CPU assignment preferences" width="800"></a><br><strong>Settings · Dark</strong><br>Startup, language, theme and automation preferences.</td>
   </tr>
 </table>
+
+## ❓ FAQ
+
+<details>
+<summary><strong>Windows SmartScreen warns me when I run the installer. Is it safe?</strong></summary>
+
+Releases are currently unsigned, so SmartScreen may warn on first launch. A free code-signing application with SignPath Foundation is pending. Until then, compare the file's SHA-256 with `SHA256SUMS.txt` on the same release page (commands in [Install](#download-from-github-releases)), and only then use **More info → Run anyway**. The code is public and CI builds the releases. See [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
+</details>
+
+<details>
+<summary><strong>Why does it need administrator rights?</strong></summary>
+
+The app manifest requests elevation so ThreadPilot can change settings of other processes. If you decline the UAC prompt, the app exits instead of running in a limited mode.
+</details>
+
+<details>
+<summary><strong>Will it get me banned by an anti-cheat?</strong></summary>
+
+ThreadPilot uses standard Windows APIs (CPU Sets, priority, EcoQoS) and does not inject into other processes. It does not bypass anti-cheat or protected-process restrictions, and we have not tested it against specific anti-cheat systems. If a game's rules forbid touching its process, leave that game alone: the Game Boost feature is off by default for this reason too.
+</details>
+
+<details>
+<summary><strong>How do I undo a change?</strong></summary>
+
+- **A process change:** on the Processes page, use **Undo last change**.
+- **A saved rule:** disable or delete it on the Rules page.
+- **Game Boost:** turn it off in Tweaks. It also restores its changes when the game closes.
+- **Everything:** priority, CPU Sets and efficiency mode set on a running process do not survive the process exiting. Use **Settings → Export Configuration** before big changes to keep a backup.
+</details>
+
+<details>
+<summary><strong>Does it keep working when ThreadPilot is closed?</strong></summary>
+
+No. Saved rules apply only while ThreadPilot is running. It installs no Windows service and writes no registry or IFEO persistence. Use the tray icon and the `--start-minimized` / `--autostart` arguments to keep it in the background.
+</details>
+
+<details>
+<summary><strong>Does it collect data?</strong></summary>
+
+No analytics or telemetry. See [`docs/PRIVACY.md`](docs/PRIVACY.md).
+</details>
 
 ## ⚙️ Requirements
 
