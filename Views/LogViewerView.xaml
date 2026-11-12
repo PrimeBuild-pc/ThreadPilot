@@ -93,15 +93,18 @@
                     </Grid.ColumnDefinitions>
 
                     <TextBlock Grid.Column="0" Text="{DynamicResource LogViewerView_Search}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBox Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBox Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             AutomationProperties.Name="{DynamicResource LogViewerView_SearchAutomationName}"/>
 
                     <TextBlock Grid.Column="3" Text="{DynamicResource LogViewerView_CategoryLabel}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <ComboBox Grid.Column="4" ItemsSource="{Binding AvailableCategories}"
-                              SelectedItem="{Binding SelectedCategory}" HorizontalAlignment="Stretch"/>
+                              SelectedItem="{Binding SelectedCategory}" HorizontalAlignment="Stretch"
+                              AutomationProperties.Name="{DynamicResource LogViewerView_CategoryFilterAutomationName}"/>
 
                     <TextBlock Grid.Column="6" Text="{DynamicResource LogViewerView_LevelLabel}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <ComboBox Grid.Column="7" ItemsSource="{Binding AvailableLogLevels}"
-                              SelectedItem="{Binding SelectedLogLevel}" HorizontalAlignment="Stretch"/>
+                              SelectedItem="{Binding SelectedLogLevel}" HorizontalAlignment="Stretch"
+                              AutomationProperties.Name="{DynamicResource LogViewerView_LevelFilterAutomationName}"/>
                 </Grid>
 
                 <!-- Filters Row 2 -->
@@ -115,15 +118,18 @@
                     </Grid.ColumnDefinitions>
 
                     <TextBlock Grid.Column="0" Text="{DynamicResource LogViewerView_From}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <DatePicker Grid.Column="1" SelectedDate="{Binding FromDate}" HorizontalAlignment="Stretch"/>
+                    <DatePicker Grid.Column="1" SelectedDate="{Binding FromDate}" HorizontalAlignment="Stretch"
+                                AutomationProperties.Name="{DynamicResource LogViewerView_FromDateAutomationName}"/>
 
                     <TextBlock Grid.Column="3" Text="{DynamicResource LogViewerView_To}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <DatePicker Grid.Column="4" SelectedDate="{Binding ToDate}" HorizontalAlignment="Stretch"/>
+                    <DatePicker Grid.Column="4" SelectedDate="{Binding ToDate}" HorizontalAlignment="Stretch"
+                                AutomationProperties.Name="{DynamicResource LogViewerView_ToDateAutomationName}"/>
                 </Grid>
 
                 <!-- Action Buttons -->
                 <StackPanel Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
-                    <Button Content="{DynamicResource LogViewerView_Refresh}" Command="{Binding RefreshLogsCommand}" Margin="5,0">
+                    <Button Content="{DynamicResource LogViewerView_Refresh}" Command="{Binding RefreshLogsCommand}" Margin="5,0"
+                            AutomationProperties.Name="{DynamicResource LogViewerView_RefreshAutomationName}">
                         <Button.IsEnabled>
                             <Binding Path="IsLoading">
                                 <Binding.Converter>
@@ -132,10 +138,14 @@
                             </Binding>
                         </Button.IsEnabled>
                     </Button>
-                    <Button Content="{DynamicResource LogViewerView_ClearDisplay}" Command="{Binding ClearLogsCommand}" Margin="5,0"/>
-                    <Button Content="{DynamicResource LogViewerView_ExportActivity}" Command="{Binding ExportLogsCommand}" Margin="5,0"/>
-                    <Button Content="{DynamicResource LogViewerView_CleanupDiagnostics}" Command="{Binding CleanupOldLogsCommand}" Margin="5,0"/>
-                    <Button Content="{DynamicResource LogViewerView_OpenFolder}" Command="{Binding OpenLogDirectoryCommand}" Margin="5,0"/>
+                    <Button Content="{DynamicResource LogViewerView_ClearDisplay}" Command="{Binding ClearLogsCommand}" Margin="5,0"
+                            AutomationProperties.Name="{DynamicResource LogViewerView_ClearDisplay}"/>
+                    <Button Content="{DynamicResource LogViewerView_ExportActivity}" Command="{Binding ExportLogsCommand}" Margin="5,0"
+                            AutomationProperties.Name="{DynamicResource LogViewerView_ExportActivity}"/>
+                    <Button Content="{DynamicResource LogViewerView_CleanupDiagnostics}" Command="{Binding CleanupOldLogsCommand}" Margin="5,0"
+                            AutomationProperties.Name="{DynamicResource LogViewerView_CleanupDiagnostics}"/>
+                    <Button Content="{DynamicResource LogViewerView_OpenFolder}" Command="{Binding OpenLogDirectoryCommand}" Margin="5,0"
+                            AutomationProperties.Name="{DynamicResource LogViewerView_OpenFolder}"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -151,7 +161,8 @@
                       VirtualizingPanel.IsVirtualizing="True"
                       VirtualizingPanel.VirtualizationMode="Recycling"
                       VirtualizingPanel.ScrollUnit="Item"
-                      ScrollViewer.CanContentScroll="True">
+                      ScrollViewer.CanContentScroll="True"
+                      AutomationProperties.Name="{DynamicResource LogViewerView_EntryListAutomationName}">
                 <ListView.View>
                     <GridView ColumnHeaderContainerStyle="{StaticResource LogGridViewHeaderStyle}">
                     <GridViewColumn Header="{DynamicResource LogViewerView_HeaderTime}" Width="150">
@@ -222,9 +233,11 @@
                 <ListView.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="{DynamicResource LogViewerView_ContextMenuCopy}" Command="{Binding CopyLogEntryCommand}"
-                                  CommandParameter="{Binding SelectedLogEntry}"/>
+                                  CommandParameter="{Binding SelectedLogEntry}"
+                                  AutomationProperties.Name="{DynamicResource LogViewerView_ContextMenuCopy}"/>
                         <Separator/>
-                        <MenuItem Header="{DynamicResource LogViewerView_ContextMenuRefresh}" Command="{Binding RefreshLogsCommand}"/>
+                        <MenuItem Header="{DynamicResource LogViewerView_ContextMenuRefresh}" Command="{Binding RefreshLogsCommand}"
+                                  AutomationProperties.Name="{DynamicResource LogViewerView_RefreshAutomationName}"/>
                     </ContextMenu>
                 </ListView.ContextMenu>
             </ListView>
@@ -259,7 +272,8 @@
 
         <!-- Splitter -->
         <GridSplitter Grid.Row="3" Height="5" HorizontalAlignment="Stretch"
-                      Background="{DynamicResource SurfaceStrokeColorDefaultBrush}" ResizeBehavior="PreviousAndNext"/>
+                      Background="{DynamicResource SurfaceStrokeColorDefaultBrush}" ResizeBehavior="PreviousAndNext"
+                      AutomationProperties.Name="{DynamicResource LogViewerView_DetailsSplitterAutomationName}"/>
 
         <!-- Activity Details -->
         <Border Grid.Row="4" Background="{DynamicResource SolidBackgroundFillColorBaseBrush}" BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
@@ -303,7 +317,8 @@
                         <TextBlock Grid.Row="3" Grid.Column="0" Text="{DynamicResource LogViewerView_Message}" FontWeight="SemiBold" Margin="0,0,10,5" VerticalAlignment="Top"/>
                         <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Message, Mode=OneWay}"
                                  IsReadOnly="True" TextWrapping="Wrap" Background="Transparent"
-                                 BorderThickness="0" Margin="0,0,0,10"/>
+                                 BorderThickness="0" Margin="0,0,0,10"
+                                 AutomationProperties.Name="{DynamicResource LogViewerView_MessageAutomationName}"/>
 
                         <TextBlock Grid.Row="4" Grid.Column="0" Text="{DynamicResource LogViewerView_Details}" FontWeight="SemiBold" Margin="0,0,10,5"
                                    VerticalAlignment="Top">
@@ -319,7 +334,8 @@
                         </TextBlock>
                         <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Details, Mode=OneWay}"
                                  IsReadOnly="True" TextWrapping="Wrap" Background="Transparent"
-                                 BorderThickness="0" Margin="0,0,0,10">
+                                 BorderThickness="0" Margin="0,0,0,10"
+                                 AutomationProperties.Name="{DynamicResource LogViewerView_DetailsAutomationName}">
                             <TextBox.Style>
                                 <Style TargetType="TextBox">
                                     <Style.Triggers>
@@ -393,16 +409,20 @@
                 <!-- Settings Panel -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <CheckBox Content="{DynamicResource LogViewerView_DebugDiagnostics}" IsChecked="{Binding EnableDebugLogging}"
-                              VerticalAlignment="Center" Margin="0,0,15,0"/>
+                              VerticalAlignment="Center" Margin="0,0,15,0"
+                              AutomationProperties.Name="{DynamicResource LogViewerView_DebugDiagnostics}"/>
 
                     <TextBlock Text="{DynamicResource LogViewerView_MaxSize}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                    <TextBox Text="{Binding MaxLogFileSizeMb}" Width="50" Margin="0,0,15,0"/>
+                    <TextBox Text="{Binding MaxLogFileSizeMb}" Width="50" Margin="0,0,15,0"
+                             AutomationProperties.Name="{DynamicResource LogViewerView_MaxSize}"/>
 
                     <TextBlock Text="{DynamicResource LogViewerView_Retention}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                    <TextBox Text="{Binding LogRetentionDays}" Width="50" Margin="0,0,15,0"/>
+                    <TextBox Text="{Binding LogRetentionDays}" Width="50" Margin="0,0,15,0"
+                             AutomationProperties.Name="{DynamicResource LogViewerView_Retention}"/>
 
                     <Button Content="{DynamicResource LogViewerView_SaveSettings}" Command="{Binding SaveSettingsCommand}"
-                            Padding="10,5" Margin="5,0"/>
+                            Padding="10,5" Margin="5,0"
+                            AutomationProperties.Name="{DynamicResource LogViewerView_SaveSettings}"/>
                 </StackPanel>
             </Grid>
         </Border>

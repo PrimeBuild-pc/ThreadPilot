@@ -54,6 +54,16 @@
     <sys:String x:Key="LogViewerView_ExportActivity">导出活动</sys:String>
     <sys:String x:Key="LogViewerView_CleanupDiagnostics">清理诊断文件</sys:String>
     <sys:String x:Key="LogViewerView_OpenFolder">打开诊断文件夹</sys:String>
+    <sys:String x:Key="LogViewerView_SearchAutomationName">搜索日志条目</sys:String>
+    <sys:String x:Key="LogViewerView_CategoryFilterAutomationName">按类别筛选</sys:String>
+    <sys:String x:Key="LogViewerView_LevelFilterAutomationName">按日志级别筛选</sys:String>
+    <sys:String x:Key="LogViewerView_FromDateAutomationName">日志条目开始日期</sys:String>
+    <sys:String x:Key="LogViewerView_ToDateAutomationName">日志条目结束日期</sys:String>
+    <sys:String x:Key="LogViewerView_RefreshAutomationName">刷新日志条目</sys:String>
+    <sys:String x:Key="LogViewerView_EntryListAutomationName">活动日志条目</sys:String>
+    <sys:String x:Key="LogViewerView_DetailsSplitterAutomationName">调整活动详情面板大小</sys:String>
+    <sys:String x:Key="LogViewerView_MessageAutomationName">所选日志条目的消息</sys:String>
+    <sys:String x:Key="LogViewerView_DetailsAutomationName">所选日志条目的详情</sys:String>
     
     <!-- LogViewerView Grid Headers -->
     <sys:String x:Key="LogViewerView_HeaderTime">时间</sys:String>
@@ -103,6 +113,12 @@
     <sys:String x:Key="MasksView_CpusHeader">CPU 核心</sys:String>
     <sys:String x:Key="MasksView_Cpu">CPU</sys:String>
     <sys:String x:Key="MasksView_Options">掩码选项</sys:String>
+    <sys:String x:Key="MasksView_CreateMaskAutomationName">创建新的 CPU 掩码</sys:String>
+    <sys:String x:Key="MasksView_DeleteMaskAutomationName">删除所选 CPU 掩码</sys:String>
+    <sys:String x:Key="MasksView_MaskListAutomationName">CPU 掩码预设列表</sys:String>
+    <sys:String x:Key="MasksView_MaskListSplitterAutomationName">调整掩码列表和编辑器大小</sys:String>
+    <sys:String x:Key="MasksView_MaskNameAutomationName">CPU 掩码名称</sys:String>
+    <sys:String x:Key="MasksView_MaskDescriptionAutomationName">CPU 掩码描述</sys:String>
 
     <!-- PerformanceView -->
     <sys:String x:Key="PerformanceView_OptionalDiagnostics">可选性能诊断</sys:String>

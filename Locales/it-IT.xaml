@@ -54,6 +54,16 @@
     <sys:String x:Key="LogViewerView_ExportActivity">Esporta attività</sys:String>
     <sys:String x:Key="LogViewerView_CleanupDiagnostics">Elimina file diagnostici</sys:String>
     <sys:String x:Key="LogViewerView_OpenFolder">Apri la cartella diagnostica</sys:String>
+    <sys:String x:Key="LogViewerView_SearchAutomationName">Cerca voci del registro</sys:String>
+    <sys:String x:Key="LogViewerView_CategoryFilterAutomationName">Filtra per categoria</sys:String>
+    <sys:String x:Key="LogViewerView_LevelFilterAutomationName">Filtra per livello del registro</sys:String>
+    <sys:String x:Key="LogViewerView_FromDateAutomationName">Data iniziale delle voci</sys:String>
+    <sys:String x:Key="LogViewerView_ToDateAutomationName">Data finale delle voci</sys:String>
+    <sys:String x:Key="LogViewerView_RefreshAutomationName">Aggiorna voci del registro</sys:String>
+    <sys:String x:Key="LogViewerView_EntryListAutomationName">Voci del registro attività</sys:String>
+    <sys:String x:Key="LogViewerView_DetailsSplitterAutomationName">Ridimensiona il pannello dei dettagli attività</sys:String>
+    <sys:String x:Key="LogViewerView_MessageAutomationName">Messaggio della voce selezionata</sys:String>
+    <sys:String x:Key="LogViewerView_DetailsAutomationName">Dettagli della voce selezionata</sys:String>
 
     <!-- LogViewerView Grid Headers -->
     <sys:String x:Key="LogViewerView_HeaderTime">Tempo</sys:String>
@@ -103,6 +113,12 @@
     <sys:String x:Key="MasksView_CpusHeader">CPUs</sys:String>
     <sys:String x:Key="MasksView_Cpu">CPU</sys:String>
     <sys:String x:Key="MasksView_Options">Opzioni maschera</sys:String>
+    <sys:String x:Key="MasksView_CreateMaskAutomationName">Crea una nuova maschera CPU</sys:String>
+    <sys:String x:Key="MasksView_DeleteMaskAutomationName">Elimina la maschera CPU selezionata</sys:String>
+    <sys:String x:Key="MasksView_MaskListAutomationName">Preimpostazioni delle maschere CPU</sys:String>
+    <sys:String x:Key="MasksView_MaskListSplitterAutomationName">Ridimensiona l’elenco delle maschere e l’editor</sys:String>
+    <sys:String x:Key="MasksView_MaskNameAutomationName">Nome della maschera CPU</sys:String>
+    <sys:String x:Key="MasksView_MaskDescriptionAutomationName">Descrizione della maschera CPU</sys:String>
 
     <!-- PerformanceView -->
     <sys:String x:Key="PerformanceView_OptionalDiagnostics">Diagnostica opzionale</sys:String>
