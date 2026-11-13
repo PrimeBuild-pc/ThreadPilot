@@ -21,11 +21,6 @@
     <a href="Locales/"><img alt="Seven interface languages" src="https://img.shields.io/badge/UI%20languages-7-5B5FC7?style=plastic&amp;logo=googletranslate&amp;logoColor=white"></a>
     <a href="LICENSE"><img alt="AGPL v3 license" src="https://img.shields.io/badge/license-AGPLv3-2ea44f?style=plastic"></a>
   </p>
-  <p>
-    <a href="https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest"><img alt="Download the latest release" src="https://img.shields.io/badge/Download-Latest%20release-2ea44f?style=for-the-badge&amp;logo=github"></a>
-    <a href="#install-with-winget"><img alt="Install with WinGet" src="https://img.shields.io/badge/WinGet-PrimeBuild.ThreadPilot-0078D4?style=for-the-badge&amp;logo=windows&amp;logoColor=white"></a>
-    <a href="#install-with-chocolatey"><img alt="Install with Chocolatey" src="https://img.shields.io/badge/Chocolatey-threadpilot-80B5E3?style=for-the-badge&amp;logo=chocolatey&amp;logoColor=white"></a>
-  </p>
   <p><a href="#-install">Install</a> · <a href="#-features">Features</a> · <a href="#-how-it-compares">How it compares</a> · <a href="#-screenshots">Screenshots</a> · <a href="#-faq">FAQ</a> · <a href="#-build-from-source">Build</a> · <a href="#-support-the-project">Support</a></p>
 
 </div>
@@ -300,7 +295,7 @@ ThreadPilot is licensed under the **GNU Affero General Public License v3.0**. Se
 
 [![GitHub Issues](https://img.shields.io/badge/Report%20a%20Bug-GitHub%20Issues-d73a49?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/issues)
 [![GitHub Discussions](https://img.shields.io/badge/Ask%20a%20Question-Discussions-6f42c1?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/discussions)
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Y6U02AIRB8) [![PayPal](https://img.shields.io/badge/Support%20Development-PayPal-00457C?logo=paypal&logoColor=white)](https://paypal.me/PrimeBuildOfficial?country.x=IT&locale.x=it_IT)
+[![Ko-fi](https://img.shields.io/badge/Support-Ko--fi-FF5E5B?style=plastic&logo=ko-fi&logoColor=white)](https://ko-fi.com/primebuild) [![PayPal](https://img.shields.io/badge/Support-PayPal-0070BA?style=plastic&logo=paypal&logoColor=white)](https://paypal.me/PrimeBuildOfficial?country.x=IT&locale.x=it_IT)
 
 If ThreadPilot is useful to you, consider starring the repository, opening thoughtful issues, sharing feedback, or supporting development with a small donation.
 
