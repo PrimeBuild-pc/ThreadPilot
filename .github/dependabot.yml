@@ -5,6 +5,13 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    # 11.x runtime packages drop net8.0 (and System.Drawing.Common 11 breaks the build);
+    # remove this once the TargetFramework moves to net10.0.
+    ignore:
+      - dependency-name: "Microsoft.Extensions.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "System.*"
+        update-types: ["version-update:semver-major"]
     labels:
       - dependencies
       - security
