@@ -323,6 +323,13 @@ namespace ThreadPilot.Core.Tests
             processMonitor.RaiseProcessStarted(new ProcessModel { ProcessId = 10, Name = "game" });
             processMonitor.RaiseProcessStarted(new ProcessModel { ProcessId = 11, Name = "game" });
 
+            // Slow CI runners can take longer than a fixed delay to fire the timer.
+            for (var i = 0; i < 100 && !powerPlanService.Invocations.Any(inv => inv.Method.Name == nameof(IPowerPlanService.SetActivePowerPlanByGuidAsync)); i++)
+            {
+                await Task.Delay(50);
+            }
+
+            // Leave room for a wrong second reevaluation to show up.
             await Task.Delay(150);
 
             powerPlanService.Verify(
