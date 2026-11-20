@@ -154,9 +154,6 @@ namespace ThreadPilot.ViewModels
 
         // PERFORMANCE IMPROVEMENT: Progressive loading support
         [ObservableProperty]
-        private double loadingProgress = 0.0;
-
-        [ObservableProperty]
         private string loadingStatusText = string.Empty;
 
         // VIRTUALIZATION ENHANCEMENT: Batch loading support

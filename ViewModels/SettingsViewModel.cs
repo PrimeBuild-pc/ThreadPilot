@@ -126,8 +126,8 @@ namespace ThreadPilot.ViewModels
             this.ApplicationVersion = this.versionProvider.DisplayVersion;
 
             // Initialize with current settings
-            this.settings = (ApplicationSettingsModel)this.settingsService.Settings.Clone();
-            this.savedSettingsSnapshot = (ApplicationSettingsModel)this.settings.Clone();
+            this.settings = this.settingsService.Settings.Clone();
+            this.savedSettingsSnapshot = this.settings.Clone();
             this.appliedThemePreference = this.settings.UseDarkTheme;
             this.LatestUpdateVersion = this.GetLocalizedString("Settings_UpdateNotChecked", "Not checked");
             this.ReservedCpuSetsStatus = this.GetLocalizedString("SettingsView_ReservedCpuSetsUnknown", "Reserved CPU Sets: status unavailable.");
@@ -683,7 +683,7 @@ namespace ThreadPilot.ViewModels
             this.isSyncingFromService = true;
             try
             {
-                var persistedSettings = (ApplicationSettingsModel)newSettings.Clone();
+                var persistedSettings = newSettings.Clone();
                 if (!string.IsNullOrWhiteSpace(this.cachedDefaultPowerPlanGuid))
                 {
                     persistedSettings.DefaultPowerPlanId = this.cachedDefaultPowerPlanGuid;
@@ -964,7 +964,7 @@ namespace ThreadPilot.ViewModels
 
         private void SetSavedSettingsSnapshot(ApplicationSettingsModel settingsSnapshot)
         {
-            this.savedSettingsSnapshot = (ApplicationSettingsModel)settingsSnapshot.Clone();
+            this.savedSettingsSnapshot = settingsSnapshot.Clone();
             this.HasUnsavedChanges = false;
         }
     }

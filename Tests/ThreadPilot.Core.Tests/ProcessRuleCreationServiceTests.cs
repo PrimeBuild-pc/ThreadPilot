@@ -5,6 +5,7 @@ namespace ThreadPilot.Core.Tests
 {
     using System.Diagnostics;
     using Microsoft.Extensions.Logging.Abstractions;
+    using Moq;
     using ThreadPilot.Models;
     using ThreadPilot.Services;
 
@@ -407,6 +408,53 @@ namespace ThreadPilot.Core.Tests
             finally
             {
                 DeleteTemporaryDirectory(filePath);
+            }
+        }
+
+        [Fact]
+        public async Task ConcurrentUpdates_PersistBothRules()
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var file = CreateTemporaryFilePath();
+            try
+            {
+                var first = new PersistentProcessRule { Id = "first", ProcessName = "first" };
+                var second = new PersistentProcessRule { Id = "second", ProcessName = "second" };
+                var physicalStore = new PersistentProcessRuleJsonStore(() => file);
+                await physicalStore.SaveAsync([first, second]);
+                var store = new Mock<IPersistentProcessRuleStore>();
+                store.Setup(x => x.LoadAsync()).Returns(() => physicalStore.LoadAsync());
+                var writeStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                var writes = 0;
+                store.Setup(x => x.SaveAsync(It.IsAny<IReadOnlyList<PersistentProcessRule>>()))
+                    .Returns(async (IReadOnlyList<PersistentProcessRule> proposed) =>
+                    {
+                        if (Interlocked.Increment(ref writes) == 1)
+                        {
+                            writeStarted.SetResult();
+                            await release.Task.WaitAsync(timeout.Token);
+                        }
+
+                        await physicalStore.SaveAsync(proposed);
+                    });
+                var service = new ProcessRuleCreationService(
+                    store.Object, null, new CpuSelectionMigrationService(), NullLogger<ProcessRuleCreationService>.Instance);
+                var a = service.UpdateRuleAsync(first with { Priority = ProcessPriorityClass.AboveNormal }, timeout.Token);
+                await writeStarted.Task.WaitAsync(timeout.Token);
+                var b = service.UpdateRuleAsync(second with { Priority = ProcessPriorityClass.BelowNormal }, timeout.Token);
+                store.Verify(x => x.LoadAsync(), Times.Once);
+                release.SetResult();
+                var results = await Task.WhenAll(a, b);
+
+                Assert.All(results, result => Assert.True(result.Success));
+                var saved = await new PersistentProcessRuleJsonStore(() => file).LoadAsync();
+                Assert.Equal(ProcessPriorityClass.AboveNormal, saved.Single(rule => rule.Id == "first").Priority);
+                Assert.Equal(ProcessPriorityClass.BelowNormal, saved.Single(rule => rule.Id == "second").Priority);
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(file);
             }
         }
 

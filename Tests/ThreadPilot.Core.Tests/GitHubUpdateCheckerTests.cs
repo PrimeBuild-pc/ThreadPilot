@@ -8,7 +8,7 @@ namespace ThreadPilot.Core.Tests
     public sealed class GitHubUpdateCheckerTests
     {
         [Fact]
-        public async Task GetLatestVersionAsync_ReturnsStableRelease_WhenTagIsSemver()
+        public async Task GetLatestReleaseInfoAsync_ReturnsStableRelease_WhenTagIsSemver()
         {
             var client = new FakeGitHubReleaseClient(
                 """
@@ -21,34 +21,36 @@ namespace ThreadPilot.Core.Tests
                 """);
             var checker = new GitHubUpdateChecker(client);
 
-            var (latest, releaseUrl) = await checker.GetLatestVersionAsync("PrimeBuild-pc", "ThreadPilot");
+            var release = await checker.GetLatestReleaseInfoAsync("PrimeBuild-pc", "ThreadPilot");
 
-            Assert.Equal(new System.Version(1, 2, 3), latest);
-            Assert.Equal("https://example.test/releases/v1.2.3", releaseUrl);
+            Assert.NotNull(release);
+            Assert.Equal(new SemanticVersion(1, 2, 3), release.Version);
+            Assert.Equal("https://example.test/releases/v1.2.3", release.ReleasePageUrl.AbsoluteUri);
         }
 
-        [Fact]
-        public async Task GetLatestVersionAsync_IgnoresDraftOrPrerelease()
+        [Theory]
+        [InlineData("true", "false")]
+        [InlineData("false", "true")]
+        public async Task GetLatestReleaseInfoAsync_IgnoresDraftOrPrerelease(string draft, string prerelease)
         {
             var client = new FakeGitHubReleaseClient(
-                """
+                $$"""
                 {
-                  "tag_name": "v1.2.3-beta1",
-                  "prerelease": true,
-                  "draft": false,
-                  "html_url": "https://example.test/releases/v1.2.3-beta1"
+                  "tag_name": "v1.2.3",
+                  "prerelease": {{prerelease}},
+                  "draft": {{draft}},
+                  "html_url": "https://example.test/releases/v1.2.3"
                 }
                 """);
             var checker = new GitHubUpdateChecker(client);
 
-            var (latest, releaseUrl) = await checker.GetLatestVersionAsync("PrimeBuild-pc", "ThreadPilot");
+            var release = await checker.GetLatestReleaseInfoAsync("PrimeBuild-pc", "ThreadPilot");
 
-            Assert.Null(latest);
-            Assert.Null(releaseUrl);
+            Assert.Null(release);
         }
 
         [Fact]
-        public async Task GetLatestVersionAsync_ReturnsNull_WhenTagCannotBeParsed()
+        public async Task GetLatestReleaseInfoAsync_ReturnsNull_WhenTagCannotBeParsed()
         {
             var client = new FakeGitHubReleaseClient(
                 """
@@ -61,10 +63,9 @@ namespace ThreadPilot.Core.Tests
                 """);
             var checker = new GitHubUpdateChecker(client);
 
-            var (latest, releaseUrl) = await checker.GetLatestVersionAsync("PrimeBuild-pc", "ThreadPilot");
+            var release = await checker.GetLatestReleaseInfoAsync("PrimeBuild-pc", "ThreadPilot");
 
-            Assert.Null(latest);
-            Assert.Equal("https://example.test/releases/release-main", releaseUrl);
+            Assert.Null(release);
         }
 
         private sealed class FakeGitHubReleaseClient : IGitHubReleaseClient
@@ -74,11 +75,6 @@ namespace ThreadPilot.Core.Tests
             public FakeGitHubReleaseClient(string responseJson)
             {
                 this.responseJson = responseJson;
-            }
-
-            public Task<string> GetLatestReleaseJsonAsync(string owner, string repo, CancellationToken cancellationToken = default)
-            {
-                return Task.FromResult(this.responseJson);
             }
 
             public Task<string> GetReleasesJsonAsync(string owner, string repo, CancellationToken cancellationToken = default)

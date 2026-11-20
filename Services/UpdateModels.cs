@@ -70,11 +70,6 @@ namespace ThreadPilot.Services
         string DisplayVersion { get; }
     }
 
-    public interface IUpdateClock
-    {
-        DateTimeOffset UtcNow { get; }
-    }
-
     public interface IUpdateService
     {
         Task<UpdateCheckResult> CheckForUpdatesAsync(UpdateCheckRequest request, CancellationToken cancellationToken = default);

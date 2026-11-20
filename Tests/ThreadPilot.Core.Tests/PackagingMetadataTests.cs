@@ -63,22 +63,15 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public void PortableUninstallers_RemoveCurrentAndLegacyStartupTasks()
+        public void PortablePackages_UseOneUninstallerForCurrentAndLegacyStartupTasks()
         {
             var root = FindRepositoryRoot();
-            var paths = new[]
-            {
-                Path.Combine(root, "build", "build-release.ps1"),
-                Path.Combine(root, "build", "package-release-zips.ps1"),
-                Path.Combine(root, ".github", "workflows", "release.yml"),
-            };
-
-            foreach (var path in paths)
-            {
-                var script = File.ReadAllText(path);
-                Assert.Contains("ThreadPilot_Launch", script, StringComparison.Ordinal);
-                Assert.Contains("ThreadPilot_Startup", script, StringComparison.Ordinal);
-            }
+            var uninstaller = Path.Combine(root, "build", "portable-uninstall.bat");
+            AssertFileContains(uninstaller, "ThreadPilot_Launch");
+            AssertFileContains(uninstaller, "ThreadPilot_Startup");
+            AssertFileContains(Path.Combine(root, "build", "package-release-zips.ps1"), "portable-uninstall.bat");
+            AssertFileContains(Path.Combine(root, "build", "build-release.ps1"), "package-release-zips.ps1");
+            AssertFileContains(Path.Combine(root, ".github", "workflows", "release.yml"), "package-release-zips.ps1");
         }
 
         [Fact]

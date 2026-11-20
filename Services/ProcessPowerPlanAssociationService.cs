@@ -6,6 +6,7 @@ namespace ThreadPilot.Services
     using System.Linq;
     using System.Text;
     using System.Text.Json;
+    using System.Threading;
     using System.Threading.Tasks;
     using ThreadPilot.Models;
 
@@ -26,271 +27,145 @@ namespace ThreadPilot.Services
 
         private readonly string configurationDirectory;
         private readonly string configurationFilePath;
-        private readonly object lockObject = new();
+        private readonly SemaphoreSlim mutationGate = new(1, 1);
 
-        private ProcessMonitorConfiguration configuration;
+        private volatile ProcessMonitorConfiguration configuration = new();
 
         public event EventHandler<ConfigurationChangedEventArgs>? ConfigurationChanged;
 
         public ProcessMonitorConfiguration Configuration => this.configuration;
 
         public ProcessPowerPlanAssociationService()
+            : this(StoragePaths.ConfigurationDirectory)
         {
             StoragePaths.EnsureAppDataDirectories();
-
-            this.configurationDirectory = StoragePaths.ConfigurationDirectory;
-            this.configurationFilePath = Path.Combine(this.configurationDirectory, "ProcessPowerPlanAssociations.json");
-            this.configuration = new ProcessMonitorConfiguration();
-
-            this.EnsureConfigurationDirectoryExists();
             this.MigrateLegacyConfigurationIfNeeded();
+        }
+
+        internal ProcessPowerPlanAssociationService(string configurationDirectory)
+        {
+            this.configurationDirectory = configurationDirectory;
+            this.configurationFilePath = Path.Combine(configurationDirectory, "ProcessPowerPlanAssociations.json");
         }
 
         public async Task<bool> LoadConfigurationAsync()
         {
+            await this.mutationGate.WaitAsync().ConfigureAwait(false);
             try
             {
-                if (!File.Exists(this.configurationFilePath))
+                if (File.Exists(this.configurationFilePath))
                 {
-                    // Create default configuration
-                    this.configuration = new ProcessMonitorConfiguration();
-                    await this.SaveConfigurationAsync().ConfigureAwait(false);
-                    return true;
-                }
-
-                var json = await File.ReadAllTextAsync(this.configurationFilePath).ConfigureAwait(false);
-                var loadedConfig = JsonSerializer.Deserialize<ProcessMonitorConfiguration>(json, JsonOptions);
-
-                if (loadedConfig != null)
-                {
-                    lock (this.lockObject)
+                    var json = await File.ReadAllTextAsync(this.configurationFilePath).ConfigureAwait(false);
+                    var loaded = JsonSerializer.Deserialize<ProcessMonitorConfiguration>(json, JsonOptions);
+                    if (loaded == null)
                     {
-                        loadedConfig.Associations ??= new List<ProcessPowerPlanAssociation>();
-                        this.configuration = loadedConfig;
+                        return false;
                     }
 
-                    this.OnConfigurationChanged("Loaded", null, "Configuration loaded from file");
-                    return true;
+                    loaded.Associations ??= new List<ProcessPowerPlanAssociation>();
+                    this.configuration = loaded;
                 }
-
-                return false;
+                else
+                {
+                    await this.PersistAsync(new ProcessMonitorConfiguration()).ConfigureAwait(false);
+                }
             }
             catch (Exception ex)
             {
                 this.OnConfigurationChanged("LoadError", null, $"Failed to load configuration: {ex.Message}");
                 return false;
             }
+            finally
+            {
+                this.mutationGate.Release();
+            }
+
+            this.OnConfigurationChanged("Loaded", null, "Configuration loaded");
+            return true;
         }
 
-        public async Task<bool> SaveConfigurationAsync()
-        {
-            try
-            {
-                ProcessMonitorConfiguration configToSave;
-                lock (this.lockObject)
+        public Task<bool> SaveMonitoringSettingsAsync(bool preventDuplicateChanges, int delayMs) =>
+            this.CommitAsync(
+                config =>
                 {
-                    configToSave = this.configuration;
-                    configToSave.LastSavedDate = DateTime.Now;
-                }
+                    config.PreventDuplicatePowerPlanChanges = preventDuplicateChanges;
+                    config.PowerPlanChangeDelayMs = delayMs;
+                    return config;
+                },
+                "Saved");
 
-                var json = JsonSerializer.Serialize(configToSave, JsonOptions);
-                await AtomicFileWriter.WriteAllTextAsync(this.configurationFilePath, json, Encoding.UTF8).ConfigureAwait(false);
+        public Task<IEnumerable<ProcessPowerPlanAssociation>> GetAssociationsAsync() =>
+            Task.FromResult<IEnumerable<ProcessPowerPlanAssociation>>(this.configuration.Associations.Select(association => association.CreateSnapshot()).ToList());
 
-                this.OnConfigurationChanged("Saved", null, "Configuration saved to file");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                this.OnConfigurationChanged("SaveError", null, $"Failed to save configuration: {ex.Message}");
-                return false;
-            }
-        }
+        public Task<IEnumerable<ProcessPowerPlanAssociation>> GetEnabledAssociationsAsync() =>
+            Task.FromResult<IEnumerable<ProcessPowerPlanAssociation>>(this.configuration.GetEnabledAssociations().Select(association => association.CreateSnapshot()).ToList());
 
-        public async Task<IEnumerable<ProcessPowerPlanAssociation>> GetAssociationsAsync()
-        {
-            await Task.CompletedTask.ConfigureAwait(false);
-            lock (this.lockObject)
-            {
-                return this.configuration.Associations.ToList();
-            }
-        }
-
-        public async Task<IEnumerable<ProcessPowerPlanAssociation>> GetEnabledAssociationsAsync()
-        {
-            await Task.CompletedTask.ConfigureAwait(false);
-            lock (this.lockObject)
-            {
-                return this.configuration.GetEnabledAssociations().ToList();
-            }
-        }
-
-        public async Task<bool> AddAssociationAsync(ProcessPowerPlanAssociation association)
-        {
-            try
-            {
-                if (association == null)
+        public Task<bool> AddAssociationAsync(ProcessPowerPlanAssociation association) =>
+            this.CommitAsync(
+                config =>
                 {
-                    return false;
-                }
-
-                lock (this.lockObject)
-                {
-                    // Check for duplicates
-                    var existing = this.configuration.Associations
-                        .FirstOrDefault(a => AreAssociationsConflicting(a, association));
-
-                    if (existing != null)
+                    if (association == null || config.Associations.Any(existing => AreAssociationsConflicting(existing, association)))
                     {
-                        return false; // Duplicate found
+                        return null;
                     }
 
-                    this.configuration.AddOrUpdateAssociation(association);
-                }
+                    config.AddOrUpdateAssociation(association.CreateSnapshot());
+                    return config;
+                },
+                "Added",
+                association);
 
-                await this.SaveConfigurationAsync().ConfigureAwait(false);
-                this.OnConfigurationChanged("Added", association, $"Association added for {association.ExecutableName}");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                this.OnConfigurationChanged("AddError", association, $"Failed to add association: {ex.Message}");
-                return false;
-            }
-        }
-
-        public async Task<bool> UpdateAssociationAsync(ProcessPowerPlanAssociation association)
-        {
-            try
-            {
-                if (association == null)
+        public Task<bool> UpdateAssociationAsync(ProcessPowerPlanAssociation association) =>
+            this.CommitAsync(
+                config =>
                 {
-                    return false;
-                }
+                    if (association == null)
+                    {
+                        return null;
+                    }
 
-                lock (this.lockObject)
+                    config.AddOrUpdateAssociation(association.CreateSnapshot());
+                    return config;
+                },
+                "Updated",
+                association);
+
+        public Task<bool> RemoveAssociationAsync(string associationId) =>
+            this.CommitAsync(config => config.RemoveAssociation(associationId) ? config : null, "Removed");
+
+        public Task<ProcessPowerPlanAssociation?> FindMatchingAssociationAsync(ProcessModel process) =>
+            Task.FromResult(this.configuration.FindMatchingAssociation(process)?.CreateSnapshot());
+
+        public Task<ProcessPowerPlanAssociation?> FindAssociationByExecutableAsync(string executableName) =>
+            Task.FromResult(this.configuration.FindAssociationByExecutable(executableName)?.CreateSnapshot());
+
+        public Task<bool> SetDefaultPowerPlanAsync(string powerPlanGuid, string powerPlanName) =>
+            this.CommitAsync(
+                config =>
                 {
-                    this.configuration.AddOrUpdateAssociation(association);
-                }
+                    config.DefaultPowerPlanGuid = powerPlanGuid;
+                    config.DefaultPowerPlanName = powerPlanName;
+                    return config;
+                },
+                "DefaultPowerPlanChanged");
 
-                await this.SaveConfigurationAsync().ConfigureAwait(false);
-                this.OnConfigurationChanged("Updated", association, $"Association updated for {association.ExecutableName}");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                this.OnConfigurationChanged("UpdateError", association, $"Failed to update association: {ex.Message}");
-                return false;
-            }
-        }
-
-        public async Task<bool> RemoveAssociationAsync(string associationId)
+        public Task<(string Guid, string Name)> GetDefaultPowerPlanAsync()
         {
-            try
-            {
-                ProcessPowerPlanAssociation? removedAssociation = null;
-                bool removed;
-
-                lock (this.lockObject)
-                {
-                    removedAssociation = this.configuration.Associations.FirstOrDefault(a => a.Id == associationId);
-                    removed = this.configuration.RemoveAssociation(associationId);
-                }
-
-                if (removed)
-                {
-                    await this.SaveConfigurationAsync().ConfigureAwait(false);
-                    this.OnConfigurationChanged("Removed", removedAssociation,
-                        $"Association removed for {removedAssociation?.ExecutableName}");
-                }
-
-                return removed;
-            }
-            catch (Exception ex)
-            {
-                this.OnConfigurationChanged("RemoveError", null, $"Failed to remove association: {ex.Message}");
-                return false;
-            }
+            var config = this.configuration;
+            return Task.FromResult((config.DefaultPowerPlanGuid, config.DefaultPowerPlanName));
         }
 
-        public async Task<ProcessPowerPlanAssociation?> FindMatchingAssociationAsync(ProcessModel process)
-        {
-            await Task.CompletedTask.ConfigureAwait(false);
-            lock (this.lockObject)
-            {
-                return this.configuration.FindMatchingAssociation(process);
-            }
-        }
+        public Task<IEnumerable<string>> ValidateConfigurationAsync() =>
+            Task.FromResult<IEnumerable<string>>(this.configuration.Validate());
 
-        public async Task<ProcessPowerPlanAssociation?> FindAssociationByExecutableAsync(string executableName)
-        {
-            await Task.CompletedTask.ConfigureAwait(false);
-            lock (this.lockObject)
-            {
-                return this.configuration.FindAssociationByExecutable(executableName);
-            }
-        }
-
-        public async Task<bool> SetDefaultPowerPlanAsync(string powerPlanGuid, string powerPlanName)
-        {
-            try
-            {
-                lock (this.lockObject)
-                {
-                    this.configuration.DefaultPowerPlanGuid = powerPlanGuid;
-                    this.configuration.DefaultPowerPlanName = powerPlanName;
-                }
-
-                await this.SaveConfigurationAsync().ConfigureAwait(false);
-                this.OnConfigurationChanged("DefaultPowerPlanChanged", null, $"Default power plan set to {powerPlanName}");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                this.OnConfigurationChanged("DefaultPowerPlanError", null, $"Failed to set default power plan: {ex.Message}");
-                return false;
-            }
-        }
-
-        public async Task<(string Guid, string Name)> GetDefaultPowerPlanAsync()
-        {
-            await Task.CompletedTask.ConfigureAwait(false);
-            lock (this.lockObject)
-            {
-                return (this.configuration.DefaultPowerPlanGuid, this.configuration.DefaultPowerPlanName);
-            }
-        }
-
-        public async Task<IEnumerable<string>> ValidateConfigurationAsync()
-        {
-            await Task.CompletedTask.ConfigureAwait(false);
-            lock (this.lockObject)
-            {
-                return this.configuration.Validate();
-            }
-        }
-
-        public async Task ResetConfigurationAsync()
-        {
-            lock (this.lockObject)
-            {
-                this.configuration = new ProcessMonitorConfiguration();
-            }
-
-            await this.SaveConfigurationAsync().ConfigureAwait(false);
-            this.OnConfigurationChanged("Reset", null, "Configuration reset to defaults");
-        }
+        public Task<bool> ResetConfigurationAsync() =>
+            this.CommitAsync(_ => new ProcessMonitorConfiguration(), "Reset");
 
         public async Task<bool> ExportConfigurationAsync(string filePath)
         {
             try
             {
-                ProcessMonitorConfiguration configToExport;
-                lock (this.lockObject)
-                {
-                    configToExport = this.configuration;
-                }
-
-                var json = JsonSerializer.Serialize(configToExport, JsonOptions);
+                var json = JsonSerializer.Serialize(this.configuration, JsonOptions);
                 await AtomicFileWriter.WriteAllTextAsync(filePath, json, Encoding.UTF8).ConfigureAwait(false);
 
                 this.OnConfigurationChanged("Exported", null, $"Configuration exported to {filePath}");
@@ -335,39 +210,45 @@ namespace ThreadPilot.Services
             }
         }
 
-        public async Task<bool> ReplaceConfigurationAsync(ProcessMonitorConfiguration configuration)
-        {
-            if (configuration == null)
-            {
-                return false;
-            }
+        public Task<bool> ReplaceConfigurationAsync(ProcessMonitorConfiguration configuration) =>
+            this.CommitAsync(_ => configuration == null ? null : CloneConfiguration(configuration), "Replaced");
 
+        private async Task<bool> CommitAsync(
+            Func<ProcessMonitorConfiguration, ProcessMonitorConfiguration?> change,
+            string changeType,
+            ProcessPowerPlanAssociation? association = null)
+        {
+            await this.mutationGate.WaitAsync().ConfigureAwait(false);
             try
             {
-                var cloned = CloneConfiguration(configuration);
-
-                lock (this.lockObject)
+                var proposed = change(CloneConfiguration(this.configuration));
+                if (proposed == null)
                 {
-                    this.configuration = cloned;
+                    return false;
                 }
 
-                await this.SaveConfigurationAsync().ConfigureAwait(false);
-                this.OnConfigurationChanged("Replaced", null, "Configuration replaced from imported bundle");
-                return true;
+                await this.PersistAsync(proposed).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                this.OnConfigurationChanged("ReplaceError", null, $"Failed to replace configuration: {ex.Message}");
+                this.OnConfigurationChanged("SaveError", association, $"Failed to save configuration: {ex.Message}");
                 return false;
             }
+            finally
+            {
+                this.mutationGate.Release();
+            }
+
+            this.OnConfigurationChanged(changeType, association);
+            return true;
         }
 
-        private void EnsureConfigurationDirectoryExists()
+        private async Task PersistAsync(ProcessMonitorConfiguration configuration)
         {
-            if (!Directory.Exists(this.configurationDirectory))
-            {
-                Directory.CreateDirectory(this.configurationDirectory);
-            }
+            configuration.LastSavedDate = DateTime.Now;
+            var json = JsonSerializer.Serialize(configuration, JsonOptions);
+            await AtomicFileWriter.WriteAllTextAsync(this.configurationFilePath, json, Encoding.UTF8).ConfigureAwait(false);
+            this.configuration = configuration;
         }
 
         private void MigrateLegacyConfigurationIfNeeded()

@@ -86,6 +86,7 @@ namespace ThreadPilot.Services
         public async Task ApplyAsync(ConfigurationBackup backup)
         {
             Validate(backup);
+            using var edit = await PersistentRuleEditGate.EnterAsync(rules);
             var previous = await this.CaptureAsync(settings.Settings);
             try
             {

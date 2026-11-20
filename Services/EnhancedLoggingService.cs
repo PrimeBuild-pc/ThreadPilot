@@ -5,6 +5,7 @@ namespace ThreadPilot.Services
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Text;
     using System.Text.Json;
     using System.Threading;
     using System.Threading.Tasks;
@@ -12,17 +13,21 @@ namespace ThreadPilot.Services
 
     public class EnhancedLoggingService : IEnhancedLoggingService, IDisposable
     {
+        private const int MaxQueuedEntries = 4096;
         private readonly ILogger<EnhancedLoggingService> logger;
         private readonly IApplicationSettingsService settingsService;
         private readonly SemaphoreSlim fileLock = new(1, 1);
-        private readonly ConcurrentQueue<LogEntry> logQueue = new();
+        private readonly Queue<LogEntry> logQueue = new();
         private readonly System.Threading.Timer flushTimer;
         private readonly string logDirectory;
         private string currentLogFilePath;
         private int flushScheduled;
         private bool isInitialized;
-        private bool disposed;
+        private volatile bool disposed;
         private volatile bool isDebugLoggingEnabled;
+        private List<LogEntry>? pendingBatch;
+        private long? pendingWriteOffset;
+        private int droppedEntries;
 
         // PERFORMANCE IMPROVEMENT: Correlation tracking for better debugging
         internal readonly AsyncLocal<string?> CorrelationId = new();
@@ -37,12 +42,18 @@ namespace ThreadPilot.Services
         public event EventHandler<CriticalErrorEventArgs>? CriticalErrorOccurred;
 
         public EnhancedLoggingService(ILogger<EnhancedLoggingService> logger, IApplicationSettingsService settingsService)
+            : this(logger, settingsService, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ThreadPilot", "Logs"))
+        {
+        }
+
+        internal EnhancedLoggingService(
+            ILogger<EnhancedLoggingService> logger, IApplicationSettingsService settingsService, string logDirectory)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
 
             // Set up log directory
-            this.logDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ThreadPilot", "Logs");
+            this.logDirectory = logDirectory;
             this.currentLogFilePath = this.GetCurrentLogFilePath();
 
             this.isDebugLoggingEnabled = settingsService.Settings.EnableDebugLogging;
@@ -235,18 +246,41 @@ namespace ThreadPilot.Services
                 CorrelationId = Thread.CurrentThread.ManagedThreadId.ToString(),
             };
 
-            this.logQueue.Enqueue(logEntry);
+            lock (this.logQueue)
+            {
+                if (this.disposed)
+                {
+                    return;
+                }
+
+                if (this.logQueue.Count == MaxQueuedEntries)
+                {
+                    this.logQueue.Dequeue();
+                    this.droppedEntries++;
+                }
+
+                this.logQueue.Enqueue(logEntry);
+            }
 
             // Force immediate flush for errors and critical events.
             if (level >= LogLevel.Error)
             {
-                this.flushTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
-                Interlocked.Exchange(ref this.flushScheduled, 0);
                 await this.FlushLogsAsync();
             }
-            else if (Interlocked.Exchange(ref this.flushScheduled, 1) == 0)
+            else
             {
-                this.flushTimer.Change(TimeSpan.FromSeconds(5), Timeout.InfiniteTimeSpan);
+                this.ScheduleFlush();
+            }
+        }
+
+        private void ScheduleFlush()
+        {
+            lock (this.logQueue)
+            {
+                if (!this.disposed && Interlocked.Exchange(ref this.flushScheduled, 1) == 0)
+                {
+                    this.flushTimer.Change(TimeSpan.FromSeconds(5), Timeout.InfiniteTimeSpan);
+                }
             }
         }
 
@@ -261,34 +295,46 @@ namespace ThreadPilot.Services
 
         private async Task FlushLogsAsync()
         {
-            if (this.logQueue.IsEmpty)
-            {
-                return;
-            }
-
             await this.fileLock.WaitAsync();
             try
             {
-                // Check if we need to rotate the log file
+                if (this.pendingBatch != null)
+                {
+                    await this.WritePendingBatchAsync();
+                }
+
+                lock (this.logQueue)
+                {
+                    if (this.logQueue.Count == 0)
+                    {
+                        return;
+                    }
+                }
+
                 await this.CheckLogRotationAsync();
-
-                var logEntries = new List<LogEntry>();
-                while (this.logQueue.TryDequeue(out var entry))
+                lock (this.logQueue)
                 {
-                    logEntries.Add(entry);
+                    this.pendingBatch = new List<LogEntry>(this.logQueue);
+                    this.logQueue.Clear();
                 }
 
-                if (logEntries.Count == 0)
+                await this.WritePendingBatchAsync();
+                var dropped = 0;
+                lock (this.logQueue)
                 {
-                    return;
+                    dropped = this.droppedEntries;
+                    this.droppedEntries = 0;
                 }
 
-                // Write entries to file
-                await this.WriteLogEntriesToFileAsync(logEntries);
+                if (dropped > 0)
+                {
+                    this.logger.LogWarning("Dropped {Count} queued diagnostic events while logging was backed up", dropped);
+                }
             }
             catch (Exception ex)
             {
                 this.logger.LogError(ex, "Failed to flush logs to file");
+                this.ScheduleFlush();
             }
             finally
             {
@@ -296,10 +342,25 @@ namespace ThreadPilot.Services
             }
         }
 
-        private async Task WriteLogEntriesToFileAsync(List<LogEntry> entries)
+        private async Task WritePendingBatchAsync()
         {
-            var logLines = entries.Select(this.FormatLogEntry);
-            await File.AppendAllLinesAsync(this.currentLogFilePath, logLines);
+            var content = string.Join(Environment.NewLine, this.pendingBatch!.Select(this.FormatLogEntry)) + Environment.NewLine;
+            await using (var file = new FileStream(this.currentLogFilePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read, 4096, useAsync: true))
+            {
+                if (this.pendingWriteOffset is long offset && file.Length > offset)
+                {
+                    // A failed append can leave part of this batch in the file.
+                    file.SetLength(offset);
+                }
+
+                file.Position = file.Length;
+                this.pendingWriteOffset = file.Position;
+                await file.WriteAsync(Encoding.UTF8.GetBytes(content));
+                await file.FlushAsync();
+            }
+
+            this.pendingWriteOffset = null;
+            this.pendingBatch = null;
         }
 
         private string FormatLogEntry(LogEntry entry)
@@ -521,16 +582,20 @@ namespace ThreadPilot.Services
 
         public void Dispose()
         {
-            if (this.disposed)
+            lock (this.logQueue)
             {
-                return;
+                if (this.disposed)
+                {
+                    return;
+                }
+
+                this.disposed = true;
+                this.flushTimer.Dispose();
             }
 
             this.settingsService.SettingsChanged -= this.OnSettingsChanged;
-            this.flushTimer?.Dispose();
-            this.FlushLogsAsync().Wait(TimeSpan.FromSeconds(5));
-            this.fileLock?.Dispose();
-            this.disposed = true;
+            Task.Run(this.FlushLogsAsync).Wait(TimeSpan.FromSeconds(5));
+            // Timer callbacks may already be waiting on the managed gate.
         }
     }
 

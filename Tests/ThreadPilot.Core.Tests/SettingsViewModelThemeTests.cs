@@ -140,7 +140,7 @@ namespace ThreadPilot.Core.Tests
             ApplicationSettingsModel? savedSettings = null;
             harness.SettingsService
                 .Setup(service => service.UpdateSettingsAsync(It.IsAny<ApplicationSettingsModel>()))
-                .Callback<ApplicationSettingsModel>(settings => savedSettings = (ApplicationSettingsModel)settings.Clone())
+                .Callback<ApplicationSettingsModel>(settings => savedSettings = settings.Clone())
                 .Returns(Task.CompletedTask);
             var viewModel = harness.CreateViewModel();
             viewModel.Settings.Language = "zh-CN";
@@ -243,11 +243,11 @@ namespace ThreadPilot.Core.Tests
             ApplicationSettingsModel? savedSettings = null;
             harness.SettingsService
                 .Setup(service => service.UpdateSettingsAsync(It.IsAny<ApplicationSettingsModel>()))
-                .Callback<ApplicationSettingsModel>(settings => savedSettings = (ApplicationSettingsModel)settings.Clone())
+                .Callback<ApplicationSettingsModel>(settings => savedSettings = settings.Clone())
                 .Returns(Task.CompletedTask);
             var viewModel = harness.CreateViewModel();
             viewModel.Settings.Language = "it-IT";
-            var externalUpdate = (ApplicationSettingsModel)harness.PersistedSettings.Clone();
+            var externalUpdate = harness.PersistedSettings.Clone();
             externalUpdate.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
 
             viewModel.ApplyPersistedSettings(externalUpdate);

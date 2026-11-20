@@ -1,4 +1,5 @@
 param(
+    [ValidatePattern('^v?[0-9][0-9A-Za-z.+-]*$')]
     [string]$Version = "1.7.9",
     [string]$Configuration = "Release",
     [string]$Runtime = "win-x64"
@@ -6,28 +7,21 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Remove-IfExists {
-    param([string]$Path)
-    if (Test-Path -LiteralPath $Path) {
-        Remove-Item -LiteralPath $Path -Recurse -Force
-    }
-}
-
 $scriptRoot = Split-Path -Parent $PSCommandPath
 $projectRoot = Split-Path -Parent $scriptRoot
 Set-Location -LiteralPath $projectRoot
 
-$outputRoot = Join-Path $projectRoot ("Installer\Output\v" + $Version)
+$outputParent = Join-Path $projectRoot "Installer\Output"
+$outputRoot = Join-Path $outputParent ("v" + $Version.TrimStart('v'))
 $publishDir = Join-Path $outputRoot "publish"
-$portableStage = Join-Path $outputRoot "portable_stage"
-
-$portableZip = Join-Path $outputRoot ("ThreadPilot_v" + $Version + "_Portable.zip")
-$uninstallScriptPath = Join-Path $outputRoot "uninstall.bat"
-$licenseSource = Join-Path $projectRoot "LICENSE"
-$licenseMarkdownPath = Join-Path $outputRoot "LICENSE.md"
-
 Write-Host "Preparing output directories..."
-Remove-IfExists -Path $outputRoot
+if (Test-Path -LiteralPath $outputRoot) {
+    $resolved = (Resolve-Path -LiteralPath $outputRoot).ProviderPath
+    if (!(Split-Path -Parent $resolved).Equals($outputParent, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Unexpected build output directory: $resolved"
+    }
+    Remove-Item -LiteralPath $resolved -Recurse -Force
+}
 New-Item -ItemType Directory -Path $publishDir -Force | Out-Null
 
 Write-Host "Publishing ThreadPilot $Version ($Configuration, $Runtime)..."
@@ -42,68 +36,10 @@ dotnet publish "ThreadPilot.csproj" `
     /p:PublishTrimmed=false `
     -o $publishDir
 
-Write-Host "Creating uninstaller script..."
-$uninstallerContent = @'
-@echo off
-setlocal EnableExtensions
-title ThreadPilot Uninstaller
-
-set "APP_DIR=%~dp0"
-if "%APP_DIR:~-1%"=="\" set "APP_DIR=%APP_DIR:~0,-1%"
-
-echo ======================================================
-echo ThreadPilot Uninstaller
-echo ======================================================
-echo.
-echo App directory: "%APP_DIR%"
-echo.
-
-echo [1/4] Closing running ThreadPilot processes...
-taskkill /IM "ThreadPilot.exe" /F >nul 2>&1
-
-echo [2/4] Removing startup task and startup registry entry...
-schtasks /Delete /TN "ThreadPilot_Launch" /F >nul 2>&1
-schtasks /Delete /TN "ThreadPilot_Startup" /F >nul 2>&1
-reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "ThreadPilot" /f >nul 2>&1
-
-echo [3/4] Removing ThreadPilot user data for this Windows account...
-rem Full uninstall removes only ThreadPilot-owned per-user AppData. Normal install/update paths never run this script.
-if exist "%APPDATA%\ThreadPilot" (
-    rd /s /q "%APPDATA%\ThreadPilot"
-    echo ThreadPilot user data removed.
-) else (
-    echo No ThreadPilot user data folder found.
-)
-
-echo [4/4] Scheduling app folder removal...
-start "" /min cmd /c "timeout /t 5 /nobreak >nul & rd /s /q \"%APP_DIR%\""
-
-echo.
-echo Uninstall completed. Remaining files will be removed in a few seconds.
-endlocal
-exit /b 0
-'@
-
-Set-Content -LiteralPath $uninstallScriptPath -Value $uninstallerContent -Encoding Ascii
-
-if (Test-Path -LiteralPath $licenseSource) {
-    Copy-Item -LiteralPath $licenseSource -Destination $licenseMarkdownPath -Force
-}
-else {
-    throw "License file not found at $licenseSource"
+if ($LASTEXITCODE -ne 0) {
+    throw "ThreadPilot publish failed (exit code $LASTEXITCODE)."
 }
 
-Write-Host "Packaging portable archive..."
-New-Item -ItemType Directory -Path $portableStage -Force | Out-Null
-Copy-Item -Path (Join-Path $publishDir "*") -Destination $portableStage -Recurse -Force
-Copy-Item -LiteralPath $uninstallScriptPath -Destination (Join-Path $portableStage "uninstall.bat") -Force
-Copy-Item -LiteralPath $licenseMarkdownPath -Destination (Join-Path $portableStage "LICENSE.md") -Force
-Remove-IfExists -Path $portableZip
-Compress-Archive -Path (Join-Path $portableStage "*") -DestinationPath $portableZip -CompressionLevel Optimal
-
-Write-Host "Cleaning staging folders..."
-Remove-IfExists -Path $portableStage
-
-Write-Host "Release packaging complete." -ForegroundColor Green
-Write-Host "Portable: $portableZip"
-Write-Host "Uninstall script source: $uninstallScriptPath"
+& (Join-Path $PSScriptRoot "package-release-zips.ps1") -Version $Version -PublishDirectory $publishDir -OutputDirectory $outputRoot
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot "portable-uninstall.bat") -Destination (Join-Path $outputRoot "uninstall.bat") -Force
+Copy-Item -LiteralPath (Join-Path $projectRoot "LICENSE") -Destination (Join-Path $outputRoot "LICENSE.md") -Force

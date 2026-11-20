@@ -245,30 +245,6 @@
                         <TextBlock Text="{DynamicResource SettingsView_CloseToTray}" Style="{StaticResource SettingTitleStyle}"/>
                     </DockPanel>
                 </Border>
-                <Border Style="{StaticResource SubSettingRowStyle}" IsEnabled="{Binding Settings.ShowTrayIcon}">
-                    <DockPanel>
-                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
-                                         IsChecked="{Binding Settings.EnableQuickApplyFromTray}"
-                                         AutomationProperties.Name="{DynamicResource SettingsView_QuickApply}"/>
-                        <TextBlock Text="{DynamicResource SettingsView_QuickApply}" Style="{StaticResource SettingTitleStyle}"/>
-                    </DockPanel>
-                </Border>
-                <Border Style="{StaticResource SubSettingRowStyle}" IsEnabled="{Binding Settings.ShowTrayIcon}">
-                    <DockPanel>
-                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
-                                         IsChecked="{Binding Settings.EnableMonitoringControlFromTray}"
-                                         AutomationProperties.Name="{DynamicResource SettingsView_MonitoringControl}"/>
-                        <TextBlock Text="{DynamicResource SettingsView_MonitoringControl}" Style="{StaticResource SettingTitleStyle}"/>
-                    </DockPanel>
-                </Border>
-                <Border Style="{StaticResource SubSettingRowStyle}" IsEnabled="{Binding Settings.ShowTrayIcon}">
-                    <DockPanel>
-                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
-                                         IsChecked="{Binding Settings.ShowDetailedTooltips}"
-                                         AutomationProperties.Name="{DynamicResource SettingsView_DetailedTooltips}"/>
-                        <TextBlock Text="{DynamicResource SettingsView_DetailedTooltips}" Style="{StaticResource SettingTitleStyle}"/>
-                    </DockPanel>
-                </Border>
                 <Border Style="{StaticResource SettingRowStyle}">
                     <DockPanel>
                         <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
@@ -371,22 +347,6 @@
                             <TextBlock Text="{Binding Settings.MaxNotificationHistoryItems}" MinWidth="52" TextAlignment="Right" VerticalAlignment="Center"/>
                         </StackPanel>
                         <TextBlock Text="{DynamicResource SettingsView_MaxHistory}" Style="{StaticResource SettingTitleStyle}"/>
-                    </DockPanel>
-                </Border>
-                <Border Style="{StaticResource SettingRowStyle}">
-                    <DockPanel>
-                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
-                                         IsChecked="{Binding Settings.AutoHideNotifications}"
-                                         AutomationProperties.Name="{DynamicResource SettingsView_AutoHide}"/>
-                        <TextBlock Text="{DynamicResource SettingsView_AutoHide}" Style="{StaticResource SettingTitleStyle}"/>
-                    </DockPanel>
-                </Border>
-                <Border Style="{StaticResource SettingRowStyle}">
-                    <DockPanel>
-                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center"
-                                         IsChecked="{Binding Settings.EnableNotificationSound}"
-                                         AutomationProperties.Name="{DynamicResource SettingsView_NotificationSound}"/>
-                        <TextBlock Text="{DynamicResource SettingsView_NotificationSound}" Style="{StaticResource SettingTitleStyle}"/>
                     </DockPanel>
                 </Border>
                 <Border Style="{StaticResource SettingRowStyle}">

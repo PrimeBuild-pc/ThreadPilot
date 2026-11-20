@@ -575,6 +575,7 @@ namespace ThreadPilot
                     return;
                 }
 
+                using var edit = await PersistentRuleEditGate.EnterAsync(ruleStore);
                 var rules = await ruleStore.LoadAsync();
                 var migrated = CpuAssignmentModeMigrationPolicy.ApplyToRules(rules);
                 if (migrated != null)

@@ -399,9 +399,6 @@
     <sys:String x:Key="SettingsView_StartMinimized">Inizia minimizzato</sys:String>
     <sys:String x:Key="SettingsView_ResetProcessChangesOnExit">Ripristina le modifiche ai processi all'uscita</sys:String>
     <sys:String x:Key="SettingsView_ResetProcessChangesOnExitDescription">Ripristina le assegnazioni CPU e le priorità modificate da ThreadPilot quando l'app viene chiusa.</sys:String>
-    <sys:String x:Key="SettingsView_QuickApply">Abilita le impostazioni in sospeso applicate dal vassoio</sys:String>
-    <sys:String x:Key="SettingsView_MonitoringControl">Abilita i controlli di monitoraggio dell'automazione dal vassoio</sys:String>
-    <sys:String x:Key="SettingsView_DetailedTooltips">Mostra descrizioni comandi dettagliate</sys:String>
 
     <sys:String x:Key="SettingsView_BasicPreferences">Preferenze di base</sys:String>
     <sys:String x:Key="SettingsView_StartWithWindows">Inizia con Windows</sys:String>
@@ -436,8 +433,6 @@
     <sys:String x:Key="SettingsView_Advanced">Avanzato</sys:String>
     <sys:String x:Key="SettingsView_NotificationHistory">Abilita la cronologia delle notifiche</sys:String>
     <sys:String x:Key="SettingsView_MaxHistory">Elementi massimi della cronologia:</sys:String>
-    <sys:String x:Key="SettingsView_AutoHide">Notifiche nascoste automaticamente</sys:String>
-    <sys:String x:Key="SettingsView_NotificationSound">Abilita il suono delle notifiche</sys:String>
     <sys:String x:Key="SettingsView_DebugLogging">Abilita la registrazione del debug</sys:String>
     <sys:String x:Key="SettingsView_PerformanceCounters">Abilita i contatori delle prestazioni</sys:String>
 

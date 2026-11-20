@@ -498,14 +498,10 @@ namespace ThreadPilot
                 return;
             }
 
-            var errorCode = exception is ThreadPilotException typedException
-                ? typedException.ErrorCode.ToString()
-                : ErrorCode.Unhandled.ToString();
-
             var context = new Dictionary<string, object>
             {
                 ["Source"] = source,
-                [LogProperties.ErrorCode] = errorCode,
+                [LogProperties.ErrorCode] = "Unhandled",
                 [LogProperties.CorrelationId] = enhancedLogger.GetCurrentCorrelationId() ?? "N/A",
                 ["IsTerminatingLevel"] = level == LogLevel.Critical,
             };

@@ -420,6 +420,12 @@ namespace ThreadPilot.Services
 
                 if (this.session == null)
                 {
+                    if (this.journal.Count > 0 && (++this.tickCount % BackgroundRescanTicks != 0 ||
+                        (await this.RestoreAllAsync().ConfigureAwait(false)).Failed.Count > 0))
+                    {
+                        return;
+                    }
+
                     await this.TryBeginSessionAsync().ConfigureAwait(false);
                     return;
                 }
@@ -809,7 +815,10 @@ namespace ThreadPilot.Services
                 Setting = GameBoostSetting.CpuSets,
                 AppliedCpuIndexes = selection.GlobalLogicalProcessorIndexes.ToList(),
             };
-            await this.AddJournalEntryAsync(entry).ConfigureAwait(false);
+            if (!await this.TryAddJournalEntryAsync(entry).ConfigureAwait(false))
+            {
+                return (ApplyOutcome.Failed, "could not save recovery data");
+            }
 
             var result = await this.affinityApplyService.ApplyAsync(process, selection, CpuAssignmentMode.CpuSets).ConfigureAwait(false);
             if (result.Success)
@@ -871,7 +880,10 @@ namespace ThreadPilot.Services
                 Setting = GameBoostSetting.EfficiencyMode,
                 AppliedEfficiencyMode = mode,
             };
-            await this.AddJournalEntryAsync(entry).ConfigureAwait(false);
+            if (!await this.TryAddJournalEntryAsync(entry).ConfigureAwait(false))
+            {
+                return (ApplyOutcome.Failed, "could not save recovery data");
+            }
 
             var result = await this.efficiencyService.SetEfficiencyModeAsync(process, mode).ConfigureAwait(false);
             if (!result.Success)
@@ -912,7 +924,11 @@ namespace ThreadPilot.Services
                 OriginalPriority = ProcessPriorityClass.Normal,
                 AppliedPriority = ProcessPriorityClass.AboveNormal,
             };
-            await this.AddJournalEntryAsync(entry).ConfigureAwait(false);
+            if (!await this.TryAddJournalEntryAsync(entry).ConfigureAwait(false))
+            {
+                await this.AuditAsync(ActivityAuditSeverity.Warning, $"{game.Name}: priority not changed", "Could not save recovery data").ConfigureAwait(false);
+                return;
+            }
 
             try
             {
@@ -994,7 +1010,10 @@ namespace ThreadPilot.Services
                         break;
                 }
 
-                this.journal.Remove(entry);
+                if (outcome != RestoreOutcome.Failed)
+                {
+                    this.journal.Remove(entry);
+                }
             }
 
             await this.SaveJournalAsync().ConfigureAwait(false);
@@ -1011,7 +1030,14 @@ namespace ThreadPilot.Services
             }
 
             var process = await this.processService.GetProcessByIdAsync(entry.ProcessId).ConfigureAwait(false);
-            if (process == null || this.HasUserRule(rules, process, entry.Setting))
+            if (process == null)
+            {
+                return this.IsSameProcessAlive(entry.ProcessId, entry.StartTimeUtcTicks)
+                    ? RestoreOutcome.Failed
+                    : RestoreOutcome.LeftAlone;
+            }
+
+            if (this.HasUserRule(rules, process, entry.Setting))
             {
                 return RestoreOutcome.LeftAlone;
             }
@@ -1019,7 +1045,12 @@ namespace ThreadPilot.Services
             if (entry.Setting == GameBoostSetting.CpuSets)
             {
                 var current = await this.processService.GetCpuAssignmentLogicalProcessorIndexesAsync(process, CpuAssignmentMode.CpuSets).ConfigureAwait(false);
-                if (current == null || !current.SequenceEqual(entry.AppliedCpuIndexes.OrderBy(index => index)))
+                if (current == null)
+                {
+                    return RestoreOutcome.Failed;
+                }
+
+                if (!current.SequenceEqual(entry.AppliedCpuIndexes.OrderBy(index => index)))
                 {
                     return RestoreOutcome.LeftAlone;
                 }
@@ -1035,8 +1066,13 @@ namespace ThreadPilot.Services
 
             if (entry.Setting == GameBoostSetting.EfficiencyMode)
             {
-                if (entry.AppliedEfficiencyMode == null
-                    || await this.efficiencyService.GetEfficiencyModeAsync(process).ConfigureAwait(false) != entry.AppliedEfficiencyMode)
+                var current = await this.efficiencyService.GetEfficiencyModeAsync(process).ConfigureAwait(false);
+                if (current == null)
+                {
+                    return RestoreOutcome.Failed;
+                }
+
+                if (entry.AppliedEfficiencyMode == null || current != entry.AppliedEfficiencyMode)
                 {
                     return RestoreOutcome.LeftAlone;
                 }
@@ -1152,10 +1188,16 @@ namespace ThreadPilot.Services
             }
         }
 
-        private async Task AddJournalEntryAsync(GameBoostJournalEntry entry)
+        private async Task<bool> TryAddJournalEntryAsync(GameBoostJournalEntry entry)
         {
             this.journal.Add(entry);
-            await this.SaveJournalAsync().ConfigureAwait(false);
+            if (await this.SaveJournalAsync().ConfigureAwait(false))
+            {
+                return true;
+            }
+
+            this.journal.Remove(entry);
+            return false;
         }
 
         private async Task ConfirmJournalEntryAsync(GameBoostJournalEntry entry)
@@ -1187,21 +1229,23 @@ namespace ThreadPilot.Services
             }
         }
 
-        private async Task SaveJournalAsync()
+        private async Task<bool> SaveJournalAsync()
         {
             try
             {
                 if (this.journal.Count == 0)
                 {
                     File.Delete(this.journalPath);
-                    return;
+                    return true;
                 }
 
                 await AtomicFileWriter.WriteAllTextAsync(this.journalPath, JsonSerializer.Serialize(this.journal, JournalJsonOptions)).ConfigureAwait(false);
+                return true;
             }
             catch (Exception ex)
             {
                 this.logger.LogWarning(ex, "Game Boost could not write its journal at {Path}", this.journalPath);
+                return false;
             }
         }
 

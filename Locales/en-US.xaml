@@ -399,9 +399,6 @@
     <sys:String x:Key="SettingsView_StartMinimized">Start minimized</sys:String>
     <sys:String x:Key="SettingsView_ResetProcessChangesOnExit">Reset process changes on exit</sys:String>
     <sys:String x:Key="SettingsView_ResetProcessChangesOnExitDescription">Restores CPU assignments and priorities changed by ThreadPilot when the app exits.</sys:String>
-    <sys:String x:Key="SettingsView_QuickApply">Enable pending settings apply from tray</sys:String>
-    <sys:String x:Key="SettingsView_MonitoringControl">Enable automation monitoring controls from tray</sys:String>
-    <sys:String x:Key="SettingsView_DetailedTooltips">Show detailed tooltips</sys:String>
     
     <sys:String x:Key="SettingsView_BasicPreferences">Basic Preferences</sys:String>
     <sys:String x:Key="SettingsView_StartWithWindows">Start with Windows</sys:String>
@@ -436,8 +433,6 @@
     <sys:String x:Key="SettingsView_Advanced">Advanced</sys:String>
     <sys:String x:Key="SettingsView_NotificationHistory">Enable notification history</sys:String>
     <sys:String x:Key="SettingsView_MaxHistory">Max history items:</sys:String>
-    <sys:String x:Key="SettingsView_AutoHide">Auto-hide notifications</sys:String>
-    <sys:String x:Key="SettingsView_NotificationSound">Enable notification sound</sys:String>
     <sys:String x:Key="SettingsView_DebugLogging">Enable debug logging</sys:String>
     <sys:String x:Key="SettingsView_PerformanceCounters">Enable performance counters</sys:String>
     

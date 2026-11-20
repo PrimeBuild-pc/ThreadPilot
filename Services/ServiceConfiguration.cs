@@ -50,7 +50,7 @@ namespace ThreadPilot.Services
             services.AddSingleton<IGitHubReleaseClient, GitHubReleaseClient>();
             services.AddSingleton<GitHubUpdateChecker>();
             services.AddSingleton<IApplicationVersionProvider, ApplicationVersionProvider>();
-            services.AddSingleton<IUpdateClock, SystemUpdateClock>();
+            services.AddSingleton(TimeProvider.System);
             services.AddSingleton<IUpdateDownloadClient, HttpUpdateDownloadClient>();
             services.AddSingleton<IUpdateTempDirectoryProvider, UpdateTempDirectoryProvider>();
             services.AddSingleton<IUpdateSignatureVerifier, AuthenticodeSignatureVerifier>();

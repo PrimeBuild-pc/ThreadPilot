@@ -399,9 +399,6 @@
     <sys:String x:Key="SettingsView_StartMinimized">开机启动时最小化</sys:String>
     <sys:String x:Key="SettingsView_ResetProcessChangesOnExit">退出时重置进程更改</sys:String>
     <sys:String x:Key="SettingsView_ResetProcessChangesOnExitDescription">退出应用时恢复 ThreadPilot 更改的 CPU 分配和优先级。</sys:String>
-    <sys:String x:Key="SettingsView_QuickApply">允许从托盘菜单应用待处理设置</sys:String>
-    <sys:String x:Key="SettingsView_MonitoringControl">允许从托盘菜单控制自动化监控</sys:String>
-    <sys:String x:Key="SettingsView_DetailedTooltips">托盘图标显示详细鼠标提示</sys:String>
     
     <sys:String x:Key="SettingsView_BasicPreferences">基本偏好设置</sys:String>
     <sys:String x:Key="SettingsView_StartWithWindows">随 Windows 开机启动</sys:String>
@@ -436,8 +433,6 @@
     <sys:String x:Key="SettingsView_Advanced">高级与调试设置</sys:String>
     <sys:String x:Key="SettingsView_NotificationHistory">启用通知历史记录</sys:String>
     <sys:String x:Key="SettingsView_MaxHistory">最大历史条目数:</sys:String>
-    <sys:String x:Key="SettingsView_AutoHide">自动渐隐通知气泡</sys:String>
-    <sys:String x:Key="SettingsView_NotificationSound">播放提示音</sys:String>
     <sys:String x:Key="SettingsView_DebugLogging">开启调试诊断日志记录</sys:String>
     <sys:String x:Key="SettingsView_PerformanceCounters">启用内部性能计数器</sys:String>
     

@@ -30,7 +30,7 @@ namespace ThreadPilot.Services
 
         public event EventHandler<ApplicationSettingsChangedEventArgs>? SettingsChanged;
 
-        public ApplicationSettingsModel Settings => (ApplicationSettingsModel)this.settings.Clone();
+        public ApplicationSettingsModel Settings => this.settings.Clone();
 
         public ApplicationSettingsService(ILogger<ApplicationSettingsService> logger)
             : this(
@@ -127,7 +127,7 @@ namespace ThreadPilot.Services
                         loadedSettings.Language,
                         this.systemUiCultureProvider());
 
-                    var oldSettings = (ApplicationSettingsModel)this.settings.Clone();
+                    var oldSettings = this.settings.Clone();
                     this.settings.CopyFrom(loadedSettings);
                     this.ValidateAndFixSettings();
 
@@ -199,7 +199,7 @@ namespace ThreadPilot.Services
 
             try
             {
-                var oldSettings = (ApplicationSettingsModel)this.settings.Clone();
+                var oldSettings = this.settings.Clone();
                 var resolvedLanguage = LocalizationService.ResolveLanguagePreference(
                     newSettings.Language,
                     this.systemUiCultureProvider());
@@ -224,7 +224,7 @@ namespace ThreadPilot.Services
             {
                 this.logger.LogInformation("Resetting settings to defaults");
 
-                var oldSettings = (ApplicationSettingsModel)this.settings.Clone();
+                var oldSettings = this.settings.Clone();
                 this.settings = this.CreateDefaultSettings();
 
                 await this.SaveSettingsAsync();
@@ -359,8 +359,8 @@ namespace ThreadPilot.Services
                 // In a more sophisticated implementation, we could track specific property changes
                 var changedProperties = new[] { "Settings" };
 
-                var oldSnapshot = (ApplicationSettingsModel)oldSettings.Clone();
-                var newSnapshot = (ApplicationSettingsModel)newSettings.Clone();
+                var oldSnapshot = oldSettings.Clone();
+                var newSnapshot = newSettings.Clone();
 
                 this.SettingsChanged?.Invoke(this, new ApplicationSettingsChangedEventArgs(
                     oldSnapshot, newSnapshot, changedProperties));

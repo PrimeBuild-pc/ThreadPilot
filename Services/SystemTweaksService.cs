@@ -815,7 +815,6 @@ namespace ThreadPilot.Services
 
             var backups = this.LoadRegistryBackups();
             var changedBackups = false;
-            var changedTargets = new List<RegistryTarget>();
             try
             {
                 foreach (var target in targets)
@@ -833,69 +832,95 @@ namespace ThreadPilot.Services
                     await SaveRegistryBackupsAsync(backups);
                 }
 
-                foreach (var target in targets)
-                {
-                    var backupKey = target.BackupKey;
+                await WriteDriverRegistryTargetsAsync(
+                    targets,
+                    target =>
+                    {
+                        if (enabled)
+                        {
+                            return enabledValue;
+                        }
 
-                    // The backup file is user-writable: only restore a value this tweak itself could have written.
-                    var desiredValue = enabled
-                        ? enabledValue
-                        : restoreOriginalWhenDisabled && backups.TryGetValue(backupKey, out var backup)
+                        // A user-writable backup may restore only values this tweak itself writes.
+                        return restoreOriginalWhenDisabled && backups.TryGetValue(target.BackupKey, out var backup)
                             && (backup.Value == enabledValue || backup.Value == disabledValue)
                             ? backup.Value
                             : disabledValue;
-                    using var key = Registry.LocalMachine.OpenSubKey(target.Path, writable: true);
-                    if (key == null)
+                    },
+                    WriteDriverRegistryValue,
+                    async () =>
                     {
-                        return false;
-                    }
+                        var status = tweak switch
+                        {
+                            SystemTweak.EthernetPowerSaving => await this.GetEthernetPowerSavingStatusAsync(),
+                            SystemTweak.InterruptModeration => await this.GetInterruptModerationStatusAsync(),
+                            SystemTweak.GpuMsiMode => await this.GetGpuMsiModeStatusAsync(),
+                            _ => new TweakStatus { IsAvailable = false },
+                        };
+                        if (!status.IsAvailable || status.IsEnabled != enabled)
+                        {
+                            return false;
+                        }
 
-                    key.SetValue(
-                        target.ValueName,
-                        target.Kind == RegistryValueKind.String
-                            ? desiredValue.ToString(CultureInfo.InvariantCulture)
-                            : desiredValue,
-                        target.Kind);
-                    changedTargets.Add(target);
-                }
-
-                var status = tweak switch
-                {
-                    SystemTweak.EthernetPowerSaving => await this.GetEthernetPowerSavingStatusAsync(),
-                    SystemTweak.InterruptModeration => await this.GetInterruptModerationStatusAsync(),
-                    SystemTweak.GpuMsiMode => await this.GetGpuMsiModeStatusAsync(),
-                    _ => new TweakStatus { IsAvailable = false },
-                };
-                this.RaiseStatusChanged(tweak.ToString(), status);
-                return status.IsAvailable && status.IsEnabled == enabled;
+                        this.RaiseStatusChanged(tweak.ToString(), status);
+                        return true;
+                    },
+                    this.logger);
+                return true;
             }
             catch (Exception ex)
             {
                 this.logger.LogWarning(ex, "Could not update driver tweak {Tweak}", tweak);
-                foreach (var target in changedTargets)
+                return false;
+            }
+        }
+
+        internal static async Task WriteDriverRegistryTargetsAsync(
+            IEnumerable<RegistryTarget> targets,
+            Func<RegistryTarget, int> selectValue,
+            Action<RegistryTarget, int> write,
+            Func<Task<bool>> verify,
+            ILogger logger)
+        {
+            var written = new List<RegistryTarget>();
+            try
+            {
+                foreach (var target in targets)
+                {
+                    write(target, selectValue(target));
+                    written.Add(target);
+                }
+
+                if (!await verify())
+                {
+                    throw new IOException("Windows did not confirm the requested device tweak.");
+                }
+            }
+            catch
+            {
+                foreach (var target in Enumerable.Reverse(written))
                 {
                     try
                     {
-                        using var key = Registry.LocalMachine.OpenSubKey(target.Path, writable: true);
-                        key?.SetValue(
-                            target.ValueName,
-                            target.Kind == RegistryValueKind.String
-                                ? target.Value.ToString(CultureInfo.InvariantCulture)
-                                : target.Value,
-                            target.Kind);
+                        write(target, target.Value);
                     }
-                    catch (Exception rollbackException)
+                    catch (Exception ex)
                     {
-                        this.logger.LogWarning(
-                            rollbackException,
-                            "Could not roll back {Path}\\{ValueName}",
-                            target.Path,
-                            target.ValueName);
+                        logger.LogWarning(ex, "Could not roll back {Path}\\{ValueName}", target.Path, target.ValueName);
                     }
                 }
 
-                return false;
+                throw;
             }
+        }
+
+        private static void WriteDriverRegistryValue(RegistryTarget target, int value)
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(target.Path, writable: true)
+                ?? throw new IOException($"Device registry key '{target.Path}' is no longer available.");
+            key.SetValue(target.ValueName, target.Kind == RegistryValueKind.String
+                ? value.ToString(CultureInfo.InvariantCulture)
+                : value, target.Kind);
         }
 
         private Dictionary<string, RegistryValueBackup> LoadRegistryBackups()
@@ -1105,7 +1130,7 @@ namespace ThreadPilot.Services
             public string StandardError { get; }
         }
 
-        private sealed record RegistryTarget(
+        internal sealed record RegistryTarget(
             string Path,
             string ValueName,
             int Value,

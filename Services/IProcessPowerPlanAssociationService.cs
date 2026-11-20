@@ -13,7 +13,7 @@ namespace ThreadPilot.Services
 
         Task<bool> LoadConfigurationAsync();
 
-        Task<bool> SaveConfigurationAsync();
+        Task<bool> SaveMonitoringSettingsAsync(bool preventDuplicateChanges, int delayMs);
 
         Task<IEnumerable<ProcessPowerPlanAssociation>> GetAssociationsAsync();
 
@@ -35,7 +35,7 @@ namespace ThreadPilot.Services
 
         Task<IEnumerable<string>> ValidateConfigurationAsync();
 
-        Task ResetConfigurationAsync();
+        Task<bool> ResetConfigurationAsync();
 
         Task<bool> ExportConfigurationAsync(string filePath);
 

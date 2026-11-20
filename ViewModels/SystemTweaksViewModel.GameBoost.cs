@@ -119,7 +119,7 @@ namespace ThreadPilot.ViewModels
                 return;
             }
 
-            var updated = (ApplicationSettingsModel)this.settingsService.Settings.Clone();
+            var updated = this.settingsService.Settings.Clone();
             updated.GameBoostEnabled = this.GameBoostEnabled;
             updated.GameBoostMode = this.GameBoostIsolation ? GameBoostMode.Isolation : GameBoostMode.Automatic;
             updated.GameBoostAboveNormalPriority = this.GameBoostAboveNormal;

@@ -264,13 +264,19 @@
                                      SelectedItem="{Binding SelectedAssociation}"
                                      AutoGenerateColumns="False"
                                      CanUserAddRows="False"
+                                     IsReadOnly="True"
                                      GridLinesVisibility="Horizontal"
                                      HeadersVisibility="Column"
                                      BorderThickness="1">
                                 <DataGrid.Columns>
-                                    <DataGridCheckBoxColumn Header="{DynamicResource MasksView_Enabled}" 
-                                                           Binding="{Binding IsEnabled}" 
-                                                           Width="60"/>
+                                    <DataGridTemplateColumn Header="{DynamicResource MasksView_Enabled}" Width="60">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                          AutomationProperties.Name="{DynamicResource MasksView_Enabled}"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
                                     <DataGridTextColumn Header="{DynamicResource ProcessPowerPlanAssociationView_Executable}"
                                                        Binding="{Binding ExecutableName}"
                                                        Width="150"/>
@@ -547,7 +553,7 @@
                     </Style.Triggers>
                 </Style>
             </Border.Style>
-            <TextBlock Text="{Binding StatusMessage}">
+            <TextBlock Text="{Binding StatusMessage}" AutomationProperties.Name="{Binding StatusMessage}">
                 <TextBlock.Style>
                     <Style TargetType="TextBlock">
                         <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}"/>

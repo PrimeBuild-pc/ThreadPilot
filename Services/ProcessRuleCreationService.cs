@@ -179,6 +179,7 @@ namespace ThreadPilot.Services
         {
             ArgumentNullException.ThrowIfNull(process);
 
+            using var edit = await PersistentRuleEditGate.EnterAsync(this.ruleStore, cancellationToken).ConfigureAwait(false);
             var rules = (await this.ruleStore.LoadAsync().ConfigureAwait(false)).ToList();
             var existingIndex = FindExistingRuleIndex(rules, process);
             if (existingIndex < 0)
@@ -200,6 +201,7 @@ namespace ThreadPilot.Services
                 return ProcessRuleCreationResult.Failed("NoSavedRuleToDelete", NoSavedRuleMessage);
             }
 
+            using var edit = await PersistentRuleEditGate.EnterAsync(this.ruleStore, cancellationToken).ConfigureAwait(false);
             var rules = (await this.ruleStore.LoadAsync().ConfigureAwait(false)).ToList();
             var existingIndex = rules.FindIndex(rule => string.Equals(rule.Id, ruleId, StringComparison.Ordinal));
             if (existingIndex < 0)
@@ -232,6 +234,7 @@ namespace ThreadPilot.Services
                     ProcessOperationUserMessages.RealtimePriorityBlocked);
             }
 
+            using var edit = await PersistentRuleEditGate.EnterAsync(this.ruleStore, cancellationToken).ConfigureAwait(false);
             var rules = (await this.ruleStore.LoadAsync().ConfigureAwait(false)).ToList();
             var existingIndex = rules.FindIndex(candidate => string.Equals(candidate.Id, rule.Id, StringComparison.Ordinal));
             if (existingIndex < 0)
@@ -386,6 +389,7 @@ namespace ThreadPilot.Services
                 return ProcessRuleCreationResult.Failed("NoActionableRulePayload", NoCurrentSettingsMessage);
             }
 
+            using var edit = await PersistentRuleEditGate.EnterAsync(this.ruleStore, cancellationToken).ConfigureAwait(false);
             var rules = (await this.ruleStore.LoadAsync().ConfigureAwait(false)).ToList();
             var existingIndex = FindExistingRuleIndex(rules, process);
             var created = existingIndex < 0;

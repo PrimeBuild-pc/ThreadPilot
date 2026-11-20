@@ -399,9 +399,6 @@
     <sys:String x:Key="SettingsView_StartMinimized">Minimiert starten</sys:String>
     <sys:String x:Key="SettingsView_ResetProcessChangesOnExit">Prozessänderungen beim Beenden zurücksetzen</sys:String>
     <sys:String x:Key="SettingsView_ResetProcessChangesOnExitDescription">Stellt von ThreadPilot geänderte CPU-Zuweisungen und Prioritäten beim Beenden der App wieder her.</sys:String>
-    <sys:String x:Key="SettingsView_QuickApply">Ausstehende Einstellungen aktivieren, die aus dem Fach übernommen werden</sys:String>
-    <sys:String x:Key="SettingsView_MonitoringControl">Aktivieren Sie die Steuerelemente für die Automatisierungsüberwachung in der Taskleiste</sys:String>
-    <sys:String x:Key="SettingsView_DetailedTooltips">Detaillierte Tooltips anzeigen</sys:String>
 
     <sys:String x:Key="SettingsView_BasicPreferences">Grundeinstellungen</sys:String>
     <sys:String x:Key="SettingsView_StartWithWindows">Beginnen Sie mit Windows</sys:String>
@@ -436,8 +433,6 @@
     <sys:String x:Key="SettingsView_Advanced">Fortgeschritten</sys:String>
     <sys:String x:Key="SettingsView_NotificationHistory">Benachrichtigungsverlauf aktivieren</sys:String>
     <sys:String x:Key="SettingsView_MaxHistory">Max. Verlaufselemente:</sys:String>
-    <sys:String x:Key="SettingsView_AutoHide">Benachrichtigungen automatisch ausblenden</sys:String>
-    <sys:String x:Key="SettingsView_NotificationSound">Benachrichtigungston aktivieren</sys:String>
     <sys:String x:Key="SettingsView_DebugLogging">Aktivieren Sie die Debug-Protokollierung</sys:String>
     <sys:String x:Key="SettingsView_PerformanceCounters">Leistungsindikatoren aktivieren</sys:String>
 

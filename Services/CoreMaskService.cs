@@ -485,8 +485,14 @@ namespace ThreadPilot.Services
                         {
                             association.CoreMaskId = allCoresMask.Id;
                             association.CoreMaskName = allCoresMask.Name;
-                            await associationService.UpdateAssociationAsync(association);
-                            this.logger.LogInformation("Updated association '{Name}' to use 'All Cores' mask", association.ExecutableName);
+                            if (await associationService.UpdateAssociationAsync(association))
+                            {
+                                this.logger.LogInformation("Updated association '{Name}' to use 'All Cores' mask", association.ExecutableName);
+                            }
+                            else
+                            {
+                                this.logger.LogWarning("Could not update association '{Name}' to use 'All Cores' mask", association.ExecutableName);
+                            }
                         }
                     }
                 }

@@ -3,6 +3,7 @@ namespace ThreadPilot.ViewModels
     using System;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
+    using System.ComponentModel;
     using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
@@ -453,6 +454,11 @@ namespace ThreadPilot.ViewModels
 
         protected override void OnDispose()
         {
+            foreach (var association in this.Associations)
+            {
+                association.PropertyChanged -= this.OnAssociationPropertyChanged;
+            }
+
             this.associationService.ConfigurationChanged -= this.OnConfigurationChanged;
             this.monitorManagerService.ServiceStatusChanged -= this.OnServiceStatusChanged;
             this.monitorManagerService.ProcessPowerPlanChanged -= this.OnProcessPowerPlanChanged;
@@ -472,6 +478,24 @@ namespace ThreadPilot.ViewModels
             this.UpdateServiceStatus();
         }
 
+        partial void OnAssociationsChanged(
+            ObservableCollection<ProcessPowerPlanAssociation>? oldValue,
+            ObservableCollection<ProcessPowerPlanAssociation> newValue)
+        {
+            if (oldValue != null)
+            {
+                foreach (var association in oldValue)
+                {
+                    association.PropertyChanged -= this.OnAssociationPropertyChanged;
+                }
+            }
+
+            foreach (var association in newValue)
+            {
+                association.PropertyChanged += this.OnAssociationPropertyChanged;
+            }
+        }
+
         partial void OnSelectedAssociationChanged(ProcessPowerPlanAssociation? value)
         {
             if (value == null)
@@ -489,9 +513,7 @@ namespace ThreadPilot.ViewModels
             {
                 this.SetStatus("Loading data...");
 
-                // Load associations
-                var associationsData = await this.associationService.GetAssociationsAsync();
-                this.Associations = new ObservableCollection<ProcessPowerPlanAssociation>(associationsData);
+                await this.RefreshAssociationsAsync();
 
                 // Load power plans
                 var powerPlans = await this.powerPlanService.GetPowerPlansAsync();
@@ -569,7 +591,7 @@ namespace ThreadPilot.ViewModels
                 }
                 else
                 {
-                    this.SetStatus("Failed to add rule - it may already exist", false);
+                    this.ShowConfigurationError("Failed to add rule - it may already exist");
                 }
             }
             catch (Exception ex)
@@ -597,9 +619,10 @@ namespace ThreadPilot.ViewModels
 
                 this.SetStatus("Updating rule...");
 
-                this.ApplyEditorToAssociation(this.SelectedAssociation);
+                var updated = this.SelectedAssociation.CreateSnapshot();
+                this.ApplyEditorToAssociation(updated);
 
-                var success = await this.associationService.UpdateAssociationAsync(this.SelectedAssociation);
+                var success = await this.associationService.UpdateAssociationAsync(updated);
                 if (success)
                 {
                     await this.LoadDataAsync();
@@ -607,13 +630,49 @@ namespace ThreadPilot.ViewModels
                 }
                 else
                 {
-                    this.SetStatus("Failed to update rule", false);
+                    this.ShowConfigurationError("Failed to update rule");
                 }
             }
             catch (Exception ex)
             {
                 this.SetStatus($"Error updating rule: {ex.Message}", false);
             }
+        }
+
+        private void OnAssociationPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ProcessPowerPlanAssociation.IsEnabled) && sender is ProcessPowerPlanAssociation association)
+            {
+                TaskSafety.FireAndForget(this.SaveAssociationEnabledAsync(association), ex =>
+                    this.Logger.LogError(ex, "Failed to update power plan association {AssociationId}", association.Id));
+            }
+        }
+
+        private async Task SaveAssociationEnabledAsync(ProcessPowerPlanAssociation association)
+        {
+            this.SetStatus("Updating rule...");
+            var updated = association.CreateSnapshot();
+            updated.UpdatedAt = DateTime.UtcNow;
+            if (!await this.associationService.UpdateAssociationAsync(updated))
+            {
+                await this.RefreshAssociationsAsync();
+                this.ShowConfigurationError("Failed to update rule");
+                return;
+            }
+
+            this.SetStatus("Rule updated successfully.", false);
+        }
+
+        private async Task RefreshAssociationsAsync()
+        {
+            var savedAssociations = await this.associationService.GetAssociationsAsync();
+            this.Associations = new ObservableCollection<ProcessPowerPlanAssociation>(savedAssociations);
+        }
+
+        private void ShowConfigurationError(string message)
+        {
+            this.SetCriticalStatus(message);
+            this.SetError(message);
         }
 
         [RelayCommand]
@@ -638,7 +697,7 @@ namespace ThreadPilot.ViewModels
                 }
                 else
                 {
-                    this.SetStatus("Failed to remove rule", false);
+                    this.ShowConfigurationError("Failed to remove rule");
                 }
             }
             catch (Exception ex)
@@ -667,7 +726,7 @@ namespace ThreadPilot.ViewModels
                 }
                 else
                 {
-                    this.SetStatus("Failed to set default power plan", false);
+                    this.ShowConfigurationError("Failed to set default power plan");
                 }
             }
             catch (Exception ex)
@@ -718,19 +777,15 @@ namespace ThreadPilot.ViewModels
             {
                 this.SetStatus("Saving configuration...");
 
-                // Update configuration with current settings
-                var config = this.associationService.Configuration;
-                config.PreventDuplicatePowerPlanChanges = this.PreventDuplicatePowerPlanChanges;
-                config.PowerPlanChangeDelayMs = this.PowerPlanChangeDelayMs;
-
-                var success = await this.associationService.SaveConfigurationAsync();
+                var success = await this.associationService.SaveMonitoringSettingsAsync(
+                    this.PreventDuplicatePowerPlanChanges, this.PowerPlanChangeDelayMs);
                 if (success)
                 {
                     this.SetStatus("Configuration saved and active.", false);
                 }
                 else
                 {
-                    this.SetStatus("Failed to save configuration", false);
+                    this.ShowConfigurationError("Failed to save configuration");
                 }
             }
             catch (Exception ex)
@@ -810,7 +865,7 @@ namespace ThreadPilot.ViewModels
 
         private void OnConfigurationChanged(object? sender, ConfigurationChangedEventArgs e)
         {
-            if (this.isInitialized)
+            if (this.isInitialized && !e.ChangeType.EndsWith("Error", StringComparison.Ordinal))
             {
                 _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () => await this.LoadDataAsync());
             }
