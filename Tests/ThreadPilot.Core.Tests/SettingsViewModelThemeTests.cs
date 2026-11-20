@@ -139,8 +139,13 @@ namespace ThreadPilot.Core.Tests
             var harness = new Harness();
             ApplicationSettingsModel? savedSettings = null;
             harness.SettingsService
-                .Setup(service => service.UpdateSettingsAsync(It.IsAny<ApplicationSettingsModel>()))
-                .Callback<ApplicationSettingsModel>(settings => savedSettings = settings.Clone())
+                .Setup(service => service.EditSettingsAsync(It.IsAny<Action<ApplicationSettingsModel>>()))
+                .Callback<Action<ApplicationSettingsModel>>(edit =>
+                {
+                    var draft = harness.PersistedSettings.Clone();
+                    edit(draft);
+                    savedSettings = draft;
+                })
                 .Returns(Task.CompletedTask);
             var viewModel = harness.CreateViewModel();
             viewModel.Settings.Language = "zh-CN";
@@ -242,20 +247,24 @@ namespace ThreadPilot.Core.Tests
             var harness = new Harness();
             ApplicationSettingsModel? savedSettings = null;
             harness.SettingsService
-                .Setup(service => service.UpdateSettingsAsync(It.IsAny<ApplicationSettingsModel>()))
-                .Callback<ApplicationSettingsModel>(settings => savedSettings = settings.Clone())
+                .Setup(service => service.EditSettingsAsync(It.IsAny<Action<ApplicationSettingsModel>>()))
+                .Callback<Action<ApplicationSettingsModel>>(edit =>
+                {
+                    var draft = harness.PersistedSettings.Clone();
+                    edit(draft);
+                    savedSettings = draft;
+                })
                 .Returns(Task.CompletedTask);
             var viewModel = harness.CreateViewModel();
             viewModel.Settings.Language = "it-IT";
-            var externalUpdate = harness.PersistedSettings.Clone();
-            externalUpdate.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
-
-            viewModel.ApplyPersistedSettings(externalUpdate);
+            // The background edit reached the store before the dispatcher delivered its event.
+            var checkTime = DateTimeOffset.UtcNow;
+            harness.PersistedSettings.LastUpdateCheckUtc = checkTime;
             await ((IAsyncRelayCommand)viewModel.SaveSettingsCommand).ExecuteAsync(null);
 
             Assert.NotNull(savedSettings);
             Assert.Equal("it-IT", savedSettings.Language);
-            Assert.Equal(externalUpdate.LastUpdateCheckUtc, savedSettings.LastUpdateCheckUtc);
+            Assert.Equal(checkTime, savedSettings.LastUpdateCheckUtc);
         }
 
         [Fact]
@@ -263,7 +272,8 @@ namespace ThreadPilot.Core.Tests
         {
             var harness = new Harness();
             harness.SettingsService
-                .Setup(service => service.UpdateSettingsAsync(It.IsAny<ApplicationSettingsModel>()))
+                .Setup(service => service.EditSettingsAsync(It.IsAny<Action<ApplicationSettingsModel>>()))
+                .Callback<Action<ApplicationSettingsModel>>(edit => edit(harness.PersistedSettings))
                 .Returns(Task.CompletedTask);
             var viewModel = harness.CreateViewModel();
             viewModel.Settings.Language = "it-IT";
@@ -275,9 +285,7 @@ namespace ThreadPilot.Core.Tests
 
             Assert.True(canNavigate);
             Assert.False(viewModel.HasUnsavedChanges);
-            harness.SettingsService.Verify(
-                service => service.UpdateSettingsAsync(It.Is<ApplicationSettingsModel>(settings => settings.Language == "it-IT")),
-                Times.Once);
+            Assert.Equal("it-IT", harness.PersistedSettings.Language);
         }
 
         [Fact]

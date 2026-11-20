@@ -307,6 +307,13 @@ namespace ThreadPilot.ViewModels
             this.DownloadAndInstallUpdateCommand.NotifyCanExecuteChanged();
         }
 
+        private Task PersistEditedSettingsAsync()
+        {
+            var baseline = this.savedSettingsSnapshot;
+            var edited = this.Settings.Clone();
+            return this.settingsService.EditSettingsAsync(draft => draft.CopyFrom(MergeSettings(baseline, edited, draft)));
+        }
+
         private async Task SaveSettingsAsync()
         {
             string previousDefaultPowerPlanGuid = string.Empty;
@@ -372,7 +379,7 @@ namespace ThreadPilot.ViewModels
                     }
                 }
 
-                await this.settingsService.UpdateSettingsAsync(this.Settings);
+                await this.PersistEditedSettingsAsync();
 
                 var useDarkTheme = this.Settings.HasUserThemePreference
                     ? this.Settings.UseDarkTheme
@@ -792,7 +799,7 @@ namespace ThreadPilot.ViewModels
 
             // Saved before the installer starts, since this copy is closed for it.
             this.Settings.AutostartWithWindows = true;
-            await this.settingsService.UpdateSettingsAsync(this.Settings);
+            await this.PersistEditedSettingsAsync();
             var result = await this.updateService.DownloadAndInstallAsync(check.Release);
             return result.Status == UpdateInstallStatus.Started ? null : result.Message;
         }

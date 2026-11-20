@@ -180,8 +180,13 @@ namespace ThreadPilot
 
                 if (!settings.HasUserThemePreference && settings.UseDarkTheme != useDarkTheme)
                 {
-                    settings.UseDarkTheme = useDarkTheme;
-                    Task.Run(async () => await settingsService.UpdateSettingsAsync(settings)).GetAwaiter().GetResult();
+                    Task.Run(() => settingsService.EditSettingsAsync(draft =>
+                    {
+                        if (!draft.HasUserThemePreference)
+                        {
+                            draft.UseDarkTheme = useDarkTheme;
+                        }
+                    })).GetAwaiter().GetResult();
                 }
 
                 themeService.ApplyTheme(useDarkTheme);

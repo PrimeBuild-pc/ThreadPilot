@@ -210,9 +210,8 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var settings = this.settingsService.Settings;
-                settings.KeyboardShortcuts = this.registeredShortcuts.Values.ToList();
-                await this.settingsService.UpdateSettingsAsync(settings);
+                var shortcuts = this.registeredShortcuts.Values.ToList();
+                await this.settingsService.EditSettingsAsync(draft => draft.KeyboardShortcuts = shortcuts);
 
                 this.logger.LogInformation("Saved {Count} keyboard shortcuts to settings", this.registeredShortcuts.Count);
             }

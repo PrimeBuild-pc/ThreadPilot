@@ -131,9 +131,8 @@ namespace ThreadPilot.Services
 
         private async Task MarkUpdateCheckAttemptAsync(CancellationToken cancellationToken)
         {
-            var settings = this.settingsService.Settings;
-            settings.LastUpdateCheckUtc = this.clock.GetUtcNow();
-            await this.settingsService.UpdateSettingsAsync(settings).ConfigureAwait(false);
+            var checkedAt = this.clock.GetUtcNow();
+            await this.settingsService.EditSettingsAsync(draft => draft.LastUpdateCheckUtc = checkedAt).ConfigureAwait(false);
         }
 
         private void TryCleanup(string tempDirectory)

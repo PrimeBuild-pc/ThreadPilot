@@ -534,8 +534,13 @@ namespace ThreadPilot
 
                 if (!settings.HasUserThemePreference && settings.UseDarkTheme != useDarkTheme)
                 {
-                    settings.UseDarkTheme = useDarkTheme;
-                    await this.settingsService.UpdateSettingsAsync(settings);
+                    await this.settingsService.EditSettingsAsync(draft =>
+                    {
+                        if (!draft.HasUserThemePreference)
+                        {
+                            draft.UseDarkTheme = useDarkTheme;
+                        }
+                    });
                 }
 
                 this.themeService.ApplyTheme(useDarkTheme);
@@ -589,8 +594,7 @@ namespace ThreadPilot
 
                 // Only after the rules have reached disk: a failed write has to be retried on the
                 // next launch, not recorded as done.
-                settings.HasMigratedPersistentRuleCpuAssignmentModes = true;
-                await this.settingsService.UpdateSettingsAsync(settings);
+                await this.settingsService.EditSettingsAsync(draft => draft.HasMigratedPersistentRuleCpuAssignmentModes = true);
             }
             catch (Exception ex)
             {
@@ -1742,8 +1746,7 @@ namespace ThreadPilot
                     return;
                 }
 
-                settings.HasSeenCpuAssignmentModeChangeNotice = true;
-                await this.settingsService.UpdateSettingsAsync(settings);
+                await this.settingsService.EditSettingsAsync(draft => draft.HasSeenCpuAssignmentModeChangeNotice = true);
             }
             catch (Exception ex)
             {
@@ -1806,8 +1809,7 @@ namespace ThreadPilot
                     return;
                 }
 
-                settings.HasSeenStartupMinimizedSuggestion = true;
-                await this.settingsService.UpdateSettingsAsync(settings);
+                await this.settingsService.EditSettingsAsync(draft => draft.HasSeenStartupMinimizedSuggestion = true);
             }
             catch (Exception ex)
             {
@@ -1895,8 +1897,7 @@ namespace ThreadPilot
                 var settings = this.settingsService.Settings;
                 if (!settings.HasSeenPerformanceIntro)
                 {
-                    settings.HasSeenPerformanceIntro = true;
-                    await this.settingsService.UpdateSettingsAsync(settings);
+                    await this.settingsService.EditSettingsAsync(draft => draft.HasSeenPerformanceIntro = true);
                 }
             }
             catch (Exception ex)
@@ -1986,8 +1987,7 @@ namespace ThreadPilot
                 var settings = this.settingsService.Settings;
                 if (!settings.HasSeenElevationWarning)
                 {
-                    settings.HasSeenElevationWarning = true;
-                    _ = this.settingsService.UpdateSettingsAsync(settings);
+                    _ = this.settingsService.EditSettingsAsync(draft => draft.HasSeenElevationWarning = true);
                 }
             }
             catch (Exception ex)

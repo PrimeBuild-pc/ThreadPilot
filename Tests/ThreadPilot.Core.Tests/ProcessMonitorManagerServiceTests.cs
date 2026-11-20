@@ -468,8 +468,10 @@ namespace ThreadPilot.Core.Tests
             coreMaskService.Verify(x => x.UnregisterMaskApplication(21), Times.Once);
         }
 
-        [Fact]
-        public async Task ProcessStarted_AppliesConfiguredCoreMaskForMatchingProcess()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task DiscoveredOrStartedProcess_AppliesConfiguredCoreMaskOnce(bool alreadyRunning)
         {
             var process = new ProcessModel { ProcessId = 31, Name = "game" };
             var processMonitor = new FakeProcessMonitorService();
@@ -513,9 +515,15 @@ namespace ThreadPilot.Core.Tests
                 coreMaskService,
                 affinityApplyService);
 
+            if (alreadyRunning)
+            {
+                processMonitor.RunningProcesses.Add(process);
+            }
+
             await manager.StartAsync();
             processMonitor.RaiseProcessStarted(process);
-            await Task.Delay(100);
+            processMonitor.RaiseProcessStarted(process);
+            await manager.EvaluateCurrentProcessesAsync();
 
             affinityApplyService.Verify(x => x.ApplyAsync(process, 1), Times.Once);
             processService.Verify(x => x.TrackAppliedMask(31, "mask-game"), Times.Once);
@@ -998,8 +1006,8 @@ namespace ThreadPilot.Core.Tests
             var settingsService = new Mock<IApplicationSettingsService>(MockBehavior.Loose);
             settingsService.SetupGet(x => x.Settings).Returns(() => persistedSettings);
             settingsService
-                .Setup(x => x.UpdateSettingsAsync(It.IsAny<ApplicationSettingsModel>()))
-                .Callback<ApplicationSettingsModel>(updated => persistedSettings.CopyFrom(updated))
+                .Setup(x => x.EditSettingsAsync(It.IsAny<Action<ApplicationSettingsModel>>()))
+                .Callback<Action<ApplicationSettingsModel>>(edit => edit(persistedSettings))
                 .Returns(Task.CompletedTask);
 
             return new ProcessMonitorManagerService(

@@ -14,13 +14,15 @@ namespace ThreadPilot.Services
 
         Task SaveSettingsAsync();
 
+        // Replaces the full profile for import and backup restore.
         Task UpdateSettingsAsync(ApplicationSettingsModel newSettings);
+
+        // Applies the edit to a detached copy of the latest committed profile.
+        Task EditSettingsAsync(Action<ApplicationSettingsModel> edit);
 
         Task ResetToDefaultsAsync();
 
         string GetSettingsFilePath();
-
-        void ValidateAndFixSettings();
 
         Task ExportSettingsAsync(string filePath);
 

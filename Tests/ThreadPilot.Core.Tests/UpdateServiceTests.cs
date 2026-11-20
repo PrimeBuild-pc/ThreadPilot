@@ -329,11 +329,11 @@ namespace ThreadPilot.Core.Tests
                 var settingsService = new Mock<IApplicationSettingsService>();
                 settingsService.SetupGet(service => service.Settings).Returns(() => this.Settings.Clone());
                 settingsService
-                    .Setup(service => service.UpdateSettingsAsync(It.IsAny<ApplicationSettingsModel>()))
-                    .Callback<ApplicationSettingsModel>(settings =>
+                    .Setup(service => service.EditSettingsAsync(It.IsAny<Action<ApplicationSettingsModel>>()))
+                    .Callback<Action<ApplicationSettingsModel>>(edit =>
                     {
-                        this.SavedSettings = settings.Clone();
-                        this.Settings.CopyFrom(settings);
+                        edit(this.Settings);
+                        this.SavedSettings = this.Settings.Clone();
                     })
                     .Returns(Task.CompletedTask);
 

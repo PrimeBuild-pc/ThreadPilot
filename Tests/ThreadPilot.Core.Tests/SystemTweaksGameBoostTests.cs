@@ -16,8 +16,13 @@ namespace ThreadPilot.Core.Tests
             ApplicationSettingsModel? saved = null;
             var settingsService = new Mock<IApplicationSettingsService>();
             settingsService.SetupGet(s => s.Settings).Returns(settings);
-            settingsService.Setup(s => s.UpdateSettingsAsync(It.IsAny<ApplicationSettingsModel>()))
-                .Callback((ApplicationSettingsModel model) => saved = model)
+            settingsService.Setup(s => s.EditSettingsAsync(It.IsAny<Action<ApplicationSettingsModel>>()))
+                .Callback((Action<ApplicationSettingsModel> edit) =>
+                {
+                    var updated = settings.Clone();
+                    edit(updated);
+                    saved = updated;
+                })
                 .Returns(Task.CompletedTask);
             var session = new Mock<IGameSessionService>();
             session.Setup(s => s.GetDecisionAsync()).ReturnsAsync(GameBoostDecision.None);

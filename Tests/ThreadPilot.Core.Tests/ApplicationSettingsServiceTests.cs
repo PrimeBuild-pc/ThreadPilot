@@ -13,6 +13,82 @@ namespace ThreadPilot.Core.Tests
     public sealed class ApplicationSettingsServiceTests
     {
         [Fact]
+        public async Task EditSettingsAsync_FailedWriteDoesNotPublishChanges()
+        {
+            var storage = new FakeSettingsStorage { FailWrites = true };
+            var service = CreateService(storage);
+            var changes = new List<ApplicationSettingsChangedEventArgs>();
+            service.SettingsChanged += (_, args) => changes.Add(args);
+
+            await Assert.ThrowsAsync<IOException>(() => service.EditSettingsAsync(draft => draft.StartMinimized = true));
+
+            Assert.False(service.Settings.StartMinimized);
+            Assert.Empty(changes);
+
+            storage.FailWrites = false;
+            await service.EditSettingsAsync(draft => draft.StartMinimized = true);
+
+            Assert.True(service.Settings.StartMinimized);
+            Assert.True(Assert.Single(changes).NewSettings.StartMinimized);
+        }
+
+        [Fact]
+        public async Task EditSettingsAsync_ConcurrentEditsPublishCommittedSnapshotsInOrder()
+        {
+            var writeStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var releaseWrite = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var storage = new FakeSettingsStorage
+            {
+                BeforeWrite = async () =>
+                {
+                    if (writeStarted.TrySetResult())
+                    {
+                        await releaseWrite.Task;
+                    }
+                },
+            };
+            var service = CreateService(storage);
+            var published = new List<ApplicationSettingsModel>();
+            service.SettingsChanged += (_, args) => published.Add(args.NewSettings);
+            var targetGameBoost = !service.Settings.GameBoostEnabled;
+
+            var first = service.EditSettingsAsync(draft => draft.StartMinimized = true);
+            try
+            {
+                await writeStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                var second = service.EditSettingsAsync(draft => draft.GameBoostEnabled = targetGameBoost);
+
+                Assert.False(service.Settings.StartMinimized);
+                Assert.False(second.IsCompleted);
+                Assert.Empty(published);
+                releaseWrite.TrySetResult();
+
+                await Task.WhenAll(first, second);
+            }
+            finally
+            {
+                releaseWrite.TrySetResult();
+            }
+
+            Assert.Collection(
+                published,
+                firstSnapshot =>
+                {
+                    Assert.True(firstSnapshot.StartMinimized);
+                    Assert.Equal(!targetGameBoost, firstSnapshot.GameBoostEnabled);
+                },
+                secondSnapshot =>
+                {
+                    Assert.True(secondSnapshot.StartMinimized);
+                    Assert.Equal(targetGameBoost, secondSnapshot.GameBoostEnabled);
+                });
+            var reloaded = CreateService(storage);
+            await reloaded.LoadSettingsAsync();
+            Assert.True(reloaded.Settings.StartMinimized);
+            Assert.Equal(targetGameBoost, reloaded.Settings.GameBoostEnabled);
+        }
+
+        [Fact]
         public async Task LoadSettingsAsync_CreatesDefaults_WhenFileIsMissing()
         {
             var storage = new FakeSettingsStorage();
@@ -530,10 +606,17 @@ namespace ThreadPilot.Core.Tests
                 return Task.FromResult<string?>(content);
             }
 
-            public bool FailWrites { get; init; }
+            public bool FailWrites { get; set; }
 
-            public Task WriteAsync(string path, string content)
+            public Func<Task>? BeforeWrite { get; init; }
+
+            public async Task WriteAsync(string path, string content)
             {
+                if (this.BeforeWrite != null)
+                {
+                    await this.BeforeWrite();
+                }
+
                 if (this.FailWrites)
                 {
                     throw new IOException("Simulated write failure.");
@@ -541,7 +624,6 @@ namespace ThreadPilot.Core.Tests
 
                 this.Files[path] = content;
                 this.Writes[path] = content;
-                return Task.CompletedTask;
             }
         }
     }

@@ -235,6 +235,7 @@ namespace ThreadPilot.Services
         private readonly object timerGate = new();
 
         private List<GameBoostJournalEntry> journal = new();
+        private volatile JournalRecoveryState startupRecovery;
         private Timer? timer;
         private bool started;
 
@@ -328,17 +329,13 @@ namespace ThreadPilot.Services
             await this.stateLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                this.journal = await this.LoadJournalAsync().ConfigureAwait(false);
-                if (this.journal.Count > 0)
+                if (this.started)
                 {
-                    this.logger.LogInformation("Game Boost: restoring {Count} change(s) left by a previous run", this.journal.Count);
-                    var (restored, left, failed) = await this.RestoreAllAsync().ConfigureAwait(false);
-                    await this.AuditAsync(
-                        failed.Count > 0 ? ActivityAuditSeverity.Warning : ActivityAuditSeverity.Success,
-                        $"Restored {restored} change(s) left by an unexpected close",
-                        DescribeRestore(restored, left, failed)).ConfigureAwait(false);
+                    return;
                 }
 
+                this.startupRecovery = JournalRecoveryState.ReadPending;
+                await this.RecoverStartupJournalAsync(logReadFailure: true).ConfigureAwait(false);
                 this.started = true;
                 this.stopped = false;
                 this.SyncTimer();
@@ -361,7 +358,14 @@ namespace ThreadPilot.Services
             await this.stateLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                await this.EndSessionAsync("ThreadPilot is closing").ConfigureAwait(false);
+                if (this.startupRecovery != JournalRecoveryState.Complete)
+                {
+                    await this.RecoverStartupJournalAsync().ConfigureAwait(false);
+                }
+                else
+                {
+                    await this.EndSessionAsync("ThreadPilot is closing").ConfigureAwait(false);
+                }
             }
             finally
             {
@@ -382,12 +386,13 @@ namespace ThreadPilot.Services
             this.gameHandle?.Dispose();
         }
 
-        // Ticks only while Game Boost is on (it is off by default); turning it off restores through ReapplyAsync.
+        // Startup recovery needs a timer even when Game Boost is disabled.
         private void SyncTimer()
         {
             lock (this.timerGate)
             {
-                if (this.started && !this.disposed && this.Settings.GameBoostEnabled)
+                if (this.started && !this.disposed
+                    && (this.Settings.GameBoostEnabled || this.startupRecovery != JournalRecoveryState.Complete))
                 {
                     this.timer ??= new Timer(_ => TaskSafety.FireAndForget(this.TickAsync(), ex => this.logger.LogWarning(ex, "Game Boost tick failed")), null, TickInterval, TickInterval);
                     return;
@@ -410,6 +415,16 @@ namespace ThreadPilot.Services
                 if (this.stopped || this.disposed)
                 {
                     return;
+                }
+
+                if (this.startupRecovery != JournalRecoveryState.Complete)
+                {
+                    await this.RecoverStartupJournalAsync().ConfigureAwait(false);
+                    this.SyncTimer();
+                    if (this.startupRecovery != JournalRecoveryState.Complete)
+                    {
+                        return;
+                    }
                 }
 
                 if (!this.Settings.GameBoostEnabled)
@@ -1168,6 +1183,7 @@ namespace ThreadPilot.Services
                 var previous = this.session;
                 await this.EndSessionAsync("Game Boost settings changed").ConfigureAwait(false);
                 if (previous == null
+                    || this.journal.Count > 0
                     || !this.Settings.GameBoostEnabled
                     || !this.IsSameProcessAlive(previous.Game.ProcessId, previous.GameStartTimeUtcTicks)
                     || !GameBoostProcessLists.IsGame(previous.Game.Name, previous.Game.ExecutablePath, this.Settings.GameBoostManualGames, this.Settings.GameBoostExcludedGames))
@@ -1210,22 +1226,59 @@ namespace ThreadPilot.Services
             }
         }
 
-        private async Task<List<GameBoostJournalEntry>> LoadJournalAsync()
+        private async Task RecoverStartupJournalAsync(bool logReadFailure = false)
+        {
+            var firstRestoreAttempt = this.startupRecovery == JournalRecoveryState.ReadPending;
+            if (firstRestoreAttempt)
+            {
+                var persisted = await this.LoadJournalAsync(logReadFailure).ConfigureAwait(false);
+                if (persisted == null)
+                {
+                    return;
+                }
+
+                this.journal = persisted;
+                this.startupRecovery = JournalRecoveryState.RestorePending;
+            }
+
+            if (this.journal.Count > 0)
+            {
+                var (restored, left, failed) = await this.RestoreAllAsync().ConfigureAwait(false);
+                if (firstRestoreAttempt || restored > 0 || left > 0)
+                {
+                    await this.AuditAsync(
+                        failed.Count > 0 ? ActivityAuditSeverity.Warning : ActivityAuditSeverity.Success,
+                        $"Restored {restored} change(s) left by an unexpected close",
+                        DescribeRestore(restored, left, failed)).ConfigureAwait(false);
+                }
+            }
+
+            if (this.journal.Count == 0)
+            {
+                this.startupRecovery = JournalRecoveryState.Complete;
+            }
+        }
+
+        private async Task<List<GameBoostJournalEntry>?> LoadJournalAsync(bool logReadFailure)
         {
             try
             {
-                if (!File.Exists(this.journalPath))
+                var json = await File.ReadAllTextAsync(this.journalPath).ConfigureAwait(false);
+                return JsonSerializer.Deserialize<List<GameBoostJournalEntry>>(json)
+                    ?? throw new JsonException("Expected a list of Game Boost recovery entries.");
+            }
+            catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+            {
+                return new();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+            {
+                if (logReadFailure)
                 {
-                    return new();
+                    this.logger.LogWarning(ex, "Game Boost recovery is pending because its journal at {Path} could not be read", this.journalPath);
                 }
 
-                var json = await File.ReadAllTextAsync(this.journalPath).ConfigureAwait(false);
-                return JsonSerializer.Deserialize<List<GameBoostJournalEntry>>(json) ?? new();
-            }
-            catch (Exception ex)
-            {
-                this.logger.LogWarning(ex, "Game Boost journal at {Path} is unreadable; nothing to restore", this.journalPath);
-                return new();
+                return null;
             }
         }
 
@@ -1263,6 +1316,13 @@ namespace ThreadPilot.Services
             {
                 // Logging only.
             }
+        }
+
+        private enum JournalRecoveryState
+        {
+            Complete,
+            ReadPending,
+            RestorePending,
         }
 
         private enum ApplyOutcome

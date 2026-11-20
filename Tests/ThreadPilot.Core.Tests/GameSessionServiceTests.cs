@@ -129,6 +129,38 @@ namespace ThreadPilot.Core.Tests
             }
         }
 
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task LockedStartupJournal_IsRetriedBeforeAnyNewSession(bool enabled)
+        {
+            using (var crashed = this.CreateService())
+            {
+                await crashed.TickAsync();
+            }
+
+            Assert.NotEmpty(this.processes.CpuSets[ChromePid]);
+            const int nextGamePid = 401;
+            this.processes.Add(nextGamePid, "NextGame", @"D:\SteamLibrary\steamapps\common\NextGame\NextGame.exe");
+            this.foregroundPid = nextGamePid;
+            this.settings.GameBoostEnabled = enabled;
+            using var service = this.CreateService();
+            using (File.Open(this.journalPath, FileMode.Open, FileAccess.Read, FileShare.None))
+            {
+                await service.StartAsync();
+                await service.TickAsync();
+                Assert.Null(service.ActiveGameName);
+                Assert.Empty(this.processes.CpuSets[nextGamePid]);
+            }
+
+            await service.TickAsync();
+            Assert.Equal(enabled ? "NextGame" : null, service.ActiveGameName);
+            await service.StopAsync();
+
+            Assert.Empty(this.processes.CpuSets[ChromePid]);
+            Assert.False(File.Exists(this.journalPath));
+        }
+
         [Fact]
         public async Task FailedRestore_RemainsInJournalForTheNextAttempt()
         {
