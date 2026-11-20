@@ -253,7 +253,6 @@ namespace ThreadPilot.Services
                 }
 
                 await this.ApplyPersistentRulesForDiscoveredProcessesAsync(currentProcesses);
-                var associatedProcesses = new List<ProcessModel>();
                 var currentProcessIds = new HashSet<int>(currentProcesses.Select(p => p.ProcessId));
 
                 // Remove stale tracked processes that are no longer running
@@ -273,13 +272,12 @@ namespace ThreadPilot.Services
                     var association = this.configuration.FindMatchingAssociation(process);
                     if (association != null)
                     {
-                        associatedProcesses.Add(process);
                         this.runningAssociatedProcesses[process.ProcessId] = process;
                     }
                 }
 
                 // Determine which power plan should be active
-                await this.DeterminePowerPlanAsync(associatedProcesses);
+                await this.UpdatePowerPlanAsync();
             }
             catch (Exception ex)
             {
@@ -287,67 +285,7 @@ namespace ThreadPilot.Services
             }
         }
 
-        public async Task ForceDefaultPowerPlanAsync()
-        {
-            if (this.configuration?.DefaultPowerPlanGuid == null)
-            {
-                return;
-            }
-
-            try
-            {
-                await this.powerPlanChangeSemaphore.WaitAsync();
-
-                var currentPowerPlan = await this.powerPlanService.GetActivePowerPlan();
-                var decision = this.powerPlanTransitionGate.ShouldApply(
-                    this.configuration.DefaultPowerPlanGuid,
-                    currentPowerPlan?.Guid);
-                if (!decision.ShouldApply)
-                {
-                    this.logger.LogDebug(
-                        "Default power plan restore suppressed for {PowerPlanGuid}: {Reason}",
-                        this.configuration.DefaultPowerPlanGuid,
-                        decision.SuppressionReason);
-                    return;
-                }
-
-                this.powerPlanTransitionGate.RecordAttempt(this.configuration.DefaultPowerPlanGuid);
-                var success = await this.powerPlanService.SetActivePowerPlanByGuidAsync(
-                    this.configuration.DefaultPowerPlanGuid,
-                    this.configuration.PreventDuplicatePowerPlanChanges);
-
-                if (success)
-                {
-                    var newPowerPlan = await this.powerPlanService.GetPowerPlanByGuidAsync(this.configuration.DefaultPowerPlanGuid);
-                    // Note: We don't have a specific process for this event, so we'll use a dummy one
-                    var dummyProcess = new ProcessModel { Name = "System", ProcessId = -1 };
-                    var dummyAssociation = new ProcessPowerPlanAssociation("System", this.configuration.DefaultPowerPlanGuid, this.configuration.DefaultPowerPlanName);
-
-                    this.ProcessPowerPlanChanged?.Invoke(this, new ProcessPowerPlanChangeEventArgs(
-                        dummyProcess, dummyAssociation, currentPowerPlan, newPowerPlan, "DefaultRestored"));
-
-                    // Show notification for default power plan restoration
-                    await this.notificationService.ShowPowerPlanChangeNotificationAsync(
-                        currentPowerPlan?.Name ?? "Unknown",
-                        newPowerPlan?.Name ?? this.configuration.DefaultPowerPlanName,
-                        string.Empty);
-                }
-                else
-                {
-                    this.logger.LogWarning(
-                        "Failed to restore default power plan {PowerPlanGuid}",
-                        this.configuration.DefaultPowerPlanGuid);
-                }
-            }
-            catch (Exception ex)
-            {
-                this.SetStatus(this.isRunning, "Error setting default power plan", $"Error: {ex.Message}", ex);
-            }
-            finally
-            {
-                this.powerPlanChangeSemaphore.Release();
-            }
-        }
+        public Task ForceDefaultPowerPlanAsync() => this.UpdatePowerPlanAsync(forceDefault: true);
 
         public async Task<PowerPlanModel?> GetCurrentActivePowerPlanAsync()
         {
@@ -386,6 +324,7 @@ namespace ThreadPilot.Services
                 return;
             }
 
+            var monitoringToken = this.automationLifetime.Token;
             try
             {
                 this.logger.LogDebug(
@@ -416,10 +355,8 @@ namespace ThreadPilot.Services
                 }
 
                 var association = associationCandidates.FirstOrDefault(candidate => candidate.MatchesProcess(e.Process));
-                if (association != null)
+                if (association != null && await this.TrackRunningAssociationAsync(e.Process, monitoringToken))
                 {
-                    this.runningAssociatedProcesses[e.Process.ProcessId] = e.Process;
-
                     await this.enhancedLogger.LogProcessMonitoringEventAsync(
                         LogEventTypes.ProcessMonitoring.AssociationTriggered,
                         e.Process.Name, e.Process.ProcessId,
@@ -427,6 +364,11 @@ namespace ThreadPilot.Services
 
                     // Apply CPU affinity mask if configured
                     await this.ApplyCoreMaskAndPriorityAsync(e.Process, association);
+
+                    if (monitoringToken.IsCancellationRequested || !this.IsTrackedAssociation(e.Process))
+                    {
+                        return;
+                    }
 
                     // Schedule power plan change with delay if configured
                     if (this.configuration.PowerPlanChangeDelayMs > 0)
@@ -440,7 +382,7 @@ namespace ThreadPilot.Services
                     }
                     else
                     {
-                        await this.ChangePowerPlanForProcess(e.Process, association, "ProcessStarted");
+                        await this.UpdatePowerPlanAsync(startedProcess: e.Process);
                     }
                 }
             }
@@ -455,6 +397,28 @@ namespace ThreadPilot.Services
                 this.SetStatus(this.isRunning, "Error handling process start", $"Error: {ex.Message}", ex);
             }
         }
+
+        private async Task<bool> TrackRunningAssociationAsync(ProcessModel process, CancellationToken monitoringToken)
+        {
+            if (monitoringToken.IsCancellationRequested)
+            {
+                return false;
+            }
+
+            // Register before checking liveness so a concurrent stop can remove the entry.
+            this.runningAssociatedProcesses[process.ProcessId] = process;
+            if (await this.processService.IsProcessStillRunning(process) && !monitoringToken.IsCancellationRequested)
+            {
+                return this.IsTrackedAssociation(process);
+            }
+
+            this.runningAssociatedProcesses.TryRemove(KeyValuePair.Create(process.ProcessId, process));
+            return false;
+        }
+
+        private bool IsTrackedAssociation(ProcessModel process) =>
+            this.runningAssociatedProcesses.TryGetValue(process.ProcessId, out var tracked) &&
+            ReferenceEquals(tracked, process);
 
         private void OnProcessStopped(object? sender, ProcessEventArgs e)
         {
@@ -479,9 +443,7 @@ namespace ThreadPilot.Services
 
                 if (this.runningAssociatedProcesses.TryRemove(e.Process.ProcessId, out _))
                 {
-                    // Check if there are any other associated processes still running
-                    var remainingProcesses = this.runningAssociatedProcesses.Values.ToList();
-                    await this.DeterminePowerPlanAsync(remainingProcesses);
+                    await this.UpdatePowerPlanAsync();
                 }
             }
             catch (Exception ex)
@@ -546,103 +508,130 @@ namespace ThreadPilot.Services
                 return;
             }
 
-            var runningProcesses = this.runningAssociatedProcesses.Values.ToList();
-            await this.DeterminePowerPlanAsync(runningProcesses);
+            await this.UpdatePowerPlanAsync();
         }
 
-        private async Task DeterminePowerPlanAsync(IList<ProcessModel> associatedProcesses)
+        private async Task UpdatePowerPlanAsync(ProcessModel? startedProcess = null, bool forceDefault = false)
         {
-            if (this.configuration == null)
-            {
-                return;
-            }
-
+            await this.powerPlanChangeSemaphore.WaitAsync();
             try
             {
-                if (associatedProcesses.Any())
+                var configuration = this.configuration;
+                if (configuration == null || (!forceDefault && !this.isRunning))
                 {
-                    // Find the highest priority association among running processes
-                    var associations = associatedProcesses
-                        .Select(p => this.configuration.FindMatchingAssociation(p))
-                        .Where(a => a != null)
-                        .OrderByDescending(a => a!.Priority)
-                        .ToList();
+                    return;
+                }
 
-                    if (associations.Any())
+                if (startedProcess != null)
+                {
+                    var association = configuration.FindMatchingAssociation(startedProcess);
+                    if (association != null)
                     {
-                        var topAssociation = associations.First()!;
-                        var matchingProcess = associatedProcesses.First(p => topAssociation.MatchesProcess(p));
-                        await this.ChangePowerPlanForProcess(matchingProcess, topAssociation, "ProcessStarted");
+                        await this.TryChangePowerPlanForProcessAsync(startedProcess, association, configuration);
+                    }
+
+                    return;
+                }
+
+                if (!forceDefault)
+                {
+                    // Read the list after any in-flight plan change has completed. Stop events
+                    // remove their processes before waiting for this lock.
+                    var candidates = this.runningAssociatedProcesses.Values
+                        .Select(process => (Process: process, Association: configuration.FindMatchingAssociation(process)))
+                        .Where(candidate => candidate.Association != null)
+                        .OrderByDescending(candidate => candidate.Association!.Priority);
+                    foreach (var candidate in candidates)
+                    {
+                        if (await this.TryChangePowerPlanForProcessAsync(candidate.Process, candidate.Association!, configuration))
+                        {
+                            return;
+                        }
                     }
                 }
-                else
+
+                if ((forceDefault || this.isRunning) && !string.IsNullOrEmpty(configuration.DefaultPowerPlanGuid))
                 {
-                    // No associated processes running, revert to default
-                    if (!string.IsNullOrEmpty(this.configuration.DefaultPowerPlanGuid))
-                    {
-                        await this.ForceDefaultPowerPlanAsync();
-                    }
+                    await this.RestoreDefaultPowerPlanAsync(configuration);
                 }
             }
             catch (Exception ex)
             {
                 this.SetStatus(this.isRunning, "Error determining power plan", $"Error: {ex.Message}", ex);
             }
-        }
-
-        private async Task ChangePowerPlanForProcess(ProcessModel process, ProcessPowerPlanAssociation association, string action)
-        {
-            try
-            {
-                await this.powerPlanChangeSemaphore.WaitAsync();
-
-                var currentPowerPlan = await this.powerPlanService.GetActivePowerPlan();
-                var decision = this.powerPlanTransitionGate.ShouldApply(
-                    association.PowerPlanGuid,
-                    currentPowerPlan?.Guid);
-                if (!decision.ShouldApply)
-                {
-                    this.logger.LogDebug(
-                        "Power plan change suppressed for {PowerPlanGuid}: {Reason}",
-                        association.PowerPlanGuid,
-                        decision.SuppressionReason);
-                    return;
-                }
-
-                this.powerPlanTransitionGate.RecordAttempt(association.PowerPlanGuid);
-                var success = await this.powerPlanService.SetActivePowerPlanByGuidAsync(
-                    association.PowerPlanGuid,
-                    this.configuration?.PreventDuplicatePowerPlanChanges ?? true);
-
-                if (success)
-                {
-                    var newPowerPlan = await this.powerPlanService.GetPowerPlanByGuidAsync(association.PowerPlanGuid);
-                    this.ProcessPowerPlanChanged?.Invoke(this, new ProcessPowerPlanChangeEventArgs(
-                        process, association, currentPowerPlan, newPowerPlan, action));
-
-                    // Show notification for power plan change
-                    await this.notificationService.ShowPowerPlanChangeNotificationAsync(
-                        currentPowerPlan?.Name ?? "Unknown",
-                        newPowerPlan?.Name ?? association.PowerPlanName,
-                        process.Name);
-                }
-                else
-                {
-                    this.logger.LogWarning(
-                        "Failed to change power plan to {PowerPlanGuid} for process {ProcessName} (PID: {ProcessId})",
-                        association.PowerPlanGuid,
-                        process.Name,
-                        process.ProcessId);
-                }
-            }
-            catch (Exception ex)
-            {
-                this.SetStatus(this.isRunning, "Error changing power plan", $"Error: {ex.Message}", ex);
-            }
             finally
             {
                 this.powerPlanChangeSemaphore.Release();
             }
+        }
+
+        private async Task RestoreDefaultPowerPlanAsync(ProcessMonitorConfiguration configuration)
+        {
+            var guid = configuration.DefaultPowerPlanGuid;
+            var currentPowerPlan = await this.powerPlanService.GetActivePowerPlan();
+            var decision = this.powerPlanTransitionGate.ShouldApply(guid, currentPowerPlan?.Guid);
+            if (!decision.ShouldApply)
+            {
+                this.logger.LogDebug("Default power plan restore suppressed for {PowerPlanGuid}: {Reason}", guid, decision.SuppressionReason);
+                return;
+            }
+
+            this.powerPlanTransitionGate.RecordAttempt(guid);
+            if (!await this.powerPlanService.SetActivePowerPlanByGuidAsync(guid, configuration.PreventDuplicatePowerPlanChanges))
+            {
+                this.logger.LogWarning("Failed to restore default power plan {PowerPlanGuid}", guid);
+                return;
+            }
+
+            var newPowerPlan = await this.powerPlanService.GetPowerPlanByGuidAsync(guid);
+            var systemProcess = new ProcessModel { Name = "System", ProcessId = -1 };
+            var defaultAssociation = new ProcessPowerPlanAssociation("System", guid, configuration.DefaultPowerPlanName);
+            this.ProcessPowerPlanChanged?.Invoke(this, new ProcessPowerPlanChangeEventArgs(
+                systemProcess, defaultAssociation, currentPowerPlan, newPowerPlan, "DefaultRestored"));
+            await this.notificationService.ShowPowerPlanChangeNotificationAsync(
+                currentPowerPlan?.Name ?? "Unknown", newPowerPlan?.Name ?? configuration.DefaultPowerPlanName, string.Empty);
+        }
+
+        private async Task<bool> TryChangePowerPlanForProcessAsync(
+            ProcessModel process, ProcessPowerPlanAssociation association, ProcessMonitorConfiguration configuration)
+        {
+            if (!this.isRunning || !this.IsTrackedAssociation(process))
+            {
+                return false;
+            }
+
+            var currentPowerPlan = await this.powerPlanService.GetActivePowerPlan();
+            var stillRunning = await this.processService.IsProcessStillRunning(process);
+            if (!stillRunning || !this.isRunning || !this.IsTrackedAssociation(process))
+            {
+                return false;
+            }
+
+            var decision = this.powerPlanTransitionGate.ShouldApply(association.PowerPlanGuid, currentPowerPlan?.Guid);
+            if (!decision.ShouldApply)
+            {
+                this.logger.LogDebug(
+                    "Power plan change suppressed for {PowerPlanGuid}: {Reason}", association.PowerPlanGuid, decision.SuppressionReason);
+                return true;
+            }
+
+            this.powerPlanTransitionGate.RecordAttempt(association.PowerPlanGuid);
+            var success = await this.powerPlanService.SetActivePowerPlanByGuidAsync(
+                association.PowerPlanGuid, configuration.PreventDuplicatePowerPlanChanges);
+            if (!success)
+            {
+                this.logger.LogWarning(
+                    "Failed to change power plan to {PowerPlanGuid} for process {ProcessName} (PID: {ProcessId})",
+                    association.PowerPlanGuid, process.Name, process.ProcessId);
+                return true;
+            }
+
+            var newPowerPlan = await this.powerPlanService.GetPowerPlanByGuidAsync(association.PowerPlanGuid);
+            this.ProcessPowerPlanChanged?.Invoke(this, new ProcessPowerPlanChangeEventArgs(
+                process, association, currentPowerPlan, newPowerPlan, "ProcessStarted"));
+            await this.notificationService.ShowPowerPlanChangeNotificationAsync(
+                currentPowerPlan?.Name ?? "Unknown", newPowerPlan?.Name ?? association.PowerPlanName, process.Name);
+            return true;
         }
 
         private void SetStatus(bool isRunning, string status, string? details = null, Exception? error = null)
