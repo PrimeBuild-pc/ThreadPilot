@@ -142,3 +142,16 @@ jobs:
           path: |
             gitleaks-report.json
             dotnet-format-report.json
+
+      - name: Record the tested PR merge commit
+        if: github.event_name == 'pull_request'
+        shell: pwsh
+        run: Set-Content -LiteralPath "${env:RUNNER_TEMP}/tested-merge.txt" -Value $env:GITHUB_SHA
+      - name: Upload the tested PR merge commit
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: verified-merge-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/tested-merge.txt
+          if-no-files-found: error
+          retention-days: 7
