@@ -365,6 +365,13 @@ namespace ThreadPilot.Services
                     }
                 }
 
+                if (string.IsNullOrWhiteSpace(e.Process.ExecutablePath)
+                    && this.configuration.GetEnabledAssociations().Any(candidate =>
+                        candidate.MatchByPath && candidate.MatchesExecutable(e.Process.Name)))
+                {
+                    await this.TryRefreshAssociationProcessAsync(e.Process);
+                }
+
                 await this.ApplyPersistentRulesForProcessStartAsync(e.Process, lifetime);
 
                 var association = await this.ReconcileAssociationAsync(e.Process, applyProcessSettings: true, lifetime);
@@ -421,18 +428,11 @@ namespace ThreadPilot.Services
             var needsPriority = applyProcessSettings && candidates.Any(candidate => !string.IsNullOrEmpty(candidate.ProcessPriority));
             if (needsPath || needsPriority)
             {
-                try
-                {
-                    await this.processService.RefreshProcessInfo(process);
-                }
-                catch (Exception ex)
-                {
-                    this.logger.LogDebug(ex, "Could not enrich process {ProcessName} (PID: {ProcessId}) for association matching", process.Name, process.ProcessId);
-                }
+                await this.TryRefreshAssociationProcessAsync(process);
             }
 
             var association = candidates.FirstOrDefault(candidate => candidate.MatchesProcess(process));
-            if (association == null || lifetime.IsCancellationRequested)
+            if (association == null || lifetime.IsCancellationRequested || !await this.processService.IsProcessStillRunning(process))
             {
                 return null;
             }
@@ -487,6 +487,18 @@ namespace ThreadPilot.Services
             }
 
             return association;
+        }
+
+        private async Task TryRefreshAssociationProcessAsync(ProcessModel process)
+        {
+            try
+            {
+                await this.processService.RefreshProcessInfo(process);
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogDebug(ex, "Could not enrich process {ProcessName} (PID: {ProcessId}) for association matching", process.Name, process.ProcessId);
+            }
         }
 
         private void OnProcessStopped(object? sender, ProcessEventArgs e)
@@ -608,14 +620,24 @@ namespace ThreadPilot.Services
                     return;
                 }
 
+                var currentPowerPlan = await this.powerPlanService.GetActivePowerPlan();
                 (ProcessModel? Process, ProcessPowerPlanAssociation? Association) selected = default;
                 if (!forceDefault)
                 {
-                    selected = this.RunningAssociatedProcesses
+                    var candidates = this.RunningAssociatedProcesses
                         .Select(process => (Process: process, Association: configuration.FindMatchingAssociation(process)))
                         .Where(match => match.Association != null)
-                        .OrderByDescending(match => match.Association!.Priority)
-                        .FirstOrDefault();
+                        .OrderByDescending(match => match.Association!.Priority);
+                    foreach (var candidate in candidates)
+                    {
+                        if (await this.processService.IsProcessStillRunning(candidate.Process)
+                            && this.runningAssociatedProcesses.TryGetValue(candidate.Process.ProcessId, out var tracked)
+                            && tracked.Process.IsSameInstance(candidate.Process))
+                        {
+                            selected = candidate;
+                            break;
+                        }
+                    }
                 }
 
                 var process = selected.Process;
@@ -626,7 +648,6 @@ namespace ThreadPilot.Services
                     return;
                 }
 
-                var currentPowerPlan = await this.powerPlanService.GetActivePowerPlan();
                 var decision = this.powerPlanTransitionGate.ShouldApply(planGuid, currentPowerPlan?.Guid);
                 if (!decision.ShouldApply || lifetime.IsCancellationRequested)
                 {
@@ -744,9 +765,7 @@ namespace ThreadPilot.Services
                 && this.configuration?.GetEnabledAssociations().Any(association =>
                     Enum.TryParse<ProcessPriorityClass>(association.ProcessPriority, out var priority)
                     && Enum.IsDefined(priority) && !ProcessPriorityGuardrails.IsBlocked(priority)
-                    && (association.MatchesProcess(process)
-                        || (association.MatchByPath && string.IsNullOrWhiteSpace(process.ExecutablePath)
-                            && association.MatchesExecutable(process.Name)))) == true)
+                    && association.MatchesProcess(process)) == true)
             {
                 // A delayed retry from the saved rule would undo the association's priority.
                 options |= PersistentRuleApplyOptions.SkipDelayedPriorityVerification;
