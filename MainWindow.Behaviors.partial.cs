@@ -407,10 +407,6 @@ namespace ThreadPilot
 
                 this.LogDebug("Skipping inactive view initialization until each page is opened.");
 
-                // Initialize keyboard shortcuts after window is loaded
-                this.Loaded += this.OnWindowLoaded;
-                this.LogDebug("Keyboard shortcuts event handler attached");
-
                 this.LogDebug("=== LoadViewModelsAsync completed successfully ===");
             }
             catch (Exception ex)
@@ -427,6 +423,8 @@ namespace ThreadPilot
             this.LogDebug("About to initialize settings...");
             await this.InitializeSettingsAsync();
             this.LogDebug("Settings initialized successfully");
+
+            await this.InitializeKeyboardShortcutsAsync();
 
             this.LogDebug("About to initialize system tray...");
             try
@@ -1595,21 +1593,6 @@ namespace ThreadPilot
             }
         }
 
-        private void OnWindowLoaded(object? sender, RoutedEventArgs e)
-        {
-            TaskSafety.FireAndForget(this.OnWindowLoadedAsync(), ex =>
-            {
-                this.LogDebug($"OnWindowLoaded failed: {ex.Message}");
-            });
-        }
-
-        private async Task OnWindowLoadedAsync()
-        {
-            this.Loaded -= this.OnWindowLoaded;
-            this.EnsureDashboardVisibleOnScreen();
-            await this.InitializeKeyboardShortcutsAsync();
-        }
-
         private void OnOpenRulesRequested(object? sender, EventArgs e)
         {
             this.SelectMainTab("Rules");
@@ -2226,7 +2209,6 @@ namespace ThreadPilot
             this.SaveWindowPlacement();
             try
             {
-                this.Loaded -= this.OnWindowLoaded;
                 this.processViewModel.OpenRulesRequested -= this.OnOpenRulesRequested;
                 this.processViewModel.OpenMasksRequested -= this.OnOpenMasksRequested;
 
