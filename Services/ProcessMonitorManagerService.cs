@@ -241,6 +241,7 @@ namespace ThreadPilot.Services
 
             try
             {
+                var trackedBeforeScan = this.runningAssociatedProcesses.ToArray();
                 var currentProcesses = (await this.processMonitorService.GetRunningProcessesAsync()).ToList();
                 if (resetRuleAttempts)
                 {
@@ -253,16 +254,18 @@ namespace ThreadPilot.Services
                 }
 
                 await this.ApplyPersistentRulesForDiscoveredProcessesAsync(currentProcesses);
-                var currentProcessIds = new HashSet<int>(currentProcesses.Select(p => p.ProcessId));
+                var currentById = currentProcesses.DistinctBy(process => process.ProcessId)
+                    .ToDictionary(process => process.ProcessId);
 
-                // Remove stale tracked processes that are no longer running
-                foreach (var trackedPid in this.runningAssociatedProcesses.Keys)
+                // A snapshot can contain a different process that reused a tracked PID.
+                foreach (var tracked in trackedBeforeScan)
                 {
-                    if (!currentProcessIds.Contains(trackedPid) && this.runningAssociatedProcesses.TryRemove(trackedPid, out _))
+                    if ((!currentById.TryGetValue(tracked.Key, out var current) || !tracked.Value.IsSameInstance(current))
+                        && this.runningAssociatedProcesses.TryRemove(tracked))
                     {
-                        this.coreMaskService.UnregisterMaskApplication(trackedPid);
-                        this.processService.UntrackProcess(trackedPid);
-                        this.persistentRuleAutoApplyService.MarkProcessExited(trackedPid);
+                        this.coreMaskService.UnregisterMaskApplication(tracked.Key);
+                        this.processService.UntrackProcess(tracked.Key);
+                        this.persistentRuleAutoApplyService.MarkProcessExited(tracked.Key);
                     }
                 }
 

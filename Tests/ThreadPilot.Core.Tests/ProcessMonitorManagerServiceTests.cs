@@ -1072,6 +1072,25 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task Snapshot_WhenPidIsReusedByUnassociatedProcess_RestoresDefaultPlan()
+        {
+            var game = new ProcessModel { ProcessId = 21, Name = "game" };
+            var monitor = new FakeProcessMonitorService { RunningProcesses = { game } };
+            var plans = new PowerPlanState();
+            using var manager = CreatePowerPlanManager(monitor, plans, CreateProcessService());
+
+            await manager.StartAsync();
+            Assert.Equal("plan-game", plans.Active);
+
+            monitor.RunningProcesses.Clear();
+            monitor.RunningProcesses.Add(new ProcessModel { ProcessId = 21, Name = "unrelated" });
+            await manager.EvaluateCurrentProcessesAsync();
+
+            Assert.Equal("balanced", plans.Active);
+            Assert.Empty(manager.RunningAssociatedProcesses);
+        }
+
+        [Fact]
         public async Task ProcessStopped_DuringPlanChange_ReevaluatesAfterTheWrite()
         {
             var processMonitor = new FakeProcessMonitorService();

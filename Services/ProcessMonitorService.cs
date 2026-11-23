@@ -431,13 +431,14 @@ namespace ThreadPilot.Services
                     {
                         ProcessId = processId,
                         Name = NormalizeProcessName(processName),
+                        StartTimeUtc = ProcessService.TryGetProcessStartTimeUtc(processId),
                         Classification = ProcessClassification.Unknown,
                     }
                     : null;
 
                 if (process != null)
                 {
-                    this.runningProcesses.TryAdd(processId, process);
+                    this.UpdateRunningProcess(process);
                     this.ProcessStarted?.Invoke(this, new ProcessEventArgs(process));
                 }
             }
@@ -520,9 +521,8 @@ namespace ThreadPilot.Services
                         return;
                     }
 
-                    if (!this.runningProcesses.ContainsKey(process.ProcessId))
+                    if (this.UpdateRunningProcess(process))
                     {
-                        this.runningProcesses.TryAdd(process.ProcessId, process);
                         this.ProcessStarted?.Invoke(this, new ProcessEventArgs(process));
                         detectedChanges++;
                     }
@@ -558,6 +558,17 @@ namespace ThreadPilot.Services
                 this.wmiStartSemaphore.Release();
                 Interlocked.Exchange(ref this.isFallbackPollingInProgress, 0);
             }
+        }
+
+        private bool UpdateRunningProcess(ProcessModel process)
+        {
+            var pid = process.ProcessId;
+            if (this.runningProcesses.TryGetValue(pid, out var existing) && !existing.IsSameInstance(process))
+            {
+                return this.runningProcesses.TryUpdate(pid, process, existing);
+            }
+
+            return this.runningProcesses.TryAdd(pid, process);
         }
 
         private void UpdateAdaptivePollingInterval(int detectedChanges)
