@@ -184,7 +184,16 @@ jobs:
           TAG: ${{ steps.version.outputs.tag }}
         run: |
           $staging = Join-Path $env:RUNNER_TEMP 'signpath'
-          Compress-Archive -LiteralPath "artifacts/release/installer/ThreadPilot_${env:TAG}_Setup.exe" -DestinationPath "$staging/unsigned/threadpilot-installer.zip"
+          $installer = "artifacts/release/installer/ThreadPilot_${env:TAG}_Setup.exe"
+          python build/normalize-installer-metadata.py $installer $env:TAG.Substring(1)
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not normalize the installer metadata."
+          }
+          $versionInfo = (Get-Item -LiteralPath $installer).VersionInfo
+          if ($versionInfo.ProductName -cne 'ThreadPilot' -or $versionInfo.ProductVersion -cne $env:TAG.Substring(1)) {
+            throw "Unexpected product metadata on $installer."
+          }
+          Compress-Archive -LiteralPath $installer -DestinationPath "$staging/unsigned/threadpilot-installer.zip"
 
       - name: Upload unsigned installer ZIP
         id: unsigned-installer
@@ -212,6 +221,7 @@ jobs:
             version: ${{ toJSON(steps.version.outputs.version) }}
 
       - name: Use the signed installer and verify Authenticode
+        timeout-minutes: 5
         shell: pwsh
         env:
           TAG: ${{ steps.version.outputs.tag }}
@@ -246,7 +256,7 @@ jobs:
               if ($testCertificate.Thumbprint -ne $testThumbprint) {
                 throw "The application was not signed by the expected SignPath test certificate."
               }
-              $store = [System.Security.Cryptography.X509Certificates.X509Store]::new('Root', 'CurrentUser')
+              $store = [System.Security.Cryptography.X509Certificates.X509Store]::new('Root', 'LocalMachine')
               $store.Open('ReadWrite')
               if (-not ($store.Certificates | Where-Object Thumbprint -eq $testThumbprint)) {
                 $store.Add($testCertificate)
