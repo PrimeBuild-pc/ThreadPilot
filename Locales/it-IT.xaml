@@ -754,4 +754,15 @@
     <sys:String x:Key="Rules_AppliesKeepAwake">tiene acceso il PC</sys:String>
     <sys:String x:Key="Rules_AppliesNothing">niente</sys:String>
     <sys:String x:Key="Rules_Unnamed">(senza nome)</sys:String>
+    <sys:String x:Key="SettingsView_Shortcuts">Scorciatoie globali</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutShowWindow">Mostra o nascondi ThreadPilot</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutMonitoring">Notifica di monitoraggio</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutPerformance">Notifica Prestazioni elevate</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutTweaks">Apri Ottimizzazioni di sistema</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutKey">Tasto della scorciatoia</sys:String>
+    <sys:String x:Key="Settings_ShortcutUnavailable">Impossibile usare {0}. Scegli un tasto con un modificatore e una combinazione disponibile.</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutCtrl">Ctrl</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutAlt">Alt</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutShift">Maiusc</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutWin">Win</sys:String>
 </ResourceDictionary>

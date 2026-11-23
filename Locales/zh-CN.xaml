@@ -754,4 +754,15 @@
     <sys:String x:Key="Rules_AppliesKeepAwake">保持电脑唤醒</sys:String>
     <sys:String x:Key="Rules_AppliesNothing">无</sys:String>
     <sys:String x:Key="Rules_Unnamed">（未命名）</sys:String>
+    <sys:String x:Key="SettingsView_Shortcuts">全局快捷键</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutShowWindow">显示或隐藏 ThreadPilot</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutMonitoring">进程监控通知</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutPerformance">高性能通知</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutTweaks">打开系统调整</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutKey">快捷键按键</sys:String>
+    <sys:String x:Key="Settings_ShortcutUnavailable">无法使用 {0}。请选择包含修饰键且可用的组合。</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutCtrl">Ctrl</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutAlt">Alt</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutShift">Shift</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutWin">Win</sys:String>
 </ResourceDictionary>

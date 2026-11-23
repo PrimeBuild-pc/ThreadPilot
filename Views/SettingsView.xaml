@@ -128,6 +128,56 @@
                     </DockPanel>
                 </Border>
 
+                <TextBlock Text="{DynamicResource SettingsView_Shortcuts}" Style="{StaticResource SectionHeaderStyle}"/>
+                <ItemsControl ItemsSource="{Binding ShortcutRows}">
+                    <ItemsControl.Style>
+                        <Style TargetType="ItemsControl">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ItemsControl.Style>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource SettingRowStyle}">
+                                <StackPanel>
+                                    <CheckBox IsChecked="{Binding IsEnabled}" FontWeight="SemiBold">
+                                        <CheckBox.Style>
+                                            <Style TargetType="CheckBox">
+                                                <Setter Property="Content" Value="{Binding Description}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ActionName}" Value="ShowMainWindow">
+                                                        <Setter Property="Content" Value="{DynamicResource SettingsView_ShortcutShowWindow}"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding ActionName}" Value="ToggleMonitoring">
+                                                        <Setter Property="Content" Value="{DynamicResource SettingsView_ShortcutMonitoring}"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding ActionName}" Value="PowerPlanHighPerformance">
+                                                        <Setter Property="Content" Value="{DynamicResource SettingsView_ShortcutPerformance}"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding ActionName}" Value="OpenTweaks">
+                                                        <Setter Property="Content" Value="{DynamicResource SettingsView_ShortcutTweaks}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </CheckBox.Style>
+                                    </CheckBox>
+                                    <WrapPanel Margin="0,6,0,0" IsEnabled="{Binding IsEnabled}">
+                                        <CheckBox Content="{DynamicResource SettingsView_ShortcutCtrl}" IsChecked="{Binding Control}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                        <CheckBox Content="{DynamicResource SettingsView_ShortcutAlt}" IsChecked="{Binding Alt}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                        <CheckBox Content="{DynamicResource SettingsView_ShortcutShift}" IsChecked="{Binding Shift}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                        <CheckBox Content="{DynamicResource SettingsView_ShortcutWin}" IsChecked="{Binding Windows}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                        <ComboBox ItemsSource="{Binding Keys}" SelectedItem="{Binding Key}" MinWidth="80"
+                                                  AutomationProperties.Name="{DynamicResource SettingsView_ShortcutKey}"/>
+                                    </WrapPanel>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
                 <!-- Rules & automation -->
                 <TextBlock Text="{DynamicResource SettingsView_RulesAutomation}" Style="{StaticResource SectionHeaderStyle}"/>
                 <Border Style="{StaticResource SettingRowStyle}">

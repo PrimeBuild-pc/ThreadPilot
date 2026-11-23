@@ -754,4 +754,15 @@
     <sys:String x:Key="Rules_AppliesKeepAwake">не даёт ПК уснуть</sys:String>
     <sys:String x:Key="Rules_AppliesNothing">ничего</sys:String>
     <sys:String x:Key="Rules_Unnamed">(без имени)</sys:String>
+    <sys:String x:Key="SettingsView_Shortcuts">Глобальные сочетания клавиш</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutShowWindow">Показать или скрыть ThreadPilot</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutMonitoring">Уведомление о мониторинге</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutPerformance">Уведомление о высокой производительности</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutTweaks">Открыть системные настройки</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutKey">Клавиша сочетания</sys:String>
+    <sys:String x:Key="Settings_ShortcutUnavailable">Не удаётся использовать {0}. Выберите клавишу с модификатором и доступное сочетание.</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutCtrl">Ctrl</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutAlt">Alt</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutShift">Shift</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutWin">Win</sys:String>
 </ResourceDictionary>

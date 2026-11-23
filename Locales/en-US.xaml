@@ -754,4 +754,15 @@
     <sys:String x:Key="Rules_AppliesKeepAwake">keeps the PC awake</sys:String>
     <sys:String x:Key="Rules_AppliesNothing">nothing</sys:String>
     <sys:String x:Key="Rules_Unnamed">(unnamed)</sys:String>
+    <sys:String x:Key="SettingsView_Shortcuts">Global shortcuts</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutShowWindow">Show or hide ThreadPilot</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutMonitoring">Monitoring notification</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutPerformance">High Performance notification</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutTweaks">Open System Tweaks</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutKey">Shortcut key</sys:String>
+    <sys:String x:Key="Settings_ShortcutUnavailable">Can't use {0}. Choose a key with a modifier and a combination that's available.</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutCtrl">Ctrl</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutAlt">Alt</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutShift">Shift</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutWin">Win</sys:String>
 </ResourceDictionary>

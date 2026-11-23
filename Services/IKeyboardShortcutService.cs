@@ -21,6 +21,10 @@ namespace ThreadPilot.Services
 
         Task LoadShortcutsFromSettingsAsync();
 
+        IReadOnlyList<KeyboardShortcut> GetConfiguredShortcuts();
+
+        Task<KeyboardShortcut?> ApplyAndSaveAsync(IReadOnlyList<KeyboardShortcut> shortcuts, Func<Task> saveAsync);
+
         Task SaveShortcutsToSettingsAsync();
 
         Task ClearAllShortcutsAsync();

@@ -106,7 +106,8 @@ namespace ThreadPilot.ViewModels
             IEnhancedLoggingService? enhancedLoggingService = null,
             IActivityAuditService? activityAuditService = null,
             ICpuTopologyProvider? cpuTopologyProvider = null,
-            ConfigurationBackupService? backupService = null)
+            ConfigurationBackupService? backupService = null,
+            IKeyboardShortcutService? keyboardShortcutService = null)
             : base(logger, enhancedLoggingService, activityAuditService)
         {
             this.settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
@@ -122,6 +123,7 @@ namespace ThreadPilot.ViewModels
             this.localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
             this.cpuTopologyProvider = cpuTopologyProvider;
             this.backupService = backupService;
+            this.keyboardShortcutService = keyboardShortcutService;
 
             this.ApplicationVersion = this.versionProvider.DisplayVersion;
 
@@ -147,6 +149,7 @@ namespace ThreadPilot.ViewModels
 
             // Subscribe to property changes to track unsaved changes
             this.Settings.PropertyChanged += this.OnSettingsPropertyChanged;
+            this.RefreshShortcutRows();
 
             // Keep viewmodel in sync with persisted settings
             this.settingsService.SettingsChanged += this.OnSettingsServiceSettingsChanged;
@@ -193,6 +196,11 @@ namespace ThreadPilot.ViewModels
 
         private void OnSettingsPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
+            if (e.PropertyName == nameof(ApplicationSettingsModel.KeyboardShortcuts) && !this.isEditingShortcutRows)
+            {
+                this.RefreshShortcutRows();
+            }
+
             if (this.isSyncingFromService)
             {
                 return;
@@ -307,11 +315,31 @@ namespace ThreadPilot.ViewModels
             this.DownloadAndInstallUpdateCommand.NotifyCanExecuteChanged();
         }
 
-        private Task PersistEditedSettingsAsync()
+        private async Task PersistEditedSettingsAsync()
         {
             var baseline = this.savedSettingsSnapshot;
             var edited = this.Settings.Clone();
-            return this.settingsService.EditSettingsAsync(draft => draft.CopyFrom(MergeSettings(baseline, edited, draft)));
+            Task SaveAsync() => this.settingsService.EditSettingsAsync(
+                draft => draft.CopyFrom(MergeSettings(baseline, edited, draft)));
+
+            if (this.keyboardShortcutService == null ||
+                JsonNode.DeepEquals(JsonSerializer.SerializeToNode(baseline.KeyboardShortcuts),
+                    JsonSerializer.SerializeToNode(edited.KeyboardShortcuts)))
+            {
+                await SaveAsync();
+                return;
+            }
+
+            var shortcuts = edited.KeyboardShortcuts.Count == 0
+                ? this.keyboardShortcutService.GetDefaultShortcuts().Values.ToArray()
+                : edited.KeyboardShortcuts.ToArray();
+            var unavailable = await this.keyboardShortcutService.ApplyAndSaveAsync(shortcuts, SaveAsync);
+            if (unavailable != null)
+            {
+                throw new InvalidOperationException(this.GetLocalizedString(
+                    "Settings_ShortcutUnavailable", "Can't use {0}. Choose a key with a modifier and a combination that's available.",
+                    unavailable));
+            }
         }
 
         private async Task SaveSettingsAsync()

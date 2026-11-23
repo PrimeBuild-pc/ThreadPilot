@@ -754,4 +754,15 @@
     <sys:String x:Key="Rules_AppliesKeepAwake">hält den PC wach</sys:String>
     <sys:String x:Key="Rules_AppliesNothing">nichts</sys:String>
     <sys:String x:Key="Rules_Unnamed">(ohne Namen)</sys:String>
+    <sys:String x:Key="SettingsView_Shortcuts">Globale Tastenkürzel</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutShowWindow">ThreadPilot ein- oder ausblenden</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutMonitoring">Überwachungsbenachrichtigung</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutPerformance">Benachrichtigung für Höchstleistung</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutTweaks">Systemoptimierungen öffnen</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutKey">Taste für das Kürzel</sys:String>
+    <sys:String x:Key="Settings_ShortcutUnavailable">{0} ist nicht verfügbar. Wählen Sie eine Taste mit Modifikator und eine verfügbare Kombination.</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutCtrl">Strg</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutAlt">Alt</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutShift">Umschalt</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutWin">Win</sys:String>
 </ResourceDictionary>
