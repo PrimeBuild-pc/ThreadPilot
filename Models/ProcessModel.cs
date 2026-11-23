@@ -59,6 +59,14 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private bool isRegistryPriorityEnabled;
 
+        internal DateTime? StartTimeUtc { get; set; }
+
+        internal bool IsSameInstance(ProcessModel other) =>
+            this.ProcessId == other.ProcessId
+            && (this.StartTimeUtc.HasValue && other.StartTimeUtc.HasValue
+                ? this.StartTimeUtc == other.StartTimeUtc
+                : string.Equals(this.Name, other.Name, StringComparison.OrdinalIgnoreCase));
+
         public void ForceNotifyProcessorAffinityChanged()
         {
             this.OnPropertyChanged(nameof(this.ProcessorAffinity));
