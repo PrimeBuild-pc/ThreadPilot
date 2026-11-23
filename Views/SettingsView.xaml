@@ -170,6 +170,7 @@
                                         <CheckBox Content="{DynamicResource SettingsView_ShortcutShift}" IsChecked="{Binding Shift}" Margin="0,0,12,0" VerticalAlignment="Center"/>
                                         <CheckBox Content="{DynamicResource SettingsView_ShortcutWin}" IsChecked="{Binding Windows}" Margin="0,0,12,0" VerticalAlignment="Center"/>
                                         <ComboBox ItemsSource="{Binding Keys}" SelectedItem="{Binding Key}" MinWidth="80"
+                                                  AutomationProperties.AutomationId="{Binding ActionName}"
                                                   AutomationProperties.Name="{DynamicResource SettingsView_ShortcutKey}"/>
                                     </WrapPanel>
                                 </StackPanel>
