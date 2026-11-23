@@ -1,33 +1,27 @@
-# Release Signing Guide
+# Release signing guide
 
-ThreadPilot releases are currently unsigned. An application for SignPath Foundation code signing is pending; the release workflow remains fully automated and unchanged until the project is approved.
+ThreadPilot's public releases are currently unsigned. The SignPath integration has passed a `workflow_dispatch` run with the self-signed test certificate. The production certificate is pending SignPath Foundation review.
 
-## Intended signing model
+## Validate test signing
 
-- Sign the published executable and installer with Authenticode through SignPath.
-- Use the publisher identity assigned by SignPath Foundation.
-- Submit signing requests only from the protected GitHub release workflow.
-- Keep SignPath project identifiers and organization secrets in GitHub environment secrets.
-- Require an explicit SignPath approval when the selected policy requires it.
+1. Dispatch the GitHub **Release** workflow with `dry_run_publish=true`.
+2. Check the two SignPath requests for the application binaries and Inno Setup installer. The workflow packages the signed executable into the installer and portable ZIP, then calculates the published SHA-256 checksums.
+3. Check Authenticode verification and the smoke test in the run summary. The `signpath-signed-zips` Actions artifact contains the two ZIPs returned by SignPath.
 
-Signing will be inserted between artifact creation and checksum generation. Builds, tests, packaging, GitHub Release creation, and artifact upload remain automated; no private certificate or PFX will be stored in the repository or on a GitHub runner.
+The workflow uses the `SIGNPATH_API_TOKEN` repository secret for the SignPath CI user. Test mode skips GitHub and WinGet publication. Chocolatey uses its own workflow.
 
-## Status and rollout
+## Enable production signing
 
-1. Complete the SignPath Foundation application.
-2. Wait for approval and the SignPath organization/project invitation.
-3. Configure the SignPath project and trusted build policy.
-4. Add the identifiers and token supplied by SignPath as protected GitHub secrets.
-5. Integrate signing on a separate change and test it with a prerelease tag.
-6. Verify the Authenticode publisher, timestamp, checksums, and installer before publishing a stable release.
+1. After SignPath Foundation activates the release certificate, set the GitHub Actions repository variable `SIGNPATH_SIGNING_POLICY_SLUG` to `release-signing`. The production workflow requires this configuration and verifies the signatures before publication.
+2. Use the repository's verified merge and release process to prepare the release tag.
+3. Review and approve the application and installer requests in SignPath as they appear. The installer uses the signed application from the first request.
+4. Approve publishing through the protected GitHub `release` environment after verifying the release tag and artifacts.
 
-Until those steps are complete, release artifacts must be described as unsigned. Do not enable the legacy PFX signing path without a separately acquired certificate and a reviewed secret-storage procedure.
-
-## Verification
+## Verify a published artifact
 
 ```powershell
-Get-AuthenticodeSignature .\ThreadPilot.exe
-Get-FileHash .\ThreadPilot.exe -Algorithm SHA256
+Get-AuthenticodeSignature .\ThreadPilot_v1.2.3_Setup.exe
+Get-FileHash .\ThreadPilot_v1.2.3_Setup.exe -Algorithm SHA256
 ```
 
-See the public [code-signing policy](CODE_SIGNING_POLICY.md) for scope, approvals, and incident handling.
+Compare the hash with `SHA256SUMS.txt` from the same release. See the [Code signing policy](CODE_SIGNING_POLICY.md) for the signing scope and team roles.

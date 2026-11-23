@@ -584,6 +584,8 @@ jobs:
             git-cliff --config cliff.toml --latest > release-notes.md
           fi
 
+          printf '\n\n[Code signing policy](https://github.com/PrimeBuild-pc/ThreadPilot/blob/main/docs/CODE_SIGNING_POLICY.md)\n' >> release-notes.md
+
           {
             echo "content<<EOF"
             cat release-notes.md

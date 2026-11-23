@@ -129,6 +129,8 @@ Get-FileHash .\ThreadPilot_v<version>_Portable.zip -Algorithm SHA256
 
 Compare the result with `SHA256SUMS.txt` from the same release.
 
+See the [Code signing policy](docs/CODE_SIGNING_POLICY.md) for the signing provider, maintainer approvals, and how to verify signatures.
+
 ## 🖼️ Screenshots
 
 Real captures of ThreadPilot v1.7.9 (see [`assets/screenshots/README.md`](assets/screenshots/README.md)). They show the interface, not benchmarks. Click a thumbnail for the full-size image.
@@ -252,8 +254,6 @@ Build release artifacts with the project script:
 - CI validates build, formatting, analyzers, vulnerability checks, and secret scanning.
 - Security disclosures are handled through private GitHub advisories. See [`docs/SECURITY.md`](docs/SECURITY.md).
 - ThreadPilot has no analytics or telemetry. See [`docs/PRIVACY.md`](docs/PRIVACY.md).
-- Release signing scope and controls are documented in [`docs/CODE_SIGNING_POLICY.md`](docs/CODE_SIGNING_POLICY.md).
-- Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org), once the pending application is approved; current artifacts are unsigned.
 - Change history is tracked in [`docs/CHANGELOG.md`](docs/CHANGELOG.md).
 - Coverage focuses on business/application code and excludes generated build artifacts.
 
