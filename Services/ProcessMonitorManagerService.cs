@@ -26,14 +26,13 @@ namespace ThreadPilot.Services
         private readonly IEnhancedLoggingService enhancedLogger;
         private readonly object lockObject = new();
 
-        private readonly ConcurrentDictionary<int, ProcessModel> runningAssociatedProcesses = new();
-        private readonly ConcurrentDictionary<int, byte> associationEffectsAttempted = new();
+        private readonly ConcurrentDictionary<int, AssociatedProcess> runningAssociatedProcesses = new();
         private readonly System.Threading.Timer delayTimer;
         private readonly SemaphoreSlim powerPlanChangeSemaphore = new(1, 1);
         private readonly SemaphoreSlim stateMutationSemaphore = new(1, 1);
 
         private CancellationTokenSource automationLifetime = new();
-        private bool isRunning;
+        private volatile bool isRunning;
         private string status = "Stopped";
         private bool disposed;
         private ProcessMonitorConfiguration? configuration;
@@ -47,7 +46,7 @@ namespace ThreadPilot.Services
 
         public string Status => this.status;
 
-        public IEnumerable<ProcessModel> RunningAssociatedProcesses => this.runningAssociatedProcesses.Values.ToList();
+        public IEnumerable<ProcessModel> RunningAssociatedProcesses => this.runningAssociatedProcesses.Values.Select(tracked => tracked.Process);
 
         public ProcessMonitorManagerService(
             IProcessMonitorService processMonitorService,
@@ -188,14 +187,15 @@ namespace ThreadPilot.Services
                 await this.processMonitorService.StopMonitoringAsync();
 
                 // Clear running processes
-                foreach (var processId in this.runningAssociatedProcesses.Keys)
+                lock (this.lockObject)
                 {
-                    this.coreMaskService.UnregisterMaskApplication(processId);
-                    this.processService.UntrackProcess(processId);
-                    this.persistentRuleAutoApplyService.MarkProcessExited(processId);
+                    foreach (var processId in this.runningAssociatedProcesses.Keys)
+                    {
+                        this.ClearProcessTracking(processId);
+                    }
+
+                    this.runningAssociatedProcesses.Clear();
                 }
-                this.runningAssociatedProcesses.Clear();
-                this.associationEffectsAttempted.Clear();
 
                 // Restore default power plan if configured
                 if (this.configuration?.DefaultPowerPlanGuid != null)
@@ -227,7 +227,18 @@ namespace ThreadPilot.Services
                 await this.StopAsync();
             }
 
-            await this.settingsService.EditSettingsAsync(draft => draft.EnableAutomationMonitoring = enabled);
+            if (enabled != this.isRunning)
+            {
+                return;
+            }
+
+            await this.settingsService.EditSettingsAsync(draft =>
+            {
+                if (enabled == this.isRunning)
+                {
+                    draft.EnableAutomationMonitoring = enabled;
+                }
+            });
         }
 
         public Task EvaluateCurrentProcessesAsync() => this.EvaluateCurrentProcessesAsync(resetRuleAttempts: false);
@@ -242,11 +253,30 @@ namespace ThreadPilot.Services
             try
             {
                 var lifetime = this.automationLifetime.Token;
-                var trackedBeforeScan = this.runningAssociatedProcesses.ToArray();
+                var trackedBeforeScan = this.runningAssociatedProcesses.ToDictionary();
                 var currentProcesses = (await this.processMonitorService.GetRunningProcessesAsync()).ToList();
                 if (lifetime.IsCancellationRequested)
                 {
                     return;
+                }
+
+                var currentById = currentProcesses.DistinctBy(process => process.ProcessId)
+                    .ToDictionary(process => process.ProcessId);
+                lock (this.lockObject)
+                {
+                    // Keep processes reported by events while the snapshot was being read.
+                    foreach (var tracked in trackedBeforeScan)
+                    {
+                        if ((!currentById.TryGetValue(tracked.Key, out var current) || !tracked.Value.Process.IsSameInstance(current))
+                            && this.runningAssociatedProcesses.TryRemove(tracked))
+                        {
+                            this.ClearProcessTracking(tracked.Key);
+                            if (current != null)
+                            {
+                                trackedBeforeScan.Remove(tracked.Key);
+                            }
+                        }
+                    }
                 }
 
                 if (resetRuleAttempts)
@@ -259,41 +289,18 @@ namespace ThreadPilot.Services
                     }
                 }
 
-                await this.ApplyPersistentRulesForDiscoveredProcessesAsync(currentProcesses);
+                await this.ApplyPersistentRulesForDiscoveredProcessesAsync(currentById.Values, resetRuleAttempts, lifetime);
                 if (lifetime.IsCancellationRequested)
                 {
                     return;
                 }
 
-                var associatedProcesses = new List<ProcessModel>();
-                var currentProcessIds = new HashSet<int>(currentProcesses.Select(p => p.ProcessId));
-
-                // A start event can register a process while the snapshot is being read.
-                foreach (var tracked in trackedBeforeScan)
+                foreach (var process in currentById.Values)
                 {
-                    if (!currentProcessIds.Contains(tracked.Key) && this.runningAssociatedProcesses.TryRemove(tracked))
-                    {
-                        this.associationEffectsAttempted.TryRemove(tracked.Key, out _);
-                        this.coreMaskService.UnregisterMaskApplication(tracked.Key);
-                        this.processService.UntrackProcess(tracked.Key);
-                        this.persistentRuleAutoApplyService.MarkProcessExited(tracked.Key);
-                    }
+                    await this.ReconcileAssociationAsync(process, applyProcessSettings: resetRuleAttempts, lifetime, trackedBeforeScan);
                 }
 
-                foreach (var process in currentProcesses)
-                {
-                    var association = await this.ReconcileAssociationAsync(
-                        process, applyProcessSettings: resetRuleAttempts, lifetime);
-                    if (association != null)
-                    {
-                        associatedProcesses.Add(process);
-                    }
-                }
-
-                if (!lifetime.IsCancellationRequested)
-                {
-                    await this.DeterminePowerPlanAsync(associatedProcesses);
-                }
+                await this.ReevaluatePowerPlanAsync(lifetime);
             }
             catch (Exception ex)
             {
@@ -301,67 +308,7 @@ namespace ThreadPilot.Services
             }
         }
 
-        public async Task ForceDefaultPowerPlanAsync()
-        {
-            if (this.configuration?.DefaultPowerPlanGuid == null)
-            {
-                return;
-            }
-
-            try
-            {
-                await this.powerPlanChangeSemaphore.WaitAsync();
-
-                var currentPowerPlan = await this.powerPlanService.GetActivePowerPlan();
-                var decision = this.powerPlanTransitionGate.ShouldApply(
-                    this.configuration.DefaultPowerPlanGuid,
-                    currentPowerPlan?.Guid);
-                if (!decision.ShouldApply)
-                {
-                    this.logger.LogDebug(
-                        "Default power plan restore suppressed for {PowerPlanGuid}: {Reason}",
-                        this.configuration.DefaultPowerPlanGuid,
-                        decision.SuppressionReason);
-                    return;
-                }
-
-                this.powerPlanTransitionGate.RecordAttempt(this.configuration.DefaultPowerPlanGuid);
-                var success = await this.powerPlanService.SetActivePowerPlanByGuidAsync(
-                    this.configuration.DefaultPowerPlanGuid,
-                    this.configuration.PreventDuplicatePowerPlanChanges);
-
-                if (success)
-                {
-                    var newPowerPlan = await this.powerPlanService.GetPowerPlanByGuidAsync(this.configuration.DefaultPowerPlanGuid);
-                    // Note: We don't have a specific process for this event, so we'll use a dummy one
-                    var dummyProcess = new ProcessModel { Name = "System", ProcessId = -1 };
-                    var dummyAssociation = new ProcessPowerPlanAssociation("System", this.configuration.DefaultPowerPlanGuid, this.configuration.DefaultPowerPlanName);
-
-                    this.ProcessPowerPlanChanged?.Invoke(this, new ProcessPowerPlanChangeEventArgs(
-                        dummyProcess, dummyAssociation, currentPowerPlan, newPowerPlan, "DefaultRestored"));
-
-                    // Show notification for default power plan restoration
-                    await this.notificationService.ShowPowerPlanChangeNotificationAsync(
-                        currentPowerPlan?.Name ?? "Unknown",
-                        newPowerPlan?.Name ?? this.configuration.DefaultPowerPlanName,
-                        string.Empty);
-                }
-                else
-                {
-                    this.logger.LogWarning(
-                        "Failed to restore default power plan {PowerPlanGuid}",
-                        this.configuration.DefaultPowerPlanGuid);
-                }
-            }
-            catch (Exception ex)
-            {
-                this.SetStatus(this.isRunning, "Error setting default power plan", $"Error: {ex.Message}", ex);
-            }
-            finally
-            {
-                this.powerPlanChangeSemaphore.Release();
-            }
-        }
+        public Task ForceDefaultPowerPlanAsync() => this.ReevaluatePowerPlanAsync(CancellationToken.None, forceDefault: true);
 
         public async Task<PowerPlanModel?> GetCurrentActivePowerPlanAsync()
         {
@@ -408,7 +355,17 @@ namespace ThreadPilot.Services
                     e.Process.ProcessId);
 
                 var lifetime = this.automationLifetime.Token;
-                await this.ApplyPersistentRulesForProcessStartAsync(e.Process);
+                lock (this.lockObject)
+                {
+                    if (this.runningAssociatedProcesses.TryGetValue(e.Process.ProcessId, out var previous)
+                        && !previous.Process.IsSameInstance(e.Process))
+                    {
+                        this.runningAssociatedProcesses.TryRemove(e.Process.ProcessId, out _);
+                        this.ClearProcessTracking(e.Process.ProcessId);
+                    }
+                }
+
+                await this.ApplyPersistentRulesForProcessStartAsync(e.Process, lifetime);
 
                 var association = await this.ReconcileAssociationAsync(e.Process, applyProcessSettings: true, lifetime);
                 if (association != null && !lifetime.IsCancellationRequested)
@@ -425,7 +382,7 @@ namespace ThreadPilot.Services
                     }
                     else
                     {
-                        await this.ChangePowerPlanForProcess(e.Process, association, "ProcessStarted");
+                        await this.ReevaluatePowerPlanAsync(lifetime);
                     }
                 }
             }
@@ -444,7 +401,8 @@ namespace ThreadPilot.Services
         private async Task<ProcessPowerPlanAssociation?> ReconcileAssociationAsync(
             ProcessModel process,
             bool applyProcessSettings,
-            CancellationToken lifetime)
+            CancellationToken lifetime,
+            IReadOnlyDictionary<int, AssociatedProcess>? trackedBeforeScan = null)
         {
             if (this.configuration == null || lifetime.IsCancellationRequested)
             {
@@ -479,11 +437,49 @@ namespace ThreadPilot.Services
                 return null;
             }
 
-            this.runningAssociatedProcesses[process.ProcessId] = process;
-            // A duplicate start or resume snapshot must not overwrite a manual edit to a process already handled.
-            if (applyProcessSettings && this.associationEffectsAttempted.TryAdd(process.ProcessId, 0))
+            AssociatedProcess tracked;
+            bool applyEffects;
+            lock (this.lockObject)
             {
-                await this.ApplyCoreMaskAndPriorityAsync(process, association);
+                this.runningAssociatedProcesses.TryGetValue(process.ProcessId, out var current);
+                if (lifetime.IsCancellationRequested)
+                {
+                    return null;
+                }
+
+                if (trackedBeforeScan != null)
+                {
+                    trackedBeforeScan.TryGetValue(process.ProcessId, out var previous);
+                    if (!ReferenceEquals(previous, current) && (current == null || !current.Process.IsSameInstance(process)))
+                    {
+                        // A later event stopped or replaced this process while we were scanning.
+                        return null;
+                    }
+                }
+
+                tracked = current ?? new AssociatedProcess(process);
+                if (current == null)
+                {
+                    this.runningAssociatedProcesses[process.ProcessId] = tracked;
+                }
+                else
+                {
+                    process.StartTimeUtc ??= tracked.Process.StartTimeUtc;
+                    tracked.Process = process;
+                }
+
+                applyEffects = applyProcessSettings && !tracked.EffectsAttempted;
+                tracked.EffectsAttempted |= applyEffects;
+            }
+
+            if (applyEffects)
+            {
+                var effects = await this.ApplyCoreMaskAndPriorityAsync(process, association);
+                lock (this.lockObject)
+                {
+                    tracked.PreservedSettings = effects;
+                }
+
                 await this.enhancedLogger.LogProcessMonitoringEventAsync(
                     LogEventTypes.ProcessMonitoring.AssociationTriggered,
                     process.Name, process.ProcessId,
@@ -510,22 +506,36 @@ namespace ThreadPilot.Services
 
             try
             {
-                this.associationEffectsAttempted.TryRemove(e.Process.ProcessId, out _);
-                this.persistentRuleAutoApplyService.MarkProcessExited(e.Process.ProcessId);
-                this.coreMaskService.UnregisterMaskApplication(e.Process.ProcessId);
-                this.processService.UntrackProcess(e.Process.ProcessId);
-
-                if (this.runningAssociatedProcesses.TryRemove(e.Process.ProcessId, out _))
+                bool associated;
+                lock (this.lockObject)
                 {
-                    // Check if there are any other associated processes still running
-                    var remainingProcesses = this.runningAssociatedProcesses.Values.ToList();
-                    await this.DeterminePowerPlanAsync(remainingProcesses);
+                    var pid = e.Process.ProcessId;
+                    associated = this.runningAssociatedProcesses.TryGetValue(pid, out var tracked);
+                    if (tracked != null && !tracked.Process.IsSameInstance(e.Process))
+                    {
+                        return;
+                    }
+
+                    this.runningAssociatedProcesses.TryRemove(pid, out _);
+                    this.ClearProcessTracking(pid);
+                }
+
+                if (associated)
+                {
+                    await this.ReevaluatePowerPlanAsync(this.automationLifetime.Token);
                 }
             }
             catch (Exception ex)
             {
                 this.SetStatus(this.isRunning, "Error handling process stop", $"Error: {ex.Message}", ex);
             }
+        }
+
+        private void ClearProcessTracking(int processId)
+        {
+            this.persistentRuleAutoApplyService.MarkProcessExited(processId);
+            this.coreMaskService.UnregisterMaskApplication(processId);
+            this.processService.UntrackProcess(processId);
         }
 
         private void OnMonitoringStatusChanged(object? sender, MonitoringStatusEventArgs e)
@@ -584,94 +594,66 @@ namespace ThreadPilot.Services
                 return;
             }
 
-            var runningProcesses = this.runningAssociatedProcesses.Values.ToList();
-            await this.DeterminePowerPlanAsync(runningProcesses);
+            await this.ReevaluatePowerPlanAsync(this.automationLifetime.Token);
         }
 
-        private async Task DeterminePowerPlanAsync(IList<ProcessModel> associatedProcesses)
+        private async Task ReevaluatePowerPlanAsync(CancellationToken lifetime, bool forceDefault = false)
         {
-            if (this.configuration == null)
-            {
-                return;
-            }
-
+            await this.powerPlanChangeSemaphore.WaitAsync();
             try
             {
-                if (associatedProcesses.Any())
+                var configuration = this.configuration;
+                if (lifetime.IsCancellationRequested || configuration == null)
                 {
-                    // Find the highest priority association among running processes
-                    var associations = associatedProcesses
-                        .Select(p => this.configuration.FindMatchingAssociation(p))
-                        .Where(a => a != null)
-                        .OrderByDescending(a => a!.Priority)
-                        .ToList();
-
-                    if (associations.Any())
-                    {
-                        var topAssociation = associations.First()!;
-                        var matchingProcess = associatedProcesses.First(p => topAssociation.MatchesProcess(p));
-                        await this.ChangePowerPlanForProcess(matchingProcess, topAssociation, "ProcessStarted");
-                    }
-                }
-                else
-                {
-                    // No associated processes running, revert to default
-                    if (!string.IsNullOrEmpty(this.configuration.DefaultPowerPlanGuid))
-                    {
-                        await this.ForceDefaultPowerPlanAsync();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                this.SetStatus(this.isRunning, "Error determining power plan", $"Error: {ex.Message}", ex);
-            }
-        }
-
-        private async Task ChangePowerPlanForProcess(ProcessModel process, ProcessPowerPlanAssociation association, string action)
-        {
-            try
-            {
-                await this.powerPlanChangeSemaphore.WaitAsync();
-
-                var currentPowerPlan = await this.powerPlanService.GetActivePowerPlan();
-                var decision = this.powerPlanTransitionGate.ShouldApply(
-                    association.PowerPlanGuid,
-                    currentPowerPlan?.Guid);
-                if (!decision.ShouldApply)
-                {
-                    this.logger.LogDebug(
-                        "Power plan change suppressed for {PowerPlanGuid}: {Reason}",
-                        association.PowerPlanGuid,
-                        decision.SuppressionReason);
                     return;
                 }
 
-                this.powerPlanTransitionGate.RecordAttempt(association.PowerPlanGuid);
-                var success = await this.powerPlanService.SetActivePowerPlanByGuidAsync(
-                    association.PowerPlanGuid,
-                    this.configuration?.PreventDuplicatePowerPlanChanges ?? true);
-
-                if (success)
+                (ProcessModel? Process, ProcessPowerPlanAssociation? Association) selected = default;
+                if (!forceDefault)
                 {
-                    var newPowerPlan = await this.powerPlanService.GetPowerPlanByGuidAsync(association.PowerPlanGuid);
-                    this.ProcessPowerPlanChanged?.Invoke(this, new ProcessPowerPlanChangeEventArgs(
-                        process, association, currentPowerPlan, newPowerPlan, action));
+                    selected = this.RunningAssociatedProcesses
+                        .Select(process => (Process: process, Association: configuration.FindMatchingAssociation(process)))
+                        .Where(match => match.Association != null)
+                        .OrderByDescending(match => match.Association!.Priority)
+                        .FirstOrDefault();
+                }
 
-                    // Show notification for power plan change
-                    await this.notificationService.ShowPowerPlanChangeNotificationAsync(
-                        currentPowerPlan?.Name ?? "Unknown",
-                        newPowerPlan?.Name ?? association.PowerPlanName,
-                        process.Name);
-                }
-                else
+                var process = selected.Process;
+                var association = selected.Association;
+                var planGuid = association?.PowerPlanGuid ?? configuration.DefaultPowerPlanGuid;
+                if (string.IsNullOrEmpty(planGuid))
                 {
-                    this.logger.LogWarning(
-                        "Failed to change power plan to {PowerPlanGuid} for process {ProcessName} (PID: {ProcessId})",
-                        association.PowerPlanGuid,
-                        process.Name,
-                        process.ProcessId);
+                    return;
                 }
+
+                var currentPowerPlan = await this.powerPlanService.GetActivePowerPlan();
+                var decision = this.powerPlanTransitionGate.ShouldApply(planGuid, currentPowerPlan?.Guid);
+                if (!decision.ShouldApply || lifetime.IsCancellationRequested)
+                {
+                    this.logger.LogDebug(
+                        "Power plan change suppressed for {PowerPlanGuid}: {Reason}", planGuid, decision.SuppressionReason);
+                    return;
+                }
+
+                this.powerPlanTransitionGate.RecordAttempt(planGuid);
+                if (!await this.powerPlanService.SetActivePowerPlanByGuidAsync(planGuid, configuration.PreventDuplicatePowerPlanChanges))
+                {
+                    this.logger.LogWarning("Failed to change power plan to {PowerPlanGuid}", planGuid);
+                    return;
+                }
+
+                var newPowerPlan = await this.powerPlanService.GetPowerPlanByGuidAsync(planGuid);
+                this.ProcessPowerPlanChanged?.Invoke(this, new ProcessPowerPlanChangeEventArgs(
+                    process ?? new ProcessModel { Name = "System", ProcessId = -1 },
+                    association ?? new ProcessPowerPlanAssociation("System", planGuid, configuration.DefaultPowerPlanName),
+                    currentPowerPlan,
+                    newPowerPlan,
+                    association == null ? "DefaultRestored" : "ProcessStarted"));
+
+                await this.notificationService.ShowPowerPlanChangeNotificationAsync(
+                    currentPowerPlan?.Name ?? "Unknown",
+                    newPowerPlan?.Name ?? association?.PowerPlanName ?? configuration.DefaultPowerPlanName,
+                    process?.Name ?? string.Empty);
             }
             catch (Exception ex)
             {
@@ -707,11 +689,13 @@ namespace ThreadPilot.Services
             }
         }
 
-        private async Task ApplyPersistentRulesForDiscoveredProcessesAsync(IEnumerable<ProcessModel> processes)
+        private async Task ApplyPersistentRulesForDiscoveredProcessesAsync(
+            IEnumerable<ProcessModel> processes, bool applyAssociationSettings, CancellationToken lifetime)
         {
             try
             {
-                var results = await this.persistentRuleAutoApplyService.ApplyForDiscoveredProcessesAsync(processes, this.automationLifetime.Token);
+                var results = await this.persistentRuleAutoApplyService.ApplyForDiscoveredProcessesAsync(
+                    processes, process => this.GetPersistentRuleOptions(process, applyAssociationSettings), lifetime);
                 await this.LogPersistentRuleResultsAsync(results);
             }
             catch (OperationCanceledException)
@@ -723,11 +707,12 @@ namespace ThreadPilot.Services
             }
         }
 
-        private async Task ApplyPersistentRulesForProcessStartAsync(ProcessModel process)
+        private async Task ApplyPersistentRulesForProcessStartAsync(ProcessModel process, CancellationToken lifetime)
         {
             try
             {
-                var results = await this.persistentRuleAutoApplyService.ApplyForProcessStartAsync(process, this.automationLifetime.Token);
+                var results = await this.persistentRuleAutoApplyService.ApplyForProcessStartAsync(
+                    process, target => this.GetPersistentRuleOptions(target, applyAssociationSettings: true), lifetime);
                 await this.LogPersistentRuleResultsAsync(results);
             }
             catch (OperationCanceledException)
@@ -741,6 +726,33 @@ namespace ThreadPilot.Services
                     process.Name,
                     process.ProcessId);
             }
+        }
+
+        private PersistentRuleApplyOptions GetPersistentRuleOptions(ProcessModel process, bool applyAssociationSettings)
+        {
+            var options = PersistentRuleApplyOptions.None;
+            lock (this.lockObject)
+            {
+                if (this.runningAssociatedProcesses.TryGetValue(process.ProcessId, out var tracked)
+                    && tracked.Process.IsSameInstance(process))
+                {
+                    options = tracked.PreservedSettings;
+                }
+            }
+
+            if (applyAssociationSettings
+                && this.configuration?.GetEnabledAssociations().Any(association =>
+                    Enum.TryParse<ProcessPriorityClass>(association.ProcessPriority, out var priority)
+                    && Enum.IsDefined(priority) && !ProcessPriorityGuardrails.IsBlocked(priority)
+                    && (association.MatchesProcess(process)
+                        || (association.MatchByPath && string.IsNullOrWhiteSpace(process.ExecutablePath)
+                            && association.MatchesExecutable(process.Name)))) == true)
+            {
+                // A delayed retry from the saved rule would undo the association's priority.
+                options |= PersistentRuleApplyOptions.SkipDelayedPriorityVerification;
+            }
+
+            return options;
         }
 
         private async Task LogPersistentRuleResultsAsync(IReadOnlyList<PersistentRuleAutoApplyResult> results)
@@ -775,8 +787,10 @@ namespace ThreadPilot.Services
             this.logger.LogDebug("ProcessMonitorManagerService settings updated");
         }
 
-        private async Task ApplyCoreMaskAndPriorityAsync(ProcessModel process, ProcessPowerPlanAssociation association)
+        private async Task<PersistentRuleApplyOptions> ApplyCoreMaskAndPriorityAsync(
+            ProcessModel process, ProcessPowerPlanAssociation association)
         {
+            var applied = PersistentRuleApplyOptions.None;
             try
             {
                 // Apply CPU affinity mask if configured
@@ -802,6 +816,7 @@ namespace ThreadPilot.Services
                                 }
                                 else
                                 {
+                                    applied |= PersistentRuleApplyOptions.PreserveAffinity;
                                     this.processService.TrackAppliedMask(process.ProcessId, coreMask.Id);
                                     this.coreMaskService.RegisterMaskApplication(process.ProcessId, coreMask.Id);
 
@@ -880,6 +895,7 @@ namespace ThreadPilot.Services
                             }
 
                             await this.processService.SetProcessPriority(process, priority, ProcessPriorityWriteSource.PowerPlanAssociation);
+                            applied |= PersistentRuleApplyOptions.PreservePriority;
 
                             this.logger.LogInformation(
                                 "Applied priority '{Priority}' to process {ProcessName} (PID: {ProcessId})",
@@ -938,6 +954,15 @@ namespace ThreadPilot.Services
                         ["AssociationId"] = association.Id,
                     });
             }
+
+            return applied;
+        }
+
+        private sealed class AssociatedProcess(ProcessModel process)
+        {
+            public ProcessModel Process { get; set; } = process;
+            public bool EffectsAttempted { get; set; }
+            public PersistentRuleApplyOptions PreservedSettings { get; set; }
         }
 
         private static string BuildAffinityOrPriorityBlockedMessage(Exception ex, string processName, string operation)

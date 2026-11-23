@@ -206,7 +206,7 @@ namespace ThreadPilot.Services
             {
                 var draft = current.Clone();
                 edit(draft);
-                return draft;
+                return draft.Clone();
             });
         }
 

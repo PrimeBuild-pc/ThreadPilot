@@ -5,6 +5,7 @@ namespace ThreadPilot.Core.Tests
     using System.Globalization;
     using System.IO;
     using System.Threading.Tasks;
+    using System.Windows.Input;
     using Microsoft.Extensions.Logging.Abstractions;
     using ThreadPilot.Models;
     using ThreadPilot.Services;
@@ -12,6 +13,42 @@ namespace ThreadPilot.Core.Tests
 
     public sealed class ApplicationSettingsServiceTests
     {
+        [Fact]
+        public async Task EditSettingsAsync_FailedShortcutEditKeepsCommittedKey()
+        {
+            var storage = new FakeSettingsStorage();
+            var service = CreateService(storage);
+            await service.EditSettingsAsync(draft => draft.KeyboardShortcuts =
+                [new KeyboardShortcut { ActionName = "Test", Key = Key.A }]);
+
+            storage.FailWrites = true;
+            await Assert.ThrowsAsync<IOException>(() => service.EditSettingsAsync(
+                draft => draft.KeyboardShortcuts[0].Key = Key.B));
+
+            var restarted = CreateService(storage);
+            await restarted.LoadSettingsAsync();
+            Assert.Equal(Key.A, Assert.Single(restarted.Settings.KeyboardShortcuts).Key);
+            Assert.Equal(Key.A, Assert.Single(service.Settings.KeyboardShortcuts).Key);
+        }
+
+        [Fact]
+        public async Task EditSettingsAsync_RetainedDraftCannotMutateCommittedSettings()
+        {
+            var service = CreateService(new FakeSettingsStorage());
+            ApplicationSettingsModel? draftOutsideEdit = null;
+            await service.EditSettingsAsync(draft =>
+            {
+                draft.StartMinimized = false;
+                draft.KeyboardShortcuts = [new KeyboardShortcut { ActionName = "Test", Key = Key.A }];
+                draftOutsideEdit = draft;
+            });
+
+            draftOutsideEdit!.StartMinimized = true;
+            draftOutsideEdit.KeyboardShortcuts[0].Key = Key.B;
+            Assert.False(service.Settings.StartMinimized);
+            Assert.Equal(Key.A, Assert.Single(service.Settings.KeyboardShortcuts).Key);
+        }
+
         [Fact]
         public async Task EditSettingsAsync_FailedWriteDoesNotPublishChanges()
         {

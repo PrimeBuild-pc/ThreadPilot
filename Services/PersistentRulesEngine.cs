@@ -7,12 +7,28 @@ namespace ThreadPilot.Services
     using Microsoft.Extensions.Logging;
     using ThreadPilot.Models;
 
+    [Flags]
+    public enum PersistentRuleApplyOptions
+    {
+        None = 0,
+        PreserveAffinity = 1,
+        PreservePriority = 2,
+        SkipDelayedPriorityVerification = 4,
+    }
+
     public interface IPersistentRulesEngine
     {
         Task<IReadOnlyList<PersistentRuleApplyResult>> ApplyMatchingRulesAsync(
             ProcessModel process,
             Predicate<PersistentProcessRule>? ruleFilter = null,
             CancellationToken cancellationToken = default);
+
+        /// <summary>Applies matching rules while preserving the process settings owned by another policy.</summary>
+        Task<IReadOnlyList<PersistentRuleApplyResult>> ApplyMatchingRulesAsync(
+            ProcessModel process,
+            Predicate<PersistentProcessRule>? ruleFilter,
+            PersistentRuleApplyOptions options,
+            CancellationToken cancellationToken);
     }
 
     public sealed class PersistentRulesEngine : IPersistentRulesEngine
@@ -60,10 +76,17 @@ namespace ThreadPilot.Services
             this.securityService = securityService;
         }
 
-        public async Task<IReadOnlyList<PersistentRuleApplyResult>> ApplyMatchingRulesAsync(
+        public Task<IReadOnlyList<PersistentRuleApplyResult>> ApplyMatchingRulesAsync(
             ProcessModel process,
             Predicate<PersistentProcessRule>? ruleFilter = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default) =>
+            this.ApplyMatchingRulesAsync(process, ruleFilter, PersistentRuleApplyOptions.None, cancellationToken);
+
+        public async Task<IReadOnlyList<PersistentRuleApplyResult>> ApplyMatchingRulesAsync(
+            ProcessModel process,
+            Predicate<PersistentProcessRule>? ruleFilter,
+            PersistentRuleApplyOptions options,
+            CancellationToken cancellationToken)
         {
             ArgumentNullException.ThrowIfNull(process);
 
@@ -75,11 +98,31 @@ namespace ThreadPilot.Services
                 .Where(rule => ruleFilter == null || ruleFilter(rule)))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                results.Add(await this.ApplyRuleAsync(rule, process, cancellationToken).ConfigureAwait(false));
+                var preserveAffinity = options.HasFlag(PersistentRuleApplyOptions.PreserveAffinity) && rule.ApplyAffinityOnStart;
+                var preservePriority = options.HasFlag(PersistentRuleApplyOptions.PreservePriority) && rule.ApplyPriorityOnStart;
+                var remaining = rule;
+                if (preserveAffinity || preservePriority)
+                {
+                    remaining = rule with
+                    {
+                        ApplyAffinityOnStart = rule.ApplyAffinityOnStart && !preserveAffinity,
+                        ApplyPriorityOnStart = rule.ApplyPriorityOnStart && !preservePriority,
+                    };
+                    if (!HasActions(remaining))
+                    {
+                        continue;
+                    }
+                }
+
+                results.Add(await this.ApplyRuleAsync(remaining, process, cancellationToken).ConfigureAwait(false));
             }
 
             return results;
         }
+
+        private static bool HasActions(PersistentProcessRule rule) =>
+            rule.ApplyAffinityOnStart || rule.ApplyPriorityOnStart || rule.ApplyMemoryPriorityOnStart
+            || rule.ApplyIoPriorityOnStart || rule.ApplyEfficiencyModeOnStart || rule.PreventSystemSleepWhileRunning;
 
         private async Task<PersistentRuleApplyResult> ApplyRuleAsync(
             PersistentProcessRule rule,
@@ -89,12 +132,7 @@ namespace ThreadPilot.Services
             var result = CreateSuccessResult(rule, process);
             var success = true;
 
-            if (!rule.ApplyAffinityOnStart &&
-                !rule.ApplyPriorityOnStart &&
-                !rule.ApplyMemoryPriorityOnStart &&
-                !rule.ApplyIoPriorityOnStart &&
-                !rule.ApplyEfficiencyModeOnStart &&
-                !rule.PreventSystemSleepWhileRunning)
+            if (!HasActions(rule))
             {
                 return MarkRuleConfigurationFailure(
                     result,

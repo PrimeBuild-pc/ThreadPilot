@@ -267,9 +267,10 @@ namespace ThreadPilot.Models
             this.LogRetentionDays = other.LogRetentionDays;
 
             // Keyboard Shortcuts
-            this.KeyboardShortcuts = other.KeyboardShortcuts != null
-                ? new List<KeyboardShortcut>(other.KeyboardShortcuts)
-                : new List<KeyboardShortcut>();
+            this.KeyboardShortcuts = other.KeyboardShortcuts?
+                .Where(shortcut => shortcut != null)
+                .Select(shortcut => shortcut.Clone())
+                .ToList() ?? [];
 
             // Game Boost
             this.GameBoostEnabled = other.GameBoostEnabled;

@@ -17,7 +17,9 @@ namespace ThreadPilot.Services
         // Replaces the full profile for import and backup restore.
         Task UpdateSettingsAsync(ApplicationSettingsModel newSettings);
 
-        // Applies the edit to a detached copy of the latest committed profile.
+        /// <summary>Applies an edit to the latest committed profile and publishes it after persistence succeeds.</summary>
+        /// <param name="edit">A synchronous edit that receives a detached draft.</param>
+        /// <returns>A task that finishes when the edit has been persisted and published.</returns>
         Task EditSettingsAsync(Action<ApplicationSettingsModel> edit);
 
         Task ResetToDefaultsAsync();

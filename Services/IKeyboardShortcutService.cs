@@ -42,6 +42,8 @@ namespace ThreadPilot.Services
 
         public bool IsGlobal { get; set; } = true;
 
+        internal KeyboardShortcut Clone() => (KeyboardShortcut)this.MemberwiseClone();
+
         public override string ToString()
         {
             var parts = new List<string>();

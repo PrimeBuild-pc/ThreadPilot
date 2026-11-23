@@ -580,15 +580,23 @@ namespace ThreadPilot
                     return;
                 }
 
-                using var edit = await PersistentRuleEditGate.EnterAsync(ruleStore);
-                var rules = await ruleStore.LoadAsync();
-                var migrated = CpuAssignmentModeMigrationPolicy.ApplyToRules(rules);
-                if (migrated != null)
+                var movedCount = await ruleStore.EditAsync(rules =>
                 {
-                    await ruleStore.SaveAsync(migrated);
-                    var movedCount = rules
+                    var migrated = CpuAssignmentModeMigrationPolicy.ApplyToRules(rules);
+                    if (migrated == null)
+                    {
+                        return Task.FromResult(0);
+                    }
+
+                    var count = rules
                         .Zip(migrated, (before, after) => before.CpuAssignmentMode != after.CpuAssignmentMode)
                         .Count(moved => moved);
+                    rules.Clear();
+                    rules.AddRange(migrated);
+                    return Task.FromResult(count);
+                });
+                if (movedCount > 0)
+                {
                     this.LogDebug($"Migrated {movedCount} saved rule(s) from Automatic to Affinity Mask");
                 }
 
@@ -1292,7 +1300,7 @@ namespace ThreadPilot
 
                 this.LogDebug("Starting process monitoring manager service...");
                 // Start the process monitoring manager service with internal timeout
-                var startTask = this.processMonitorManagerService.SetAutomationMonitoringEnabledAsync(true);
+                var startTask = this.processMonitorManagerService.StartAsync();
                 var timeoutTask = Task.Delay(6000); // 6 second internal timeout
                 var completedTask = await Task.WhenAny(startTask, timeoutTask);
 

@@ -13,6 +13,10 @@ namespace ThreadPilot.Services
 
         Task<bool> LoadConfigurationAsync();
 
+        /// <summary>Saves the power plan monitoring options.</summary>
+        /// <param name="preventDuplicateChanges">Whether to suppress repeated power plan changes.</param>
+        /// <param name="delayMs">The delay before reevaluating the active power plan, in milliseconds.</param>
+        /// <returns>Whether the options were saved.</returns>
         Task<bool> SaveMonitoringSettingsAsync(bool preventDuplicateChanges, int delayMs);
 
         Task<IEnumerable<ProcessPowerPlanAssociation>> GetAssociationsAsync();

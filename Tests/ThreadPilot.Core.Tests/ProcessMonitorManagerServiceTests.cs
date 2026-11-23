@@ -41,12 +41,12 @@ namespace ThreadPilot.Core.Tests
             autoApply.Verify(
                 x => x.ApplyForDiscoveredProcessesAsync(
                 It.Is<IEnumerable<ProcessModel>>(ps => ps.Any(p => p.ProcessId == 41)),
-                It.IsAny<CancellationToken>()), Times.Once);
+                It.IsAny<Func<ProcessModel, PersistentRuleApplyOptions>>(), It.IsAny<CancellationToken>()), Times.Once);
             autoApply.Verify(x => x.MarkProcessExited(41), Times.Once);
             var applied = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             autoApply.Setup(x => x.ApplyForDiscoveredProcessesAsync(
                 It.Is<IEnumerable<ProcessModel>>(ps => ps.Any(p => p.ProcessId == 42)),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<Func<ProcessModel, PersistentRuleApplyOptions>>(), It.IsAny<CancellationToken>()))
                 .Callback(() => applied.TrySetResult())
                 .ReturnsAsync(Array.Empty<PersistentRuleAutoApplyResult>());
             monitor.RunningProcesses.Add(new ProcessModel { ProcessId = 42, Name = "missed-during-sleep" });
@@ -181,6 +181,41 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task SetAutomationMonitoringEnabledAsync_LateEnableKeepsDisabledPreference()
+        {
+            var monitor = new FakeProcessMonitorService();
+            var settings = new ApplicationSettingsModel { EnableAutomationMonitoring = true };
+            var scanEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var finishScan = new TaskCompletionSource<IReadOnlyList<PersistentRuleAutoApplyResult>>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var autoApply = CreateAutoApplyService();
+            autoApply.Setup(x => x.ApplyForDiscoveredProcessesAsync(
+                It.IsAny<IEnumerable<ProcessModel>>(), It.IsAny<Func<ProcessModel, PersistentRuleApplyOptions>>(),
+                It.IsAny<CancellationToken>())).Returns(() =>
+            {
+                scanEntered.TrySetResult();
+                return finishScan.Task;
+            });
+            using var manager = CreateService(monitor, CreateAssociationService(new()),
+                CreatePowerPlanService(), CreateNotificationService(), CreateProcessService(),
+                CreateCoreMaskService(), CreateAffinityApplyService(), autoApply, settings: settings);
+            var starting = manager.SetAutomationMonitoringEnabledAsync(true);
+            try
+            {
+                await scanEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                await manager.SetAutomationMonitoringEnabledAsync(false);
+                Assert.False(settings.EnableAutomationMonitoring);
+            }
+            finally
+            {
+                finishScan.TrySetResult(Array.Empty<PersistentRuleAutoApplyResult>());
+                await starting.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+
+            Assert.False(manager.IsRunning);
+            Assert.False(settings.EnableAutomationMonitoring);
+        }
+
+        [Fact]
         public async Task StartAsync_SelectsHighestPriorityAssociation()
         {
             var processMonitor = new FakeProcessMonitorService
@@ -245,7 +280,7 @@ namespace ThreadPilot.Core.Tests
             };
             var autoApply = CreateAutoApplyService();
             autoApply
-                .Setup(x => x.ApplyForProcessStartAsync(process, It.IsAny<CancellationToken>()))
+                .Setup(x => x.ApplyForProcessStartAsync(process, It.IsAny<Func<ProcessModel, PersistentRuleApplyOptions>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() =>
                 {
                     process.Priority = ProcessPriorityClass.High;
@@ -287,7 +322,7 @@ namespace ThreadPilot.Core.Tests
             await Task.Delay(50);
 
             Assert.Equal(ProcessPriorityClass.Normal, process.Priority);
-            autoApply.Verify(x => x.ApplyForProcessStartAsync(process, It.IsAny<CancellationToken>()), Times.Once);
+            autoApply.Verify(x => x.ApplyForProcessStartAsync(process, It.IsAny<Func<ProcessModel, PersistentRuleApplyOptions>>(), It.IsAny<CancellationToken>()), Times.Once);
             processService.Verify(x => x.SetProcessPriority(process, ProcessPriorityClass.Normal, ProcessPriorityWriteSource.PowerPlanAssociation), Times.Once);
         }
 
@@ -471,6 +506,167 @@ namespace ThreadPilot.Core.Tests
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
+        public async Task Recovery_WhenThePidWasReused_AppliesTheNewProcessAssociation(bool sameExecutable)
+        {
+            var started = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            var first = new ProcessModel { ProcessId = 42, Name = "first", StartTimeUtc = started };
+            var replacement = new ProcessModel
+            {
+                ProcessId = 42,
+                Name = sameExecutable ? "first" : "replacement",
+                StartTimeUtc = started.AddMinutes(1),
+            };
+            var monitor = new FakeProcessMonitorService { RunningProcesses = { first } };
+            var config = new ProcessMonitorConfiguration
+            {
+                PowerPlanChangeDelayMs = 0,
+                Associations =
+                {
+                    new ProcessPowerPlanAssociation("first", "plan-first", "First") { CoreMaskId = "mask-first" },
+                    new ProcessPowerPlanAssociation("replacement", "plan-replacement", "Replacement") { CoreMaskId = "mask-replacement" },
+                },
+            };
+            var masks = CreateCoreMaskService();
+            masks.SetupGet(x => x.AvailableMasks).Returns(new ObservableCollection<CoreMask>
+            {
+                new() { Id = "mask-first", Name = "First", BoolMask = new ObservableCollection<bool> { true, false } },
+                new() { Id = "mask-replacement", Name = "Replacement", BoolMask = new ObservableCollection<bool> { false, true } },
+            });
+            masks.Setup(x => x.RegisterMaskApplication(42, It.IsAny<string>()));
+            var processes = CreateProcessService();
+            processes.Setup(x => x.TrackAppliedMask(42, It.IsAny<string>()));
+            var affinity = CreateAffinityApplyService();
+            using var manager = CreateService(monitor, CreateAssociationService(config),
+                CreatePowerPlanService(), CreateNotificationService(), processes, masks, affinity);
+
+            await manager.StartAsync();
+            affinity.Verify(x => x.ApplyAsync(first, 1), Times.Once);
+            monitor.RunningProcesses.Clear();
+            monitor.RunningProcesses.Add(replacement);
+            monitor.RaiseSnapshotRefreshed();
+
+            affinity.Verify(x => x.ApplyAsync(replacement, sameExecutable ? 1 : 2), Times.Once);
+        }
+
+        [Theory]
+        [InlineData(ProcessPriorityClass.Normal)]
+        [InlineData(ProcessPriorityClass.BelowNormal)]
+        public async Task Recovery_PreservesAssociationAndManualPriorityWhileReapplyingOtherRuleFields(
+            ProcessPriorityClass priorityBeforeRecovery)
+        {
+            var process = new ProcessModel { ProcessId = 42, Name = "game", Priority = ProcessPriorityClass.Normal };
+            var monitor = new FakeProcessMonitorService { RunningProcesses = { process } };
+            var configuration = new ProcessMonitorConfiguration
+            {
+                Associations =
+                {
+                    new ProcessPowerPlanAssociation("game", "plan-game", "Game")
+                    {
+                        ProcessPriority = nameof(ProcessPriorityClass.Normal),
+                    },
+                },
+            };
+            var settings = new Mock<IApplicationSettingsService>();
+            settings.SetupGet(x => x.Settings).Returns(new ApplicationSettingsModel { ApplyPersistentRulesOnProcessStart = true });
+            var store = new Mock<IPersistentProcessRuleStore>();
+            store.Setup(x => x.LoadAsync()).ReturnsAsync(
+            [
+                new PersistentProcessRule
+                {
+                    ProcessName = "game",
+                    IsEnabled = true,
+                    Priority = ProcessPriorityClass.High,
+                    ApplyPriorityOnStart = true,
+                    MemoryPriority = ProcessMemoryPriority.Low,
+                    ApplyMemoryPriorityOnStart = true,
+                },
+            ]);
+            var processes = CreateProcessService();
+            processes.Setup(x => x.RefreshProcessInfo(process)).Returns(Task.CompletedTask);
+            processes.Setup(x => x.TrackPriorityChange(42, It.IsAny<ProcessPriorityClass>()));
+            processes.Setup(x => x.SetProcessPriority(process, It.IsAny<ProcessPriorityClass>(), It.IsAny<ProcessPriorityWriteSource>()))
+                .Callback((ProcessModel target, ProcessPriorityClass priority, ProcessPriorityWriteSource _) => target.Priority = priority)
+                .Returns(Task.CompletedTask);
+            var actualMemoryPriority = ProcessMemoryPriority.Normal;
+            var memory = new Mock<IProcessMemoryPriorityService>();
+            memory.Setup(x => x.SetMemoryPriorityAsync(process, It.IsAny<ProcessMemoryPriority>()))
+                .Callback((ProcessModel _, ProcessMemoryPriority priority) => actualMemoryPriority = priority)
+                .ReturnsAsync(ProcessOperationResult.Succeeded("Memory priority applied", string.Empty));
+            var affinity = CreateAffinityApplyService();
+            var matcher = new PersistentProcessRuleMatcher();
+            var engine = new PersistentRulesEngine(store.Object, matcher, affinity.Object, processes.Object,
+                memory.Object, NullLogger<PersistentRulesEngine>.Instance);
+            var autoApply = new PersistentRuleAutoApplyService(store.Object, matcher, engine, settings.Object,
+                NullLogger<PersistentRuleAutoApplyService>.Instance);
+            using var manager = new ProcessMonitorManagerService(
+                monitor, CreateAssociationService(configuration).Object, CreatePowerPlanService().Object,
+                CreateNotificationService().Object, settings.Object, processes.Object, CreateCoreMaskService().Object,
+                affinity.Object, autoApply, new PowerPlanTransitionGate(TimeSpan.FromSeconds(2), () => DateTimeOffset.UtcNow),
+                NullLogger<ProcessMonitorManagerService>.Instance, CreateEnhancedLogger().Object);
+
+            await manager.StartAsync();
+            Assert.Equal(ProcessPriorityClass.Normal, process.Priority);
+            Assert.Equal(ProcessMemoryPriority.Low, actualMemoryPriority);
+
+            process.Priority = priorityBeforeRecovery;
+            actualMemoryPriority = ProcessMemoryPriority.Normal;
+            monitor.RaiseSnapshotRefreshed();
+
+            Assert.Equal(ProcessMemoryPriority.Low, actualMemoryPriority);
+            Assert.Equal(priorityBeforeRecovery, process.Priority);
+        }
+
+        [Fact]
+        public async Task StartAsync_WhenAnAssociatedProcessStartsDuringTheScan_KeepsItsPowerPlan()
+        {
+            var monitor = new FakeProcessMonitorService
+            {
+                RunningProcesses = { new ProcessModel { ProcessId = 80, Name = "unrelated" } },
+            };
+            var config = new ProcessMonitorConfiguration
+            {
+                DefaultPowerPlanGuid = "plan-default",
+                PowerPlanChangeDelayMs = 0,
+                Associations = { new ProcessPowerPlanAssociation("game", "plan-game", "Game") },
+            };
+            var activePlan = "balanced";
+            var power = CreatePowerPlanService();
+            power.Setup(x => x.GetActivePowerPlan())
+                .ReturnsAsync(() => new PowerPlanModel { Guid = activePlan, Name = activePlan });
+            power.Setup(x => x.SetActivePowerPlanByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
+                .Callback((string id, bool _) => activePlan = id)
+                .ReturnsAsync(true);
+            var scanEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var finishScan = new TaskCompletionSource<IReadOnlyList<PersistentRuleAutoApplyResult>>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var autoApply = CreateAutoApplyService();
+            autoApply.Setup(x => x.ApplyForDiscoveredProcessesAsync(
+                It.IsAny<IEnumerable<ProcessModel>>(), It.IsAny<Func<ProcessModel, PersistentRuleApplyOptions>>(), It.IsAny<CancellationToken>())).Returns(() =>
+            {
+                scanEntered.TrySetResult();
+                return finishScan.Task;
+            });
+            using var manager = CreateService(monitor, CreateAssociationService(config), power,
+                CreateNotificationService(), CreateProcessService(), CreateCoreMaskService(), CreateAffinityApplyService(),
+                autoApply);
+            var evaluation = manager.StartAsync();
+            try
+            {
+                await scanEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                monitor.RaiseProcessStarted(new ProcessModel { ProcessId = 42, Name = "game" });
+                Assert.Equal("plan-game", activePlan);
+            }
+            finally
+            {
+                finishScan.TrySetResult(Array.Empty<PersistentRuleAutoApplyResult>());
+                await evaluation.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+
+            Assert.Equal("plan-game", activePlan);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
         public async Task DiscoveredOrStartedProcess_AppliesConfiguredCoreMaskOnce(bool alreadyRunning)
         {
             var process = new ProcessModel { ProcessId = 31, Name = "game" };
@@ -521,6 +717,7 @@ namespace ThreadPilot.Core.Tests
             }
 
             await manager.StartAsync();
+            affinityApplyService.Verify(x => x.ApplyAsync(process, 1), alreadyRunning ? Times.Once() : Times.Never());
             processMonitor.RaiseProcessStarted(process);
             processMonitor.RaiseProcessStarted(process);
             await manager.EvaluateCurrentProcessesAsync();
@@ -560,10 +757,10 @@ namespace ThreadPilot.Core.Tests
             autoApplyService.Verify(
                 x => x.ApplyForDiscoveredProcessesAsync(
                     It.IsAny<IEnumerable<ProcessModel>>(),
-                    It.IsAny<CancellationToken>()),
+                    It.IsAny<Func<ProcessModel, PersistentRuleApplyOptions>>(), It.IsAny<CancellationToken>()),
                 Times.Once);
             autoApplyService.Verify(
-                x => x.ApplyForProcessStartAsync(process, It.IsAny<CancellationToken>()),
+                x => x.ApplyForProcessStartAsync(process, It.IsAny<Func<ProcessModel, PersistentRuleApplyOptions>>(), It.IsAny<CancellationToken>()),
                 Times.Once);
         }
 
@@ -588,7 +785,7 @@ namespace ThreadPilot.Core.Tests
             autoApplyService
                 .Setup(x => x.ApplyForDiscoveredProcessesAsync(
                     It.IsAny<IEnumerable<ProcessModel>>(),
-                    It.IsAny<CancellationToken>()))
+                    It.IsAny<Func<ProcessModel, PersistentRuleApplyOptions>>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new OperationCanceledException());
             var logger = new CapturingLogger<ProcessMonitorManagerService>();
             var manager = CreateService(
@@ -624,7 +821,7 @@ namespace ThreadPilot.Core.Tests
             autoApplyService
                 .Setup(x => x.ApplyForProcessStartAsync(
                     process,
-                    It.IsAny<CancellationToken>()))
+                    It.IsAny<Func<ProcessModel, PersistentRuleApplyOptions>>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new OperationCanceledException());
             var logger = new CapturingLogger<ProcessMonitorManagerService>();
             var manager = CreateService(
@@ -666,7 +863,7 @@ namespace ThreadPilot.Core.Tests
             autoApplyService
                 .Setup(x => x.ApplyForDiscoveredProcessesAsync(
                     It.IsAny<IEnumerable<ProcessModel>>(),
-                    It.IsAny<CancellationToken>()))
+                    It.IsAny<Func<ProcessModel, PersistentRuleApplyOptions>>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException("auto apply failed"));
             var logger = new CapturingLogger<ProcessMonitorManagerService>();
             var manager = CreateService(
@@ -705,7 +902,7 @@ namespace ThreadPilot.Core.Tests
             autoApplyService
                 .Setup(x => x.ApplyForProcessStartAsync(
                     process,
-                    It.IsAny<CancellationToken>()))
+                    It.IsAny<Func<ProcessModel, PersistentRuleApplyOptions>>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException("auto apply failed"));
             var logger = new CapturingLogger<ProcessMonitorManagerService>();
             var manager = CreateService(
@@ -745,7 +942,7 @@ namespace ThreadPilot.Core.Tests
             autoApplyService
                 .Setup(x => x.ApplyForProcessStartAsync(
                     process,
-                    It.IsAny<CancellationToken>()))
+                    It.IsAny<Func<ProcessModel, PersistentRuleApplyOptions>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new[]
                 {
                     new PersistentRuleAutoApplyResult
@@ -798,7 +995,7 @@ namespace ThreadPilot.Core.Tests
             autoApplyService
                 .Setup(x => x.ApplyForProcessStartAsync(
                     process,
-                    It.IsAny<CancellationToken>()))
+                    It.IsAny<Func<ProcessModel, PersistentRuleApplyOptions>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new[]
                 {
                     new PersistentRuleAutoApplyResult
@@ -958,8 +1155,8 @@ namespace ThreadPilot.Core.Tests
             var automation = CreateAutoApplyService();
             var tokens = new List<CancellationToken>();
             automation.Setup(x => x.ApplyForProcessStartAsync(
-                It.IsAny<ProcessModel>(), It.IsAny<CancellationToken>()))
-                .Callback<ProcessModel, CancellationToken>((_, token) => tokens.Add(token))
+                It.IsAny<ProcessModel>(), It.IsAny<Func<ProcessModel, PersistentRuleApplyOptions>>(), It.IsAny<CancellationToken>()))
+                .Callback((ProcessModel _, Func<ProcessModel, PersistentRuleApplyOptions> _, CancellationToken token) => tokens.Add(token))
                 .ReturnsAsync(Array.Empty<PersistentRuleAutoApplyResult>());
             using var manager = CreateService(
                 monitor,
@@ -1102,12 +1299,12 @@ namespace ThreadPilot.Core.Tests
             autoApplyService
                 .Setup(x => x.ApplyForDiscoveredProcessesAsync(
                     It.IsAny<IEnumerable<ProcessModel>>(),
-                    It.IsAny<CancellationToken>()))
+                    It.IsAny<Func<ProcessModel, PersistentRuleApplyOptions>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Array.Empty<PersistentRuleAutoApplyResult>());
             autoApplyService
                 .Setup(x => x.ApplyForProcessStartAsync(
                     It.IsAny<ProcessModel>(),
-                    It.IsAny<CancellationToken>()))
+                    It.IsAny<Func<ProcessModel, PersistentRuleApplyOptions>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Array.Empty<PersistentRuleAutoApplyResult>());
             autoApplyService.Setup(x => x.MarkProcessExited(It.IsAny<int>()));
             return autoApplyService;
