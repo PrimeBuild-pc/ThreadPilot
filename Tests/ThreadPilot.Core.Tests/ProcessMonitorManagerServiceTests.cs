@@ -979,6 +979,180 @@ namespace ThreadPilot.Core.Tests
             Assert.True(tokens[1].IsCancellationRequested);
         }
 
+        [Theory]
+        [InlineData(0)]
+        [InlineData(25)]
+        public async Task ProcessStopped_DuringStartRefresh_DoesNotApplyExitedProcessPlan(int delayMs)
+        {
+            var processMonitor = new FakeProcessMonitorService();
+            var process = new ProcessModel { ProcessId = 21, Name = "game" };
+            var powerPlans = new PowerPlanState();
+            var processService = CreateProcessService();
+            var refresh = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            processService.Setup(x => x.IsProcessStillRunning(process)).ReturnsAsync(false);
+            using var manager = CreatePowerPlanManager(processMonitor, powerPlans, processService, delayMs);
+            processService.Setup(x => x.RefreshProcessInfo(process)).Returns(refresh.Task);
+
+            await manager.StartAsync();
+            processMonitor.RaiseProcessStarted(process);
+            processService.Verify(x => x.RefreshProcessInfo(process), Times.Once);
+            processMonitor.RaiseProcessStopped(process);
+            refresh.SetException(new InvalidOperationException("Process no longer exists"));
+
+            // Give the start continuation and the delayed power plan callback time to finish.
+            await Task.WhenAny(powerPlans.GameApplied.Task, Task.Delay(500));
+            Assert.Equal("balanced", powerPlans.Active);
+            Assert.Empty(manager.RunningAssociatedProcesses);
+            powerPlans.Service.Verify(x => x.SetActivePowerPlanByGuidAsync("plan-game", true), Times.Never);
+        }
+
+        [Fact]
+        public async Task ProcessStopped_DuringActivePlanRead_SkipsExitedProcessPlan()
+        {
+            var processMonitor = new FakeProcessMonitorService();
+            var process = new ProcessModel { ProcessId = 21, Name = "game" };
+            var powerPlans = new PowerPlanState();
+            var processService = CreateProcessService();
+            using var manager = CreatePowerPlanManager(processMonitor, powerPlans, processService);
+            await manager.StartAsync();
+
+            var readStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var finishRead = new TaskCompletionSource<PowerPlanModel?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var restoreChecked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            powerPlans.Service.SetupSequence(x => x.GetActivePowerPlan())
+                .Returns(() =>
+                {
+                    readStarted.TrySetResult();
+                    return finishRead.Task;
+                })
+                .Returns(() =>
+                {
+                    restoreChecked.TrySetResult();
+                    return Task.FromResult<PowerPlanModel?>(powerPlans.Current);
+                })
+                .Returns(() => Task.FromResult<PowerPlanModel?>(powerPlans.Current));
+
+            processMonitor.RaiseProcessStarted(process);
+            try
+            {
+                await readStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                processMonitor.RaiseProcessStopped(process);
+            }
+            finally
+            {
+                finishRead.TrySetResult(powerPlans.Current);
+            }
+
+            await restoreChecked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            powerPlans.Service.Verify(x => x.SetActivePowerPlanByGuidAsync("plan-game", true), Times.Never);
+            Assert.Equal("balanced", powerPlans.Active);
+        }
+
+        [Fact]
+        public async Task ProcessStopped_RestoresDefaultOnlyAfterLastInstanceExits()
+        {
+            var processMonitor = new FakeProcessMonitorService();
+            var first = new ProcessModel { ProcessId = 21, Name = "game" };
+            var second = new ProcessModel { ProcessId = 22, Name = "game" };
+            var powerPlans = new PowerPlanState();
+            using var manager = CreatePowerPlanManager(processMonitor, powerPlans, CreateProcessService());
+
+            await manager.StartAsync();
+            processMonitor.RaiseProcessStarted(first);
+            processMonitor.RaiseProcessStarted(second);
+            await powerPlans.GameApplied.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            processMonitor.RaiseProcessStopped(first);
+            Assert.Equal("plan-game", powerPlans.Active);
+            powerPlans.Service.Verify(x => x.SetActivePowerPlanByGuidAsync("balanced", true), Times.Never);
+
+            processMonitor.RaiseProcessStopped(second);
+            await powerPlans.DefaultRestored.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal("balanced", powerPlans.Active);
+            Assert.Empty(manager.RunningAssociatedProcesses);
+        }
+
+        [Fact]
+        public async Task Snapshot_WhenPidIsReusedByUnassociatedProcess_RestoresDefaultPlan()
+        {
+            var game = new ProcessModel { ProcessId = 21, Name = "game" };
+            var monitor = new FakeProcessMonitorService { RunningProcesses = { game } };
+            var plans = new PowerPlanState();
+            using var manager = CreatePowerPlanManager(monitor, plans, CreateProcessService());
+
+            await manager.StartAsync();
+            Assert.Equal("plan-game", plans.Active);
+
+            monitor.RunningProcesses.Clear();
+            monitor.RunningProcesses.Add(new ProcessModel { ProcessId = 21, Name = "unrelated" });
+            await manager.EvaluateCurrentProcessesAsync();
+
+            Assert.Equal("balanced", plans.Active);
+            Assert.Empty(manager.RunningAssociatedProcesses);
+        }
+
+        [Fact]
+        public async Task ProcessStopped_DuringPlanChange_ReevaluatesAfterTheWrite()
+        {
+            var processMonitor = new FakeProcessMonitorService();
+            var game = new ProcessModel { ProcessId = 21, Name = "game" };
+            var secondary = new ProcessModel { ProcessId = 22, Name = "secondary" };
+            var powerPlans = new PowerPlanState();
+            var writeStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var finishWrite = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            powerPlans.Service.Setup(x => x.SetActivePowerPlanByGuidAsync("plan-game", true))
+                .Returns(async () =>
+                {
+                    writeStarted.TrySetResult();
+                    await finishWrite.Task;
+                    return powerPlans.SetActive("plan-game");
+                });
+            using var manager = CreatePowerPlanManager(
+                processMonitor, powerPlans, CreateProcessService(),
+                delayMs: 25, additionalAssociation: new ProcessPowerPlanAssociation("secondary", "plan-secondary", "Secondary"));
+            await manager.StartAsync();
+            processMonitor.RaiseProcessStarted(game);
+            try
+            {
+                await writeStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                processMonitor.RaiseProcessStarted(secondary);
+                processMonitor.RaiseProcessStopped(game);
+                processMonitor.RaiseProcessStopped(secondary);
+            }
+            finally
+            {
+                finishWrite.TrySetResult();
+            }
+
+            await powerPlans.DefaultRestored.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal("balanced", powerPlans.Active);
+            powerPlans.Service.Verify(x => x.SetActivePowerPlanByGuidAsync("plan-secondary", true), Times.Never);
+        }
+
+        private static ProcessMonitorManagerService CreatePowerPlanManager(
+            FakeProcessMonitorService processMonitor,
+            PowerPlanState powerPlans,
+            Mock<IProcessService> processService,
+            int delayMs = 0,
+            ProcessPowerPlanAssociation? additionalAssociation = null)
+        {
+            var configuration = new ProcessMonitorConfiguration
+            {
+                DefaultPowerPlanGuid = "balanced",
+                DefaultPowerPlanName = "Balanced",
+                PowerPlanChangeDelayMs = delayMs,
+                Associations = { new ProcessPowerPlanAssociation("game", "plan-game", "Game") },
+            };
+            if (additionalAssociation != null)
+            {
+                configuration.Associations.Add(additionalAssociation);
+            }
+
+            processService.Setup(x => x.RefreshProcessInfo(It.IsAny<ProcessModel>())).Returns(Task.CompletedTask);
+            return CreateService(
+                processMonitor, CreateAssociationService(configuration), powerPlans.Service,
+                CreateNotificationService(), processService, CreateCoreMaskService(), CreateAffinityApplyService());
+        }
+
         private static ProcessMonitorManagerService CreateService(
             FakeProcessMonitorService processMonitorService,
             Mock<IProcessPowerPlanAssociationService> associationService,
@@ -1067,6 +1241,7 @@ namespace ThreadPilot.Core.Tests
         {
             var processService = new Mock<IProcessService>(MockBehavior.Strict);
             processService.Setup(x => x.UntrackProcess(It.IsAny<int>()));
+            processService.Setup(x => x.IsProcessStillRunning(It.IsAny<ProcessModel>())).ReturnsAsync(true);
             return processService;
         }
 
@@ -1103,6 +1278,43 @@ namespace ThreadPilot.Core.Tests
                 .ReturnsAsync(Array.Empty<PersistentRuleAutoApplyResult>());
             autoApplyService.Setup(x => x.MarkProcessExited(It.IsAny<int>()));
             return autoApplyService;
+        }
+
+        private sealed class PowerPlanState
+        {
+            public PowerPlanState()
+            {
+                this.Service = CreatePowerPlanService();
+                this.Service.Setup(x => x.GetActivePowerPlan()).ReturnsAsync(() => this.Current);
+                this.Service.Setup(x => x.SetActivePowerPlanByGuidAsync(It.IsAny<string>(), true))
+                    .ReturnsAsync((string guid, bool _) => this.SetActive(guid));
+            }
+
+            public Mock<IPowerPlanService> Service { get; }
+
+            public string Active { get; private set; } = "balanced";
+
+            public PowerPlanModel Current => new() { Guid = this.Active, Name = this.Active };
+
+            public TaskCompletionSource GameApplied { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public TaskCompletionSource DefaultRestored { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public bool SetActive(string guid)
+            {
+                this.Active = guid;
+                if (guid == "plan-game")
+                {
+                    this.GameApplied.TrySetResult();
+                }
+
+                if (guid == "balanced")
+                {
+                    this.DefaultRestored.TrySetResult();
+                }
+
+                return true;
+            }
         }
 
         private sealed class FakeProcessMonitorService : IProcessMonitorService

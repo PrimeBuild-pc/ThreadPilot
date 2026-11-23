@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       dry_run_publish:
-        description: "Build and validate release without winget publication"
+        description: "Build and validate without publishing a GitHub release or WinGet update"
         required: false
-        default: "false"
+        default: "true"
         type: choice
         options:
           - "false"
@@ -18,6 +18,10 @@ on:
 # Read-only by default: only the job that publishes the GitHub release gets write access.
 permissions:
   contents: read
+
+concurrency:
+  group: threadpilot-release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -324,6 +328,7 @@ jobs:
           }
 
   release:
+    if: github.event_name != 'workflow_dispatch' || inputs.dry_run_publish == 'false'
     runs-on: ubuntu-latest
     # Protected environment: waits for the maintainer's approval before it can write the release.
     environment: release
@@ -404,7 +409,7 @@ jobs:
           fi
 
       - name: Install git-cliff
-        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6
         with:
           tool: git-cliff@2.10.0
 
@@ -434,7 +439,22 @@ jobs:
 
           Write-Host "CONTRIBUTORS.md is maintained manually in this workflow."
 
-      - name: Publish GitHub release
+      - name: Verify tag provenance and public checksums
+        shell: bash
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          set -euo pipefail
+          refs="$(git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" "refs/tags/$TAG" "refs/tags/$TAG^{}")"
+          test -n "$refs"
+          tagged_commit="$(tail -n1 <<< "$refs" | cut -f1)"
+          test "$tagged_commit" = "$GITHUB_SHA"
+          git merge-base --is-ancestor "$tagged_commit" origin/main
+          cd public-release-assets
+          sha256sum --strict --check SHA256SUMS.txt
+
+      - name: Stage GitHub release as draft
+        id: draft-release
         uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           tag_name: ${{ needs.build.outputs.tag }}
@@ -447,6 +467,29 @@ jobs:
           prerelease: ${{ needs.build.outputs.prerelease == 'true' }}
           make_latest: ${{ needs.build.outputs.prerelease == 'true' && 'false' || 'true' }}
           generate_release_notes: true
+          draft: true
+          overwrite_files: false
+          fail_on_unmatched_files: true
+
+      - name: Verify uploaded assets and publish the draft
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.build.outputs.tag }}
+          RELEASE_ID: ${{ steps.draft-release.outputs.id }}
+          PRERELEASE: ${{ needs.build.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID")"
+          jq -e --arg tag "$TAG" --argjson prerelease "$PRERELEASE"             '.draft and .tag_name == $tag and .prerelease == $prerelease and (.assets|length == 3)' <<< "$release" >/dev/null
+          for path in public-release-assets/*; do
+            file="${path##*/}"
+            digest="sha256:$(sha256sum "$path" | cut -d' ' -f1)"
+            jq -e --arg name "$file" --arg digest "$digest" 'any(.assets[]; .name == $name and .digest == $digest)' <<< "$release" >/dev/null
+          done
+          refs="$(git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" "refs/tags/$TAG" "refs/tags/$TAG^{}")"
+          test "$(tail -n1 <<< "$refs" | cut -f1)" = "$GITHUB_SHA"
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
 
   publish-winget:
     runs-on: windows-2022

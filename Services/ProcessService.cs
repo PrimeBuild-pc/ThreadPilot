@@ -189,6 +189,19 @@ namespace ThreadPilot.Services
             }
         }
 
+        internal static DateTime? TryGetProcessStartTimeUtc(int processId)
+        {
+            try
+            {
+                using var process = Process.GetProcessById(processId);
+                return process.StartTime.ToUniversalTime();
+            }
+            catch (Exception ex) when (ex is ArgumentException || IsPassiveProcessAccessException(ex) || IsTerminatedProcessException(ex))
+            {
+                return null;
+            }
+        }
+
         public ProcessModel CreateProcessModel(Process process)
         {
             return this.CreateProcessModel(process, this.foregroundProcessService?.TryGetForegroundProcessId());
@@ -290,11 +303,11 @@ namespace ThreadPilot.Services
             {
                 try
                 {
-                    startTimeUtc = process.StartTime.ToUniversalTime();
+                    startTimeUtc = model.StartTimeUtc = process.StartTime.ToUniversalTime();
                 }
                 catch (Exception ex) when (IsPassiveProcessAccessException(ex) || IsTerminatedProcessException(ex))
                 {
-                    // Start time is used only to validate static metadata against PID reuse.
+                    // Start time may be inaccessible for protected processes.
                 }
 
                 try
