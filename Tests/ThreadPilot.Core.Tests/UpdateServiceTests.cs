@@ -59,7 +59,7 @@ namespace ThreadPilot.Core.Tests
         public async Task CheckForUpdatesAsync_StartupChecksOnEveryLaunch()
         {
             var harness = new Harness();
-            harness.Settings.LastUpdateCheckUtc = harness.Clock.UtcNow.AddDays(-2);
+            harness.Settings.LastUpdateCheckUtc = harness.Clock.GetUtcNow().AddDays(-2);
 
             var result = await harness.Service.CheckForUpdatesAsync(new UpdateCheckRequest(UpdateCheckTrigger.Startup));
 
@@ -76,7 +76,7 @@ namespace ThreadPilot.Core.Tests
 
             Assert.True(result.IsUpdateAvailable);
             Assert.Equal("1.4.0", result.Release?.Version.ToString());
-            Assert.Equal(harness.Clock.UtcNow, harness.SavedSettings?.LastUpdateCheckUtc);
+            Assert.Equal(harness.Clock.GetUtcNow(), harness.SavedSettings?.LastUpdateCheckUtc);
         }
 
         [Fact]
@@ -327,13 +327,13 @@ namespace ThreadPilot.Core.Tests
             {
                 this.TempDirectory = Directory.CreateTempSubdirectory("ThreadPilotUpdateTest").FullName;
                 var settingsService = new Mock<IApplicationSettingsService>();
-                settingsService.SetupGet(service => service.Settings).Returns(() => (ApplicationSettingsModel)this.Settings.Clone());
+                settingsService.SetupGet(service => service.Settings).Returns(() => this.Settings.Clone());
                 settingsService
-                    .Setup(service => service.UpdateSettingsAsync(It.IsAny<ApplicationSettingsModel>()))
-                    .Callback<ApplicationSettingsModel>(settings =>
+                    .Setup(service => service.EditSettingsAsync(It.IsAny<Action<ApplicationSettingsModel>>()))
+                    .Callback<Action<ApplicationSettingsModel>>(edit =>
                     {
-                        this.SavedSettings = (ApplicationSettingsModel)settings.Clone();
-                        this.Settings.CopyFrom(settings);
+                        edit(this.Settings);
+                        this.SavedSettings = this.Settings.Clone();
                     })
                     .Returns(Task.CompletedTask);
 
@@ -361,9 +361,9 @@ namespace ThreadPilot.Core.Tests
             }
         }
 
-        private sealed class FakeClock : IUpdateClock
+        private sealed class FakeClock : TimeProvider
         {
-            public DateTimeOffset UtcNow { get; } = new(2026, 6, 7, 12, 0, 0, TimeSpan.Zero);
+            public override DateTimeOffset GetUtcNow() => new(2026, 6, 7, 12, 0, 0, TimeSpan.Zero);
         }
 
         private sealed class FakeGitHubReleaseClient : IGitHubReleaseClient
@@ -375,11 +375,6 @@ namespace ThreadPilot.Core.Tests
             public FakeGitHubReleaseClient(string releasesJson)
             {
                 this.releasesJson = releasesJson;
-            }
-
-            public Task<string> GetLatestReleaseJsonAsync(string owner, string repo, CancellationToken cancellationToken = default)
-            {
-                throw new NotSupportedException();
             }
 
             public Task<string> GetReleasesJsonAsync(string owner, string repo, CancellationToken cancellationToken = default)

@@ -112,6 +112,76 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task UnwritableJournal_PreventsGameBoostChanges()
+        {
+            Directory.CreateDirectory(this.journalPath);
+            try
+            {
+                using var service = this.CreateService();
+
+                await service.TickAsync();
+
+                Assert.Empty(this.processes.CpuSets[ChromePid]);
+            }
+            finally
+            {
+                Directory.Delete(this.journalPath);
+            }
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task LockedStartupJournal_IsRetriedBeforeAnyNewSession(bool enabled)
+        {
+            using (var crashed = this.CreateService())
+            {
+                await crashed.TickAsync();
+            }
+
+            Assert.NotEmpty(this.processes.CpuSets[ChromePid]);
+            const int nextGamePid = 401;
+            this.processes.Add(nextGamePid, "NextGame", @"D:\SteamLibrary\steamapps\common\NextGame\NextGame.exe");
+            this.foregroundPid = nextGamePid;
+            this.settings.GameBoostEnabled = enabled;
+            using var service = this.CreateService();
+            using (File.Open(this.journalPath, FileMode.Open, FileAccess.Read, FileShare.None))
+            {
+                await service.StartAsync();
+                await service.TickAsync();
+                Assert.Null(service.ActiveGameName);
+                Assert.Empty(this.processes.CpuSets[nextGamePid]);
+            }
+
+            await service.TickAsync();
+            Assert.Equal(enabled ? "NextGame" : null, service.ActiveGameName);
+            await service.StopAsync();
+
+            Assert.Empty(this.processes.CpuSets[ChromePid]);
+            Assert.False(File.Exists(this.journalPath));
+        }
+
+        [Fact]
+        public async Task FailedRestore_RemainsInJournalForTheNextAttempt()
+        {
+            using var service = this.CreateService();
+            await service.TickAsync();
+            this.processes.FailClear.Add(ChromePid);
+
+            this.processes.Exit(GamePid);
+            await service.TickAsync();
+
+            Assert.NotEmpty(this.processes.CpuSets[ChromePid]);
+            Assert.True(File.Exists(this.journalPath));
+
+            this.processes.FailClear.Clear();
+            await service.StopAsync();
+
+            Assert.Empty(this.processes.CpuSets[ChromePid]);
+            Assert.False(File.Exists(this.journalPath));
+        }
+
+        [Fact]
         public async Task HeldGame_ExitEvent_EndsTheSessionAndRestores_WithoutATick()
         {
             this.processes.HandleAllowed = true;
@@ -705,6 +775,11 @@ namespace ThreadPilot.Core.Tests
                 processService.Setup(s => s.ClearProcessCpuSetAsync(It.IsAny<ProcessModel>()))
                     .ReturnsAsync((ProcessModel p) =>
                     {
+                        if (this.FailClear.Contains(p.ProcessId))
+                        {
+                            return false;
+                        }
+
                         this.CpuSets[p.ProcessId] = [];
                         return true;
                     });
@@ -759,6 +834,8 @@ namespace ThreadPilot.Core.Tests
             public HashSet<int> Unreadable { get; } = new();
 
             public HashSet<int> FailButApply { get; } = new();
+
+            public HashSet<int> FailClear { get; } = new();
 
             public List<int> ApplyCalls { get; } = new();
 

@@ -13,6 +13,8 @@ namespace ThreadPilot.Services
     {
         private readonly ILogger<KeyboardShortcutService> logger;
         private readonly IApplicationSettingsService settingsService;
+        private readonly Func<nint, int, uint, uint, bool> registerHotkey;
+        private readonly Func<nint, int, bool> unregisterHotkey;
         private readonly Dictionary<string, KeyboardShortcut> registeredShortcuts = new();
         private readonly Dictionary<int, string> hotkeyIdToAction = new();
         private int nextHotkeyId = 1;
@@ -39,9 +41,20 @@ namespace ThreadPilot.Services
         public KeyboardShortcutService(
             ILogger<KeyboardShortcutService> logger,
             IApplicationSettingsService settingsService)
+            : this(logger, settingsService, RegisterHotKey, UnregisterHotKey)
+        {
+        }
+
+        internal KeyboardShortcutService(
+            ILogger<KeyboardShortcutService> logger,
+            IApplicationSettingsService settingsService,
+            Func<nint, int, uint, uint, bool> registerHotkey,
+            Func<nint, int, bool> unregisterHotkey)
         {
             this.logger = logger;
             this.settingsService = settingsService;
+            this.registerHotkey = registerHotkey;
+            this.unregisterHotkey = unregisterHotkey;
         }
 
         public async Task<bool> RegisterShortcutAsync(string actionName, Key key, ModifierKeys modifiers)
@@ -89,7 +102,7 @@ namespace ThreadPilot.Services
                 var winModifiers = this.ConvertToWinModifiers(modifiers);
                 var virtualKey = KeyInterop.VirtualKeyFromKey(key);
 
-                if (RegisterHotKey(this.windowHandle, hotkeyId, winModifiers, (uint)virtualKey))
+                if (this.registerHotkey(this.windowHandle, hotkeyId, winModifiers, (uint)virtualKey))
                 {
                     this.registeredShortcuts[actionName] = shortcut;
                     this.hotkeyIdToAction[hotkeyId] = actionName;
@@ -134,13 +147,12 @@ namespace ThreadPilot.Services
                 }
 
                 // Unregister from Windows API
-                var unregistered = UnregisterHotKey(this.windowHandle, hotkeyId);
-
-                this.registeredShortcuts.Remove(actionName);
-                this.hotkeyIdToAction.Remove(hotkeyId);
+                var unregistered = this.unregisterHotkey(this.windowHandle, hotkeyId);
 
                 if (unregistered)
                 {
+                    this.registeredShortcuts.Remove(actionName);
+                    this.hotkeyIdToAction.Remove(hotkeyId);
                     this.logger.LogInformation(
                         "Unregistered shortcut {Shortcut} for action {Action}",
                         shortcut.ToString(), actionName);
@@ -180,22 +192,9 @@ namespace ThreadPilot.Services
         {
             try
             {
-                var configuredShortcuts = this.settingsService.Settings.KeyboardShortcuts;
-
-                if (configuredShortcuts != null && configuredShortcuts.Count > 0)
+                foreach (var shortcut in this.GetConfiguredShortcuts().Where(shortcut => shortcut.IsEnabled))
                 {
-                    foreach (var shortcutSetting in configuredShortcuts)
-                    {
-                        if (shortcutSetting.IsEnabled)
-                        {
-                            await this.RegisterShortcutAsync(shortcutSetting.ActionName, shortcutSetting.Key, shortcutSetting.Modifiers);
-                        }
-                    }
-                }
-                else
-                {
-                    // Load default shortcuts if none are configured
-                    await this.LoadDefaultShortcutsAsync();
+                    await this.RegisterShortcutAsync(shortcut.ActionName, shortcut.Key, shortcut.Modifiers);
                 }
 
                 this.logger.LogInformation("Loaded {Count} keyboard shortcuts from settings", this.registeredShortcuts.Count);
@@ -206,13 +205,93 @@ namespace ThreadPilot.Services
             }
         }
 
+        public IReadOnlyList<KeyboardShortcut> GetConfiguredShortcuts()
+        {
+            var configured = this.settingsService.Settings.KeyboardShortcuts;
+            return configured == null || configured.Count == 0
+                ? this.GetDefaultShortcuts().Values.ToArray()
+                : configured.Select(shortcut => shortcut.Clone()).ToArray();
+        }
+
+        public async Task<KeyboardShortcut?> ApplyAndSaveAsync(
+            IReadOnlyList<KeyboardShortcut> shortcuts,
+            Func<Task> saveAsync)
+        {
+            var previous = this.GetConfiguredShortcuts();
+            var enabled = shortcuts.Where(shortcut => shortcut.IsEnabled).ToArray();
+            var changed = enabled.Where(shortcut =>
+                !previous.Any(old => old.IsEnabled && SameBinding(old, shortcut)) &&
+                !this.registeredShortcuts.Values.Any(old => SameBinding(old, shortcut))).ToArray();
+            foreach (var shortcut in changed)
+            {
+                if (shortcut.Modifiers == ModifierKeys.None || KeyInterop.VirtualKeyFromKey(shortcut.Key) == 0 ||
+                    enabled.Count(other => SameGesture(other, shortcut)) > 1)
+                {
+                    return shortcut;
+                }
+            }
+
+            var toRemove = this.registeredShortcuts.Values
+                .Where(old => changed.Any(shortcut => shortcut.ActionName == old.ActionName) ||
+                    !enabled.Any(shortcut => shortcut.ActionName == old.ActionName)).ToArray();
+            var removed = new List<KeyboardShortcut>();
+            var registered = new List<string>();
+            var saved = false;
+            try
+            {
+                foreach (var shortcut in toRemove)
+                {
+                    if (!this.UnregisterShortcut(shortcut.ActionName))
+                    {
+                        return shortcut;
+                    }
+
+                    removed.Add(shortcut);
+                }
+
+                foreach (var shortcut in changed)
+                {
+                    if (!await this.RegisterShortcutAsync(shortcut.ActionName, shortcut.Key, shortcut.Modifiers))
+                    {
+                        return shortcut;
+                    }
+
+                    registered.Add(shortcut.ActionName);
+                }
+
+                await saveAsync();
+                saved = true;
+                return null;
+            }
+            finally
+            {
+                if (!saved)
+                {
+                    foreach (var action in registered)
+                    {
+                        this.UnregisterShortcut(action);
+                    }
+
+                    foreach (var shortcut in removed)
+                    {
+                        await this.RegisterShortcutAsync(shortcut.ActionName, shortcut.Key, shortcut.Modifiers);
+                    }
+                }
+            }
+        }
+
+        private static bool SameBinding(KeyboardShortcut left, KeyboardShortcut right) =>
+            left.ActionName == right.ActionName && SameGesture(left, right);
+
+        private static bool SameGesture(KeyboardShortcut left, KeyboardShortcut right) =>
+            left.Modifiers == right.Modifiers && KeyInterop.VirtualKeyFromKey(left.Key) == KeyInterop.VirtualKeyFromKey(right.Key);
+
         public async Task SaveShortcutsToSettingsAsync()
         {
             try
             {
-                var settings = this.settingsService.Settings;
-                settings.KeyboardShortcuts = this.registeredShortcuts.Values.ToList();
-                await this.settingsService.UpdateSettingsAsync(settings);
+                var shortcuts = this.registeredShortcuts.Values.ToList();
+                await this.settingsService.EditSettingsAsync(draft => draft.KeyboardShortcuts = shortcuts);
 
                 this.logger.LogInformation("Saved {Count} keyboard shortcuts to settings", this.registeredShortcuts.Count);
             }
@@ -319,15 +398,6 @@ namespace ThreadPilot.Services
             }
 
             return IntPtr.Zero;
-        }
-
-        private async Task LoadDefaultShortcutsAsync()
-        {
-            var defaultShortcuts = this.GetDefaultShortcuts();
-            foreach (var shortcut in defaultShortcuts.Values)
-            {
-                await this.RegisterShortcutAsync(shortcut.ActionName, shortcut.Key, shortcut.Modifiers);
-            }
         }
 
         private uint ConvertToWinModifiers(ModifierKeys modifiers)

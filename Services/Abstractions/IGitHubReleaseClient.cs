@@ -5,8 +5,6 @@ namespace ThreadPilot.Services.Abstractions
 
     public interface IGitHubReleaseClient
     {
-        Task<string> GetLatestReleaseJsonAsync(string owner, string repo, CancellationToken cancellationToken = default);
-
         Task<string> GetReleasesJsonAsync(string owner, string repo, CancellationToken cancellationToken = default);
     }
 }

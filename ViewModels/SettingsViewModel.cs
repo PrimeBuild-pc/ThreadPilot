@@ -106,7 +106,8 @@ namespace ThreadPilot.ViewModels
             IEnhancedLoggingService? enhancedLoggingService = null,
             IActivityAuditService? activityAuditService = null,
             ICpuTopologyProvider? cpuTopologyProvider = null,
-            ConfigurationBackupService? backupService = null)
+            ConfigurationBackupService? backupService = null,
+            IKeyboardShortcutService? keyboardShortcutService = null)
             : base(logger, enhancedLoggingService, activityAuditService)
         {
             this.settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
@@ -122,12 +123,13 @@ namespace ThreadPilot.ViewModels
             this.localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
             this.cpuTopologyProvider = cpuTopologyProvider;
             this.backupService = backupService;
+            this.keyboardShortcutService = keyboardShortcutService;
 
             this.ApplicationVersion = this.versionProvider.DisplayVersion;
 
             // Initialize with current settings
-            this.settings = (ApplicationSettingsModel)this.settingsService.Settings.Clone();
-            this.savedSettingsSnapshot = (ApplicationSettingsModel)this.settings.Clone();
+            this.settings = this.settingsService.Settings.Clone();
+            this.savedSettingsSnapshot = this.settings.Clone();
             this.appliedThemePreference = this.settings.UseDarkTheme;
             this.LatestUpdateVersion = this.GetLocalizedString("Settings_UpdateNotChecked", "Not checked");
             this.ReservedCpuSetsStatus = this.GetLocalizedString("SettingsView_ReservedCpuSetsUnknown", "Reserved CPU Sets: status unavailable.");
@@ -147,6 +149,7 @@ namespace ThreadPilot.ViewModels
 
             // Subscribe to property changes to track unsaved changes
             this.Settings.PropertyChanged += this.OnSettingsPropertyChanged;
+            this.RefreshShortcutRows();
 
             // Keep viewmodel in sync with persisted settings
             this.settingsService.SettingsChanged += this.OnSettingsServiceSettingsChanged;
@@ -193,6 +196,11 @@ namespace ThreadPilot.ViewModels
 
         private void OnSettingsPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
+            if (e.PropertyName == nameof(ApplicationSettingsModel.KeyboardShortcuts) && !this.isEditingShortcutRows)
+            {
+                this.RefreshShortcutRows();
+            }
+
             if (this.isSyncingFromService)
             {
                 return;
@@ -307,6 +315,33 @@ namespace ThreadPilot.ViewModels
             this.DownloadAndInstallUpdateCommand.NotifyCanExecuteChanged();
         }
 
+        private async Task PersistEditedSettingsAsync()
+        {
+            var baseline = this.savedSettingsSnapshot;
+            var edited = this.Settings.Clone();
+            Task SaveAsync() => this.settingsService.EditSettingsAsync(
+                draft => draft.CopyFrom(MergeSettings(baseline, edited, draft)));
+
+            if (this.keyboardShortcutService == null ||
+                JsonNode.DeepEquals(JsonSerializer.SerializeToNode(baseline.KeyboardShortcuts),
+                    JsonSerializer.SerializeToNode(edited.KeyboardShortcuts)))
+            {
+                await SaveAsync();
+                return;
+            }
+
+            var shortcuts = edited.KeyboardShortcuts.Count == 0
+                ? this.keyboardShortcutService.GetDefaultShortcuts().Values.ToArray()
+                : edited.KeyboardShortcuts.ToArray();
+            var unavailable = await this.keyboardShortcutService.ApplyAndSaveAsync(shortcuts, SaveAsync);
+            if (unavailable != null)
+            {
+                throw new InvalidOperationException(this.GetLocalizedString(
+                    "Settings_ShortcutUnavailable", "Can't use {0}. Choose a key with a modifier and a combination that's available.",
+                    unavailable));
+            }
+        }
+
         private async Task SaveSettingsAsync()
         {
             string previousDefaultPowerPlanGuid = string.Empty;
@@ -372,7 +407,7 @@ namespace ThreadPilot.ViewModels
                     }
                 }
 
-                await this.settingsService.UpdateSettingsAsync(this.Settings);
+                await this.PersistEditedSettingsAsync();
 
                 var useDarkTheme = this.Settings.HasUserThemePreference
                     ? this.Settings.UseDarkTheme
@@ -683,7 +718,7 @@ namespace ThreadPilot.ViewModels
             this.isSyncingFromService = true;
             try
             {
-                var persistedSettings = (ApplicationSettingsModel)newSettings.Clone();
+                var persistedSettings = newSettings.Clone();
                 if (!string.IsNullOrWhiteSpace(this.cachedDefaultPowerPlanGuid))
                 {
                     persistedSettings.DefaultPowerPlanId = this.cachedDefaultPowerPlanGuid;
@@ -792,7 +827,7 @@ namespace ThreadPilot.ViewModels
 
             // Saved before the installer starts, since this copy is closed for it.
             this.Settings.AutostartWithWindows = true;
-            await this.settingsService.UpdateSettingsAsync(this.Settings);
+            await this.PersistEditedSettingsAsync();
             var result = await this.updateService.DownloadAndInstallAsync(check.Release);
             return result.Status == UpdateInstallStatus.Started ? null : result.Message;
         }
@@ -964,7 +999,7 @@ namespace ThreadPilot.ViewModels
 
         private void SetSavedSettingsSnapshot(ApplicationSettingsModel settingsSnapshot)
         {
-            this.savedSettingsSnapshot = (ApplicationSettingsModel)settingsSnapshot.Clone();
+            this.savedSettingsSnapshot = settingsSnapshot.Clone();
             this.HasUnsavedChanges = false;
         }
     }

@@ -30,22 +30,7 @@ namespace ThreadPilot.ViewModels
             this.virtualizedProcessService.Configuration.EnableBackgroundLoading = true;
 
             // Subscribe to events
-            this.virtualizedProcessService.BatchLoadProgress += this.OnBatchLoadProgress;
             this.virtualizedProcessService.BackgroundBatchLoaded += this.OnBackgroundBatchLoaded;
-        }
-
-        private void OnBatchLoadProgress(object? sender, BatchLoadProgressEventArgs e)
-        {
-            if (this.isUiRefreshPaused || !this.isProcessViewActive)
-            {
-                return;
-            }
-
-            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                this.LoadingProgress = e.ProgressPercentage;
-                this.LoadingStatusText = e.StatusMessage;
-            });
         }
 
         private void OnBackgroundBatchLoaded(object? sender, ProcessBatchResult e)
@@ -620,7 +605,6 @@ namespace ThreadPilot.ViewModels
 
                     // BUG FIX: Ensure loading state is properly cleared
                     this.ClearStatus();
-                    this.LoadingProgress = 0.0;
                     this.LoadingStatusText = string.Empty;
                 });
 
@@ -631,7 +615,6 @@ namespace ThreadPilot.ViewModels
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     // BUG FIX: Ensure loading state is cleared even on error
-                    this.LoadingProgress = 0.0;
                     this.LoadingStatusText = string.Empty;
                     this.SetStatus($"Error loading more processes: {ex.Message}", false);
                 });
@@ -653,7 +636,6 @@ namespace ThreadPilot.ViewModels
                 // PERFORMANCE IMPROVEMENT: Progressive loading with status updates
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    this.LoadingProgress = 0.0;
                     this.LoadingStatusText = this.ShowActiveApplicationsOnly ? "Loading active applications..." : "Loading processes...";
                     this.SetStatus(this.LoadingStatusText);
                 });
@@ -717,7 +699,6 @@ namespace ThreadPilot.ViewModels
 
                     // BUG FIX: Ensure loading state is properly cleared
                     this.ClearStatus();
-                    this.LoadingProgress = 0.0;
                     this.LoadingStatusText = string.Empty;
                 });
 
@@ -729,7 +710,6 @@ namespace ThreadPilot.ViewModels
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     // BUG FIX: Ensure loading state is cleared even on error
-                    this.LoadingProgress = 0.0;
                     this.LoadingStatusText = string.Empty;
                     this.SetStatus($"Error loading processes: {ex.Message}", false);
                 });

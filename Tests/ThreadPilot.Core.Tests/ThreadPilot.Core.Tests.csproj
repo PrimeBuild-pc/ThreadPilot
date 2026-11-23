@@ -21,6 +21,10 @@
     <ProjectReference Include="..\..\ThreadPilot.csproj" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(StorePackage)' != 'true'">
+    <Compile Remove="StorePackageTests.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>

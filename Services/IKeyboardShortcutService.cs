@@ -21,6 +21,10 @@ namespace ThreadPilot.Services
 
         Task LoadShortcutsFromSettingsAsync();
 
+        IReadOnlyList<KeyboardShortcut> GetConfiguredShortcuts();
+
+        Task<KeyboardShortcut?> ApplyAndSaveAsync(IReadOnlyList<KeyboardShortcut> shortcuts, Func<Task> saveAsync);
+
         Task SaveShortcutsToSettingsAsync();
 
         Task ClearAllShortcutsAsync();
@@ -41,6 +45,8 @@ namespace ThreadPilot.Services
         public bool IsEnabled { get; set; } = true;
 
         public bool IsGlobal { get; set; } = true;
+
+        internal KeyboardShortcut Clone() => (KeyboardShortcut)this.MemberwiseClone();
 
         public override string ToString()
         {

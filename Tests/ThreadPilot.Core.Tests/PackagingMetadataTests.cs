@@ -4,8 +4,8 @@ namespace ThreadPilot.Core.Tests
 
     public sealed partial class PackagingMetadataTests
     {
-        private const string ReleaseVersion = "1.7.9";
-        private const string ReleaseAssemblyVersion = "1.7.9.0";
+        private const string ReleaseVersion = "1.7.10";
+        private const string ReleaseAssemblyVersion = "1.7.10.0";
 
         [Fact]
         public void InnoInstaller_UsesStableDisplayNameAndSeparateVersionMetadata()
@@ -63,22 +63,14 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public void PortableUninstallers_RemoveCurrentAndLegacyStartupTasks()
+        public void LocalPortablePackages_UseOneUninstallerForCurrentAndLegacyStartupTasks()
         {
             var root = FindRepositoryRoot();
-            var paths = new[]
-            {
-                Path.Combine(root, "build", "build-release.ps1"),
-                Path.Combine(root, "build", "package-release-zips.ps1"),
-                Path.Combine(root, ".github", "workflows", "release.yml"),
-            };
-
-            foreach (var path in paths)
-            {
-                var script = File.ReadAllText(path);
-                Assert.Contains("ThreadPilot_Launch", script, StringComparison.Ordinal);
-                Assert.Contains("ThreadPilot_Startup", script, StringComparison.Ordinal);
-            }
+            var uninstaller = Path.Combine(root, "build", "portable-uninstall.bat");
+            AssertFileContains(uninstaller, "ThreadPilot_Launch");
+            AssertFileContains(uninstaller, "ThreadPilot_Startup");
+            AssertFileContains(Path.Combine(root, "build", "package-release-zips.ps1"), "portable-uninstall.bat");
+            AssertFileContains(Path.Combine(root, "build", "build-release.ps1"), "package-release-zips.ps1");
         }
 
         [Fact]
@@ -149,7 +141,7 @@ namespace ThreadPilot.Core.Tests
             throw new InvalidOperationException("Repository root could not be located.");
         }
 
-        [GeneratedRegex("#define MyAppVersion \"1\\.7\\.9\"", RegexOptions.CultureInvariant)]
+        [GeneratedRegex("#define MyAppVersion \"1\\.7\\.10\"", RegexOptions.CultureInvariant)]
         private static partial Regex MyAppVersionRegex();
     }
 }

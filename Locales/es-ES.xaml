@@ -399,9 +399,6 @@
     <sys:String x:Key="SettingsView_StartMinimized">Empezar minimizado</sys:String>
     <sys:String x:Key="SettingsView_ResetProcessChangesOnExit">Restablecer cambios de procesos al salir</sys:String>
     <sys:String x:Key="SettingsView_ResetProcessChangesOnExitDescription">Restaura las asignaciones de CPU y prioridades modificadas por ThreadPilot al cerrar la aplicación.</sys:String>
-    <sys:String x:Key="SettingsView_QuickApply">Habilitar configuración pendiente aplicar desde la bandeja</sys:String>
-    <sys:String x:Key="SettingsView_MonitoringControl">Habilite los controles de monitoreo de automatización desde la bandeja</sys:String>
-    <sys:String x:Key="SettingsView_DetailedTooltips">Mostrar información sobre herramientas detallada</sys:String>
 
     <sys:String x:Key="SettingsView_BasicPreferences">Preferencias básicas</sys:String>
     <sys:String x:Key="SettingsView_StartWithWindows">Comience con Windows</sys:String>
@@ -436,8 +433,6 @@
     <sys:String x:Key="SettingsView_Advanced">Avanzado</sys:String>
     <sys:String x:Key="SettingsView_NotificationHistory">Habilitar el historial de notificaciones</sys:String>
     <sys:String x:Key="SettingsView_MaxHistory">Elementos máximos del historial:</sys:String>
-    <sys:String x:Key="SettingsView_AutoHide">Ocultar notificaciones automáticamente</sys:String>
-    <sys:String x:Key="SettingsView_NotificationSound">Habilitar sonido de notificación</sys:String>
     <sys:String x:Key="SettingsView_DebugLogging">Habilitar el registro de depuración</sys:String>
     <sys:String x:Key="SettingsView_PerformanceCounters">Habilitar contadores de rendimiento</sys:String>
 
@@ -759,4 +754,15 @@
     <sys:String x:Key="Rules_AppliesKeepAwake">mantiene el PC activo</sys:String>
     <sys:String x:Key="Rules_AppliesNothing">nada</sys:String>
     <sys:String x:Key="Rules_Unnamed">(sin nombre)</sys:String>
+    <sys:String x:Key="SettingsView_Shortcuts">Atajos globales</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutShowWindow">Mostrar u ocultar ThreadPilot</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutMonitoring">Notificación de supervisión</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutPerformance">Notificación de alto rendimiento</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutTweaks">Abrir ajustes del sistema</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutKey">Tecla del atajo</sys:String>
+    <sys:String x:Key="Settings_ShortcutUnavailable">No se puede usar {0}. Elige una tecla con un modificador y una combinación disponible.</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutCtrl">Ctrl</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutAlt">Alt</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutShift">Mayús</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutWin">Win</sys:String>
 </ResourceDictionary>

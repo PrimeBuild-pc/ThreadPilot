@@ -180,8 +180,13 @@ namespace ThreadPilot
 
                 if (!settings.HasUserThemePreference && settings.UseDarkTheme != useDarkTheme)
                 {
-                    settings.UseDarkTheme = useDarkTheme;
-                    Task.Run(async () => await settingsService.UpdateSettingsAsync(settings)).GetAwaiter().GetResult();
+                    Task.Run(() => settingsService.EditSettingsAsync(draft =>
+                    {
+                        if (!draft.HasUserThemePreference)
+                        {
+                            draft.UseDarkTheme = useDarkTheme;
+                        }
+                    })).GetAwaiter().GetResult();
                 }
 
                 themeService.ApplyTheme(useDarkTheme);
@@ -498,14 +503,10 @@ namespace ThreadPilot
                 return;
             }
 
-            var errorCode = exception is ThreadPilotException typedException
-                ? typedException.ErrorCode.ToString()
-                : ErrorCode.Unhandled.ToString();
-
             var context = new Dictionary<string, object>
             {
                 ["Source"] = source,
-                [LogProperties.ErrorCode] = errorCode,
+                [LogProperties.ErrorCode] = "Unhandled",
                 [LogProperties.CorrelationId] = enhancedLogger.GetCurrentCorrelationId() ?? "N/A",
                 ["IsTerminatingLevel"] = level == LogLevel.Critical,
             };

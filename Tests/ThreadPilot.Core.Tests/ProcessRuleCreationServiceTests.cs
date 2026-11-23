@@ -5,6 +5,7 @@ namespace ThreadPilot.Core.Tests
 {
     using System.Diagnostics;
     using Microsoft.Extensions.Logging.Abstractions;
+    using Moq;
     using ThreadPilot.Models;
     using ThreadPilot.Services;
 
@@ -407,6 +408,94 @@ namespace ThreadPilot.Core.Tests
             finally
             {
                 DeleteTemporaryDirectory(filePath);
+            }
+        }
+
+        [Fact]
+        public async Task SaveRuleAsync_WhenRulesAreTemporarilyUnreadable_PreservesExistingRules()
+        {
+            var file = CreateTemporaryFilePath();
+            try
+            {
+                var existing = new PersistentProcessRule { Id = "saved-before-lock", ProcessName = "first" };
+                await new PersistentProcessRuleJsonStore(() => file).SaveAsync([existing]);
+
+                using var fileLock = File.Open(file, FileMode.Open, FileAccess.Read, FileShare.None);
+                var store = new PersistentProcessRuleJsonStore(() => file, copyFile: (source, backup) =>
+                {
+                    try
+                    {
+                        File.Copy(source, backup);
+                    }
+                    finally
+                    {
+                        // Release the real Windows lock after the first preservation attempt,
+                        // which is made from inside the failed read path.
+                        fileLock.Dispose();
+                    }
+                });
+                var service = CreateService(store);
+                var process = CreateProcess();
+                var payload = new ProcessRuleCreationPayload { Priority = ProcessPriorityClass.AboveNormal };
+                await Assert.ThrowsAsync<IOException>(() => service.SaveRuleAsync(process, payload));
+                Assert.Equal(existing.Id, Assert.Single(await new PersistentProcessRuleJsonStore(() => file).LoadAsync()).Id);
+
+                var result = await service.SaveRuleAsync(process, payload);
+                var saved = await new PersistentProcessRuleJsonStore(() => file).LoadAsync();
+
+                Assert.Contains(saved, rule => rule.Id == existing.Id);
+                Assert.True(result.Success);
+                Assert.Equal(2, saved.Count);
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(file);
+            }
+        }
+
+        [Fact]
+        public async Task ConcurrentUpdates_PersistBothRules()
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var file = CreateTemporaryFilePath();
+            try
+            {
+                var first = new PersistentProcessRule { Id = "first", ProcessName = "first" };
+                var second = new PersistentProcessRule { Id = "second", ProcessName = "second" };
+                var store = new PersistentProcessRuleJsonStore(() => file);
+                await store.SaveAsync([first, second]);
+                var editStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                var firstEdit = ((IPersistentProcessRuleStore)store).EditAsync(
+                    async draft =>
+                    {
+                        draft[0] = first with { Priority = ProcessPriorityClass.AboveNormal };
+                        editStarted.SetResult();
+                        await release.Task.WaitAsync(timeout.Token);
+                        return true;
+                    },
+                    timeout.Token);
+                await editStarted.Task.WaitAsync(timeout.Token);
+                var secondEdit = CreateService(store).UpdateRuleAsync(
+                    second with { Priority = ProcessPriorityClass.BelowNormal }, timeout.Token);
+                try
+                {
+                    Assert.False(secondEdit.IsCompleted);
+                }
+                finally
+                {
+                    release.SetResult();
+                }
+
+                await firstEdit;
+                Assert.True((await secondEdit).Success);
+                var saved = await new PersistentProcessRuleJsonStore(() => file).LoadAsync();
+                Assert.Equal(ProcessPriorityClass.AboveNormal, saved.Single(rule => rule.Id == "first").Priority);
+                Assert.Equal(ProcessPriorityClass.BelowNormal, saved.Single(rule => rule.Id == "second").Priority);
+            }
+            finally
+            {
+                DeleteTemporaryDirectory(file);
             }
         }
 

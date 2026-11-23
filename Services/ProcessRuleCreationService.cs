@@ -179,14 +179,8 @@ namespace ThreadPilot.Services
         {
             ArgumentNullException.ThrowIfNull(process);
 
-            var rules = (await this.ruleStore.LoadAsync().ConfigureAwait(false)).ToList();
-            var existingIndex = FindExistingRuleIndex(rules, process);
-            if (existingIndex < 0)
-            {
-                return ProcessRuleCreationResult.Failed("NoSavedRuleToDelete", NoSavedRuleMessage);
-            }
-
-            return await this.RemoveAtAsync(rules, existingIndex, cancellationToken).ConfigureAwait(false);
+            return await this.DeleteMatchingRuleAsync(rules => FindExistingRuleIndex(rules, process), cancellationToken)
+                .ConfigureAwait(false);
         }
 
         // The saved-rules list in the Rules tab holds rules, not processes: it can address a rule
@@ -200,14 +194,9 @@ namespace ThreadPilot.Services
                 return ProcessRuleCreationResult.Failed("NoSavedRuleToDelete", NoSavedRuleMessage);
             }
 
-            var rules = (await this.ruleStore.LoadAsync().ConfigureAwait(false)).ToList();
-            var existingIndex = rules.FindIndex(rule => string.Equals(rule.Id, ruleId, StringComparison.Ordinal));
-            if (existingIndex < 0)
-            {
-                return ProcessRuleCreationResult.Failed("NoSavedRuleToDelete", NoSavedRuleMessage);
-            }
-
-            return await this.RemoveAtAsync(rules, existingIndex, cancellationToken).ConfigureAwait(false);
+            return await this.DeleteMatchingRuleAsync(
+                rules => rules.FindIndex(rule => string.Equals(rule.Id, ruleId, StringComparison.Ordinal)),
+                cancellationToken).ConfigureAwait(false);
         }
 
         // Editing a rule in place, from the saved-rules list. The affinity payload is not editable
@@ -232,68 +221,78 @@ namespace ThreadPilot.Services
                     ProcessOperationUserMessages.RealtimePriorityBlocked);
             }
 
-            var rules = (await this.ruleStore.LoadAsync().ConfigureAwait(false)).ToList();
-            var existingIndex = rules.FindIndex(candidate => string.Equals(candidate.Id, rule.Id, StringComparison.Ordinal));
-            if (existingIndex < 0)
+            var result = await this.ruleStore.EditAsync(
+                async rules =>
+                {
+                    var existingIndex = rules.FindIndex(candidate => string.Equals(candidate.Id, rule.Id, StringComparison.Ordinal));
+                    if (existingIndex < 0)
+                    {
+                        return ProcessRuleCreationResult.Failed("NoSavedRuleToUpdate", NoSavedRuleMessage);
+                    }
+
+                    var existing = rules[existingIndex];
+                    var updated = existing with
+                    {
+                        IsEnabled = rule.IsEnabled,
+                        Priority = rule.Priority,
+                        MemoryPriority = rule.MemoryPriority,
+                        IoPriority = rule.IoPriority,
+                        EfficiencyMode = rule.EfficiencyMode,
+                        CpuAssignmentMode = rule.CpuAssignmentMode,
+                        PreventSystemSleepWhileRunning = rule.PreventSystemSleepWhileRunning,
+                        ApplyPriorityOnStart = rule.Priority.HasValue,
+                        ApplyMemoryPriorityOnStart = rule.MemoryPriority.HasValue,
+                        ApplyIoPriorityOnStart = rule.IoPriority.HasValue,
+                        ApplyEfficiencyModeOnStart = rule.EfficiencyMode.HasValue,
+                        UpdatedAt = DateTime.UtcNow,
+                    };
+
+                    if (coreSelection != null)
+                    {
+                        var affinity = await this.BuildAffinityPayloadFromCoreSelectionAsync(coreSelection, "Saved rule editor", cancellationToken).ConfigureAwait(false);
+                        if (!affinity.Success)
+                        {
+                            return affinity;
+                        }
+
+                        if (affinity.Payload == null)
+                        {
+                            return ProcessRuleCreationResult.Failed("NoActionableRulePayload", NoCurrentSettingsMessage);
+                        }
+
+                        updated = updated with
+                        {
+                            CpuSelection = affinity.Payload.CpuSelection,
+                            LegacyAffinityMask = HasSelectionPayload(affinity.Payload.CpuSelection) ? null : affinity.Payload.LegacyAffinityMask,
+                            ApplyAffinityOnStart = true,
+                        };
+                    }
+
+                    rules[existingIndex] = updated;
+
+                    var processName = string.IsNullOrWhiteSpace(updated.ProcessName)
+                        ? "process"
+                        : updated.ProcessName.Trim();
+
+                    return new ProcessRuleCreationResult
+                    {
+                        Success = true,
+                        Updated = true,
+                        Rule = updated,
+                        UserMessage = $"Updated saved rule for {processName}.",
+                    };
+                },
+                cancellationToken).ConfigureAwait(false);
+
+            if (result.Rule is { } updated)
             {
-                return ProcessRuleCreationResult.Failed("NoSavedRuleToUpdate", NoSavedRuleMessage);
+                this.logger.LogInformation(
+                    "Updated saved rule {RuleId} for process {ProcessName}",
+                    updated.Id,
+                    string.IsNullOrWhiteSpace(updated.ProcessName) ? "process" : updated.ProcessName.Trim());
             }
 
-            var existing = rules[existingIndex];
-            var updated = existing with
-            {
-                IsEnabled = rule.IsEnabled,
-                Priority = rule.Priority,
-                MemoryPriority = rule.MemoryPriority,
-                IoPriority = rule.IoPriority,
-                EfficiencyMode = rule.EfficiencyMode,
-                CpuAssignmentMode = rule.CpuAssignmentMode,
-                PreventSystemSleepWhileRunning = rule.PreventSystemSleepWhileRunning,
-                ApplyPriorityOnStart = rule.Priority.HasValue,
-                ApplyMemoryPriorityOnStart = rule.MemoryPriority.HasValue,
-                ApplyIoPriorityOnStart = rule.IoPriority.HasValue,
-                ApplyEfficiencyModeOnStart = rule.EfficiencyMode.HasValue,
-                UpdatedAt = DateTime.UtcNow,
-            };
-
-            if (coreSelection != null)
-            {
-                var affinity = await this.BuildAffinityPayloadFromCoreSelectionAsync(coreSelection, "Saved rule editor", cancellationToken).ConfigureAwait(false);
-                if (!affinity.Success)
-                {
-                    return affinity;
-                }
-
-                if (affinity.Payload == null)
-                {
-                    return ProcessRuleCreationResult.Failed("NoActionableRulePayload", NoCurrentSettingsMessage);
-                }
-
-                updated = updated with
-                {
-                    CpuSelection = affinity.Payload.CpuSelection,
-                    LegacyAffinityMask = HasSelectionPayload(affinity.Payload.CpuSelection) ? null : affinity.Payload.LegacyAffinityMask,
-                    ApplyAffinityOnStart = true,
-                };
-            }
-
-            rules[existingIndex] = updated;
-
-            cancellationToken.ThrowIfCancellationRequested();
-            await this.ruleStore.SaveAsync(rules).ConfigureAwait(false);
-
-            var processName = string.IsNullOrWhiteSpace(updated.ProcessName)
-                ? "process"
-                : updated.ProcessName.Trim();
-            this.logger.LogInformation("Updated saved rule {RuleId} for process {ProcessName}", updated.Id, processName);
-
-            return new ProcessRuleCreationResult
-            {
-                Success = true,
-                Updated = true,
-                Rule = updated,
-                UserMessage = $"Updated saved rule for {processName}.",
-            };
+            return result;
         }
 
         // Nothing checked saved rules against the machine they are running on. A rule that pins
@@ -339,25 +338,32 @@ namespace ThreadPilot.Services
                 .ToList();
         }
 
-        private async Task<ProcessRuleCreationResult> RemoveAtAsync(
-            List<PersistentProcessRule> rules,
-            int index,
+        private async Task<ProcessRuleCreationResult> DeleteMatchingRuleAsync(
+            Func<List<PersistentProcessRule>, int> findRule,
             CancellationToken cancellationToken)
         {
-            var removed = rules[index];
-            rules.RemoveAt(index);
+            var removed = await this.ruleStore.EditAsync<PersistentProcessRule?>(
+                rules =>
+                {
+                    var index = findRule(rules);
+                    if (index < 0)
+                    {
+                        return Task.FromResult<PersistentProcessRule?>(null);
+                    }
 
-            cancellationToken.ThrowIfCancellationRequested();
-            await this.ruleStore.SaveAsync(rules).ConfigureAwait(false);
+                    var rule = rules[index];
+                    rules.RemoveAt(index);
+                    return Task.FromResult<PersistentProcessRule?>(rule);
+                },
+                cancellationToken).ConfigureAwait(false);
 
-            var processName = string.IsNullOrWhiteSpace(removed.ProcessName)
-                ? "process"
-                : removed.ProcessName.Trim();
-            this.logger.LogInformation(
-                "Deleted saved rule {RuleId} for process {ProcessName}",
-                removed.Id,
-                processName);
+            if (removed == null)
+            {
+                return ProcessRuleCreationResult.Failed("NoSavedRuleToDelete", NoSavedRuleMessage);
+            }
 
+            var processName = string.IsNullOrWhiteSpace(removed.ProcessName) ? "process" : removed.ProcessName.Trim();
+            this.logger.LogInformation("Deleted saved rule {RuleId} for process {ProcessName}", removed.Id, processName);
             return new ProcessRuleCreationResult
             {
                 Success = true,
@@ -386,83 +392,84 @@ namespace ThreadPilot.Services
                 return ProcessRuleCreationResult.Failed("NoActionableRulePayload", NoCurrentSettingsMessage);
             }
 
-            var rules = (await this.ruleStore.LoadAsync().ConfigureAwait(false)).ToList();
-            var existingIndex = FindExistingRuleIndex(rules, process);
-            var created = existingIndex < 0;
-            var now = DateTime.UtcNow;
-            var processName = string.IsNullOrWhiteSpace(process.Name)
-                ? "process"
-                : process.Name.Trim();
-            var executablePath = string.IsNullOrWhiteSpace(process.ExecutablePath)
-                ? null
-                : process.ExecutablePath.Trim();
-            var existing = created ? null : rules[existingIndex];
+            return await this.ruleStore.EditAsync(
+                rules =>
+                {
+                    var existingIndex = FindExistingRuleIndex(rules, process);
+                    var created = existingIndex < 0;
+                    var now = DateTime.UtcNow;
+                    var processName = string.IsNullOrWhiteSpace(process.Name)
+                        ? "process"
+                        : process.Name.Trim();
+                    var executablePath = string.IsNullOrWhiteSpace(process.ExecutablePath)
+                        ? null
+                        : process.ExecutablePath.Trim();
+                    var existing = created ? null : rules[existingIndex];
 
-            // Saving is a merge, not a replacement. A caller that does not carry a field - or a
-            // field that could not be read from the process this time - must not silently erase
-            // what the rule already had: that turned "Apply CPU assignment and save as rule" into
-            // a quiet way to lose the memory and I/O priority saved a moment earlier. Removing a
-            // field is done by deleting the rule, which is an explicit action.
-            var hasAffinityPayload = HasSelectionPayload(payload.CpuSelection) || payload.LegacyAffinityMask.HasValue;
-            var cpuSelection = hasAffinityPayload ? payload.CpuSelection : existing?.CpuSelection;
-            var legacyAffinityMask = hasAffinityPayload
-                ? (HasSelectionPayload(payload.CpuSelection) ? null : payload.LegacyAffinityMask)
-                : existing?.LegacyAffinityMask;
-            var cpuAssignmentMode = hasAffinityPayload
-                ? payload.CpuAssignmentMode
-                : existing?.CpuAssignmentMode ?? payload.CpuAssignmentMode;
-            var priority = payload.Priority ?? existing?.Priority;
-            var memoryPriority = payload.MemoryPriority ?? existing?.MemoryPriority;
-            var ioPriority = payload.IoPriority ?? existing?.IoPriority;
-            var efficiencyMode = payload.EfficiencyMode ?? existing?.EfficiencyMode;
+                    // Saving is a merge, not a replacement. A caller that does not carry a field - or a
+                    // field that could not be read from the process this time - must not silently erase
+                    // what the rule already had: that turned "Apply CPU assignment and save as rule" into
+                    // a quiet way to lose the memory and I/O priority saved a moment earlier. Removing a
+                    // field is done by deleting the rule, which is an explicit action.
+                    var hasAffinityPayload = HasSelectionPayload(payload.CpuSelection) || payload.LegacyAffinityMask.HasValue;
+                    var cpuSelection = hasAffinityPayload ? payload.CpuSelection : existing?.CpuSelection;
+                    var legacyAffinityMask = hasAffinityPayload
+                        ? (HasSelectionPayload(payload.CpuSelection) ? null : payload.LegacyAffinityMask)
+                        : existing?.LegacyAffinityMask;
+                    var cpuAssignmentMode = hasAffinityPayload
+                        ? payload.CpuAssignmentMode
+                        : existing?.CpuAssignmentMode ?? payload.CpuAssignmentMode;
+                    var priority = payload.Priority ?? existing?.Priority;
+                    var memoryPriority = payload.MemoryPriority ?? existing?.MemoryPriority;
+                    var ioPriority = payload.IoPriority ?? existing?.IoPriority;
+                    var efficiencyMode = payload.EfficiencyMode ?? existing?.EfficiencyMode;
 
-            var rule = new PersistentProcessRule
-            {
-                Id = existing?.Id ?? Guid.NewGuid().ToString("N"),
-                Name = $"{processName} rule",
-                IsEnabled = true,
-                ProcessName = processName,
-                ExecutablePath = executablePath,
-                CpuSelection = cpuSelection,
-                LegacyAffinityMask = HasSelectionPayload(cpuSelection) ? null : legacyAffinityMask,
-                CpuAssignmentMode = cpuAssignmentMode,
-                Priority = priority,
-                MemoryPriority = memoryPriority,
-                IoPriority = ioPriority,
-                EfficiencyMode = efficiencyMode,
-                ApplyAffinityOnStart = HasSelectionPayload(cpuSelection) || legacyAffinityMask.HasValue,
-                ApplyPriorityOnStart = priority.HasValue,
-                ApplyMemoryPriorityOnStart = memoryPriority.HasValue,
-                ApplyIoPriorityOnStart = ioPriority.HasValue,
-                ApplyEfficiencyModeOnStart = efficiencyMode.HasValue,
-                PreventSystemSleepWhileRunning = payload.PreventSystemSleepWhileRunning,
-                CreatedAt = existing?.CreatedAt ?? now,
-                UpdatedAt = now,
-                Description = RuleDescription,
-            };
+                    var rule = new PersistentProcessRule
+                    {
+                        Id = existing?.Id ?? Guid.NewGuid().ToString("N"),
+                        Name = $"{processName} rule",
+                        IsEnabled = true,
+                        ProcessName = processName,
+                        ExecutablePath = executablePath,
+                        CpuSelection = cpuSelection,
+                        LegacyAffinityMask = HasSelectionPayload(cpuSelection) ? null : legacyAffinityMask,
+                        CpuAssignmentMode = cpuAssignmentMode,
+                        Priority = priority,
+                        MemoryPriority = memoryPriority,
+                        IoPriority = ioPriority,
+                        EfficiencyMode = efficiencyMode,
+                        ApplyAffinityOnStart = HasSelectionPayload(cpuSelection) || legacyAffinityMask.HasValue,
+                        ApplyPriorityOnStart = priority.HasValue,
+                        ApplyMemoryPriorityOnStart = memoryPriority.HasValue,
+                        ApplyIoPriorityOnStart = ioPriority.HasValue,
+                        ApplyEfficiencyModeOnStart = efficiencyMode.HasValue,
+                        PreventSystemSleepWhileRunning = payload.PreventSystemSleepWhileRunning,
+                        CreatedAt = existing?.CreatedAt ?? now,
+                        UpdatedAt = now,
+                        Description = RuleDescription,
+                    };
 
-            if (created)
-            {
-                rules.Add(rule);
-            }
-            else
-            {
-                rules[existingIndex] = rule;
-            }
+                    if (created)
+                    {
+                        rules.Add(rule);
+                    }
+                    else
+                    {
+                        rules[existingIndex] = rule;
+                    }
 
-            cancellationToken.ThrowIfCancellationRequested();
-            await this.ruleStore.SaveAsync(rules).ConfigureAwait(false);
-
-            return new ProcessRuleCreationResult
-            {
-                Success = true,
-                Created = created,
-                Updated = !created,
-                Rule = rule,
-                UserMessage = created
-                    ? $"Saved rule for {processName}."
-                    : $"Updated saved rule for {processName}.",
-            };
+                    return Task.FromResult(new ProcessRuleCreationResult
+                    {
+                        Success = true,
+                        Created = created,
+                        Updated = !created,
+                        Rule = rule,
+                        UserMessage = created
+                            ? $"Saved rule for {processName}."
+                            : $"Updated saved rule for {processName}.",
+                    });
+                },
+                cancellationToken).ConfigureAwait(false);
         }
 
         private static PayloadBuildResult BuildLegacyAffinityPayload(IReadOnlyList<bool> currentCoreSelection)

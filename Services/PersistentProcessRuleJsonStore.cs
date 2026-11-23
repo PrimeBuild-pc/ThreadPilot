@@ -38,7 +38,12 @@ namespace ThreadPilot.Services
             this.copyFile = copyFile ?? ((source, destination) => File.Copy(source, destination, overwrite: false));
         }
 
-        public async Task<IReadOnlyList<PersistentProcessRule>> LoadAsync()
+        public Task<IReadOnlyList<PersistentProcessRule>> LoadAsync() => this.LoadAsync(failOnUnreadable: false);
+
+        Task<IReadOnlyList<PersistentProcessRule>> IPersistentProcessRuleStore.LoadForEditAsync() =>
+            this.LoadAsync(failOnUnreadable: true);
+
+        private async Task<IReadOnlyList<PersistentProcessRule>> LoadAsync(bool failOnUnreadable)
         {
             if (this.cachedRules != null)
             {
@@ -55,14 +60,6 @@ namespace ThreadPilot.Services
 
                 var filePath = this.filePathProvider();
                 this.logger?.LogDebug("Loading persistent process rules from {FilePath}", filePath);
-                if (!File.Exists(filePath))
-                {
-                    this.logger?.LogDebug("Persistent process rules file does not exist at {FilePath}", filePath);
-                    this.loadFailed = false;
-                    this.preservationRequired = false;
-                    return this.cachedRules = [];
-                }
-
                 try
                 {
                     var json = await File.ReadAllTextAsync(filePath).ConfigureAwait(false);
@@ -72,11 +69,23 @@ namespace ThreadPilot.Services
                     this.preservationRequired = false;
                     return this.cachedRules = rules.ToArray();
                 }
+                catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+                {
+                    this.logger?.LogDebug("Persistent process rules file does not exist at {FilePath}", filePath);
+                    this.loadFailed = false;
+                    this.preservationRequired = false;
+                    return this.cachedRules = [];
+                }
                 catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
                 {
                     this.loadFailed = true;
                     this.preservationRequired = !this.TryPreserveUnreadableFile(filePath, ex);
                     this.logger?.LogWarning(ex, "Could not load persistent process rules from {FilePath}. The rule set will be re-read on the next access.", filePath);
+                    if (failOnUnreadable)
+                    {
+                        throw new IOException("The saved process rules could not be read. Retry after the file becomes available.", ex);
+                    }
+
                     return [];
                 }
             }

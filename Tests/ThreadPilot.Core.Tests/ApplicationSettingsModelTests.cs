@@ -5,6 +5,27 @@ namespace ThreadPilot.Core.Tests
     public sealed class ApplicationSettingsModelTests
     {
         [Fact]
+        public void LegacySettings_WithRemovedPreferences_StillDeserialize()
+        {
+            var json = """
+                {
+                  "enableQuickApplyFromTray": false,
+                  "enableMonitoringControlFromTray": false,
+                  "enableNotificationSound": true,
+                  "showDetailedTooltips": false,
+                  "autoHideNotifications": false,
+                  "notificationPosition": "TopLeft",
+                  "enableAutomationMonitoring": false
+                }
+                """;
+            var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var settings = System.Text.Json.JsonSerializer.Deserialize<ApplicationSettingsModel>(json, options);
+
+            Assert.NotNull(settings);
+            Assert.False(settings.EnableAutomationMonitoring);
+        }
+
+        [Fact]
         public void Constructor_StartMinimizedDefaultsFalse_ForManualLaunchVisibility()
         {
             var settings = new ApplicationSettingsModel();
@@ -47,7 +68,7 @@ namespace ThreadPilot.Core.Tests
                 EnableNotifications = true,
             };
 
-            var editableSettings = (ApplicationSettingsModel)savedSettings.Clone();
+            var editableSettings = savedSettings.Clone();
             editableSettings.EnableNotifications = false;
             Assert.False(editableSettings.HasSameUserSettingsAs(savedSettings));
 
@@ -63,7 +84,7 @@ namespace ThreadPilot.Core.Tests
             {
                 UpdatedAt = new System.DateTime(2026, 5, 16, 10, 0, 0, System.DateTimeKind.Utc),
             };
-            var editableSettings = (ApplicationSettingsModel)savedSettings.Clone();
+            var editableSettings = savedSettings.Clone();
             editableSettings.UpdatedAt = savedSettings.UpdatedAt.AddMinutes(5);
 
             Assert.True(editableSettings.HasSameUserSettingsAs(savedSettings));

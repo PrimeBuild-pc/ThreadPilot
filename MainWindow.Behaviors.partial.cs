@@ -407,10 +407,6 @@ namespace ThreadPilot
 
                 this.LogDebug("Skipping inactive view initialization until each page is opened.");
 
-                // Initialize keyboard shortcuts after window is loaded
-                this.Loaded += this.OnWindowLoaded;
-                this.LogDebug("Keyboard shortcuts event handler attached");
-
                 this.LogDebug("=== LoadViewModelsAsync completed successfully ===");
             }
             catch (Exception ex)
@@ -427,6 +423,8 @@ namespace ThreadPilot
             this.LogDebug("About to initialize settings...");
             await this.InitializeSettingsAsync();
             this.LogDebug("Settings initialized successfully");
+
+            await this.InitializeKeyboardShortcutsAsync();
 
             this.LogDebug("About to initialize system tray...");
             try
@@ -534,8 +532,13 @@ namespace ThreadPilot
 
                 if (!settings.HasUserThemePreference && settings.UseDarkTheme != useDarkTheme)
                 {
-                    settings.UseDarkTheme = useDarkTheme;
-                    await this.settingsService.UpdateSettingsAsync(settings);
+                    await this.settingsService.EditSettingsAsync(draft =>
+                    {
+                        if (!draft.HasUserThemePreference)
+                        {
+                            draft.UseDarkTheme = useDarkTheme;
+                        }
+                    });
                 }
 
                 this.themeService.ApplyTheme(useDarkTheme);
@@ -575,21 +578,29 @@ namespace ThreadPilot
                     return;
                 }
 
-                var rules = await ruleStore.LoadAsync();
-                var migrated = CpuAssignmentModeMigrationPolicy.ApplyToRules(rules);
-                if (migrated != null)
+                var movedCount = await ruleStore.EditAsync(rules =>
                 {
-                    await ruleStore.SaveAsync(migrated);
-                    var movedCount = rules
+                    var migrated = CpuAssignmentModeMigrationPolicy.ApplyToRules(rules);
+                    if (migrated == null)
+                    {
+                        return Task.FromResult(0);
+                    }
+
+                    var count = rules
                         .Zip(migrated, (before, after) => before.CpuAssignmentMode != after.CpuAssignmentMode)
                         .Count(moved => moved);
+                    rules.Clear();
+                    rules.AddRange(migrated);
+                    return Task.FromResult(count);
+                });
+                if (movedCount > 0)
+                {
                     this.LogDebug($"Migrated {movedCount} saved rule(s) from Automatic to Affinity Mask");
                 }
 
                 // Only after the rules have reached disk: a failed write has to be retried on the
                 // next launch, not recorded as done.
-                settings.HasMigratedPersistentRuleCpuAssignmentModes = true;
-                await this.settingsService.UpdateSettingsAsync(settings);
+                await this.settingsService.EditSettingsAsync(draft => draft.HasMigratedPersistentRuleCpuAssignmentModes = true);
             }
             catch (Exception ex)
             {
@@ -1287,7 +1298,7 @@ namespace ThreadPilot
 
                 this.LogDebug("Starting process monitoring manager service...");
                 // Start the process monitoring manager service with internal timeout
-                var startTask = this.processMonitorManagerService.SetAutomationMonitoringEnabledAsync(true);
+                var startTask = this.processMonitorManagerService.StartAsync();
                 var timeoutTask = Task.Delay(6000); // 6 second internal timeout
                 var completedTask = await Task.WhenAny(startTask, timeoutTask);
 
@@ -1582,21 +1593,6 @@ namespace ThreadPilot
             }
         }
 
-        private void OnWindowLoaded(object? sender, RoutedEventArgs e)
-        {
-            TaskSafety.FireAndForget(this.OnWindowLoadedAsync(), ex =>
-            {
-                this.LogDebug($"OnWindowLoaded failed: {ex.Message}");
-            });
-        }
-
-        private async Task OnWindowLoadedAsync()
-        {
-            this.Loaded -= this.OnWindowLoaded;
-            this.EnsureDashboardVisibleOnScreen();
-            await this.InitializeKeyboardShortcutsAsync();
-        }
-
         private void OnOpenRulesRequested(object? sender, EventArgs e)
         {
             this.SelectMainTab("Rules");
@@ -1741,8 +1737,7 @@ namespace ThreadPilot
                     return;
                 }
 
-                settings.HasSeenCpuAssignmentModeChangeNotice = true;
-                await this.settingsService.UpdateSettingsAsync(settings);
+                await this.settingsService.EditSettingsAsync(draft => draft.HasSeenCpuAssignmentModeChangeNotice = true);
             }
             catch (Exception ex)
             {
@@ -1805,8 +1800,7 @@ namespace ThreadPilot
                     return;
                 }
 
-                settings.HasSeenStartupMinimizedSuggestion = true;
-                await this.settingsService.UpdateSettingsAsync(settings);
+                await this.settingsService.EditSettingsAsync(draft => draft.HasSeenStartupMinimizedSuggestion = true);
             }
             catch (Exception ex)
             {
@@ -1894,8 +1888,7 @@ namespace ThreadPilot
                 var settings = this.settingsService.Settings;
                 if (!settings.HasSeenPerformanceIntro)
                 {
-                    settings.HasSeenPerformanceIntro = true;
-                    await this.settingsService.UpdateSettingsAsync(settings);
+                    await this.settingsService.EditSettingsAsync(draft => draft.HasSeenPerformanceIntro = true);
                 }
             }
             catch (Exception ex)
@@ -1985,8 +1978,7 @@ namespace ThreadPilot
                 var settings = this.settingsService.Settings;
                 if (!settings.HasSeenElevationWarning)
                 {
-                    settings.HasSeenElevationWarning = true;
-                    _ = this.settingsService.UpdateSettingsAsync(settings);
+                    _ = this.settingsService.EditSettingsAsync(draft => draft.HasSeenElevationWarning = true);
                 }
             }
             catch (Exception ex)
@@ -2217,7 +2209,6 @@ namespace ThreadPilot
             this.SaveWindowPlacement();
             try
             {
-                this.Loaded -= this.OnWindowLoaded;
                 this.processViewModel.OpenRulesRequested -= this.OnOpenRulesRequested;
                 this.processViewModel.OpenMasksRequested -= this.OnOpenMasksRequested;
 

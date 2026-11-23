@@ -563,12 +563,22 @@ namespace ThreadPilot.Services
         private bool UpdateRunningProcess(ProcessModel process)
         {
             var pid = process.ProcessId;
-            if (this.runningProcesses.TryGetValue(pid, out var existing) && !existing.IsSameInstance(process))
+            if (!this.runningProcesses.TryGetValue(pid, out var existing))
+            {
+                return this.runningProcesses.TryAdd(pid, process);
+            }
+
+            if (!existing.IsSameInstance(process))
             {
                 return this.runningProcesses.TryUpdate(pid, process, existing);
             }
 
-            return this.runningProcesses.TryAdd(pid, process);
+            if (existing.StartTimeUtc == null && process.StartTimeUtc != null)
+            {
+                this.runningProcesses.TryUpdate(pid, process, existing);
+            }
+
+            return false;
         }
 
         private void UpdateAdaptivePollingInterval(int detectedChanges)

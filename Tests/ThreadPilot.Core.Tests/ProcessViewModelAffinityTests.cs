@@ -103,7 +103,7 @@ namespace ThreadPilot.Core.Tests
 
             Assert.Equal(2345, timer.Interval);
 
-            var updated = (ApplicationSettingsModel)initial.Clone();
+            var updated = initial.Clone();
             updated.PollingIntervalMs = 6789;
             settingsService.Raise(
                 service => service.SettingsChanged += null,

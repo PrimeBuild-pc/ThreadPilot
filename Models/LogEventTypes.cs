@@ -26,21 +26,6 @@ namespace ThreadPilot.Models
             public const string AssociationTriggered = "AssociationTriggered";
         }
 
-        public static class UserActions
-        {
-            public const string SettingsChanged = "SettingsChanged";
-            public const string ProcessAffinityChanged = "ProcessAffinityChanged";
-            public const string ProcessPriorityChanged = "ProcessPriorityChanged";
-            public const string AssociationAdded = "AssociationAdded";
-            public const string AssociationRemoved = "AssociationRemoved";
-            public const string MonitoringToggled = "MonitoringToggled";
-            public const string GameBoostToggled = "GameBoostToggled";
-            public const string AutostartToggled = "AutostartToggled";
-            public const string NotificationSettingsChanged = "NotificationSettingsChanged";
-            public const string LogsExported = "LogsExported";
-            public const string LogsCleared = "LogsCleared";
-        }
-
         public static class System
         {
             public const string ApplicationStarted = "ApplicationStarted";
@@ -79,19 +64,6 @@ namespace ThreadPilot.Models
         }
     }
 
-    public static class LogCategories
-    {
-        public const string PowerPlan = "PowerPlan";
-        public const string ProcessMonitoring = "ProcessMonitoring";
-        public const string UserAction = "UserAction";
-        public const string System = "System";
-        public const string Error = "Error";
-        public const string Performance = "Performance";
-        public const string Security = "Security";
-        public const string Configuration = "Configuration";
-        public const string Lifecycle = "Lifecycle";
-    }
-
     public static class LogProperties
     {
         public const string ProcessName = "ProcessName";
@@ -111,77 +83,4 @@ namespace ThreadPilot.Models
         public const string Version = "Version";
         public const string Environment = "Environment";
     }
-
-    public static class LogDataBuilder
-    {
-        public static Dictionary<string, object> CreateProcessData(string processName, int processId)
-        {
-            return new Dictionary<string, object>
-            {
-                [LogProperties.ProcessName] = processName,
-                [LogProperties.ProcessId] = processId,
-            };
-        }
-
-        public static Dictionary<string, object> CreatePowerPlanData(string planId, string planName)
-        {
-            return new Dictionary<string, object>
-            {
-                [LogProperties.PowerPlanId] = planId,
-                [LogProperties.PowerPlanName] = planName,
-            };
-        }
-
-        public static Dictionary<string, object> CreateGameData(string gameName)
-        {
-            return new Dictionary<string, object>
-            {
-                [LogProperties.GameName] = gameName,
-            };
-        }
-
-        public static Dictionary<string, object> CreatePerformanceData(long memoryUsage, double cpuUsage)
-        {
-            return new Dictionary<string, object>
-            {
-                [LogProperties.MemoryUsage] = memoryUsage,
-                [LogProperties.CpuUsage] = cpuUsage,
-            };
-        }
-
-        public static Dictionary<string, object> CreateErrorData(Exception exception)
-        {
-            var stackTrace = exception.StackTrace ?? "N/A";
-            stackTrace = stackTrace[..Math.Min(2000, stackTrace.Length)];
-
-            return new Dictionary<string, object>
-            {
-                [LogProperties.ErrorCode] = exception.HResult,
-                [LogProperties.StackTrace] = stackTrace,
-                ["ExceptionType"] = exception.GetType().Name,
-                ["InnerException"] = exception.InnerException?.Message ?? "N/A",
-            };
-        }
-
-        public static Dictionary<string, object> CreateTimingData(TimeSpan duration)
-        {
-            return new Dictionary<string, object>
-            {
-                [LogProperties.Duration] = duration.TotalMilliseconds,
-            };
-        }
-
-        public static Dictionary<string, object> CreateSystemData()
-        {
-            return new Dictionary<string, object>
-            {
-                [LogProperties.Version] = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown",
-                [LogProperties.Environment] = Environment.OSVersion.ToString(),
-                [LogProperties.ThreadId] = Thread.CurrentThread.ManagedThreadId,
-                ["MachineName"] = Environment.MachineName,
-                ["UserName"] = Environment.UserName,
-            };
-        }
-    }
 }
-

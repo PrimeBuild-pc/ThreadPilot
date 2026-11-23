@@ -1,9 +1,41 @@
 namespace ThreadPilot.Core.Tests
 {
     using System.Xml.Linq;
+    using ThreadPilot.Services;
 
     public sealed class SystemTweaksStartupAndStyleTests
     {
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task FailedDeviceTweak_RestoresEarlierWrites(bool secondDeviceDisappears)
+        {
+            SystemTweaksService.RegistryTarget[] targets =
+            [
+                new("first", "value", 2, Microsoft.Win32.RegistryValueKind.DWord),
+                new("second", "value", 3, Microsoft.Win32.RegistryValueKind.DWord),
+            ];
+            var values = targets.ToDictionary(target => target.Path, target => target.Value);
+
+            await Assert.ThrowsAsync<IOException>(() => SystemTweaksService.WriteDriverRegistryTargetsAsync(
+                targets,
+                _ => 1,
+                (target, value) =>
+                {
+                    if (secondDeviceDisappears && target.Path == "second")
+                    {
+                        throw new IOException("Device unavailable");
+                    }
+
+                    values[target.Path] = value;
+                },
+                () => Task.FromResult(false),
+                Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance));
+
+            Assert.Equal(2, values["first"]);
+            Assert.Equal(3, values["second"]);
+        }
+
         [Fact]
         public void Startup_LoadsPersistedTweakStateBeforePageNavigation()
         {

@@ -119,18 +119,25 @@ namespace ThreadPilot.ViewModels
                 return;
             }
 
-            var updated = (ApplicationSettingsModel)this.settingsService.Settings.Clone();
-            updated.GameBoostEnabled = this.GameBoostEnabled;
-            updated.GameBoostMode = this.GameBoostIsolation ? GameBoostMode.Isolation : GameBoostMode.Automatic;
-            updated.GameBoostAboveNormalPriority = this.GameBoostAboveNormal;
-            updated.GameBoostManualGames = SplitLines(this.GameBoostManualGamesText);
-            updated.GameBoostExcludedGames = SplitLines(this.GameBoostExcludedGamesText);
-            updated.GameBoostBackgroundProcesses = SplitLines(this.GameBoostBackgroundText);
+            var enabled = this.GameBoostEnabled;
+            var mode = this.GameBoostIsolation ? GameBoostMode.Isolation : GameBoostMode.Automatic;
+            var aboveNormal = this.GameBoostAboveNormal;
+            var manualGames = SplitLines(this.GameBoostManualGamesText);
+            var excludedGames = SplitLines(this.GameBoostExcludedGamesText);
+            var backgroundProcesses = SplitLines(this.GameBoostBackgroundText);
 
-            await this.settingsService.UpdateSettingsAsync(updated);
+            await this.settingsService.EditSettingsAsync(draft =>
+            {
+                draft.GameBoostEnabled = enabled;
+                draft.GameBoostMode = mode;
+                draft.GameBoostAboveNormalPriority = aboveNormal;
+                draft.GameBoostManualGames = manualGames;
+                draft.GameBoostExcludedGames = excludedGames;
+                draft.GameBoostBackgroundProcesses = backgroundProcesses;
+            });
             await this.LogUserActionAsync(
                 "GameBoostSettingsChanged",
-                $"Game Boost {(updated.GameBoostEnabled ? "on" : "off")}, {updated.GameBoostMode}",
+                $"Game Boost {(enabled ? "on" : "off")}, {mode}",
                 "GameBoost");
             await this.RefreshGameBoostDecisionTextAsync();
         }

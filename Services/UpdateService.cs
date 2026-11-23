@@ -20,7 +20,7 @@ namespace ThreadPilot.Services
         private readonly IUpdateInstallerService installerService;
         private readonly IUpdateTempDirectoryProvider tempDirectoryProvider;
         private readonly IApplicationShutdownService shutdownService;
-        private readonly IUpdateClock clock;
+        private readonly TimeProvider clock;
         private readonly ILogger<UpdateService> logger;
         private readonly SemaphoreSlim checkGate = new(1, 1);
         private readonly SemaphoreSlim installGate = new(1, 1);
@@ -33,7 +33,7 @@ namespace ThreadPilot.Services
             IUpdateInstallerService installerService,
             IUpdateTempDirectoryProvider tempDirectoryProvider,
             IApplicationShutdownService shutdownService,
-            IUpdateClock clock,
+            TimeProvider clock,
             ILogger<UpdateService> logger)
         {
             this.updateChecker = updateChecker ?? throw new ArgumentNullException(nameof(updateChecker));
@@ -131,9 +131,8 @@ namespace ThreadPilot.Services
 
         private async Task MarkUpdateCheckAttemptAsync(CancellationToken cancellationToken)
         {
-            var settings = this.settingsService.Settings;
-            settings.LastUpdateCheckUtc = this.clock.UtcNow;
-            await this.settingsService.UpdateSettingsAsync(settings).ConfigureAwait(false);
+            var checkedAt = this.clock.GetUtcNow();
+            await this.settingsService.EditSettingsAsync(draft => draft.LastUpdateCheckUtc = checkedAt).ConfigureAwait(false);
         }
 
         private void TryCleanup(string tempDirectory)

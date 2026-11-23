@@ -542,7 +542,7 @@ namespace ThreadPilot.Core.Tests
                 }).Returns(Task.CompletedTask);
             using var lifetime = new CancellationTokenSource();
             var service = CreateService([rule], engine.Object, processService: processes.Object, enhancedLogger: diagnostics.Object);
-            var pending = service.ApplyForProcessStartAsync(process, lifetime.Token);
+            var pending = service.ApplyForProcessStartAsync(process, cancellationToken: lifetime.Token);
             await scheduled.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
             // A duplicate discovery must not start another retry loop.

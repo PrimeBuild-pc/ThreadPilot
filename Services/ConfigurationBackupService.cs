@@ -86,61 +86,36 @@ namespace ThreadPilot.Services
         public async Task ApplyAsync(ConfigurationBackup backup)
         {
             Validate(backup);
-            var previous = await this.CaptureAsync(settings.Settings);
-            try
+            await rules.ReplaceForImportAsync(backup.PersistentProcessRules, async () =>
             {
-                if (backup.PersistentProcessRules != null)
-                {
-                    await rules.SaveAsync(backup.PersistentProcessRules);
-                }
-
+                var previousAssociations = Clone(associations.Configuration);
                 if (!await associations.ReplaceConfigurationAsync(backup.ProcessMonitorConfiguration!))
                 {
                     throw new IOException("Could not save power plan associations.");
                 }
 
-                await settings.UpdateSettingsAsync(backup.Settings!);
-            }
-            catch (Exception importError)
-            {
-                var errors = new List<Exception> { importError };
                 try
                 {
-                    await rules.SaveAsync(previous.PersistentProcessRules!);
+                    // Settings commit last and publish only after persistence succeeds.
+                    await settings.UpdateSettingsAsync(backup.Settings!);
                 }
-                catch (Exception ex)
+                catch (Exception importError)
                 {
-                    errors.Add(ex);
-                }
-
-                try
-                {
-                    if (!await associations.ReplaceConfigurationAsync(previous.ProcessMonitorConfiguration!))
+                    try
                     {
-                        throw new IOException("Could not restore power plan associations.");
+                        if (!await associations.ReplaceConfigurationAsync(previousAssociations))
+                        {
+                            throw new IOException("Could not restore power plan associations.");
+                        }
                     }
-                }
-                catch (Exception ex)
-                {
-                    errors.Add(ex);
-                }
+                    catch (Exception rollbackError)
+                    {
+                        throw new AggregateException("Import failed and power plan associations could not be restored.", importError, rollbackError);
+                    }
 
-                try
-                {
-                    await settings.UpdateSettingsAsync(previous.Settings!);
+                    throw;
                 }
-                catch (Exception ex)
-                {
-                    errors.Add(ex);
-                }
-
-                if (errors.Count > 1)
-                {
-                    throw new AggregateException("Import failed and restoration was incomplete.", errors);
-                }
-
-                throw;
-            }
+            });
         }
 
         private static T Clone<T>(T source) => JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(source, JsonOptions), JsonOptions)!;

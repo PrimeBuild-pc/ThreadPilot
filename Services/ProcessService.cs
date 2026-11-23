@@ -1076,7 +1076,8 @@ namespace ThreadPilot.Services
                 try
                 {
                     using var targetProcess = Process.GetProcessById(process.ProcessId);
-                    return !targetProcess.HasExited;
+                    return !targetProcess.HasExited
+                        && (process.StartTimeUtc == null || process.StartTimeUtc == targetProcess.StartTime.ToUniversalTime());
                 }
                 catch (ArgumentException)
                 {

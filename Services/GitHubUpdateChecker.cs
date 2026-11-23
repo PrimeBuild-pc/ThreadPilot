@@ -26,45 +26,6 @@ namespace ThreadPilot.Services
             this.gitHubReleaseClient = gitHubReleaseClient ?? throw new ArgumentNullException(nameof(gitHubReleaseClient));
         }
 
-        public async Task<(Version? latest, string? releaseUrl)> GetLatestVersionAsync(
-            string owner,
-            string repo,
-            CancellationToken cancellationToken = default)
-        {
-            if (string.IsNullOrWhiteSpace(owner))
-            {
-                throw new ArgumentException("Owner is required", nameof(owner));
-            }
-
-            if (string.IsNullOrWhiteSpace(repo))
-            {
-                throw new ArgumentException("Repository is required", nameof(repo));
-            }
-
-            var json = await this.gitHubReleaseClient.GetLatestReleaseJsonAsync(owner, repo, cancellationToken);
-            var release = JsonSerializer.Deserialize<LatestRelease>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-            });
-
-            if (release is null || release.Draft || release.Prerelease || string.IsNullOrWhiteSpace(release.Tag_name))
-            {
-                return (null, null);
-            }
-
-            var tag = release.Tag_name.Trim();
-            if (tag.StartsWith("v", StringComparison.OrdinalIgnoreCase))
-            {
-                tag = tag[1..];
-            }
-
-            var sanitized = tag.Split('-', '+')[0];
-
-            return Version.TryParse(sanitized, out var version)
-                ? (version, release.Html_url)
-                : (null, release.Html_url);
-        }
-
         public async Task<UpdateReleaseInfo?> GetLatestReleaseInfoAsync(
             string owner,
             string repo,

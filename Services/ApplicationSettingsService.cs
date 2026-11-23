@@ -5,6 +5,7 @@ namespace ThreadPilot.Services
     using System.IO;
     using System.Text;
     using System.Text.Json;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using ThreadPilot.Helpers;
@@ -18,7 +19,8 @@ namespace ThreadPilot.Services
         private readonly string settingsFilePath;
         private readonly string? legacySettingsPath;
         private readonly Func<CultureInfo> systemUiCultureProvider;
-        private ApplicationSettingsModel settings;
+        private readonly SemaphoreSlim settingsGate = new(1, 1);
+        private volatile ApplicationSettingsModel settings;
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
             WriteIndented = true,
@@ -30,7 +32,7 @@ namespace ThreadPilot.Services
 
         public event EventHandler<ApplicationSettingsChangedEventArgs>? SettingsChanged;
 
-        public ApplicationSettingsModel Settings => (ApplicationSettingsModel)this.settings.Clone();
+        public ApplicationSettingsModel Settings => this.settings.Clone();
 
         public ApplicationSettingsService(ILogger<ApplicationSettingsService> logger)
             : this(
@@ -62,6 +64,19 @@ namespace ThreadPilot.Services
 
         public async Task LoadSettingsAsync()
         {
+            await this.settingsGate.WaitAsync();
+            try
+            {
+                await this.LoadSettingsCoreAsync();
+            }
+            finally
+            {
+                this.settingsGate.Release();
+            }
+        }
+
+        private async Task LoadSettingsCoreAsync()
+        {
             try
             {
                 this.logger.LogInformation("Loading application settings from {FilePath}", this.settingsFilePath);
@@ -69,8 +84,9 @@ namespace ThreadPilot.Services
                 if (!this.settingsStorage.Exists(this.settingsFilePath))
                 {
                     this.logger.LogInformation("Settings file not found, using defaults");
-                    this.settings = this.CreateDefaultSettings();
-                    await this.SaveSettingsAsync();
+                    var defaults = this.CreateDefaultSettings();
+                    await this.PersistAsync(defaults);
+                    this.settings = defaults;
                     return;
                 }
 
@@ -78,8 +94,9 @@ namespace ThreadPilot.Services
                 if (string.IsNullOrWhiteSpace(json))
                 {
                     this.logger.LogWarning("Settings file was empty, using defaults");
-                    this.settings = this.CreateDefaultSettings();
-                    await this.SaveSettingsAsync();
+                    var defaults = this.CreateDefaultSettings();
+                    await this.PersistAsync(defaults);
+                    this.settings = defaults;
                     return;
                 }
 
@@ -127,12 +144,11 @@ namespace ThreadPilot.Services
                         loadedSettings.Language,
                         this.systemUiCultureProvider());
 
-                    var oldSettings = (ApplicationSettingsModel)this.settings.Clone();
-                    this.settings.CopyFrom(loadedSettings);
-                    this.ValidateAndFixSettings();
+                    var oldSettings = this.settings;
+                    this.ValidateAndFixSettings(loadedSettings);
 
-                    var migrationChangedSettings = CpuAssignmentModeMigrationPolicy.Apply(this.settings);
-                    if (CpuAssignmentModeMigrationPolicy.ShouldShowNotice(this.settings))
+                    var migrationChangedSettings = CpuAssignmentModeMigrationPolicy.Apply(loadedSettings);
+                    if (CpuAssignmentModeMigrationPolicy.ShouldShowNotice(loadedSettings))
                     {
                         this.logger.LogInformation(
                             "Migrated the default CPU assignment mode from Automatic to AffinityMask. Automatic applies CPU Sets only, which does not change the affinity mask Windows enforces.");
@@ -142,7 +158,7 @@ namespace ThreadPilot.Services
                     {
                         try
                         {
-                            await this.SaveSettingsAsync();
+                            await this.PersistAsync(loadedSettings);
                         }
                         catch (Exception ex)
                         {
@@ -153,14 +169,16 @@ namespace ThreadPilot.Services
                         }
                     }
 
+                    this.settings = loadedSettings;
                     this.logger.LogInformation("Settings loaded successfully");
-                    this.OnSettingsChanged(oldSettings, this.settings);
+                    this.OnSettingsChanged(oldSettings, loadedSettings);
                 }
                 else
                 {
                     this.logger.LogWarning("Failed to deserialize settings, using defaults");
-                    this.settings = this.CreateDefaultSettings();
-                    await this.SaveSettingsAsync();
+                    var defaults = this.CreateDefaultSettings();
+                    await this.PersistAsync(defaults);
+                    this.settings = defaults;
                 }
             }
             catch (Exception ex)
@@ -170,73 +188,64 @@ namespace ThreadPilot.Services
             }
         }
 
-        public async Task SaveSettingsAsync()
+        public Task SaveSettingsAsync() =>
+            this.CommitAsync(current => current.Clone(), notify: false);
+
+        public Task UpdateSettingsAsync(ApplicationSettingsModel newSettings)
         {
+            ArgumentNullException.ThrowIfNull(newSettings);
+            var replacement = newSettings.Clone();
+            replacement.Language = LocalizationService.ResolveLanguagePreference(newSettings.Language, this.systemUiCultureProvider());
+            return this.CommitAsync(_ => replacement);
+        }
+
+        public Task EditSettingsAsync(Action<ApplicationSettingsModel> edit)
+        {
+            ArgumentNullException.ThrowIfNull(edit);
+            return this.CommitAsync(current =>
+            {
+                var draft = current.Clone();
+                edit(draft);
+                return draft.Clone();
+            });
+        }
+
+        public Task ResetToDefaultsAsync() =>
+            this.CommitAsync(_ => this.CreateDefaultSettings());
+
+        private async Task CommitAsync(
+            Func<ApplicationSettingsModel, ApplicationSettingsModel> createDraft,
+            bool notify = true)
+        {
+            await this.settingsGate.WaitAsync();
             try
             {
-                this.logger.LogDebug("Saving application settings to {FilePath}", this.settingsFilePath);
+                var previous = this.settings;
+                var draft = createDraft(previous);
+                this.ValidateAndFixSettings(draft);
+                await this.PersistAsync(draft);
+                this.settings = draft;
 
-                this.ValidateAndFixSettings();
-
-                var json = JsonSerializer.Serialize(this.settings, JsonOptions);
-                await this.settingsStorage.WriteAsync(this.settingsFilePath, json);
-
-                this.logger.LogDebug("Settings saved successfully");
+                if (notify)
+                {
+                    this.OnSettingsChanged(previous, draft);
+                }
             }
             catch (Exception ex)
             {
-                this.logger.LogError(ex, "Error saving settings");
+                this.logger.LogError(ex, "Error saving application settings");
                 throw;
+            }
+            finally
+            {
+                this.settingsGate.Release();
             }
         }
 
-        public async Task UpdateSettingsAsync(ApplicationSettingsModel newSettings)
+        private Task PersistAsync(ApplicationSettingsModel draft)
         {
-            if (newSettings == null)
-            {
-                throw new ArgumentNullException(nameof(newSettings));
-            }
-
-            try
-            {
-                var oldSettings = (ApplicationSettingsModel)this.settings.Clone();
-                var resolvedLanguage = LocalizationService.ResolveLanguagePreference(
-                    newSettings.Language,
-                    this.systemUiCultureProvider());
-                this.settings.CopyFrom(newSettings);
-                this.settings.Language = resolvedLanguage;
-
-                await this.SaveSettingsAsync();
-
-                this.OnSettingsChanged(oldSettings, this.settings);
-                this.logger.LogInformation("Settings updated successfully");
-            }
-            catch (Exception ex)
-            {
-                this.logger.LogError(ex, "Error updating settings");
-                throw;
-            }
-        }
-
-        public async Task ResetToDefaultsAsync()
-        {
-            try
-            {
-                this.logger.LogInformation("Resetting settings to defaults");
-
-                var oldSettings = (ApplicationSettingsModel)this.settings.Clone();
-                this.settings = this.CreateDefaultSettings();
-
-                await this.SaveSettingsAsync();
-
-                this.OnSettingsChanged(oldSettings, this.settings);
-                this.logger.LogInformation("Settings reset to defaults");
-            }
-            catch (Exception ex)
-            {
-                this.logger.LogError(ex, "Error resetting settings to defaults");
-                throw;
-            }
+            var json = JsonSerializer.Serialize(draft, JsonOptions);
+            return this.settingsStorage.WriteAsync(this.settingsFilePath, json);
         }
 
         public string GetSettingsFilePath()
@@ -244,58 +253,58 @@ namespace ThreadPilot.Services
             return this.settingsFilePath;
         }
 
-        public void ValidateAndFixSettings()
+        private void ValidateAndFixSettings(ApplicationSettingsModel draft)
         {
             // Validate and fix notification durations
-            if (this.settings.NotificationDisplayDurationMs < 1000)
+            if (draft.NotificationDisplayDurationMs < 1000)
             {
-                this.settings.NotificationDisplayDurationMs = 1000;
+                draft.NotificationDisplayDurationMs = 1000;
             }
 
-            if (this.settings.NotificationDisplayDurationMs > 30000)
+            if (draft.NotificationDisplayDurationMs > 30000)
             {
-                this.settings.NotificationDisplayDurationMs = 30000;
+                draft.NotificationDisplayDurationMs = 30000;
             }
 
-            if (this.settings.BalloonNotificationTimeoutMs < 1000)
+            if (draft.BalloonNotificationTimeoutMs < 1000)
             {
-                this.settings.BalloonNotificationTimeoutMs = 1000;
+                draft.BalloonNotificationTimeoutMs = 1000;
             }
 
-            if (this.settings.BalloonNotificationTimeoutMs > 60000)
+            if (draft.BalloonNotificationTimeoutMs > 60000)
             {
-                this.settings.BalloonNotificationTimeoutMs = 60000;
+                draft.BalloonNotificationTimeoutMs = 60000;
             }
 
             // Validate notification history
-            if (this.settings.MaxNotificationHistoryItems < 10)
+            if (draft.MaxNotificationHistoryItems < 10)
             {
-                this.settings.MaxNotificationHistoryItems = 10;
+                draft.MaxNotificationHistoryItems = 10;
             }
 
-            if (this.settings.MaxNotificationHistoryItems > 1000)
+            if (draft.MaxNotificationHistoryItems > 1000)
             {
-                this.settings.MaxNotificationHistoryItems = 1000;
+                draft.MaxNotificationHistoryItems = 1000;
             }
 
             // Validate custom icon path
-            if (this.settings.UseCustomTrayIcon && !string.IsNullOrEmpty(this.settings.CustomTrayIconPath))
+            if (draft.UseCustomTrayIcon && !string.IsNullOrEmpty(draft.CustomTrayIconPath))
             {
-                if (!File.Exists(this.settings.CustomTrayIconPath))
+                if (!File.Exists(draft.CustomTrayIconPath))
                 {
-                    this.logger.LogWarning("Custom tray icon file not found: {Path}", this.settings.CustomTrayIconPath);
-                    this.settings.UseCustomTrayIcon = false;
+                    this.logger.LogWarning("Custom tray icon file not found: {Path}", draft.CustomTrayIconPath);
+                    draft.UseCustomTrayIcon = false;
                 }
             }
 
-            this.settings.Language = LocalizationService.ResolveLanguagePreference(
-                this.settings.Language,
+            draft.Language = LocalizationService.ResolveLanguagePreference(
+                draft.Language,
                 this.systemUiCultureProvider());
 
-            if (!Enum.IsDefined(this.settings.DefaultCpuAssignmentMode))
+            if (!Enum.IsDefined(draft.DefaultCpuAssignmentMode))
             {
                 // Repair to the shipped default rather than Automatic; see CopyFrom.
-                this.settings.DefaultCpuAssignmentMode = CpuAssignmentMode.AffinityMask;
+                draft.DefaultCpuAssignmentMode = CpuAssignmentMode.AffinityMask;
             }
         }
 
@@ -359,8 +368,8 @@ namespace ThreadPilot.Services
                 // In a more sophisticated implementation, we could track specific property changes
                 var changedProperties = new[] { "Settings" };
 
-                var oldSnapshot = (ApplicationSettingsModel)oldSettings.Clone();
-                var newSnapshot = (ApplicationSettingsModel)newSettings.Clone();
+                var oldSnapshot = oldSettings.Clone();
+                var newSnapshot = newSettings.Clone();
 
                 this.SettingsChanged?.Invoke(this, new ApplicationSettingsChangedEventArgs(
                     oldSnapshot, newSnapshot, changedProperties));

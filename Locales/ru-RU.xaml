@@ -399,9 +399,6 @@
     <sys:String x:Key="SettingsView_StartMinimized">Начать сворачивать</sys:String>
     <sys:String x:Key="SettingsView_ResetProcessChangesOnExit">Сбрасывать изменения процессов при выходе</sys:String>
     <sys:String x:Key="SettingsView_ResetProcessChangesOnExitDescription">Восстанавливает назначения ЦП и приоритеты, изменённые ThreadPilot, при закрытии приложения.</sys:String>
-    <sys:String x:Key="SettingsView_QuickApply">Включить ожидающие настройки, применимые из трея</sys:String>
-    <sys:String x:Key="SettingsView_MonitoringControl">Включить элементы управления мониторингом автоматизации из трея</sys:String>
-    <sys:String x:Key="SettingsView_DetailedTooltips">Показать подробные подсказки</sys:String>
 
     <sys:String x:Key="SettingsView_BasicPreferences">Основные настройки</sys:String>
     <sys:String x:Key="SettingsView_StartWithWindows">Начните с Windows</sys:String>
@@ -436,8 +433,6 @@
     <sys:String x:Key="SettingsView_Advanced">Расширенный</sys:String>
     <sys:String x:Key="SettingsView_NotificationHistory">Включить историю уведомлений</sys:String>
     <sys:String x:Key="SettingsView_MaxHistory">Максимальное количество элементов истории:</sys:String>
-    <sys:String x:Key="SettingsView_AutoHide">Автоматическое скрытие уведомлений</sys:String>
-    <sys:String x:Key="SettingsView_NotificationSound">Включить звук уведомлений</sys:String>
     <sys:String x:Key="SettingsView_DebugLogging">Включить ведение журнала отладки</sys:String>
     <sys:String x:Key="SettingsView_PerformanceCounters">Включить счетчики производительности</sys:String>
 
@@ -759,4 +754,15 @@
     <sys:String x:Key="Rules_AppliesKeepAwake">не даёт ПК уснуть</sys:String>
     <sys:String x:Key="Rules_AppliesNothing">ничего</sys:String>
     <sys:String x:Key="Rules_Unnamed">(без имени)</sys:String>
+    <sys:String x:Key="SettingsView_Shortcuts">Глобальные сочетания клавиш</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutShowWindow">Показать или скрыть ThreadPilot</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutMonitoring">Уведомление о мониторинге</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutPerformance">Уведомление о высокой производительности</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutTweaks">Открыть системные настройки</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutKey">Клавиша сочетания</sys:String>
+    <sys:String x:Key="Settings_ShortcutUnavailable">Не удаётся использовать {0}. Выберите клавишу с модификатором и доступное сочетание.</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutCtrl">Ctrl</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutAlt">Alt</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutShift">Shift</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutWin">Win</sys:String>
 </ResourceDictionary>

@@ -3,19 +3,6 @@ namespace ThreadPilot.Models.Core
     using System;
     using System.ComponentModel;
 
-    public interface IModel : INotifyPropertyChanged
-    {
-        string Id { get; }
-
-        DateTime CreatedAt { get; }
-
-        DateTime UpdatedAt { get; }
-
-        ValidationResult Validate();
-
-        IModel Clone();
-    }
-
     public class ValidationResult
     {
         public bool IsValid { get; }

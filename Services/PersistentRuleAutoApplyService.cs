@@ -13,10 +13,12 @@ namespace ThreadPilot.Services
     {
         Task<IReadOnlyList<PersistentRuleAutoApplyResult>> ApplyForDiscoveredProcessesAsync(
             IEnumerable<ProcessModel> processes,
+            Func<ProcessModel, PersistentRuleApplyOptions>? getOptions = null,
             CancellationToken cancellationToken = default);
 
         Task<IReadOnlyList<PersistentRuleAutoApplyResult>> ApplyForProcessStartAsync(
             ProcessModel process,
+            Func<ProcessModel, PersistentRuleApplyOptions>? getOptions = null,
             CancellationToken cancellationToken = default);
 
         void MarkProcessExited(int processId);
@@ -138,6 +140,7 @@ namespace ThreadPilot.Services
 
         public async Task<IReadOnlyList<PersistentRuleAutoApplyResult>> ApplyForDiscoveredProcessesAsync(
             IEnumerable<ProcessModel> processes,
+            Func<ProcessModel, PersistentRuleApplyOptions>? getOptions = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(processes);
@@ -164,7 +167,7 @@ namespace ThreadPilot.Services
             foreach (var process in snapshot)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                results.AddRange(await this.ApplyForProcessAsync(process, rules, "DiscoveredSnapshot", cancellationToken).ConfigureAwait(false));
+                results.AddRange(await this.ApplyForProcessAsync(process, rules, "DiscoveredSnapshot", getOptions, cancellationToken).ConfigureAwait(false));
             }
 
             return results;
@@ -172,6 +175,7 @@ namespace ThreadPilot.Services
 
         public async Task<IReadOnlyList<PersistentRuleAutoApplyResult>> ApplyForProcessStartAsync(
             ProcessModel process,
+            Func<ProcessModel, PersistentRuleApplyOptions>? getOptions = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(process);
@@ -182,7 +186,7 @@ namespace ThreadPilot.Services
             }
 
             var rules = await this.ruleStore.LoadAsync().ConfigureAwait(false);
-            return await this.ApplyForProcessAsync(process, rules, "ProcessStarted", cancellationToken).ConfigureAwait(false);
+            return await this.ApplyForProcessAsync(process, rules, "ProcessStarted", getOptions, cancellationToken).ConfigureAwait(false);
         }
 
         public void MarkProcessExited(int processId)
@@ -207,6 +211,7 @@ namespace ThreadPilot.Services
             ProcessModel process,
             IReadOnlyList<PersistentProcessRule> rules,
             string source,
+            Func<ProcessModel, PersistentRuleApplyOptions>? getOptions,
             CancellationToken cancellationToken)
         {
             using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -220,7 +225,7 @@ namespace ThreadPilot.Services
 
             try
             {
-                return await this.ApplyForProcessCoreAsync(process, rules, source, lifetime.Token).ConfigureAwait(false);
+                return await this.ApplyForProcessCoreAsync(process, rules, source, getOptions, lifetime.Token).ConfigureAwait(false);
             }
             finally
             {
@@ -238,6 +243,7 @@ namespace ThreadPilot.Services
             ProcessModel process,
             IReadOnlyList<PersistentProcessRule> rules,
             string source,
+            Func<ProcessModel, PersistentRuleApplyOptions>? getOptions,
             CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -353,18 +359,21 @@ namespace ThreadPilot.Services
             {
                 // Runtime auto-apply only runs while ThreadPilot is open; it does not use registry,
                 // IFEO, services, or protected-process bypass techniques.
-                var applyResults = await this.rulesEngine
-                    .ApplyMatchingRulesAsync(
-                        process,
-                        rule => selectedSignatures.Contains(PersistentRuleRuntimeKeys.GetRuleSignature(rule)),
-                        cancellationToken)
-                    .ConfigureAwait(false);
+                var options = getOptions?.Invoke(process) ?? PersistentRuleApplyOptions.None;
+                var preserved = options & (PersistentRuleApplyOptions.PreserveAffinity | PersistentRuleApplyOptions.PreservePriority);
+                bool Filter(PersistentProcessRule rule) => selectedSignatures.Contains(PersistentRuleRuntimeKeys.GetRuleSignature(rule));
+                var applyResults = preserved == PersistentRuleApplyOptions.None
+                    ? await this.rulesEngine.ApplyMatchingRulesAsync(process, Filter, cancellationToken).ConfigureAwait(false)
+                    : await this.rulesEngine.ApplyMatchingRulesAsync(process, Filter, preserved, cancellationToken).ConfigureAwait(false);
 
                 var results = applyResults.Select(PersistentRuleAutoApplyResult.FromApplyResult).ToList();
                 foreach (var result in results)
                 {
                     await this.LogResultAsync(result, process, source).ConfigureAwait(false);
-                    this.priorityVerificationService?.ScheduleDelayedVerification(result, process, source);
+                    if (!options.HasFlag(PersistentRuleApplyOptions.SkipDelayedPriorityVerification))
+                    {
+                        this.priorityVerificationService?.ScheduleDelayedVerification(result, process, source);
+                    }
                 }
 
                 if (source.EndsWith("/PathRetry", StringComparison.Ordinal))

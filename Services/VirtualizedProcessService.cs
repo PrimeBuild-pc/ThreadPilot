@@ -24,8 +24,6 @@ namespace ThreadPilot.Services
 
         public VirtualizedProcessConfig Configuration { get; set; } = new();
 
-        public event EventHandler<BatchLoadProgressEventArgs>? BatchLoadProgress;
-
         public event EventHandler<ProcessBatchResult>? BackgroundBatchLoaded;
 
         public VirtualizedProcessService(
@@ -104,32 +102,6 @@ namespace ThreadPilot.Services
                 batchIndex, totalBatches, batchProcesses.Count, stopwatch.ElapsedMilliseconds);
 
             return result;
-    }
-
-
-        public async Task<List<ProcessBatchResult>> LoadProcessBatchesAsync(int startBatchIndex, int batchCount, bool activeApplicationsOnly = false)
-        {
-            var results = new List<ProcessBatchResult>();
-            var totalBatches = await this.GetTotalBatchCountAsync(activeApplicationsOnly);
-
-            for (int i = 0; i < batchCount && (startBatchIndex + i) < totalBatches; i++)
-            {
-                var batchIndex = startBatchIndex + i;
-                var batch = await this.LoadProcessBatchAsync(batchIndex, activeApplicationsOnly);
-                results.Add(batch);
-
-                // Report progress
-                this.BatchLoadProgress?.Invoke(this, new BatchLoadProgressEventArgs
-                {
-                    LoadedBatches = i + 1,
-                    TotalBatches = batchCount,
-                    LoadedProcesses = results.Sum(r => r.Processes.Count),
-                    TotalProcesses = batch.TotalProcessCount,
-                    StatusMessage = $"Loaded batch {batchIndex + 1} of {totalBatches}",
-                });
-            }
-
-            return results;
         }
 
         public async Task PreloadNextBatchAsync(int currentBatchIndex, bool activeApplicationsOnly = false)
@@ -162,44 +134,6 @@ namespace ThreadPilot.Services
                     }
                 });
             }
-        }
-
-        public async Task<List<ProcessModel>> SearchProcessesAsync(string searchTerm, bool activeApplicationsOnly = false)
-        {
-            if (string.IsNullOrWhiteSpace(searchTerm))
-            {
-                return new List<ProcessModel>();
-            }
-
-            await this.EnsureProcessesLoadedAsync(activeApplicationsOnly);
-
-            var filteredProcesses = activeApplicationsOnly
-                ? this.allProcesses?.Where(p => p.HasVisibleWindow) ?? Enumerable.Empty<ProcessModel>()
-                : this.allProcesses ?? Enumerable.Empty<ProcessModel>();
-
-            return filteredProcesses
-                .Where(p => p.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                           (p.MainWindowTitle?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false))
-                .ToList();
-        }
-
-        public async Task<ProcessBatchResult> RefreshBatchAsync(int batchIndex, bool activeApplicationsOnly = false)
-        {
-            var cacheKey = $"batch_{batchIndex}_{activeApplicationsOnly}";
-            this.batchCache.TryRemove(cacheKey.GetHashCode(), out _);
-
-            // Force refresh of all processes
-            await this.RefreshAllProcessesAsync(activeApplicationsOnly);
-
-            return await this.LoadProcessBatchAsync(batchIndex, activeApplicationsOnly);
-        }
-
-        public void ClearCache()
-        {
-            this.batchCache.Clear();
-            this.allProcesses = null;
-            this.lastFullRefresh = DateTime.MinValue;
-            this.logger.LogInformation("Cleared virtualized process cache");
         }
 
         private async Task EnsureProcessesLoadedAsync(bool activeApplicationsOnly)
