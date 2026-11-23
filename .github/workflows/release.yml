@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       dry_run_publish:
-        description: "Build and validate without publishing a GitHub release or WinGet update"
+        description: "Sign with the test certificate without publishing to GitHub, WinGet, or Chocolatey"
         required: false
         default: "true"
         type: choice
@@ -27,6 +27,10 @@ jobs:
   build:
     # Match the Windows 11-era APIs exercised by the native integration tests.
     runs-on: windows-2025
+    timeout-minutes: 90
+    permissions:
+      actions: read
+      contents: read
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
@@ -69,6 +73,27 @@ jobs:
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
+      - name: Resolve SignPath policy
+        id: signing
+        shell: pwsh
+        env:
+          TEST_SIGNING: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run_publish == 'true' }}
+          RELEASE_POLICY: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:SIGNPATH_API_TOKEN)) {
+            throw "The SIGNPATH_API_TOKEN repository secret is required."
+          }
+
+          $policy = $env:RELEASE_POLICY
+          if ($env:TEST_SIGNING -eq 'true') {
+            $policy = 'test-signing'
+          } elseif ([string]::IsNullOrWhiteSpace($policy) -or $policy -eq 'test-signing') {
+            throw "Set SIGNPATH_SIGNING_POLICY_SLUG to the approved production policy before publishing."
+          }
+
+          "policy=$policy" >> $env:GITHUB_OUTPUT
+
       - name: Restore
         run: dotnet restore "ThreadPilot_1.sln"
 
@@ -79,10 +104,66 @@ jobs:
         run: dotnet test "Tests/ThreadPilot.Core.Tests/ThreadPilot.Core.Tests.csproj" --configuration Release --no-restore --verbosity normal --collect:"XPlat Code Coverage" --settings "Tests/ThreadPilot.Core.Tests/coverlet.runsettings" --results-directory TestResults
 
       - name: Publish self-contained single-file
-        run: dotnet publish "ThreadPilot.csproj" --configuration Release -p:PublishProfile=WinX64-SingleFile
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: dotnet publish "ThreadPilot.csproj" --configuration Release -p:PublishProfile=WinX64-SingleFile "-p:InformationalVersion=$env:VERSION" -p:IncludeSourceRevisionInInformationalVersion=false
 
       - name: Publish ReadyToRun
-        run: dotnet publish "ThreadPilot.csproj" --configuration Release -p:PublishProfile=WinX64-ReadyToRun
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: dotnet publish "ThreadPilot.csproj" --configuration Release -p:PublishProfile=WinX64-ReadyToRun "-p:InformationalVersion=$env:VERSION" -p:IncludeSourceRevisionInInformationalVersion=false
+
+      - name: Package application binaries for signing
+        shell: pwsh
+        run: |
+          $staging = Join-Path $env:RUNNER_TEMP 'signpath'
+          New-Item -ItemType Directory -Force -Path "$staging/unsigned" | Out-Null
+          foreach ($profile in 'singlefile', 'readytorun') {
+            New-Item -ItemType Directory -Path "$staging/apps/$profile" -Force | Out-Null
+            Copy-Item -LiteralPath "artifacts/release/$profile/ThreadPilot.exe" -Destination "$staging/apps/$profile/"
+          }
+          Compress-Archive -Path "$staging/apps/*" -DestinationPath "$staging/unsigned/threadpilot-apps.zip"
+
+      - name: Upload unsigned application binaries ZIP
+        id: unsigned-apps
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: ${{ runner.temp }}/signpath/unsigned/threadpilot-apps.zip
+          archive: false
+          if-no-files-found: error
+
+      - name: Sign application binaries with SignPath
+        id: signed-apps
+        uses: signpath/github-action-submit-signing-request@a2c5b60d9c75f073142b653c354b632eedce097b # v3.2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: 5481e6eb-6003-4432-8c51-98f28c9d5c20
+          project-slug: ThreadPilot
+          signing-policy-slug: ${{ steps.signing.outputs.policy }}
+          artifact-configuration-slug: windows-apps
+          github-artifact-id: ${{ steps.unsigned-apps.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 1800
+          output-artifact-directory: ${{ runner.temp }}/signpath/downloads/apps
+          skip-decompress: true
+          parameters: |
+            version: ${{ toJSON(steps.version.outputs.version) }}
+
+      - name: Use signed application binaries
+        shell: pwsh
+        run: |
+          $staging = Join-Path $env:RUNNER_TEMP 'signpath'
+          New-Item -ItemType Directory -Force -Path "$staging/signed" | Out-Null
+          $archive = @(Get-ChildItem -LiteralPath "$staging/downloads/apps" -File -Filter '*.zip')
+          if ($archive.Count -ne 1) {
+            throw "Expected one signed apps ZIP, got $($archive.Count)."
+          }
+          $signedZip = "$staging/signed/threadpilot-apps.zip"
+          Copy-Item -LiteralPath $archive[0].FullName -Destination $signedZip
+          Expand-Archive -LiteralPath $signedZip -DestinationPath "$staging/signed-apps"
+          foreach ($profile in 'singlefile', 'readytorun') {
+            Copy-Item -LiteralPath "$staging/signed-apps/$profile/ThreadPilot.exe" -Destination "artifacts/release/$profile/" -Force
+          }
 
       - name: Install Inno Setup
         shell: pwsh
@@ -97,46 +178,115 @@ jobs:
 
           & iscc.exe "/DMyAppVersion=$version" "/DMyAppSourceDir=$sourceDir" "Installer/setup.iss"
 
-      - name: Prepare signing certificate (optional)
+      - name: Package the installer for signing
         shell: pwsh
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          $ErrorActionPreference = "Stop"
-          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_CERT_BASE64) -or [string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_CERT_PASSWORD))
-          {
-            Write-Host "Signing secrets not provided via environment variables. Skipping certificate preparation."
-            exit 0
-          }
+          $staging = Join-Path $env:RUNNER_TEMP 'signpath'
+          Compress-Archive -LiteralPath "artifacts/release/installer/ThreadPilot_${env:TAG}_Setup.exe" -DestinationPath "$staging/unsigned/threadpilot-installer.zip"
 
-          $certPath = Join-Path $env:RUNNER_TEMP "threadpilot-signing.pfx"
-          [System.IO.File]::WriteAllBytes($certPath, [System.Convert]::FromBase64String($env:WINDOWS_SIGNING_CERT_BASE64))
-          "THREADPILOT_SIGN_CERT_PATH=$certPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Upload unsigned installer ZIP
+        id: unsigned-installer
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: ${{ runner.temp }}/signpath/unsigned/threadpilot-installer.zip
+          archive: false
+          if-no-files-found: error
 
-      - name: Sign binaries and packages (optional)
+      - name: Sign installer with SignPath
+        id: signed-installer
+        uses: signpath/github-action-submit-signing-request@a2c5b60d9c75f073142b653c354b632eedce097b # v3.2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: 5481e6eb-6003-4432-8c51-98f28c9d5c20
+          project-slug: ThreadPilot
+          signing-policy-slug: ${{ steps.signing.outputs.policy }}
+          artifact-configuration-slug: windows-installer
+          github-artifact-id: ${{ steps.unsigned-installer.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 1800
+          output-artifact-directory: ${{ runner.temp }}/signpath/downloads/installer
+          skip-decompress: true
+          parameters: |
+            version: ${{ toJSON(steps.version.outputs.version) }}
+
+      - name: Use the signed installer and verify Authenticode
         shell: pwsh
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          POLICY: ${{ steps.signing.outputs.policy }}
+          APPS_REQUEST: ${{ steps.signed-apps.outputs.signing-request-web-url }}
+          INSTALLER_REQUEST: ${{ steps.signed-installer.outputs.signing-request-web-url }}
         run: |
-          $ErrorActionPreference = "Stop"
-          if ([string]::IsNullOrWhiteSpace($env:THREADPILOT_SIGN_CERT_PATH) -or -not (Test-Path $env:THREADPILOT_SIGN_CERT_PATH))
-          {
-            Write-Host "No signing certificate prepared. Skipping signing step."
-            exit 0
+          $staging = Join-Path $env:RUNNER_TEMP 'signpath'
+          $archive = @(Get-ChildItem -LiteralPath "$staging/downloads/installer" -File -Filter '*.zip')
+          if ($archive.Count -ne 1) {
+            throw "Expected one signed installer ZIP, got $($archive.Count)."
+          }
+          $signedZip = "$staging/signed/threadpilot-installer.zip"
+          Copy-Item -LiteralPath $archive[0].FullName -Destination $signedZip
+          Expand-Archive -LiteralPath $signedZip -DestinationPath "$staging/signed-installer"
+          $installer = "ThreadPilot_${env:TAG}_Setup.exe"
+          Copy-Item -LiteralPath "$staging/signed-installer/$installer" -Destination "artifacts/release/installer/" -Force
+
+          $files = @(
+            'artifacts/release/singlefile/ThreadPilot.exe'
+            'artifacts/release/readytorun/ThreadPilot.exe'
+            "artifacts/release/installer/$installer"
+          )
+
+          # Trust only the pinned self-signed certificate for this verification step.
+          $store = $null
+          $addedCertificate = $null
+          try {
+            if ($env:POLICY -eq 'test-signing') {
+              $testThumbprint = '78B778434A5DAE1F58BE91AE237444AC55EF26BC'
+              $testCertificate = (Get-AuthenticodeSignature -LiteralPath $files[0]).SignerCertificate
+              if ($testCertificate.Thumbprint -ne $testThumbprint) {
+                throw "The application was not signed by the expected SignPath test certificate."
+              }
+              $store = [System.Security.Cryptography.X509Certificates.X509Store]::new('Root', 'CurrentUser')
+              $store.Open('ReadWrite')
+              if (-not ($store.Certificates | Where-Object Thumbprint -eq $testThumbprint)) {
+                $store.Add($testCertificate)
+                $addedCertificate = $testCertificate
+              }
+            }
+
+            foreach ($file in $files) {
+              $signature = Get-AuthenticodeSignature -LiteralPath $file
+              if ($signature.Status -ne 'Valid') {
+                throw "Invalid Authenticode signature on ${file}: $($signature.StatusMessage)"
+              }
+              if ($env:POLICY -eq 'test-signing' -and $signature.SignerCertificate.Thumbprint -ne $testThumbprint) {
+                throw "Unexpected test certificate on $file."
+              }
+              if ($env:POLICY -ne 'test-signing' -and $signature.SignerCertificate.Subject -eq $signature.SignerCertificate.Issuer) {
+                throw "A self-signed certificate cannot be used for the public release: $file."
+              }
+              "- Verified $file ($($signature.SignerCertificate.Subject))" >> $env:GITHUB_STEP_SUMMARY
+            }
+          } finally {
+            if ($null -ne $addedCertificate) {
+              $store.Remove($addedCertificate)
+            }
+            if ($null -ne $store) {
+              $store.Dispose()
+            }
           }
 
-          if (-not (Get-Command signtool.exe -ErrorAction SilentlyContinue))
-          {
-            throw "signtool.exe not found on runner; install Windows SDK or disable signing."
-          }
+          "- [Application signing request]($env:APPS_REQUEST)" >> $env:GITHUB_STEP_SUMMARY
+          "- [Installer signing request]($env:INSTALLER_REQUEST)" >> $env:GITHUB_STEP_SUMMARY
 
-          $timestampUrl = "http://timestamp.digicert.com"
-          $password = $env:WINDOWS_SIGNING_CERT_PASSWORD
-          $targets = @()
-          $targets += Get-ChildItem "artifacts/release/singlefile" -Recurse -File -Include *.exe -ErrorAction SilentlyContinue
-          $targets += Get-ChildItem "artifacts/release/readytorun" -Recurse -File -Include *.exe -ErrorAction SilentlyContinue
-          $targets += Get-ChildItem "artifacts/release/installer" -Recurse -File -Include *.exe -ErrorAction SilentlyContinue
-
-          foreach ($target in $targets)
-          {
-            signtool.exe sign /fd SHA256 /tr $timestampUrl /td SHA256 /f "$env:THREADPILOT_SIGN_CERT_PATH" /p $password "$($target.FullName)"
-          }
+      - name: Upload signed ZIPs for test review
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run_publish == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: signpath-signed-zips
+          path: ${{ runner.temp }}/signpath/signed/*.zip
+          if-no-files-found: error
+          compression-level: 0
 
       - name: Create release packages
         shell: pwsh
