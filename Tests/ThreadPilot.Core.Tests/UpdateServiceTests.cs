@@ -15,6 +15,20 @@ namespace ThreadPilot.Core.Tests
     public sealed class UpdateServiceTests
     {
         [Fact]
+        public async Task StorePackageBlocksChecksAndDownloadsBeforeNetworkOrInstallerCalls()
+        {
+            if (!StoreDistribution.IsStoreBuild) return;
+            var harness = new Harness();
+            var check = await harness.Service.CheckForUpdatesAsync(new UpdateCheckRequest(UpdateCheckTrigger.Manual));
+            Assert.Equal(UpdateCheckStatus.Skipped, check.Status);
+            Assert.False(harness.ReleaseClient.RequestedReleases);
+            var install = await harness.Service.DownloadAndInstallAsync(null!);
+            Assert.Equal(UpdateInstallStatus.Failed, install.Status);
+            harness.Download.VerifyNoOtherCalls();
+            harness.Installer.Verify(service => service.LaunchInstallerElevatedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
         public void SemanticVersion_OrdersStableAbovePrerelease()
         {
             Assert.True(SemanticVersion.TryParse("v1.4.0-beta.1", out var prerelease));

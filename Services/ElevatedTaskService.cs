@@ -45,9 +45,9 @@ namespace ThreadPilot.Services
             this.isProtectedInstallPath = isProtectedInstallPath ?? IsProtectedInstallPath;
         }
 
-        public string LaunchTaskName => "ThreadPilot_Launch";
+        public string LaunchTaskName => StoreDistribution.IsStoreBuild ? "ThreadPilot_Store_Launch" : "ThreadPilot_Launch";
 
-        public string AutostartTaskName => "ThreadPilot_Startup";
+        public string AutostartTaskName => StoreDistribution.IsStoreBuild ? "ThreadPilot_Store_Startup" : "ThreadPilot_Startup";
 
         /// <summary>
         /// True when the path is inside Program Files. The tasks run with highest privileges and no UAC prompt,
@@ -158,6 +158,38 @@ namespace ThreadPilot.Services
             {
                 LogRunLaunchTaskException(this.logger, ex);
                 return false;
+            }
+        }
+
+        public async Task<bool> RemoveLaunchTaskAsync()
+        {
+            try
+            {
+                await this.RemoveTasksOutsideProtectedLocationsAsync();
+                var result = await this.RunSchTasksAsync(new List<string> { "/Delete", "/TN", this.LaunchTaskName, "/F" });
+
+                // Exit code 1: the task does not exist.
+                var removed = result.ExitCode is 0 or 1;
+                LogLaunchTaskRemoved(this.logger, this.LaunchTaskName, result.ExitCode);
+                return removed;
+            }
+            catch (Exception ex)
+            {
+                LogRemoveLaunchTaskException(this.logger, ex);
+                return false;
+            }
+        }
+
+        public async Task<string?> GetAutostartTaskExecutablePathAsync()
+        {
+            try
+            {
+                return await this.QueryTaskCommandAsync(this.AutostartTaskName);
+            }
+            catch (Exception ex)
+            {
+                LogAutostartTaskQueryException(this.logger, ex);
+                return null;
             }
         }
 
@@ -498,5 +530,11 @@ namespace ThreadPilot.Services
 
         [LoggerMessage(EventId = 4271, Level = LogLevel.Warning, Message = "Removed task '{TaskName}' pointing at '{Command}' outside Program Files (schtasks exit code {ExitCode})")]
         private static partial void LogUnprotectedTaskRemoved(ILogger logger, string taskName, string command, int exitCode);
+
+        [LoggerMessage(EventId = 4272, Level = LogLevel.Debug, Message = "Launch task '{TaskName}' removed because autostart is off (schtasks exit code {ExitCode})")]
+        private static partial void LogLaunchTaskRemoved(ILogger logger, string taskName, int exitCode);
+
+        [LoggerMessage(EventId = 4273, Level = LogLevel.Warning, Message = "Exception while removing elevated launch task")]
+        private static partial void LogRemoveLaunchTaskException(ILogger logger, Exception ex);
     }
 }

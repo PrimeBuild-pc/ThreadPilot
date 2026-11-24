@@ -50,6 +50,12 @@ namespace ThreadPilot.Services
         public async Task<UpdateCheckResult> CheckForUpdatesAsync(UpdateCheckRequest request, CancellationToken cancellationToken = default)
         {
             var currentVersion = this.versionProvider.CurrentVersion;
+            if (StoreDistribution.IsStoreBuild)
+            {
+                return new UpdateCheckResult(UpdateCheckStatus.Skipped, currentVersion, null,
+                    "Updates for this installation are managed by Microsoft Store.");
+            }
+
             var settings = this.settingsService.Settings;
 
             if (request.Trigger == UpdateCheckTrigger.Startup)
@@ -100,6 +106,12 @@ namespace ThreadPilot.Services
 
         public async Task<UpdateInstallResult> DownloadAndInstallAsync(UpdateReleaseInfo release, CancellationToken cancellationToken = default)
         {
+            if (StoreDistribution.IsStoreBuild)
+            {
+                return new UpdateInstallResult(UpdateInstallStatus.Failed,
+                    "Updates for this installation are managed by Microsoft Store.");
+            }
+
             if (!await this.installGate.WaitAsync(0, cancellationToken).ConfigureAwait(false))
             {
                 return new UpdateInstallResult(UpdateInstallStatus.Failed, "Another update is already in progress.");

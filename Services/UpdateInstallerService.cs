@@ -35,6 +35,11 @@ namespace ThreadPilot.Services
 
         public Task LaunchInstallerElevatedAsync(string installerPath, CancellationToken cancellationToken = default)
         {
+            if (StoreDistribution.IsStoreBuild)
+            {
+                throw new InvalidOperationException("This installation is updated through Microsoft Store.");
+            }
+
             if (!File.Exists(installerPath))
             {
                 throw new FileNotFoundException("Update installer was not found.", installerPath);

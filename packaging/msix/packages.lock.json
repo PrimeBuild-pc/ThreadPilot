@@ -1,0 +1,158 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net8.0-windows10.0.22000": {
+      "CommunityToolkit.Mvvm": {
+        "type": "Direct",
+        "requested": "[8.4.2, )",
+        "resolved": "8.4.2",
+        "contentHash": "WadCzGEc2U+3e20avRLng4qNtt4zoOGWrdUISqJWrHe3/FSnrYjuM5Sb4yQb09LhkBXrrI4Zt3dLKgRMbItsrg=="
+      },
+      "Microsoft.Extensions.DependencyInjection": {
+        "type": "Direct",
+        "requested": "[9.0.23, )",
+        "resolved": "9.0.23",
+        "contentHash": "c2g+pXne/BAaEur5kCjYVylzqkEAYUfsUlXuNKIify1jcB/VcYXh5MQ5pCUqIoWZqtK8Bg1QJxRMnxmmiVrN5Q==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.23"
+        }
+      },
+      "Microsoft.Extensions.Logging": {
+        "type": "Direct",
+        "requested": "[9.0.23, )",
+        "resolved": "9.0.23",
+        "contentHash": "PmlCDc/jQvDCRelJdy2KWLJb3GwshDDULoUezW0yS7q/TDIGEDv54VSzrSqR8h6n7zjMjEmIxRhiO9ZL1nFipA==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection": "9.0.23",
+          "Microsoft.Extensions.Logging.Abstractions": "9.0.23",
+          "Microsoft.Extensions.Options": "9.0.23"
+        }
+      },
+      "StyleCop.Analyzers": {
+        "type": "Direct",
+        "requested": "[1.3.180, )",
+        "resolved": "1.3.180",
+        "contentHash": "/TDyrO3tUJOsnyTazvaX+qwwBt4aixQLNLtxmkyWQZE94IOZ9PnClHrwKUVn/NSXdXUUWrKMHTtlxUkZ1F8JWg=="
+      },
+      "System.Drawing.Common": {
+        "type": "Direct",
+        "requested": "[9.0.23, )",
+        "resolved": "9.0.23",
+        "contentHash": "vvjH0afpASyFn+6gE6bu+JYLpWkHGigilZLTovKQ3mqRf364sTgUoEj+cWrf3MwbtjgUGT5OcChwM6TnTqVvdg==",
+        "dependencies": {
+          "Microsoft.Win32.SystemEvents": "9.0.23"
+        }
+      },
+      "System.Management": {
+        "type": "Direct",
+        "requested": "[8.0.0, )",
+        "resolved": "8.0.0",
+        "contentHash": "jrK22i5LRzxZCfGb+tGmke2VH7oE0DvcDlJ1HAKYU8cPmD8XnpUT0bYn2Gy98GEhGjtfbR/sxKTVb+dE770pfA==",
+        "dependencies": {
+          "System.CodeDom": "8.0.0"
+        }
+      },
+      "System.ServiceProcess.ServiceController": {
+        "type": "Direct",
+        "requested": "[9.0.23, )",
+        "resolved": "9.0.23",
+        "contentHash": "zwVO6rMy23xrj2XAzd870bayP6WqJCQp2PIDgCoBD38ylN2DDORC4esLliYn+T4vqwchrEMyLrahl+Evx0gyLw==",
+        "dependencies": {
+          "System.Diagnostics.EventLog": "9.0.23"
+        }
+      },
+      "WPF-UI": {
+        "type": "Direct",
+        "requested": "[4.3.0, )",
+        "resolved": "4.3.0",
+        "contentHash": "SIHhc8lIrhEQ/1cLFZN6Dtf8cqsLm4myBULj9obnacd9TyDs2vizhKYzRzTlcPEcnzb3L4EstvPN3M6kcXbJCA==",
+        "dependencies": {
+          "WPF-UI.Abstractions": "4.3.0"
+        }
+      },
+      "Microsoft.Extensions.DependencyInjection.Abstractions": {
+        "type": "Transitive",
+        "resolved": "9.0.23",
+        "contentHash": "2q60LgJHMtJXWPvuOPOkPf1VUdPhdxrifB8y45eSzE2yCDcsM33oEkiSZv5uGo5Xzm/L8R/KaEce9z0F2CpxvQ=="
+      },
+      "Microsoft.Extensions.Logging.Abstractions": {
+        "type": "Transitive",
+        "resolved": "9.0.23",
+        "contentHash": "8MEyxyKTME/AlM5w4kz0PxsUsiuHWOGBtl/bNgJHcVyBkBWRuWR3w3grESdmpvIU/CJ2KR2dmpM88N3gCaUbdA==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.23",
+          "System.Diagnostics.DiagnosticSource": "9.0.23"
+        }
+      },
+      "Microsoft.Extensions.Options": {
+        "type": "Transitive",
+        "resolved": "9.0.23",
+        "contentHash": "4890hobN1MJ2H9rGt8Kibo6rwbdtkVcLbOyow6t937dU79WSw4XvlViPKii5do6xCj7/mIyIwC4br3VgO/PoJA==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.23",
+          "Microsoft.Extensions.Primitives": "9.0.23"
+        }
+      },
+      "Microsoft.Extensions.Primitives": {
+        "type": "Transitive",
+        "resolved": "9.0.23",
+        "contentHash": "exasnJ2Jqab52j2z4yyNUH3k8eA1lPJetl7ULYSAYcIA+jEnnfQy28WUed7sGQYm+XjGXoSH1vucSigkdKqaMg=="
+      },
+      "Microsoft.Win32.SystemEvents": {
+        "type": "Transitive",
+        "resolved": "9.0.23",
+        "contentHash": "C90EMB2xYDFe92CC+MaF4xEHO8M58Co5kFrrT9AygBxp9lytk5Zh3rtIOxh5fDkoUAqC9FRFfFqkOheINZWbEg=="
+      },
+      "System.CodeDom": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "WTlRjL6KWIMr/pAaq3rYqh0TJlzpouaQ/W1eelssHgtlwHAH25jXTkUphTYx9HaIIf7XA6qs/0+YhtLEQRkJ+Q=="
+      },
+      "System.Diagnostics.DiagnosticSource": {
+        "type": "Transitive",
+        "resolved": "9.0.23",
+        "contentHash": "PkSL9NarmNeTgTxhdnmvVD6jfOr1vn+fbYvInPUddrbS8aBL1yYvclEYSxKriXDMAW2zfjdU3Qw2571Wft3VNA=="
+      },
+      "System.Diagnostics.EventLog": {
+        "type": "Transitive",
+        "resolved": "9.0.23",
+        "contentHash": "CsduDjF/l+TcybLoshLCe62wQxaCElmaYE4Ze8s0UYjwNsVJ+IN0hqXp0nwUk1XIgM40RG2M9enmeWQkaJ8mwg=="
+      },
+      "WPF-UI.Abstractions": {
+        "type": "Transitive",
+        "resolved": "4.3.0",
+        "contentHash": "7Kj9DmCCo4SOCd1jAiw4+EcMFP2nR8rLLvitAYzVtzbWToTsodkbie24+8x9C4LDLxkopWEUGX62szqqNy7oeg=="
+      }
+    },
+    "net8.0-windows10.0.22000/win-x64": {
+      "System.Management": {
+        "type": "Direct",
+        "requested": "[8.0.0, )",
+        "resolved": "8.0.0",
+        "contentHash": "jrK22i5LRzxZCfGb+tGmke2VH7oE0DvcDlJ1HAKYU8cPmD8XnpUT0bYn2Gy98GEhGjtfbR/sxKTVb+dE770pfA==",
+        "dependencies": {
+          "System.CodeDom": "8.0.0"
+        }
+      },
+      "System.ServiceProcess.ServiceController": {
+        "type": "Direct",
+        "requested": "[9.0.23, )",
+        "resolved": "9.0.23",
+        "contentHash": "zwVO6rMy23xrj2XAzd870bayP6WqJCQp2PIDgCoBD38ylN2DDORC4esLliYn+T4vqwchrEMyLrahl+Evx0gyLw==",
+        "dependencies": {
+          "System.Diagnostics.EventLog": "9.0.23"
+        }
+      },
+      "Microsoft.Win32.SystemEvents": {
+        "type": "Transitive",
+        "resolved": "9.0.23",
+        "contentHash": "C90EMB2xYDFe92CC+MaF4xEHO8M58Co5kFrrT9AygBxp9lytk5Zh3rtIOxh5fDkoUAqC9FRFfFqkOheINZWbEg=="
+      },
+      "System.Diagnostics.EventLog": {
+        "type": "Transitive",
+        "resolved": "9.0.23",
+        "contentHash": "CsduDjF/l+TcybLoshLCe62wQxaCElmaYE4Ze8s0UYjwNsVJ+IN0hqXp0nwUk1XIgM40RG2M9enmeWQkaJ8mwg=="
+      }
+    }
+  }
+}
