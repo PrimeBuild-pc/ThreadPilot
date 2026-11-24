@@ -22,13 +22,13 @@ jobs:
           if ($LASTEXITCODE) { throw 'The Store packaging branch must be merged before this preview can run.' }
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
-          dotnet-version: '8.0.428'
+          dotnet-version: '8.0.427'
       - name: Build and verify the unsigned Store package
         shell: powershell
         run: |
           $output = Join-Path $env:RUNNER_TEMP 'store-preview'
           # Pin the Store SDK in the disposable checkout. The repository SDK can roll forward for CI.
-          '{"sdk":{"version":"8.0.428","rollForward":"disable"}}' |
+          '{"sdk":{"version":"8.0.427","rollForward":"disable"}}' |
             Set-Content -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'global.json') -Encoding ascii
           ./packaging/msix/Build-Msix.ps1 -OutputDirectory $output
           $packages = @(Get-ChildItem -LiteralPath $output -File -Filter '*-Store.msix')
