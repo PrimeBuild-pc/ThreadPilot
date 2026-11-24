@@ -283,6 +283,8 @@ Contributions are welcome. Before opening a pull request, please read [`docs/CON
 
 For bugs, feature requests, or packaging issues, open a GitHub issue with reproduction steps and your Windows version.
 
+Support: [primebuild.official@gmail.com](mailto:primebuild.official@gmail.com) · [primebuild.website](https://primebuild.website). What stays on the system after uninstalling is listed in [`docs/PRIVACY.md`](docs/PRIVACY.md).
+
 ## 📄 License
 
 ThreadPilot is licensed under the **GNU Affero General Public License v3.0**. See [`LICENSE`](LICENSE).
