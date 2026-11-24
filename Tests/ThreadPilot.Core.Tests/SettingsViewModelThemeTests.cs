@@ -427,6 +427,7 @@ namespace ThreadPilot.Core.Tests
                     UseDarkTheme = initialDarkTheme,
                     HasUserThemePreference = initialDarkTheme,
                     StartMinimized = initialStartMinimized,
+                    AutostartWithWindows = true,
                 };
                 this.SettingsService.SetupGet(service => service.Settings).Returns(this.settings);
                 this.Autostart

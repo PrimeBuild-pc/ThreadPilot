@@ -38,6 +38,9 @@
     <sys:String x:Key="MainWindow_ElevationWarningOverlay">Предупреждение о повышении прав</sys:String>
     <sys:String x:Key="MainWindow_PerformanceIntroductionOverlay">Оверлей представления производительности</sys:String>
     <sys:String x:Key="MainWindow_StartupMinimizedSuggestion">Предложение при запуске свернуто</sys:String>
+    <sys:String x:Key="MainWindow_AutostartOffNoticeTitle">Запуск вместе с Windows отключён</sys:String>
+    <sys:String x:Key="MainWindow_AutostartOffNoticeDescription">ThreadPilot не запускается автоматически при входе в Windows и не создаёт запланированных задач, пока вы не включите этот параметр. Его можно включить сейчас или позже в настройках.</sys:String>
+    <sys:String x:Key="MainWindow_EnableAutostartNow">Включить сейчас</sys:String>
     <sys:String x:Key="MainWindow_UnsavedSettingsDialog">Диалог несохраненных настроек</sys:String>
     <sys:String x:Key="MainWindow_LoadingOverlay">Оверлей загрузки приложения при запуске</sys:String>
 

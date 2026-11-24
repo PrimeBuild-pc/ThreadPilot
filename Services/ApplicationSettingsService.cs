@@ -102,6 +102,7 @@ namespace ThreadPilot.Services
 
                 var legacyThemePreferenceDetected = false;
                 var hasLanguagePreference = false;
+                var hasAutostartPreference = true;
 
                 try
                 {
@@ -114,6 +115,7 @@ namespace ThreadPilot.Services
                         hasLanguagePreference = document.RootElement.TryGetProperty("language", out var languageElement) &&
                             languageElement.ValueKind == JsonValueKind.String &&
                             !string.IsNullOrWhiteSpace(languageElement.GetString());
+                        hasAutostartPreference = document.RootElement.TryGetProperty("autostartWithWindows", out _);
                     }
                 }
                 catch (JsonException ex)
@@ -133,6 +135,12 @@ namespace ThreadPilot.Services
                     if (!hasLanguagePreference)
                     {
                         loadedSettings.Language = string.Empty;
+                    }
+
+                    // A saved profile without the key predates the opt-in default: keep the old default (on).
+                    if (!hasAutostartPreference)
+                    {
+                        loadedSettings.AutostartWithWindows = true;
                     }
 
                     var languageIsSupported = LocalizationService.TryNormalizeSupportedLanguage(
@@ -390,6 +398,9 @@ namespace ThreadPilot.Services
                 // migrate and nothing to announce.
                 HasMigratedCpuAssignmentModeDefault = true,
                 HasSeenCpuAssignmentModeChangeNotice = true,
+
+                // New installs start with autostart off; tell them once.
+                HasSeenAutostartOffNotice = false,
             };
             return defaults;
         }

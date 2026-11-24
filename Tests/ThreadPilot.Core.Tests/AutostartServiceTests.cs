@@ -63,12 +63,14 @@ namespace ThreadPilot.Core.Tests
             elevatedTaskService
                 .Setup(x => x.EnsureAutostartTaskAsync(It.IsAny<string>(), It.Is<string>(args => args.Contains("--autostart", StringComparison.Ordinal))))
                 .ReturnsAsync(true);
+            elevatedTaskService.Setup(x => x.EnsureLaunchTaskAsync()).ReturnsAsync(true);
 
             var service = CreateService(elevationService, elevatedTaskService);
 
             var result = await service.EnableAutostartAsync(startMinimized: true);
 
             Assert.True(result);
+            elevatedTaskService.Verify(x => x.EnsureLaunchTaskAsync(), Times.Once);
             elevatedTaskService.Verify(
                 x => x.EnsureAutostartTaskAsync(
                     It.IsAny<string>(),
@@ -87,6 +89,7 @@ namespace ThreadPilot.Core.Tests
             var elevatedTaskService = new Mock<IElevatedTaskService>(MockBehavior.Strict);
             elevatedTaskService.Setup(x => x.IsAutostartTaskRegisteredAsync()).ReturnsAsync(false);
             elevatedTaskService.Setup(x => x.RemoveAutostartTaskAsync()).ReturnsAsync(true);
+            elevatedTaskService.Setup(x => x.RemoveLaunchTaskAsync()).ReturnsAsync(true);
 
             var service = CreateService(elevationService, elevatedTaskService);
 
@@ -94,6 +97,7 @@ namespace ThreadPilot.Core.Tests
 
             Assert.True(result);
             elevatedTaskService.Verify(x => x.RemoveAutostartTaskAsync(), Times.Once);
+            elevatedTaskService.Verify(x => x.RemoveLaunchTaskAsync(), Times.Once);
         }
 
         [Fact]
@@ -107,6 +111,47 @@ namespace ThreadPilot.Core.Tests
 
             Assert.False(await service.CheckAutostartStatusAsync());
             Assert.False(service.IsAutostartEnabled);
+        }
+
+        [Fact]
+        public async Task EnsureAutostartAsync_WhenTaskPointsAtAnOlderPackageFolder_ReRegistersIt()
+        {
+            // A Store update moves the exe to a new versioned folder; the old task would fail at logon.
+            var elevation = new Mock<IElevationService>();
+            elevation.Setup(x => x.IsRunningAsAdministrator()).Returns(true);
+            var elevatedTask = new Mock<IElevatedTaskService>();
+            elevatedTask.Setup(x => x.GetAutostartTaskExecutablePathAsync())
+                .ReturnsAsync(@"C:\Program Files\WindowsApps\LorenzoMassafra.ThreadPilot_1.7.10.0_x64__abc\App\ThreadPilot.exe");
+            elevatedTask.Setup(x => x.EnsureAutostartTaskAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+            elevatedTask.Setup(x => x.EnsureLaunchTaskAsync()).ReturnsAsync(true);
+            var service = new FixedPathAutostartService(elevation.Object, elevatedTask.Object, CurrentPackageExe);
+
+            await service.EnsureAutostartAsync(startMinimized: true);
+
+            elevatedTask.Verify(x => x.EnsureAutostartTaskAsync(CurrentPackageExe, It.Is<string>(a => a.Contains("--autostart", StringComparison.Ordinal))), Times.Once);
+            elevatedTask.Verify(x => x.EnsureLaunchTaskAsync(), Times.Once);
+        }
+
+        [Fact]
+        public async Task EnsureAutostartAsync_WhenTaskAlreadyPointsHere_OnlyRefreshesTheLaunchTask()
+        {
+            var elevatedTask = new Mock<IElevatedTaskService>();
+            elevatedTask.Setup(x => x.GetAutostartTaskExecutablePathAsync()).ReturnsAsync(CurrentPackageExe.ToUpperInvariant());
+            elevatedTask.Setup(x => x.EnsureLaunchTaskAsync()).ReturnsAsync(true);
+            var service = new FixedPathAutostartService(new Mock<IElevationService>().Object, elevatedTask.Object, CurrentPackageExe);
+
+            await service.EnsureAutostartAsync(startMinimized: true);
+
+            elevatedTask.Verify(x => x.EnsureAutostartTaskAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            elevatedTask.Verify(x => x.EnsureLaunchTaskAsync(), Times.Once);
+        }
+
+        private const string CurrentPackageExe = @"C:\Program Files\WindowsApps\LorenzoMassafra.ThreadPilot_1.7.11.0_x64__abc\App\ThreadPilot.exe";
+
+        private sealed class FixedPathAutostartService(IElevationService elevation, IElevatedTaskService elevatedTask, string exePath)
+            : AutostartService(NullLogger<AutostartService>.Instance, elevation, elevatedTask)
+        {
+            internal override string? GetExecutablePath() => exePath;
         }
 
         private sealed class LegacyRunEntryAutostartService(IElevationService elevation, IElevatedTaskService elevatedTask)

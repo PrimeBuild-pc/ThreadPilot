@@ -415,6 +415,53 @@
                 </Border>
             </Grid>
 
+            <Grid x:Name="AutostartOffNoticeOverlay"
+                  Visibility="Collapsed"
+                  Panel.ZIndex="957"
+                  Background="{DynamicResource OverlayBrush}"
+                  AutomationProperties.Name="{DynamicResource MainWindow_AutostartOffNoticeTitle}">
+                <Border Background="{DynamicResource CardSurfaceBrush}"
+                        BorderBrush="{DynamicResource BorderSubtleBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{DynamicResource StandardCardCornerRadius}"
+                        Padding="20"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Top"
+                        Margin="0,56,0,0"
+                        MinWidth="420"
+                        MaxWidth="560"
+                        IsHitTestVisible="True">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity="0.16"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource MainWindow_AutostartOffNoticeTitle}"
+                                   FontSize="20"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                   Margin="0,0,0,8"/>
+                        <TextBlock Text="{DynamicResource MainWindow_AutostartOffNoticeDescription}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Margin="0,0,0,16"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="{DynamicResource MainWindow_OpenSettings}"
+                                    Click="AutostartOffNoticeOpenSettings_Click"
+                                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                    Padding="14,7"
+                                    Margin="0,0,10,0"/>
+                            <Button x:Name="AutostartOffNoticeEnableButton"
+                                    Content="{DynamicResource MainWindow_EnableAutostartNow}"
+                                    Click="AutostartOffNoticeEnableNow_Click"
+                                    Background="{DynamicResource ControlFillColorTertiaryBrush}"
+                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                    Padding="14,7"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
             <Grid x:Name="CpuAssignmentModeChangedOverlay"
                   Visibility="Collapsed"
                   Panel.ZIndex="956"

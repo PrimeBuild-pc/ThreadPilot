@@ -38,6 +38,9 @@
     <sys:String x:Key="MainWindow_ElevationWarningOverlay">权限提升警告覆盖层</sys:String>
     <sys:String x:Key="MainWindow_PerformanceIntroductionOverlay">性能诊断介绍覆盖层</sys:String>
     <sys:String x:Key="MainWindow_StartupMinimizedSuggestion">启动时最小化建议</sys:String>
+    <sys:String x:Key="MainWindow_AutostartOffNoticeTitle">开机自启已关闭</sys:String>
+    <sys:String x:Key="MainWindow_AutostartOffNoticeDescription">在你开启此选项之前，ThreadPilot 不会在登录 Windows 时自动启动，也不会创建任何计划任务。你可以现在开启，也可以稍后在设置中开启。</sys:String>
+    <sys:String x:Key="MainWindow_EnableAutostartNow">立即开启</sys:String>
     <sys:String x:Key="MainWindow_UnsavedSettingsDialog">未保存设置对话框</sys:String>
     <sys:String x:Key="MainWindow_LoadingOverlay">应用启动加载覆盖层</sys:String>
     

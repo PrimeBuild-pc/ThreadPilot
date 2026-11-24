@@ -138,9 +138,36 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal(5000, service.Settings.BalloonNotificationTimeoutMs);
             Assert.True(service.Settings.EnableSelfLowImpactMode);
             Assert.False(service.Settings.EnableSelfAffinityLimit);
-            Assert.True(service.Settings.AutostartWithWindows);
+            Assert.False(service.Settings.AutostartWithWindows);
+            Assert.False(service.Settings.HasSeenAutostartOffNotice);
             Assert.False(service.Settings.StartMinimized);
             Assert.Equal("en-US", service.Settings.Language);
+        }
+
+        [Fact]
+        public async Task LoadSettingsAsync_ProfileSavedBeforeOptInDefault_KeepsAutostartOnWithoutNotice()
+        {
+            var storage = new FakeSettingsStorage();
+            storage.Files[TestPaths.SettingsFilePath] = "{ \"startMinimized\": true }";
+            var service = CreateService(storage);
+
+            await service.LoadSettingsAsync();
+
+            Assert.True(service.Settings.AutostartWithWindows);
+            Assert.True(service.Settings.HasSeenAutostartOffNotice);
+        }
+
+        [Fact]
+        public async Task LoadSettingsAsync_SavedAutostartChoice_IsKept()
+        {
+            var storage = new FakeSettingsStorage();
+            storage.Files[TestPaths.SettingsFilePath] = "{ \"autostartWithWindows\": false }";
+            var service = CreateService(storage);
+
+            await service.LoadSettingsAsync();
+
+            Assert.False(service.Settings.AutostartWithWindows);
+            Assert.True(service.Settings.HasSeenAutostartOffNotice);
         }
 
         [Fact]

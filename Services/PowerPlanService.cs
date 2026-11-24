@@ -56,6 +56,11 @@ namespace ThreadPilot.Services
         {
             StoragePaths.EnsureAppDataDirectories();
 
+            if (StoreDistribution.IsStoreBuild)
+            {
+                return StoragePaths.PowerPlansDirectory;
+            }
+
             // Check portable mode first (Powerplans folder next to EXE)
             var exeDir = AppContext.BaseDirectory;
             var portablePath = Path.Combine(exeDir, "Powerplans");

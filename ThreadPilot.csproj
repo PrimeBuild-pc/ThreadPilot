@@ -23,10 +23,14 @@
          copies text, and an elevated process should not deserialize data another program can put there. -->
     <EnableUnsafeBinaryFormatterSerialization>false</EnableUnsafeBinaryFormatterSerialization>
     <NoWarn>CS1998;CS0067;CS0414;WFAC010;IL3000;MVVMTK0034</NoWarn>
-    <Version>1.7.10</Version>
-    <AssemblyVersion>1.7.10.0</AssemblyVersion>
-    <FileVersion>1.7.10.0</FileVersion>
-    <InformationalVersion>1.7.10</InformationalVersion>
+    <Version>1.7.11</Version>
+    <AssemblyVersion>1.7.11.0</AssemblyVersion>
+    <FileVersion>1.7.11.0</FileVersion>
+    <InformationalVersion>1.7.11</InformationalVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(StorePackage)' == 'true'">
+    <DefineConstants>$(DefineConstants);MSIX_STORE</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

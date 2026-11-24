@@ -38,6 +38,9 @@
     <sys:String x:Key="MainWindow_ElevationWarningOverlay">Avertissement d’élévation de privilèges</sys:String>
     <sys:String x:Key="MainWindow_PerformanceIntroductionOverlay">Superposition d'introduction aux performances</sys:String>
     <sys:String x:Key="MainWindow_StartupMinimizedSuggestion">Suggestion réduite au démarrage</sys:String>
+    <sys:String x:Key="MainWindow_AutostartOffNoticeTitle">Le démarrage avec Windows est désactivé</sys:String>
+    <sys:String x:Key="MainWindow_AutostartOffNoticeDescription">ThreadPilot ne démarre pas automatiquement à l’ouverture de session Windows et ne crée aucune tâche planifiée tant que vous n’activez pas cette option. Vous pouvez l’activer maintenant ou plus tard dans les paramètres.</sys:String>
+    <sys:String x:Key="MainWindow_EnableAutostartNow">Activer maintenant</sys:String>
     <sys:String x:Key="MainWindow_UnsavedSettingsDialog">Boîte de dialogue Paramètres non enregistrés</sys:String>
     <sys:String x:Key="MainWindow_LoadingOverlay">Superposition de chargement au démarrage de l'application</sys:String>
 

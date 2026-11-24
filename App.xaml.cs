@@ -198,23 +198,22 @@ namespace ThreadPilot
 
             if (isRunningAsAdministrator)
             {
-                // Off the UI thread and in this order: the launch-task pass deletes tasks pointing outside Program
-                // Files, then autostart is restored for this copy if the user asked for it (e.g. right after a
-                // portable copy installed itself in Program Files).
+                // Off the UI thread. Both scheduled tasks (logon and UAC-free launch) exist only while the user
+                // has autostart on: EnsureAutostartAsync re-points them at this copy (after an update or a portable
+                // copy installing itself in Program Files); otherwise the launch task is removed.
                 var autostartService = this.ServiceProvider.GetRequiredService<IAutostartService>();
                 var wantsAutostart = loadedSettings?.AutostartWithWindows == true;
                 var autostartMinimized = loadedSettings?.StartMinimized ?? true;
                 TaskSafety.FireAndForget(
                     Task.Run(async () =>
                     {
-                        if (!await elevatedTaskService.EnsureLaunchTaskAsync())
-                        {
-                            logger.LogInformation("Elevated launch task not available; the next launch will ask for elevation.");
-                        }
-
                         if (wantsAutostart)
                         {
                             await autostartService.EnsureAutostartAsync(autostartMinimized);
+                        }
+                        else
+                        {
+                            await elevatedTaskService.RemoveLaunchTaskAsync();
                         }
 
                         new UpdateTempDirectoryProvider().CleanupStale(TimeSpan.FromDays(1));
