@@ -25,6 +25,7 @@ namespace ThreadPilot.Services
         private readonly Func<string?>? executablePathProvider;
         private readonly Func<string>? currentUserProvider;
         private readonly Func<string?, bool> isProtectedInstallPath;
+        private readonly Func<string?> packageFamilyNameProvider;
 
         public ElevatedTaskService(ILogger<ElevatedTaskService> logger, IProcessRunner processRunner)
             : this(logger, processRunner, null, null)
@@ -36,14 +37,23 @@ namespace ThreadPilot.Services
             IProcessRunner processRunner,
             Func<string?>? executablePathProvider,
             Func<string>? currentUserProvider,
-            Func<string?, bool>? isProtectedInstallPath = null)
+            Func<string?, bool>? isProtectedInstallPath = null,
+            Func<string?>? packageFamilyNameProvider = null)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.processRunner = processRunner ?? throw new ArgumentNullException(nameof(processRunner));
             this.executablePathProvider = executablePathProvider;
             this.currentUserProvider = currentUserProvider;
             this.isProtectedInstallPath = isProtectedInstallPath ?? IsProtectedInstallPath;
+            this.packageFamilyNameProvider = packageFamilyNameProvider ?? GetCurrentPackageFamilyName;
         }
+
+        /// <summary>
+        /// Store build: the logon task runs this (non-elevated) to activate the package by its app ID. Started by path,
+        /// a packaged exe has no package identity and can fail to load files MSIX shares between packages; activation
+        /// gives identity, and Windows then asks for UAC consent because the exe requires administrator rights.
+        /// </summary>
+        public static string StoreActivationLauncherPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe");
 
         public string LaunchTaskName => StoreDistribution.IsStoreBuild ? "ThreadPilot_Store_Launch" : "ThreadPilot_Launch";
 
@@ -79,6 +89,13 @@ namespace ThreadPilot.Services
 
         public async Task<bool> EnsureLaunchTaskAsync()
         {
+            if (StoreDistribution.IsStoreBuild)
+            {
+                // No UAC-free launch in the Store build: every elevation is a UAC prompt. Drop any older task.
+                await this.RemoveLaunchTaskAsync();
+                return false;
+            }
+
             try
             {
                 var executablePath = this.executablePathProvider?.Invoke() ?? this.GetExecutablePath();
@@ -209,14 +226,34 @@ namespace ThreadPilot.Services
                     return false;
                 }
 
-                var taskRunCommand = BuildCommand(executablePath, arguments);
+                string taskRunCommand;
+                string runLevel;
+                if (StoreDistribution.IsStoreBuild)
+                {
+                    var packageFamilyName = this.packageFamilyNameProvider();
+                    if (string.IsNullOrWhiteSpace(packageFamilyName))
+                    {
+                        LogAutostartTaskNoPackageIdentity(this.logger);
+                        return false;
+                    }
+
+                    // Arguments are not needed: "Start minimized" is read from settings.
+                    taskRunCommand = BuildCommand(StoreActivationLauncherPath, $"shell:AppsFolder\\{packageFamilyName}!App");
+                    runLevel = "LIMITED";
+                }
+                else
+                {
+                    taskRunCommand = BuildCommand(executablePath, arguments);
+                    runLevel = "HIGHEST";
+                }
+
                 var result = await this.RunSchTasksAsync(new List<string>
                 {
                     "/Create",
                     "/TN", this.AutostartTaskName,
                     "/TR", taskRunCommand,
                     "/SC", "ONLOGON",
-                    "/RL", "HIGHEST",
+                    "/RL", runLevel,
                     "/F",
                     "/RU", Environment.UserName,
                 });
@@ -298,7 +335,7 @@ namespace ThreadPilot.Services
             foreach (var taskName in new[] { this.LaunchTaskName, this.AutostartTaskName })
             {
                 var command = await this.QueryTaskCommandAsync(taskName);
-                if (command == null || this.isProtectedInstallPath(command))
+                if (command == null || this.isProtectedInstallPath(command) || IsStoreActivationCommand(command))
                 {
                     continue;
                 }
@@ -352,6 +389,26 @@ namespace ThreadPilot.Services
                 return null;
             }
         }
+
+        private static bool IsStoreActivationCommand(string command) =>
+            StoreDistribution.IsStoreBuild && string.Equals(command, StoreActivationLauncherPath, StringComparison.OrdinalIgnoreCase);
+
+        private static string? GetCurrentPackageFamilyName()
+        {
+            var length = 0;
+            if (GetCurrentPackageFamilyNameNative(ref length, null) != ErrorInsufficientBuffer)
+            {
+                return null; // APPMODEL_ERROR_NO_PACKAGE: not running with package identity.
+            }
+
+            var buffer = new StringBuilder(length);
+            return GetCurrentPackageFamilyNameNative(ref length, buffer) == 0 ? buffer.ToString() : null;
+        }
+
+        private const int ErrorInsufficientBuffer = 122;
+
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", EntryPoint = "GetCurrentPackageFamilyName", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        private static extern int GetCurrentPackageFamilyNameNative(ref int packageFamilyNameLength, StringBuilder? packageFamilyName);
 
         private static string BuildCommand(string executablePath, string arguments)
         {
@@ -536,5 +593,8 @@ namespace ThreadPilot.Services
 
         [LoggerMessage(EventId = 4273, Level = LogLevel.Warning, Message = "Exception while removing elevated launch task")]
         private static partial void LogRemoveLaunchTaskException(ILogger logger, Exception ex);
+
+        [LoggerMessage(EventId = 4274, Level = LogLevel.Warning, Message = "Autostart task not registered: the Store build is running without package identity")]
+        private static partial void LogAutostartTaskNoPackageIdentity(ILogger logger);
     }
 }

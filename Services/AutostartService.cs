@@ -54,7 +54,9 @@ namespace ThreadPilot.Services
         private async Task<bool> AutostartTaskTargetsCurrentExecutableAsync()
         {
             var taskPath = await this.elevatedTaskService.GetAutostartTaskExecutablePathAsync();
-            var currentPath = this.GetExecutablePath();
+
+            // The Store task activates the package by app ID, which survives updates; an older task that ran the exe by path does not match.
+            var currentPath = StoreDistribution.IsStoreBuild ? ElevatedTaskService.StoreActivationLauncherPath : this.GetExecutablePath();
             if (string.IsNullOrWhiteSpace(taskPath) || string.IsNullOrWhiteSpace(currentPath))
             {
                 return false;
@@ -110,8 +112,8 @@ namespace ThreadPilot.Services
                     return false;
                 }
 
-                // The UAC-free launch task exists only while autostart is on.
-                if (!await this.elevatedTaskService.EnsureLaunchTaskAsync())
+                // The UAC-free launch task exists only while autostart is on; the Store build deletes it instead (no UAC-free path).
+                if (!await this.elevatedTaskService.EnsureLaunchTaskAsync() && !StoreDistribution.IsStoreBuild)
                 {
                     LogLaunchTaskNotEnsured(this.logger);
                 }

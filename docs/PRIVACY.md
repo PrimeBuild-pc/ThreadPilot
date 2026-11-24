@@ -22,7 +22,7 @@ Uninstalling the app (including the Microsoft Store edition) removes its program
 
 - Registry priority entries: `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\<program>\PerfOptions\CpuPriorityClass`.
 - Tweaked values: Prefetch, Power Throttling, MMCSS Games scheduling, Ethernet and GPU driver properties, power-scheme AC values, mouse, menu-delay and Game Mode values, and the start type of the SysMain service.
-- Scheduled tasks `ThreadPilot_Launch`, `ThreadPilot_Startup`, `ThreadPilot_Store_Launch` and `ThreadPilot_Store_Startup`. Since 1.7.11 they exist only while "Start with Windows" is on (off by default for new installs); turning it off removes them. Turn it off before uninstalling, or delete them in Task Scheduler as administrator.
+- Scheduled tasks `ThreadPilot_Launch`, `ThreadPilot_Startup`, `ThreadPilot_Store_Launch` and `ThreadPilot_Store_Startup`. Since 1.7.11 they exist only while "Start with Windows" is on (off by default for new installs); turning it off removes them. The Microsoft Store edition creates only `ThreadPilot_Store_Startup`, which is not elevated: Windows shows the UAC prompt at sign-in. Turn it off before uninstalling, or delete them in Task Scheduler as administrator.
 - Power plans imported into Windows (remove with the Power Plans page or `powercfg /delete`).
 - Local data: `%APPDATA%\ThreadPilot` (settings, rules, profiles, tweak backups) and `%LOCALAPPDATA%\ThreadPilot\Logs`. Delete them after restoring.
 

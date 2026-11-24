@@ -47,8 +47,8 @@ System changes and external data persist after package removal. Uninstalling MSI
 - The embedded EXE manifest still requires `requireAdministrator` at startup.
 - Settings, profiles, configuration, masks, undo data and power plans use `%APPDATA%\ThreadPilot`; logs use `%LOCALAPPDATA%\ThreadPilot\Logs`. The Store build never chooses a power-plan folder inside its immutable payload.
 - Existing migration sources beside the executable are read-only inputs; no user data is included in the MSIX.
-- Elevated tasks are named `ThreadPilot_Store_Launch` and `ThreadPilot_Store_Startup`, so they do not replace the EXE-channel tasks. Since 1.7.11 both exist only while "Start with Windows" is on (off for new installs, in every channel); turning it off deletes them. The task commands point at the current protected package executable path.
-- Package paths contain a version. Since 1.7.11 each elevated start with autostart on compares the startup task's command with the current executable and re-registers it if it differs, and refreshes the launch task. A real Store-to-Store update has not been exercised yet. Custom package volumes outside Program Files are not supported by the existing protected-path check.
+- The Store build creates one task, `ThreadPilot_Store_Startup`, and only while "Start with Windows" is on (off for new installs, in every channel). It is **not elevated** (`/RL LIMITED`) and runs `%windir%\explorer.exe shell:AppsFolder\<package family name>!App`: normal package activation, so the app gets package identity and Windows shows the UAC prompt at sign-in. A packaged exe started by path has no identity and can fail to load files MSIX shares between packages (seen as `FileNotFoundException: WinRT.Runtime`). The UAC-free `ThreadPilot_Store_Launch` task is never created by the Store build; a leftover one is deleted. The EXE channel keeps its own `ThreadPilot_Launch`/`ThreadPilot_Startup`.
+- The activation target (package family name and app ID) does not change across updates. Each elevated start with autostart on re-registers the startup task if it is missing or still in the older run-the-exe-by-path form. A sideloaded update 1.7.11.0 → 1.7.12.0 was exercised on a host; a Store-delivered update has not been. Custom package volumes outside Program Files are not supported by the existing protected-path check.
 - The existing EXE-channel settings are shared. Back them up before testing; do not run the EXE and MSIX simultaneously. The EXE uninstaller may remove shared app data.
 - All GitHub update checks and EXE installer execution are blocked by the Store channel, including a guard in the installer service itself.
 
@@ -69,7 +69,7 @@ dotnet test .\Tests\ThreadPilot.Core.Tests\ThreadPilot.Core.Tests.csproj -c Rele
 dotnet test .\Tests\ThreadPilot.Core.Tests\ThreadPilot.Core.Tests.csproj -c Release -p:StorePackage=true --filter 'FullyQualifiedName~StorePackage'
 ```
 
-Recorded results (1.7.11): 969 EXE-channel tests and 3 Store-channel safety tests passed. ThreadPilot emits existing analyzer/style warnings; consult the build log. VM launch/UAC/data/tweak round trips, lifecycle updates, uninstall and full WACK remain to be verified in the shared VM by the original chat.
+Recorded results (1.7.11): 969 EXE-channel tests and 6 Store-channel tests passed. ThreadPilot emits existing analyzer/style warnings; consult the build log. VM launch/UAC/data/tweak round trips, lifecycle updates, uninstall and full WACK remain to be verified in the shared VM by the original chat.
 
 ## Microsoft references
 
