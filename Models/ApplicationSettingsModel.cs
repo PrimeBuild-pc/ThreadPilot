@@ -78,9 +78,10 @@ namespace ThreadPilot.Models
         [ObservableProperty]
         private int maxNotificationHistoryItems = 50;
 
-        // Autostart Settings
+        // Autostart Settings. Off for new installs since 1.7.11: the logon task and the UAC-free launch task are
+        // created only after the user turns this on. Profiles saved before then keep their value.
         [ObservableProperty]
-        private bool autostartWithWindows = true;
+        private bool autostartWithWindows = false;
 
         // Power Plan Settings
         [ObservableProperty]
@@ -163,6 +164,11 @@ namespace ThreadPilot.Models
 
         [ObservableProperty]
         private bool hasSeenStartupMinimizedSuggestion = false;
+
+        // True for profiles saved before the notice existed (their autostart choice was already made);
+        // a brand-new profile clears it in CreateDefaultSettings so the notice is shown once.
+        [ObservableProperty]
+        private bool hasSeenAutostartOffNotice = true;
 
         [ObservableProperty]
         private bool enableSelfLowImpactMode = true;
@@ -258,6 +264,7 @@ namespace ThreadPilot.Models
             this.HasSeenPerformanceIntro = other.HasSeenPerformanceIntro;
             this.HasSeenElevationWarning = other.HasSeenElevationWarning;
             this.HasSeenStartupMinimizedSuggestion = other.HasSeenStartupMinimizedSuggestion;
+            this.HasSeenAutostartOffNotice = other.HasSeenAutostartOffNotice;
             this.HasMigratedCpuAssignmentModeDefault = other.HasMigratedCpuAssignmentModeDefault;
             this.HasSeenCpuAssignmentModeChangeNotice = other.HasSeenCpuAssignmentModeChangeNotice;
             this.HasMigratedPersistentRuleCpuAssignmentModes = other.HasMigratedPersistentRuleCpuAssignmentModes;

@@ -38,6 +38,9 @@
     <sys:String x:Key="MainWindow_ElevationWarningOverlay">Warnung zur Rechteerhöhung</sys:String>
     <sys:String x:Key="MainWindow_PerformanceIntroductionOverlay">Leistungseinführungs-Overlay</sys:String>
     <sys:String x:Key="MainWindow_StartupMinimizedSuggestion">Vorschlag zum minimierten Start</sys:String>
+    <sys:String x:Key="MainWindow_AutostartOffNoticeTitle">Start mit Windows ist aus</sys:String>
+    <sys:String x:Key="MainWindow_AutostartOffNoticeDescription">ThreadPilot startet nicht automatisch bei der Windows-Anmeldung und legt keine geplante Aufgabe an, bis Sie diese Option aktivieren. Sie können sie jetzt oder später in den Einstellungen aktivieren.</sys:String>
+    <sys:String x:Key="MainWindow_EnableAutostartNow">Jetzt aktivieren</sys:String>
     <sys:String x:Key="MainWindow_UnsavedSettingsDialog">Dialogfeld „Nicht gespeicherte Einstellungen“.</sys:String>
     <sys:String x:Key="MainWindow_LoadingOverlay">Overlay zum Laden der Anwendung beim Start</sys:String>
 

@@ -30,7 +30,8 @@ namespace ThreadPilot.Core.Tests
         {
             var settings = new ApplicationSettingsModel();
 
-            Assert.True(settings.AutostartWithWindows);
+            Assert.False(settings.AutostartWithWindows);
+            Assert.True(settings.HasSeenAutostartOffNotice);
             Assert.False(settings.StartMinimized);
             Assert.True(settings.ApplyPersistentRulesOnProcessStart);
             Assert.True(settings.EnableAutomationMonitoring);

@@ -38,6 +38,9 @@
     <sys:String x:Key="MainWindow_ElevationWarningOverlay">Elevation warning overlay</sys:String>
     <sys:String x:Key="MainWindow_PerformanceIntroductionOverlay">Performance introduction overlay</sys:String>
     <sys:String x:Key="MainWindow_StartupMinimizedSuggestion">Startup minimized suggestion</sys:String>
+    <sys:String x:Key="MainWindow_AutostartOffNoticeTitle">Start with Windows is off</sys:String>
+    <sys:String x:Key="MainWindow_AutostartOffNoticeDescription">ThreadPilot does not start automatically when you sign in to Windows, and it creates no scheduled task until you turn this on. You can turn it on now or later in Settings.</sys:String>
+    <sys:String x:Key="MainWindow_EnableAutostartNow">Turn on now</sys:String>
     <sys:String x:Key="MainWindow_UnsavedSettingsDialog">Unsaved settings dialog</sys:String>
     <sys:String x:Key="MainWindow_LoadingOverlay">Application startup loading overlay</sys:String>
     

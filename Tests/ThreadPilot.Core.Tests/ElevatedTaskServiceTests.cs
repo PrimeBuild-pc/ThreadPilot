@@ -187,6 +187,32 @@ namespace ThreadPilot.Core.Tests
             }
         }
 
+        [Fact]
+        public async Task RemoveLaunchTaskAsync_DeletesTheLaunchTask_AndTreatsAMissingTaskAsRemoved()
+        {
+            var runner = new RecordingProcessRunner
+            {
+                // No task exists: every query and delete reports "not found".
+                ResultFactory = _ => new ProcessRunResult(1, string.Empty, "not found"),
+            };
+            var service = CreateService(runner);
+
+            Assert.True(await service.RemoveLaunchTaskAsync());
+            Assert.Contains(runner.Invocations, invocation => invocation.Arguments.SequenceEqual(new[] { "/Delete", "/TN", service.LaunchTaskName, "/F" }));
+            Assert.DoesNotContain(runner.Invocations, invocation => invocation.Arguments[0] == "/Create");
+        }
+
+        [Fact]
+        public async Task GetAutostartTaskExecutablePathAsync_ReturnsTheTaskCommand_OrNullWhenMissing()
+        {
+            const string packaged = @"C:\Program Files\WindowsApps\LorenzoMassafra.ThreadPilot_1.7.10.0_x64__abc\App\ThreadPilot.exe";
+            var present = CreateService(new RecordingProcessRunner { ResultFactory = _ => TaskXml($"\"{packaged}\"") });
+            var missing = CreateService(new RecordingProcessRunner { ResultFactory = _ => new ProcessRunResult(1, string.Empty, "not found") });
+
+            Assert.Equal(packaged, await present.GetAutostartTaskExecutablePathAsync());
+            Assert.Null(await missing.GetAutostartTaskExecutablePathAsync());
+        }
+
         private static ProcessRunResult TaskXml(string command) => new(
             0,
             $"<?xml version=\"1.0\" encoding=\"UTF-16\"?>\r\r\n<Task><Actions><Exec><Command>{command}</Command></Exec></Actions></Task>",

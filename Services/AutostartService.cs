@@ -40,12 +40,34 @@ namespace ThreadPilot.Services
 
         public async Task EnsureAutostartAsync(bool startMinimized)
         {
-            if (!this.IsAutostartSupported || await this.CheckAutostartStatusAsync())
+            // A Store update installs into a new versioned folder, so a task that still exists may point at a removed exe.
+            if (this.IsAutostartSupported && !await this.AutostartTaskTargetsCurrentExecutableAsync())
             {
+                await this.EnableAutostartAsync(startMinimized);
                 return;
             }
 
-            await this.EnableAutostartAsync(startMinimized);
+            // Refreshes the launch task's path; also drops ThreadPilot tasks outside Program Files.
+            await this.elevatedTaskService.EnsureLaunchTaskAsync();
+        }
+
+        private async Task<bool> AutostartTaskTargetsCurrentExecutableAsync()
+        {
+            var taskPath = await this.elevatedTaskService.GetAutostartTaskExecutablePathAsync();
+            var currentPath = this.GetExecutablePath();
+            if (string.IsNullOrWhiteSpace(taskPath) || string.IsNullOrWhiteSpace(currentPath))
+            {
+                return false;
+            }
+
+            try
+            {
+                return string.Equals(Path.GetFullPath(taskPath), Path.GetFullPath(currentPath), StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                return false;
+            }
         }
 
         public async Task<bool> EnableAutostartAsync(bool startMinimized = true)
@@ -86,6 +108,12 @@ namespace ThreadPilot.Services
                 {
                     LogAutostartTaskRegistrationFailed(this.logger);
                     return false;
+                }
+
+                // The UAC-free launch task exists only while autostart is on.
+                if (!await this.elevatedTaskService.EnsureLaunchTaskAsync())
+                {
+                    LogLaunchTaskNotEnsured(this.logger);
                 }
 
                 this.isAutostartEnabled = true;
@@ -135,6 +163,11 @@ namespace ThreadPilot.Services
                 }
 
                 this.TryRemoveLegacyRegistryAutostart();
+
+                if (!await this.elevatedTaskService.RemoveLaunchTaskAsync())
+                {
+                    LogLaunchTaskNotRemoved(this.logger);
+                }
 
                 LogAutostartDisabled(this.logger);
 
@@ -202,7 +235,7 @@ namespace ThreadPilot.Services
             return string.Join(" ", args);
         }
 
-        private string? GetExecutablePath()
+        internal virtual string? GetExecutablePath()
         {
             try
             {
@@ -318,6 +351,12 @@ namespace ThreadPilot.Services
 
         [LoggerMessage(EventId = 4226, Level = LogLevel.Debug, Message = "Failed to remove legacy HKCU Run autostart value")]
         private static partial void LogLegacyRegistryCleanupFailed(ILogger logger, Exception ex);
+
+        [LoggerMessage(EventId = 4227, Level = LogLevel.Warning, Message = "Autostart enabled but the elevated launch task could not be registered")]
+        private static partial void LogLaunchTaskNotEnsured(ILogger logger);
+
+        [LoggerMessage(EventId = 4228, Level = LogLevel.Warning, Message = "Autostart disabled but the elevated launch task could not be removed")]
+        private static partial void LogLaunchTaskNotRemoved(ILogger logger);
     }
 }
 

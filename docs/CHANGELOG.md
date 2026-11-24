@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.7.11 - Start with Windows is opt-in
+
+- Start with Windows is off for new installs; saved settings keep their value. A one-time notice offers to turn it on or open Settings (all seven languages).
+- The sign-in task and the UAC-free launch task are created only while Start with Windows is on; turning it off removes both.
+- At startup the sign-in task is re-registered when it points at an older install folder (Store updates change the package path).
+- First Microsoft Store (MSIX) build.
+
 ## v1.7.9 - Saved rules recover after sleep
 
 - Recreate process monitoring after sleep/hibernation resume and session unlock, then rescan running processes and apply saved rules.

@@ -1,6 +1,6 @@
 param(
     [ValidatePattern('^v?[0-9][0-9A-Za-z.+-]*$')]
-    [string]$Version = "1.7.10",
+    [string]$Version = "1.7.11",
     [string]$PublishDirectory = "artifacts/release/singlefile",
     [string]$OutputDirectory = "artifacts/release/packages"
 )
