@@ -684,7 +684,7 @@
                         </ScrollViewer>
 
                             <WrapPanel Margin="0,6,0,0">
-                                <TextBlock Text="{Binding CurrentAffinityText}" FontSize="{StaticResource ProcessFontSmall}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,16,2"/>
+                                <TextBlock Text="{Binding CurrentAffinityText}" FontSize="{StaticResource ProcessFontSmall}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,16,2"/>
                                 <TextBlock Text="{Binding PendingAffinityText}" FontSize="{StaticResource ProcessFontSmall}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,16,2"/>
                             </WrapPanel>
                             <TextBlock Text="{Binding AffinityEditStateText}" FontSize="{StaticResource ProcessFontSmall}" Foreground="{DynamicResource WarningTextBrush}" TextWrapping="Wrap" Margin="0,0,0,2"/>
