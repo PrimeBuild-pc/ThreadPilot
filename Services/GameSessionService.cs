@@ -935,7 +935,7 @@ namespace ThreadPilot.Services
             if (!result.Success)
             {
                 this.logger.LogInformation("Game Boost could not set efficiency mode {Mode} on {ProcessName} (PID {ProcessId})", mode, process.Name, process.ProcessId);
-                return (ApplyOutcome.Failed, "efficiency mode not applied");
+                return (ApplyOutcome.Failed, string.IsNullOrWhiteSpace(result.UserMessage) ? "efficiency mode not applied" : result.UserMessage.TrimEnd('.'));
             }
 
             await this.ConfirmJournalEntryAsync(entry).ConfigureAwait(false);

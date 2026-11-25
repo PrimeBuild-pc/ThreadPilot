@@ -67,14 +67,17 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public async Task SetEfficiencyModeAsync_WhenWindowsDenies_ReportsAccessDenied()
+        public async Task SetEfficiencyModeAsync_WhenGrantedHandleIsRefused_ReportsProtection()
         {
+            // The handle opened, the call made with it was refused: rights stripped by anti-cheat, not missing admin.
             var nativeApi = new FakeProcessMemoryPriorityNativeApi { SetResult = false, LastError = 5 };
 
             var result = await CreateService(nativeApi).SetEfficiencyModeAsync(CreateProcess(), ProcessEfficiencyMode.On);
 
             Assert.False(result.Success);
             Assert.True(result.IsAccessDenied);
+            Assert.True(result.IsAntiCheatLikely);
+            Assert.Equal(ProcessOperationUserMessages.AntiCheatProtectedLikely, result.UserMessage);
         }
 
         [Fact]
