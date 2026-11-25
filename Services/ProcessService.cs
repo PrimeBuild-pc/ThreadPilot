@@ -400,7 +400,7 @@ namespace ThreadPilot.Services
                     {
                         try
                         {
-                            model.ExecutablePath = process.MainModule?.FileName ?? string.Empty;
+                            model.ExecutablePath = ProcessImagePath.TryGet(model.ProcessId) ?? process.MainModule?.FileName ?? string.Empty;
                             if (startTimeUtc.HasValue && !string.IsNullOrWhiteSpace(model.ExecutablePath))
                             {
                                 this.processMetadata[model.ProcessId] = new ProcessMetadata(startTimeUtc.Value, model.ExecutablePath);
@@ -795,7 +795,7 @@ namespace ThreadPilot.Services
                     process.HasVisibleWindow = process.MainWindowHandle != IntPtr.Zero && !string.IsNullOrWhiteSpace(process.MainWindowTitle);
                     if (string.IsNullOrWhiteSpace(process.ExecutablePath))
                     {
-                        process.ExecutablePath = p.MainModule?.FileName ?? string.Empty;
+                        process.ExecutablePath = ProcessImagePath.TryGet(p.Id) ?? p.MainModule?.FileName ?? string.Empty;
                     }
 
                     this.ApplyProcessClassification(
