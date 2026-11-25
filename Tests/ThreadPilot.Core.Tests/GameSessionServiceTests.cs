@@ -80,6 +80,25 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task ForegroundWithUnreadablePath_IsReportedOnce_AndNotTreatedAsAGame()
+        {
+            // An anti-cheat or protected process may hide its path: the library check then cannot match it.
+            this.processes.Add(701, "ProtectedGame", string.Empty);
+            this.foregroundPid = 701;
+            using var service = this.CreateService();
+
+            for (var i = 0; i < 5; i++)
+            {
+                await service.TickAsync();
+                this.clock.Advance(TimeSpan.FromSeconds(3));
+            }
+
+            Assert.Null(service.ActiveGameName);
+            var entry = Assert.Single(await this.audit.GetEntriesAsync());
+            Assert.Equal("ProtectedGame: not recognized as a game, its executable path cannot be read", entry.Message);
+        }
+
+        [Fact]
         public async Task NonGameForeground_IsNotReexaminedEveryTick_ButIsAfterAWhile()
         {
             this.foregroundPid = ChromePid;

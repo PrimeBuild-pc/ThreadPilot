@@ -248,6 +248,10 @@ namespace ThreadPilot.Services
         // Set by StopAsync: a tick already queued when the timer was disposed must not begin a session.
         private bool stopped;
         private (int ProcessId, long StartTicks, long Timestamp)? rejectedForeground;
+
+        // Foreground processes already reported as unreadable, so the Activity page gets one line each, not one per tick.
+        private readonly HashSet<(int ProcessId, long StartTicks)> reportedUnreadableForeground = new();
+        private string? lastTickFailure;
         private GameSession? session;
         private IGameProcessHandle? gameHandle;
         private GameBoostDecision? cachedDecision;
@@ -402,7 +406,7 @@ namespace ThreadPilot.Services
                 if (this.started && !this.disposed
                     && (this.Settings.GameBoostEnabled || this.startupRecovery != JournalRecoveryState.Complete))
                 {
-                    this.timer ??= new Timer(_ => TaskSafety.FireAndForget(this.TickAsync(), ex => this.logger.LogWarning(ex, "Game Boost tick failed")), null, TickInterval, TickInterval);
+                    this.timer ??= new Timer(_ => TaskSafety.FireAndForget(this.TickAsync(), this.OnTickFailed), null, TickInterval, TickInterval);
                     return;
                 }
 
@@ -502,6 +506,14 @@ namespace ThreadPilot.Services
                 {
                     this.rejectedForeground = (processId, foregroundStartTicks, this.timeProvider.GetTimestamp());
                 }
+                else if (this.reportedUnreadableForeground.Add((processId, foregroundStartTicks)))
+                {
+                    // Without a path the library check cannot match: say so once, or a protected game looks ignored for no reason.
+                    await this.AuditAsync(
+                        ActivityAuditSeverity.Info,
+                        $"{game.Name}: not recognized as a game, its executable path cannot be read",
+                        "Protected or anti-cheat processes can hide it; add the name to Game Boost's manual game list").ConfigureAwait(false);
+                }
 
                 return;
             }
@@ -516,6 +528,17 @@ namespace ThreadPilot.Services
             this.logger.LogInformation("Game Boost session started for {Game} (PID {ProcessId})", game.Name, game.ProcessId);
             await this.AuditSessionStartAsync(game).ConfigureAwait(false);
             await this.ApplyToSessionAsync(includeGame: true).ConfigureAwait(false);
+        }
+
+        // A failing tick repeats every 3 s: Activity (and the log file) get each new error once, not every tick.
+        private void OnTickFailed(Exception ex)
+        {
+            this.logger.LogWarning(ex, "Game Boost tick failed");
+            if (ex.Message != this.lastTickFailure)
+            {
+                this.lastTickFailure = ex.Message;
+                _ = this.AuditAsync(ActivityAuditSeverity.Warning, "Game Boost check failed", ex.Message);
+            }
         }
 
         private async Task AuditSessionStartAsync(ProcessModel game)
