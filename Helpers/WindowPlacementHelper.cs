@@ -32,7 +32,7 @@ namespace ThreadPilot.Helpers
     public static class WindowPlacementHelper
     {
         private const double DefaultWindowWidth = 1280;
-        private const double DefaultWindowHeight = 864;
+        private const double DefaultWindowHeight = 960;
         private const double MinimumVisibleAreaRatio = 0.25;
 
         // A window this close to filling its monitor's working area is treated as having no

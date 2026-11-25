@@ -266,6 +266,9 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleModeLabel">CPU-Zuweisungsmodus</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulePreventSleep">System wach halten, solange dieser Prozess läuft</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">Wählen Sie eine gespeicherte CPU-Maske für die Kerne dieser Regel. Masken werden auf der Seite „CPU-Masken“ bearbeitet.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMaskLabel">CPU-Masken-Vorlage (legt die Kerne fest; der Modus oben entscheidet CPU-Sets oder Affinität)</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMaskPlaceholder">Aktuelle Kerne beibehalten</sys:String>
+    <sys:String x:Key="Rules_TopologyReviewWarning">Diese Regeln legen Kerne einer anderen CPU als der aktuellen fest, daher bedeutet ihre Auswahl möglicherweise nicht mehr dasselbe wie beim Speichern: {0}. Lege ihre Kerne unten mit einer gespeicherten Maske neu fest.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleSave">Änderungen speichern</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_NoSavedRules">Noch keine gespeicherten Prozessregeln. Klicken Sie auf der Registerkarte Prozesse mit der rechten Maustaste auf einen Prozess und wählen Sie Regeln.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">Ausführbar</sys:String>
@@ -293,6 +296,12 @@
     <sys:String x:Key="ProcessView_NoProcessSelected">Kein Prozess ausgewählt</sys:String>
 
     <sys:String x:Key="ProcessView_PendingCoreMask">Ausstehende Kernmaske</sys:String>
+    <sys:String x:Key="ProcessView_CurrentCpuSets">Aktuelle CPU-Sets: CPU {0} ({1})</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromGameBoost">von Game Boost gesetzt, solange das Spiel läuft</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromRule">aus deiner gespeicherten Regel</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromOther">manuell, von der App selbst oder von einem anderen Tool gesetzt</sys:String>
+    <sys:String x:Key="ProcessView_CurrentIdealProcessors">Aktuelle ideale Prozessoren: CPU {0}</sys:String>
+    <sys:String x:Key="ProcessView_NoCpuSetsNote">keine CPU-Sets, Windows wählt die Kerne</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinity">Kerne anwenden</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinityTooltip">Wendet die CPU-Auswahl im gewählten Modus an und überprüft den Windows-Status</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinitySaveRule">CPU-Zuweisung anwenden und als Regel speichern</sys:String>

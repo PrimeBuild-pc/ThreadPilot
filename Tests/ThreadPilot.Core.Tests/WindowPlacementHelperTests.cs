@@ -63,6 +63,15 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal(864, result.Bounds.Height);
         }
 
+        [Theory]
+        [InlineData(1280, 864, 960)]
+        [InlineData(1280, 900, 900)]
+        [InlineData(1100, 864, 864)]
+        public void SavedSize_OnlyTheOldUntouchedDefaultGetsTheNewHeight(double width, double height, double expected)
+        {
+            Assert.Equal(expected, MainWindow.UpgradeLegacyDefaultHeight(width, height));
+        }
+
         [Fact]
         public void CorrectWindowBounds_WhenFillingWorkingAreaAndShrinkRequested_CentersDefaultSizeOnSameMonitor()
         {
@@ -80,9 +89,9 @@ namespace ThreadPilot.Core.Tests
 
             Assert.True(result.WasCorrected);
             Assert.Equal(1280, result.Bounds.Width);
-            Assert.Equal(864, result.Bounds.Height);
+            Assert.Equal(960, result.Bounds.Height);
             Assert.Equal(1920 + ((2560 - 1280) / 2), result.Bounds.Left);
-            Assert.Equal((1400 - 864) / 2, result.Bounds.Top);
+            Assert.Equal((1400 - 960) / 2, result.Bounds.Top);
         }
 
         [Fact]

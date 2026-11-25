@@ -20,7 +20,7 @@ namespace ThreadPilot
                 this.Left = state.WindowLeft.Value;
                 this.Top = state.WindowTop.Value;
                 this.Width = state.WindowWidth.Value;
-                this.Height = state.WindowHeight.Value;
+                this.Height = UpgradeLegacyDefaultHeight(state.WindowWidth.Value, state.WindowHeight.Value);
             }
 
             if (state.WindowMaximized)
@@ -28,6 +28,12 @@ namespace ThreadPilot
                 this.WindowState = WindowState.Maximized;
             }
         }
+
+        // 1280 x 864 was the default size before the editors on the Rules page got taller: a saved size that is
+        // exactly that was never resized by the user, so it gets the new default height. Placement correction still
+        // shrinks it to the screen's working area.
+        internal static double UpgradeLegacyDefaultHeight(double width, double height) =>
+            width == 1280 && height == 864 ? 960 : height;
 
         private void SaveWindowPlacement()
         {

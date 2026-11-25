@@ -266,6 +266,9 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleModeLabel">Режим назначения ЦП</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulePreventSleep">Не давать системе засыпать, пока процесс работает</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">Выберите сохранённую маску CPU для ядер этого правила. Маски редактируются на странице «Маски CPU».</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMaskLabel">Шаблон маски ЦП (задаёт ядра; режим выше определяет CPU Sets или привязку)</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMaskPlaceholder">Оставить текущие ядра</sys:String>
+    <sys:String x:Key="Rules_TopologyReviewWarning">Эти правила закрепляют ядра другого процессора, поэтому их выбор может значить не то, что при сохранении: {0}. Задайте их ядра заново с помощью сохранённой маски ниже.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleSave">Сохранить изменения</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_NoSavedRules">Сохранённых правил процессов пока нет. Щёлкните процесс правой кнопкой на вкладке «Процессы» и выберите «Правила».</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">Исполняемый файл</sys:String>
@@ -293,6 +296,12 @@
     <sys:String x:Key="ProcessView_NoProcessSelected">Процесс не выбран</sys:String>
 
     <sys:String x:Key="ProcessView_PendingCoreMask">Ожидающая маска ядер</sys:String>
+    <sys:String x:Key="ProcessView_CurrentCpuSets">Текущие наборы ЦП (CPU Sets): ЦП {0} ({1})</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromGameBoost">заданы Game Boost, пока запущена игра</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromRule">из вашего сохранённого правила</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromOther">заданы вручную, самим приложением или другой программой</sys:String>
+    <sys:String x:Key="ProcessView_CurrentIdealProcessors">Текущие идеальные процессоры: ЦП {0}</sys:String>
+    <sys:String x:Key="ProcessView_NoCpuSetsNote">нет CPU Sets, ядра выбирает Windows</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinity">Применить ядра</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinityTooltip">Применяет выбор ЦП в выбранном режиме и проверяет состояние Windows.</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinitySaveRule">Применить назначение ЦП и сохранить правило</sys:String>

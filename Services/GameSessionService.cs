@@ -190,6 +190,9 @@ namespace ThreadPilot.Services
 
         Task<GameBoostDecision> GetDecisionAsync();
 
+        /// <summary>True while Game Boost owns the default CPU Sets of this process (confirmed in its journal).</summary>
+        bool HasAppliedCpuSets(int processId);
+
         /// <summary>Undoes what a previous run left behind (crash), then starts watching for games.</summary>
         Task StartAsync();
 
@@ -235,6 +238,9 @@ namespace ThreadPilot.Services
         private readonly object timerGate = new();
 
         private List<GameBoostJournalEntry> journal = new();
+
+        // Read by the UI thread without the state lock: replaced, never mutated, on every journal save.
+        private volatile HashSet<int> cpuSetProcessIds = new HashSet<int>();
         private volatile JournalRecoveryState startupRecovery;
         private Timer? timer;
         private bool started;
@@ -242,6 +248,10 @@ namespace ThreadPilot.Services
         // Set by StopAsync: a tick already queued when the timer was disposed must not begin a session.
         private bool stopped;
         private (int ProcessId, long StartTicks, long Timestamp)? rejectedForeground;
+
+        // Foreground processes already reported as unreadable, so the Activity page gets one line each, not one per tick.
+        private readonly HashSet<(int ProcessId, long StartTicks)> reportedUnreadableForeground = new();
+        private string? lastTickFailure;
         private GameSession? session;
         private IGameProcessHandle? gameHandle;
         private GameBoostDecision? cachedDecision;
@@ -290,6 +300,8 @@ namespace ThreadPilot.Services
         }
 
         public string? ActiveGameName => this.session?.Game.Name;
+
+        public bool HasAppliedCpuSets(int processId) => this.cpuSetProcessIds.Contains(processId);
 
         private ApplicationSettingsModel Settings => this.settingsService.Settings;
 
@@ -394,7 +406,7 @@ namespace ThreadPilot.Services
                 if (this.started && !this.disposed
                     && (this.Settings.GameBoostEnabled || this.startupRecovery != JournalRecoveryState.Complete))
                 {
-                    this.timer ??= new Timer(_ => TaskSafety.FireAndForget(this.TickAsync(), ex => this.logger.LogWarning(ex, "Game Boost tick failed")), null, TickInterval, TickInterval);
+                    this.timer ??= new Timer(_ => TaskSafety.FireAndForget(this.RunTickAsync(), this.OnTickFailed), null, TickInterval, TickInterval);
                     return;
                 }
 
@@ -494,6 +506,14 @@ namespace ThreadPilot.Services
                 {
                     this.rejectedForeground = (processId, foregroundStartTicks, this.timeProvider.GetTimestamp());
                 }
+                else if (this.reportedUnreadableForeground.Add((processId, foregroundStartTicks)))
+                {
+                    // Without a path the library check cannot match: say so once, or a protected game looks ignored for no reason.
+                    await this.AuditAsync(
+                        ActivityAuditSeverity.Info,
+                        $"{game.Name}: not recognized as a game, its executable path cannot be read",
+                        "Protected or anti-cheat processes can hide it; add the name to Game Boost's manual game list").ConfigureAwait(false);
+                }
 
                 return;
             }
@@ -508,6 +528,24 @@ namespace ThreadPilot.Services
             this.logger.LogInformation("Game Boost session started for {Game} (PID {ProcessId})", game.Name, game.ProcessId);
             await this.AuditSessionStartAsync(game).ConfigureAwait(false);
             await this.ApplyToSessionAsync(includeGame: true).ConfigureAwait(false);
+        }
+
+        // A tick that completes clears the failure memory, so an error that comes back after a recovery is reported again.
+        internal async Task RunTickAsync()
+        {
+            await this.TickAsync().ConfigureAwait(false);
+            this.lastTickFailure = null;
+        }
+
+        // A failing tick repeats every 3 s: Activity (and the log file) get each new error once, not every tick.
+        internal void OnTickFailed(Exception ex)
+        {
+            this.logger.LogWarning(ex, "Game Boost tick failed");
+            if (ex.Message != this.lastTickFailure)
+            {
+                this.lastTickFailure = ex.Message;
+                _ = this.AuditAsync(ActivityAuditSeverity.Warning, "Game Boost check failed", ex.Message);
+            }
         }
 
         private async Task AuditSessionStartAsync(ProcessModel game)
@@ -904,7 +942,7 @@ namespace ThreadPilot.Services
             if (!result.Success)
             {
                 this.logger.LogInformation("Game Boost could not set efficiency mode {Mode} on {ProcessName} (PID {ProcessId})", mode, process.Name, process.ProcessId);
-                return (ApplyOutcome.Failed, "efficiency mode not applied");
+                return (ApplyOutcome.Failed, string.IsNullOrWhiteSpace(result.UserMessage) ? "efficiency mode not applied" : result.UserMessage.TrimEnd('.'));
             }
 
             await this.ConfirmJournalEntryAsync(entry).ConfigureAwait(false);
@@ -1284,6 +1322,10 @@ namespace ThreadPilot.Services
 
         private async Task<bool> SaveJournalAsync()
         {
+            this.cpuSetProcessIds = this.journal
+                .Where(entry => entry.Setting == GameBoostSetting.CpuSets && entry.Confirmed)
+                .Select(entry => entry.ProcessId)
+                .ToHashSet();
             try
             {
                 if (this.journal.Count == 0)

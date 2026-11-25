@@ -231,10 +231,19 @@ namespace ThreadPilot.ViewModels
                     value,
                     CpuAssignmentMode.CpuSets);
                 IReadOnlyList<int>? softAssignmentIndexes;
+                var cpuSetsSource = CpuSetsSource.Other;
                 if (cpuSetIndexes is { Count: > 0 })
                 {
                     assignment = (CpuAssignmentMode.CpuSets, assignment.FromRule && assignment.Mode == CpuAssignmentMode.CpuSets);
                     softAssignmentIndexes = cpuSetIndexes;
+                    if (this.gameSessionService?.HasAppliedCpuSets(value.ProcessId) == true)
+                    {
+                        cpuSetsSource = CpuSetsSource.GameBoost;
+                    }
+                    else if (assignment.FromRule)
+                    {
+                        cpuSetsSource = CpuSetsSource.Rule;
+                    }
                 }
                 else
                 {
@@ -254,11 +263,14 @@ namespace ThreadPilot.ViewModels
                     this.SetCpuAssignmentMode(assignment.Mode, assignment.FromRule);
                     if (softAssignmentIndexes is { Count: > 0 })
                     {
-                        this.UpdateCoreSelections(softAssignmentIndexes, assignment.Mode);
+                        this.UpdateCoreSelections(softAssignmentIndexes, assignment.Mode, cpuSetsSource: cpuSetsSource);
                     }
                     else
                     {
-                        this.UpdateCoreSelections(value.ProcessorAffinity);
+                        // An empty list (not null) means Windows answered: the process has no CPU Sets of its own.
+                        this.UpdateCoreSelections(
+                            value.ProcessorAffinity,
+                            note: cpuSetIndexes is { Count: 0 } ? this.UiText("ProcessView_NoCpuSetsNote", "no CPU Sets, Windows picks the cores") : null);
                     }
 
                     this.UpdateAffinityDisplayState();
@@ -441,9 +453,10 @@ namespace ThreadPilot.ViewModels
             }
         }
 
-        private void UpdateCoreSelections(long affinityMask, bool forceSync = false)
+        private void UpdateCoreSelections(long affinityMask, bool forceSync = false, string? note = null)
         {
             this.currentSoftCpuAssignmentText = null;
+            this.currentAffinityNote = note;
             this.UpdateCoreSelections(
                 core => (affinityMask & core.AffinityMask) != 0,
                 $"affinity mask 0x{affinityMask:X}",
@@ -453,12 +466,27 @@ namespace ThreadPilot.ViewModels
         private void UpdateCoreSelections(
             IReadOnlyCollection<int> logicalProcessorIndexes,
             CpuAssignmentMode mode,
-            bool forceSync = false)
+            bool forceSync = false,
+            CpuSetsSource cpuSetsSource = CpuSetsSource.Other)
         {
             var selectedIndexes = logicalProcessorIndexes.ToHashSet();
+            var cpus = string.Join(", ", selectedIndexes.OrderBy(index => index));
+            this.currentAffinityNote = null;
             this.currentSoftCpuAssignmentText = mode == CpuAssignmentMode.CpuSets
-                ? $"Current CPU Sets: CPU {string.Join(", ", selectedIndexes.OrderBy(index => index))}"
-                : $"Current ideal processors: CPU {string.Join(", ", selectedIndexes.OrderBy(index => index))}";
+                ? string.Format(
+                    System.Globalization.CultureInfo.CurrentCulture,
+                    this.UiText("ProcessView_CurrentCpuSets", "Current CPU Sets: CPU {0} ({1})"),
+                    cpus,
+                    cpuSetsSource switch
+                    {
+                        CpuSetsSource.GameBoost => this.UiText("ProcessView_CpuSetsFromGameBoost", "set by Game Boost while the game runs"),
+                        CpuSetsSource.Rule => this.UiText("ProcessView_CpuSetsFromRule", "from your saved rule"),
+                        _ => this.UiText("ProcessView_CpuSetsFromOther", "set by hand, by the app itself or by another tool"),
+                    })
+                : string.Format(
+                    System.Globalization.CultureInfo.CurrentCulture,
+                    this.UiText("ProcessView_CurrentIdealProcessors", "Current ideal processors: CPU {0}"),
+                    cpus);
             this.UpdateCoreSelections(
                 core => selectedIndexes.Contains(core.LogicalCoreId),
                 this.currentSoftCpuAssignmentText,
@@ -544,7 +572,7 @@ namespace ThreadPilot.ViewModels
         {
             var currentMask = this.SelectedProcess?.ProcessorAffinity;
             this.CurrentAffinityText = this.currentSoftCpuAssignmentText ?? (currentMask.HasValue
-                ? $"Current OS affinity: 0x{currentMask.Value:X}"
+                ? (this.currentAffinityNote == null ? $"Current OS affinity: 0x{currentMask.Value:X}" : $"Current OS affinity: 0x{currentMask.Value:X} ({this.currentAffinityNote})")
                 : "Current OS affinity: no process selected");
 
             if (this.SelectedProcess == null)

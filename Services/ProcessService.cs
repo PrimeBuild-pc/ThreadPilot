@@ -117,6 +117,7 @@ namespace ThreadPilot.Services
         private List<ProcessModel> EnumerateProcessModels(Func<ProcessModel, bool>? filter = null, Func<string, bool>? nameFilter = null)
         {
             var foregroundProcessId = this.foregroundProcessService?.TryGetForegroundProcessId();
+            var mainWindows = MainWindowSnapshot.Capture();
             var models = new List<ProcessModel>();
             foreach (var process in Process.GetProcesses())
             {
@@ -128,7 +129,7 @@ namespace ThreadPilot.Services
                         continue;
                     }
 
-                    var model = this.TryCreateProcessModel(process, foregroundProcessId);
+                    var model = this.TryCreateProcessModel(process, foregroundProcessId, mainWindows);
                     if (model != null && (filter == null || filter(model)))
                     {
                         models.Add(model);
@@ -207,11 +208,11 @@ namespace ThreadPilot.Services
             return this.CreateProcessModel(process, this.foregroundProcessService?.TryGetForegroundProcessId());
         }
 
-        private ProcessModel? TryCreateProcessModel(Process process, int? foregroundProcessId)
+        private ProcessModel? TryCreateProcessModel(Process process, int? foregroundProcessId, IReadOnlyDictionary<int, nint>? mainWindows = null)
         {
             try
             {
-                return this.CreateProcessModel(process, foregroundProcessId);
+                return this.CreateProcessModel(process, foregroundProcessId, mainWindows);
             }
             catch (Exception ex) when (IsTerminatedProcessException(ex))
             {
@@ -246,7 +247,8 @@ namespace ThreadPilot.Services
             }
         }
 
-        private ProcessModel CreateProcessModel(Process process, int? foregroundProcessId)
+        // mainWindows: one EnumWindows pass shared by a whole list refresh; null looks the window up per process.
+        private ProcessModel CreateProcessModel(Process process, int? foregroundProcessId, IReadOnlyDictionary<int, nint>? mainWindows = null)
         {
             var model = new ProcessModel();
             var accessDenied = false;
@@ -378,8 +380,17 @@ namespace ThreadPilot.Services
                 {
                     try
                     {
-                        model.MainWindowHandle = process.MainWindowHandle;
-                        model.MainWindowTitle = process.MainWindowTitle ?? string.Empty;
+                        if (mainWindows == null)
+                        {
+                            model.MainWindowHandle = process.MainWindowHandle;
+                            model.MainWindowTitle = process.MainWindowTitle ?? string.Empty;
+                        }
+                        else
+                        {
+                            model.MainWindowHandle = mainWindows.GetValueOrDefault(model.ProcessId);
+                            model.MainWindowTitle = model.MainWindowHandle == 0 ? string.Empty : MainWindowSnapshot.GetTitle(model.MainWindowHandle);
+                        }
+
                         model.HasVisibleWindow = model.MainWindowHandle != IntPtr.Zero && !string.IsNullOrWhiteSpace(model.MainWindowTitle);
                     }
                     catch (Exception ex) when (IsTerminatedProcessException(ex))
@@ -400,7 +411,7 @@ namespace ThreadPilot.Services
                     {
                         try
                         {
-                            model.ExecutablePath = process.MainModule?.FileName ?? string.Empty;
+                            model.ExecutablePath = ProcessImagePath.TryGet(model.ProcessId) ?? process.MainModule?.FileName ?? string.Empty;
                             if (startTimeUtc.HasValue && !string.IsNullOrWhiteSpace(model.ExecutablePath))
                             {
                                 this.processMetadata[model.ProcessId] = new ProcessMetadata(startTimeUtc.Value, model.ExecutablePath);
@@ -795,7 +806,7 @@ namespace ThreadPilot.Services
                     process.HasVisibleWindow = process.MainWindowHandle != IntPtr.Zero && !string.IsNullOrWhiteSpace(process.MainWindowTitle);
                     if (string.IsNullOrWhiteSpace(process.ExecutablePath))
                     {
-                        process.ExecutablePath = p.MainModule?.FileName ?? string.Empty;
+                        process.ExecutablePath = ProcessImagePath.TryGet(p.Id) ?? p.MainModule?.FileName ?? string.Empty;
                     }
 
                     this.ApplyProcessClassification(

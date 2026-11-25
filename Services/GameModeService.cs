@@ -7,13 +7,23 @@ namespace ThreadPilot.Services
 
     public class GameModeService : IGameModeService
     {
-        private readonly ILogger<GameModeService> logger;
-        private const string GameBarKeyPath = @"Software\Microsoft\GameBar";
+        private const string DefaultGameBarKeyPath = @"Software\Microsoft\GameBar";
         private const string GameModeValueName = "AutoGameModeEnabled";
+        private readonly ILogger<GameModeService> logger;
+        private readonly string gameBarKeyPath;
 
         public GameModeService(ILogger<GameModeService> logger)
+            : this(logger, DefaultGameBarKeyPath)
+        {
+        }
+
+        // Tests point this at a scratch key under HKCU so the real Game Bar settings are never touched.
+        internal GameModeService(ILogger<GameModeService> logger, string gameBarKeyPath)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.gameBarKeyPath = string.IsNullOrWhiteSpace(gameBarKeyPath)
+                ? throw new ArgumentException("A registry key path is required.", nameof(gameBarKeyPath))
+                : gameBarKeyPath;
         }
 
         public async Task<bool> IsGameModeEnabledAsync()
@@ -22,28 +32,20 @@ namespace ThreadPilot.Services
 
             try
             {
-                using var key = Registry.CurrentUser.OpenSubKey(GameBarKeyPath, writable: false);
-                if (key == null)
-                {
-                    this.logger.LogDebug("GameBar registry key not found, assuming Game Mode is disabled");
-                    return false;
-                }
-
-                var value = key.GetValue(GameModeValueName);
-                if (value is int intValue)
-                {
-                    bool isEnabled = intValue != 0;
-                    this.logger.LogDebug("Game Mode status: {Status}", isEnabled ? "Enabled" : "Disabled");
-                    return isEnabled;
-                }
-
-                this.logger.LogDebug("GameMode value not found, assuming disabled");
-                return false;
+                using var key = Registry.CurrentUser.OpenSubKey(this.gameBarKeyPath, writable: false);
+                var value = key?.GetValue(GameModeValueName);
+                var isEnabled = IsEnabledFromRegistryValue(value);
+                this.logger.LogDebug(
+                    "Game Mode status: {Status} ({Source})",
+                    isEnabled ? "Enabled" : "Disabled",
+                    value == null ? "value not set, Windows default" : "registry value");
+                return isEnabled;
             }
             catch (Exception ex)
             {
-                this.logger.LogWarning(ex, "Failed to read Game Mode registry key, assuming disabled");
-                return false;
+                // Unreadable is not the same as off: report the Windows default rather than a false "disabled".
+                this.logger.LogWarning(ex, "Failed to read Game Mode registry key, assuming the Windows default (enabled)");
+                return true;
             }
         }
 
@@ -53,7 +55,7 @@ namespace ThreadPilot.Services
 
             try
             {
-                using var key = Registry.CurrentUser.CreateSubKey(GameBarKeyPath, writable: true);
+                using var key = Registry.CurrentUser.CreateSubKey(this.gameBarKeyPath, writable: true);
                 if (key == null)
                 {
                     this.logger.LogWarning("GameBar registry key not found, cannot modify Game Mode");
@@ -75,6 +77,16 @@ namespace ThreadPilot.Services
                 return false;
             }
         }
+
+        /// <summary>
+        /// Windows 10 1703+ and Windows 11 turn Game Mode on by default and only write AutoGameModeEnabled
+        /// once the user changes the switch, so a missing key or value means "on"; only an explicit 0 means "off".
+        /// </summary>
+        internal static bool IsEnabledFromRegistryValue(object? value) => value switch
+        {
+            int dword => dword != 0,
+            long qword => qword != 0,
+            _ => true,
+        };
     }
 }
-

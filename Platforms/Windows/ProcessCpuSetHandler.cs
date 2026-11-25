@@ -377,7 +377,7 @@ namespace ThreadPilot.Platforms.Windows
             }
 
             this.logger?.LogWarning(errorMessage);
-            return this.CreateNativeFailureResult(operationName, error, errorMessage);
+            return this.CreateNativeFailureResult(operationName, error, errorMessage, handleOpened: true);
         }
 
         private bool VerifyCpuSetIds(uint[] expected, uint expectedCount)
@@ -458,21 +458,31 @@ namespace ThreadPilot.Platforms.Windows
             return unavailable;
         }
 
+        // handleOpened: Windows granted the handle, then refused the call made with it. ThreadPilot always runs
+        // elevated, so that is a kernel callback (anti-cheat, anti-tamper) stripping rights, not missing admin rights.
         private CpuSetApplyResult CreateNativeFailureResult(
             string operationName,
             int win32ErrorCode,
-            string? technicalMessage = null)
+            string? technicalMessage = null,
+            bool handleOpened = false)
         {
             var message = technicalMessage ??
                 $"Could not {operationName} for '{this.executableName}' (PID: {this.pid}): {new Win32Exception(win32ErrorCode).Message}";
             var accessDenied = win32ErrorCode == 5;
+            var protectedLikely = accessDenied && handleOpened;
+            var userMessage = ProcessOperationUserMessages.CpuSetsUnavailable;
+            if (accessDenied)
+            {
+                userMessage = protectedLikely ? ProcessOperationUserMessages.AntiCheatProtectedLikely : ProcessOperationUserMessages.AccessDenied;
+            }
 
             return CpuSetApplyResult.Failed(
                 accessDenied ? AffinityApplyErrorCodes.AccessDenied : AffinityApplyErrorCodes.NativeApplyFailed,
-                accessDenied ? ProcessOperationUserMessages.AccessDenied : ProcessOperationUserMessages.CpuSetsUnavailable,
+                userMessage,
                 message,
                 win32ErrorCode,
-                isAccessDenied: accessDenied);
+                isAccessDenied: accessDenied,
+                isAntiCheatLikely: protectedLikely);
         }
 
         private static CpuSetMapping GetCpuSetMapping(IProcessCpuSetNativeApi nativeApi)

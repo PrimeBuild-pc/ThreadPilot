@@ -17,6 +17,10 @@ namespace ThreadPilot.Services
         private static readonly TimeSpan[] DefaultDelays = [TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3)];
         private static readonly TimeSpan DefaultRetryDelay = TimeSpan.FromSeconds(4); // ponytail: one conservative startup-settling retry; no polling.
 
+        // Some games reset their own priority once they finish starting, well after the early checks (Assetto Corsa
+        // Competizione went back to Normal within ~66 s once). One more look, sharing the single retry; still no polling.
+        private static readonly TimeSpan DefaultLateDelay = TimeSpan.FromSeconds(90);
+
         private readonly IProcessService processService;
         private readonly ILogger<PersistentRulePriorityVerificationService> logger;
         private readonly IActivityAuditService? activityAuditService;
@@ -24,6 +28,7 @@ namespace ThreadPilot.Services
         private readonly IPersistentProcessRuleMatcher? matcher;
         private readonly IReadOnlyList<TimeSpan> delays;
         private readonly TimeSpan retryDelay;
+        private readonly TimeSpan? lateDelay;
         private readonly Func<TimeSpan, CancellationToken, Task> delayAsync;
         private readonly ConcurrentDictionary<RetryKey, byte> retryUsed = new();
         private readonly ConcurrentDictionary<RetryKey, CancellationTokenSource> pendingRetries = new();
@@ -34,7 +39,7 @@ namespace ThreadPilot.Services
             IActivityAuditService? activityAuditService = null,
             IPersistentProcessRuleStore? ruleStore = null,
             IPersistentProcessRuleMatcher? matcher = null)
-            : this(processService, logger, activityAuditService, ruleStore, matcher, DefaultDelays, DefaultRetryDelay, Task.Delay)
+            : this(processService, logger, activityAuditService, ruleStore, matcher, DefaultDelays, DefaultRetryDelay, Task.Delay, DefaultLateDelay)
         {
         }
 
@@ -56,7 +61,8 @@ namespace ThreadPilot.Services
             IPersistentProcessRuleMatcher? matcher,
             IReadOnlyList<TimeSpan> delays,
             TimeSpan retryDelay,
-            Func<TimeSpan, CancellationToken, Task> delayAsync)
+            Func<TimeSpan, CancellationToken, Task> delayAsync,
+            TimeSpan? lateDelay = null)
         {
             this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -66,6 +72,7 @@ namespace ThreadPilot.Services
             this.delays = delays?.Take(2).ToArray() ?? DefaultDelays;
             this.retryDelay = retryDelay < TimeSpan.Zero ? DefaultRetryDelay : retryDelay;
             this.delayAsync = delayAsync ?? Task.Delay;
+            this.lateDelay = lateDelay > TimeSpan.Zero ? lateDelay : null;
         }
 
         public void ScheduleDelayedVerification(PersistentRuleAutoApplyResult result, ProcessModel process, string source)
@@ -157,6 +164,42 @@ namespace ThreadPilot.Services
                         reason: ex.Message).ConfigureAwait(false);
                     return;
                 }
+            }
+
+            await this.VerifyLateAsync(result, process, source, requested, cancellationToken).ConfigureAwait(false);
+        }
+
+        // The early checks passed. A process that exits before this is simply gone, not a failed check, so it is skipped quietly.
+        private async Task VerifyLateAsync(PersistentRuleAutoApplyResult result, ProcessModel process, string source, ProcessPriorityClass requested, CancellationToken cancellationToken)
+        {
+            if (this.lateDelay is not TimeSpan delay)
+            {
+                return;
+            }
+
+            const string phase = "late";
+            try
+            {
+                await this.delayAsync(delay, cancellationToken).ConfigureAwait(false);
+                if (!await this.processService.IsProcessStillRunning(process).ConfigureAwait(false))
+                {
+                    return;
+                }
+
+                await this.processService.RefreshProcessInfo(process).ConfigureAwait(false);
+                var observed = process.Priority;
+                if (observed == requested)
+                {
+                    await this.LogVerifiedAsync(result, process, source, phase, requested, observed, attempt: 0).ConfigureAwait(false);
+                    return;
+                }
+
+                await this.LogRevertedAsync(result, process, source, phase, requested, observed).ConfigureAwait(false);
+                await this.ScheduleRetryAsync(result, process, source, requested, observed).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                this.logger.LogDebug(ex, "Late priority verification skipped for {ProcessName} (PID: {ProcessId})", result.ProcessName, result.ProcessId);
             }
         }
 

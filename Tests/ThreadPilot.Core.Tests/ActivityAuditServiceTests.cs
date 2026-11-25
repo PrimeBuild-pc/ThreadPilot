@@ -1,6 +1,8 @@
 namespace ThreadPilot.Core.Tests
 {
+    using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Logging.Abstractions;
+    using Moq;
     using ThreadPilot.Services;
 
     public sealed class ActivityAuditServiceTests
@@ -61,6 +63,46 @@ namespace ThreadPilot.Core.Tests
                 entry => Assert.Equal("Second", entry.Message),
                 entry => Assert.Equal("First", entry.Message));
             Assert.All(entries, entry => Assert.NotEqual(default, entry.Timestamp));
+        }
+
+        [Theory]
+        [InlineData(ActivityAuditSeverity.Info, LogLevel.Information)]
+        [InlineData(ActivityAuditSeverity.Success, LogLevel.Information)]
+        [InlineData(ActivityAuditSeverity.Warning, LogLevel.Warning)]
+        [InlineData(ActivityAuditSeverity.Error, LogLevel.Error)]
+        public async Task EveryEntry_IsAlsoWrittenToTheLogFile(ActivityAuditSeverity severity, LogLevel expectedLevel)
+        {
+            var fileLog = new Mock<IEnhancedLoggingService>();
+            var service = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance, fileLog.Object);
+
+            var log = severity switch
+            {
+                ActivityAuditSeverity.Success => service.LogSuccessAsync("Game Boost", "Session started: Game (Automatic)", "Intel hybrid"),
+                ActivityAuditSeverity.Warning => service.LogWarningAsync("Game Boost", "Session started: Game (Automatic)", "Intel hybrid"),
+                ActivityAuditSeverity.Error => service.LogErrorAsync("Game Boost", "Session started: Game (Automatic)", "Intel hybrid"),
+                _ => service.LogInfoAsync("Game Boost", "Session started: Game (Automatic)", "Intel hybrid"),
+            };
+            await log;
+
+            fileLog.Verify(
+                file => file.LogSystemEventAsync(
+                    "ActivityAudit/Game Boost",
+                    "Game Boost: Session started: Game (Automatic) (Intel hybrid)",
+                    expectedLevel),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task FileLogFailure_DoesNotLoseTheActivityEntry()
+        {
+            var fileLog = new Mock<IEnhancedLoggingService>();
+            fileLog.Setup(file => file.LogSystemEventAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<LogLevel>()))
+                .ThrowsAsync(new IOException("disk full"));
+            var service = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance, fileLog.Object);
+
+            await service.LogInfoAsync("Game Boost", "Session ended for Game: the game exited");
+
+            Assert.Single(await service.GetEntriesAsync());
         }
     }
 }

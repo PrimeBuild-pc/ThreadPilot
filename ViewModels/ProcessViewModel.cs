@@ -40,6 +40,7 @@ namespace ThreadPilot.ViewModels
         private readonly ILocalizationService? uiLocalization;
         private readonly IPersistentProcessRuleStore? persistentRuleStore;
         private readonly IPersistentProcessRuleMatcher? persistentRuleMatcher;
+        private readonly IGameSessionService? gameSessionService;
         private readonly Action<string> clipboardSetter;
         private readonly Action<string> executableLocationOpener;
         private System.Timers.Timer? refreshTimer;
@@ -55,6 +56,7 @@ namespace ThreadPilot.ViewModels
         private bool suppressCpuAssignmentModeChanges;
         private bool cpuAssignmentModeOverriddenByRule;
         private string? currentSoftCpuAssignmentText;
+        private string? currentAffinityNote;
 
         [ObservableProperty]
         private bool isAutomationMonitoringEnabled = true;
@@ -197,7 +199,8 @@ namespace ThreadPilot.ViewModels
             Action<string>? executableLocationOpener = null,
             ILocalizationService? localizationService = null,
             IApplicationSettingsService? settingsService = null,
-            ProcessPowerRequestService? powerRequestService = null)
+            ProcessPowerRequestService? powerRequestService = null,
+            IGameSessionService? gameSessionService = null)
             : base(logger, enhancedLoggingService, activityAuditService)
         {
             this.processService = processService ?? throw new ArgumentNullException(nameof(processService));
@@ -225,6 +228,7 @@ namespace ThreadPilot.ViewModels
             this.uiLocalization = localizationService;
             this.persistentRuleStore = persistentRuleStore;
             this.persistentRuleMatcher = persistentRuleMatcher;
+            this.gameSessionService = gameSessionService;
             this.SelectedCpuAssignmentMode = settingsService?.Settings.DefaultCpuAssignmentMode ?? CpuAssignmentMode.Automatic;
 
             // Fields, not properties: the change handlers would reload and re-save the list during construction.
@@ -301,6 +305,14 @@ namespace ThreadPilot.ViewModels
         ];
 
         public SelectedProcessSummaryViewModel SelectedProcessSummary { get; }
+
+        // Who set the CPU Sets shown for the selected process, as far as ThreadPilot can tell.
+        private enum CpuSetsSource
+        {
+            Other,
+            GameBoost,
+            Rule,
+        }
 
         private static void OpenExecutableLocationInExplorer(string executablePath)
         {

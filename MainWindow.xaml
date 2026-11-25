@@ -11,7 +11,7 @@
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="Mica"
         Title="{DynamicResource MainWindow_Title}"
-        Height="864"
+        Height="960"
         Width="1280"
         WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True"

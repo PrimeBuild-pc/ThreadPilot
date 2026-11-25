@@ -266,6 +266,9 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleModeLabel">Modo de asignación de CPU</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulePreventSleep">Impedir la suspensión mientras este proceso se ejecuta</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">Elige una máscara de CPU guardada para los núcleos de esta regla. Las máscaras se editan en la página Máscaras de CPU.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMaskLabel">Plantilla de máscara de CPU (fija los núcleos; el modo de arriba decide CPU Sets o afinidad)</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMaskPlaceholder">Mantener los núcleos actuales</sys:String>
+    <sys:String x:Key="Rules_TopologyReviewWarning">Estas reglas fijan núcleos de una CPU distinta de la actual, así que su selección puede no significar lo mismo que cuando se guardaron: {0}. Vuelve a fijar sus núcleos con una máscara guardada abajo.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleSave">Guardar cambios</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_NoSavedRules">Aún no hay reglas de proceso guardadas. Haz clic derecho en un proceso en la pestaña Procesos y elige Reglas para guardar una.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">ejecutable</sys:String>
@@ -293,6 +296,12 @@
     <sys:String x:Key="ProcessView_NoProcessSelected">Ningún proceso seleccionado</sys:String>
 
     <sys:String x:Key="ProcessView_PendingCoreMask">Máscara de núcleos pendiente</sys:String>
+    <sys:String x:Key="ProcessView_CurrentCpuSets">CPU Sets actuales: CPU {0} ({1})</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromGameBoost">establecidos por Game Boost mientras el juego está abierto</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromRule">de tu regla guardada</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromOther">establecidos a mano, por la propia app o por otra herramienta</sys:String>
+    <sys:String x:Key="ProcessView_CurrentIdealProcessors">Procesadores ideales actuales: CPU {0}</sys:String>
+    <sys:String x:Key="ProcessView_NoCpuSetsNote">sin CPU Sets, Windows elige los núcleos</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinity">Aplicar núcleos</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinityTooltip">Aplica la selección de CPU con el modo elegido y verifica el estado de Windows</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinitySaveRule">Aplicar asignación de CPU y guardar como regla</sys:String>

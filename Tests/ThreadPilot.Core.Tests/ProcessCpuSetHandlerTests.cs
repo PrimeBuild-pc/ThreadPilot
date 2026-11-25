@@ -236,8 +236,9 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
-        public void ProcessCpuSetHandler_ApplyCpuSelectionDetailed_WhenNativeAccessDenied_ReturnsAccessDenied()
+        public void ProcessCpuSetHandler_ApplyCpuSelectionDetailed_WhenGrantedHandleIsRefused_ReportsProtection()
         {
+            // Seen with Call of Duty (Ricochet): OpenProcess succeeds, SetProcessDefaultCpuSets fails with 5.
             var nativeApi = new FakeProcessCpuSetNativeApi
             {
                 SetProcessDefaultCpuSetsResult = false,
@@ -255,7 +256,27 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal(AffinityApplyErrorCodes.AccessDenied, result.ErrorCode);
             Assert.Equal(5, result.Win32ErrorCode);
             Assert.True(result.IsAccessDenied);
+            Assert.True(result.IsAntiCheatLikely);
+            Assert.Equal(ProcessOperationUserMessages.AntiCheatProtectedLikely, result.UserMessage);
+        }
+
+        [Fact]
+        public void ProcessCpuSetHandler_ApplyCpuSelectionDetailed_WhenHandleIsRefused_ReportsPlainAccessDenied()
+        {
+            var nativeApi = new FakeProcessCpuSetNativeApi
+            {
+                FailSetHandleOpen = true,
+                LastWin32Error = 5,
+            };
+            using var handler = CreateHandler(nativeApi, CpuSetMapping.Empty);
+
+            var result = handler.ApplyCpuSelectionDetailed(new CpuSelection { CpuSetIds = [400] });
+
+            Assert.False(result.Success);
+            Assert.True(result.IsAccessDenied);
+            Assert.False(result.IsAntiCheatLikely);
             Assert.Equal(ProcessOperationUserMessages.AccessDenied, result.UserMessage);
+            Assert.False(nativeApi.WasSetProcessDefaultCpuSetsCalled);
         }
 
         [Fact]
@@ -381,13 +402,17 @@ namespace ThreadPilot.Core.Tests
 
             public bool SetProcessDefaultCpuSetsResult { get; init; } = true;
 
+            public bool FailSetHandleOpen { get; init; }
+
             public uint[]? VerifiedCpuSetIds { get; init; }
 
             public IReadOnlyList<SYSTEM_CPU_SET_INFORMATION> SystemCpuSets { get; init; } = [];
 
             public SafeProcessHandle OpenProcess(ProcessAccessFlags access, bool inheritHandle, uint processId)
             {
-                return new SafeProcessHandle(new IntPtr(1), ownsHandle: false);
+                return this.FailSetHandleOpen && access.HasFlag(ProcessAccessFlags.PROCESS_SET_LIMITED_INFORMATION)
+                    ? new SafeProcessHandle(IntPtr.Zero, ownsHandle: false)
+                    : new SafeProcessHandle(new IntPtr(1), ownsHandle: false);
             }
 
             public bool SetProcessDefaultCpuSets(SafeProcessHandle process, uint[]? cpuSetIds, uint cpuSetIdCount)
