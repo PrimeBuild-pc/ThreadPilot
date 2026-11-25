@@ -57,8 +57,9 @@ timestamps; ~1.3 s of CPU). No change proposed. Note for future measurements: `T
   "cores left to your rule", added high QoS and moved Steam, Steam web helpers and Edge to the E-cores.
 - Priority stayed Above Normal for the full 120 s observation on the second launch. On the **first** launch it was
   found back at Normal about a minute later although ThreadPilot had verified it at +1 s and +4 s and logged no
-  other priority write; this did not reproduce. A late re-verification (e.g. at +60 s) would catch it, but without a
-  reproducible cause it is left as an observation, not a change.
+  other priority write. **Fixed afterwards** with a late check at +90 s that shares the rule's single retry
+  (commit "Check a rule's priority once more 90 s after the process starts"). Verified live: priority forced back
+  to Normal at +21 s, the late check saw it at +94 s and the retry restored Above Normal at +98 s.
 - ThreadPilot overhead during the session: 0.08 % of one core.
 - Assetto Corsa Rally was not run (same rule shape as ACC).
 
