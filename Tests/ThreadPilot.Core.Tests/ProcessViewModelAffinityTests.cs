@@ -145,7 +145,53 @@ namespace ThreadPilot.Core.Tests
             Assert.True(SpinWait.SpinUntil(
                 () => viewModel.CpuCores[0].IsSelected && !viewModel.CpuCores[1].IsSelected,
                 TimeSpan.FromSeconds(2)));
-            Assert.Equal("Current CPU Sets: CPU 0", viewModel.CurrentAffinityText);
+            Assert.Equal("Current CPU Sets: CPU 0 (set by hand, by the app itself or by another tool)", viewModel.CurrentAffinityText);
+        }
+
+        [Fact]
+        public void SelectingProcessBoostedByGameBoost_SaysGameBoostSetTheCpuSets()
+        {
+            var processService = CreateRunningProcessService(cpuSets: [0]);
+            var session = new Mock<IGameSessionService>(MockBehavior.Loose);
+            session.Setup(service => service.HasAppliedCpuSets(1234)).Returns(true);
+            using var viewModel = CreateViewModel(
+                processService.Object,
+                new Mock<IGameModeService>(MockBehavior.Loose).Object,
+                cpuTopologyProvider: null,
+                settingsService: null,
+                gameSessionService: session.Object);
+            viewModel.CpuTopology = CreateTwoCoreTopology();
+            viewModel.CpuCores = new System.Collections.ObjectModel.ObservableCollection<CpuCoreModel>(viewModel.CpuTopology.LogicalCores);
+
+            viewModel.SelectedProcess = new ProcessModel { ProcessId = 1234, Name = "Game", ProcessorAffinity = 3 };
+
+            var expected = "Current CPU Sets: CPU 0 (set by Game Boost while the game runs)";
+            Assert.True(SpinWait.SpinUntil(() => viewModel.CurrentAffinityText == expected, TimeSpan.FromSeconds(2)), viewModel.CurrentAffinityText);
+        }
+
+        [Fact]
+        public void SelectingProcessWithoutCpuSets_SaysWindowsPicksTheCores()
+        {
+            var processService = CreateRunningProcessService(cpuSets: []);
+            using var viewModel = CreateViewModel(processService.Object, new Mock<IGameModeService>(MockBehavior.Loose).Object, cpuTopologyProvider: null);
+            viewModel.CpuTopology = CreateTwoCoreTopology();
+            viewModel.CpuCores = new System.Collections.ObjectModel.ObservableCollection<CpuCoreModel>(viewModel.CpuTopology.LogicalCores);
+
+            viewModel.SelectedProcess = new ProcessModel { ProcessId = 1234, Name = "Game", ProcessorAffinity = 3 };
+
+            var expected = "Current OS affinity: 0x3 (no CPU Sets, Windows picks the cores)";
+            Assert.True(SpinWait.SpinUntil(() => viewModel.CurrentAffinityText == expected, TimeSpan.FromSeconds(2)), viewModel.CurrentAffinityText);
+        }
+
+        private static Mock<IProcessService> CreateRunningProcessService(IReadOnlyList<int> cpuSets)
+        {
+            var processService = new Mock<IProcessService>(MockBehavior.Loose);
+            processService.Setup(service => service.IsProcessStillRunning(It.IsAny<ProcessModel>())).ReturnsAsync(true);
+            processService.Setup(service => service.RefreshProcessInfo(It.IsAny<ProcessModel>())).Returns(Task.CompletedTask);
+            processService
+                .Setup(service => service.GetCpuAssignmentLogicalProcessorIndexesAsync(It.IsAny<ProcessModel>(), CpuAssignmentMode.CpuSets))
+                .ReturnsAsync(cpuSets);
+            return processService;
         }
 
         private static ProcessViewModel CreateViewModel(IProcessService processService, IGameModeService gameModeService)
@@ -155,7 +201,8 @@ namespace ThreadPilot.Core.Tests
             IProcessService processService,
             IGameModeService gameModeService,
             ICpuTopologyProvider? cpuTopologyProvider,
-            IApplicationSettingsService? settingsService = null)
+            IApplicationSettingsService? settingsService = null,
+            IGameSessionService? gameSessionService = null)
         {
             var virtualizedProcessService = new Mock<IVirtualizedProcessService>(MockBehavior.Loose);
             virtualizedProcessService.SetupProperty(
@@ -182,7 +229,8 @@ namespace ThreadPilot.Core.Tests
                 associationService.Object,
                 gameModeService,
                 cpuTopologyProvider: cpuTopologyProvider,
-                settingsService: settingsService);
+                settingsService: settingsService,
+                gameSessionService: gameSessionService);
         }
 
         private static CpuTopologyModel CreateTwoCoreTopology()

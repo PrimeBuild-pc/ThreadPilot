@@ -190,6 +190,9 @@ namespace ThreadPilot.Services
 
         Task<GameBoostDecision> GetDecisionAsync();
 
+        /// <summary>True while Game Boost owns the default CPU Sets of this process (confirmed in its journal).</summary>
+        bool HasAppliedCpuSets(int processId);
+
         /// <summary>Undoes what a previous run left behind (crash), then starts watching for games.</summary>
         Task StartAsync();
 
@@ -235,6 +238,9 @@ namespace ThreadPilot.Services
         private readonly object timerGate = new();
 
         private List<GameBoostJournalEntry> journal = new();
+
+        // Read by the UI thread without the state lock: replaced, never mutated, on every journal save.
+        private volatile HashSet<int> cpuSetProcessIds = new HashSet<int>();
         private volatile JournalRecoveryState startupRecovery;
         private Timer? timer;
         private bool started;
@@ -290,6 +296,8 @@ namespace ThreadPilot.Services
         }
 
         public string? ActiveGameName => this.session?.Game.Name;
+
+        public bool HasAppliedCpuSets(int processId) => this.cpuSetProcessIds.Contains(processId);
 
         private ApplicationSettingsModel Settings => this.settingsService.Settings;
 
@@ -1284,6 +1292,10 @@ namespace ThreadPilot.Services
 
         private async Task<bool> SaveJournalAsync()
         {
+            this.cpuSetProcessIds = this.journal
+                .Where(entry => entry.Setting == GameBoostSetting.CpuSets && entry.Confirmed)
+                .Select(entry => entry.ProcessId)
+                .ToHashSet();
             try
             {
                 if (this.journal.Count == 0)

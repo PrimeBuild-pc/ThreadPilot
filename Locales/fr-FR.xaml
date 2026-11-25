@@ -293,6 +293,12 @@
     <sys:String x:Key="ProcessView_NoProcessSelected">Aucun processus sélectionné</sys:String>
 
     <sys:String x:Key="ProcessView_PendingCoreMask">Masque de cœurs en attente</sys:String>
+    <sys:String x:Key="ProcessView_CurrentCpuSets">CPU Sets actuels : CPU {0} ({1})</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromGameBoost">définis par Game Boost tant que le jeu tourne</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromRule">depuis votre règle enregistrée</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromOther">définis à la main, par l&apos;application elle-même ou par un autre outil</sys:String>
+    <sys:String x:Key="ProcessView_CurrentIdealProcessors">Processeurs idéaux actuels : CPU {0}</sys:String>
+    <sys:String x:Key="ProcessView_NoCpuSetsNote">aucun CPU Set, Windows choisit les cœurs</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinity">Appliquer les cœurs</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinityTooltip">Applique la sélection CPU avec le mode choisi et vérifie l’état Windows</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinitySaveRule">Appliquer l’affectation CPU et enregistrer la règle</sys:String>

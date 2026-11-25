@@ -293,6 +293,12 @@
     <sys:String x:Key="ProcessView_NoProcessSelected">未选择进程</sys:String>
     
     <sys:String x:Key="ProcessView_PendingCoreMask">待处理的核心掩码</sys:String>
+    <sys:String x:Key="ProcessView_CurrentCpuSets">当前 CPU 集：CPU {0}（{1}）</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromGameBoost">由 Game Boost 在游戏运行期间设置</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromRule">来自你保存的规则</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromOther">由手动、应用自身或其他工具设置</sys:String>
+    <sys:String x:Key="ProcessView_CurrentIdealProcessors">当前理想处理器：CPU {0}</sys:String>
+    <sys:String x:Key="ProcessView_NoCpuSetsNote">无 CPU 集，由 Windows 选择核心</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinity">应用核心</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinityTooltip">使用所选模式应用待处理 CPU 选择，并验证 Windows 状态</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinitySaveRule">应用 CPU 分配并保存为规则</sys:String>

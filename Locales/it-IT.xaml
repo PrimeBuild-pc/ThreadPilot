@@ -293,6 +293,12 @@
     <sys:String x:Key="ProcessView_NoProcessSelected">Nessun processo selezionato</sys:String>
 
     <sys:String x:Key="ProcessView_PendingCoreMask">Maschera core in sospeso</sys:String>
+    <sys:String x:Key="ProcessView_CurrentCpuSets">CPU Set attuali: CPU {0} ({1})</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromGameBoost">impostati da Game Boost finché il gioco è aperto</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromRule">dalla tua regola salvata</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromOther">impostati a mano, dall&apos;app stessa o da un altro programma</sys:String>
+    <sys:String x:Key="ProcessView_CurrentIdealProcessors">Processori ideali attuali: CPU {0}</sys:String>
+    <sys:String x:Key="ProcessView_NoCpuSetsNote">nessun CPU Set, i core li sceglie Windows</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinity">Applica core</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinityTooltip">Applica la selezione CPU con la modalità scelta e verifica lo stato di Windows</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinitySaveRule">Applica assegnazione CPU e salva come regola</sys:String>

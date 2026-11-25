@@ -293,6 +293,12 @@
     <sys:String x:Key="ProcessView_NoProcessSelected">Процесс не выбран</sys:String>
 
     <sys:String x:Key="ProcessView_PendingCoreMask">Ожидающая маска ядер</sys:String>
+    <sys:String x:Key="ProcessView_CurrentCpuSets">Текущие наборы ЦП (CPU Sets): ЦП {0} ({1})</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromGameBoost">заданы Game Boost, пока запущена игра</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromRule">из вашего сохранённого правила</sys:String>
+    <sys:String x:Key="ProcessView_CpuSetsFromOther">заданы вручную, самим приложением или другой программой</sys:String>
+    <sys:String x:Key="ProcessView_CurrentIdealProcessors">Текущие идеальные процессоры: ЦП {0}</sys:String>
+    <sys:String x:Key="ProcessView_NoCpuSetsNote">нет CPU Sets, ядра выбирает Windows</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinity">Применить ядра</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinityTooltip">Применяет выбор ЦП в выбранном режиме и проверяет состояние Windows.</sys:String>
     <sys:String x:Key="ProcessView_ApplyAffinitySaveRule">Применить назначение ЦП и сохранить правило</sys:String>
