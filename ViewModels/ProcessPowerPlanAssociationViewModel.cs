@@ -182,7 +182,12 @@ namespace ThreadPilot.ViewModels
                     : await this.ruleCreationService.GetRulesNeedingTopologyReviewAsync().ConfigureAwait(true);
                 this.SavedRulesReviewMessage = needingReview.Count == 0
                     ? string.Empty
-                    : $"These rules pin cores from a different CPU than the one running now, so what they select may not mean what it did when they were saved: {string.Join(", ", needingReview)}. Set their cores again from a saved mask below.";
+                    : string.Format(
+                        System.Globalization.CultureInfo.CurrentCulture,
+                        this.Localize(
+                            "Rules_TopologyReviewWarning",
+                            "These rules pin cores from a different CPU than the one running now, so what they select may not mean what it did when they were saved: {0}. Set their cores again from a saved mask below."),
+                        string.Join(", ", needingReview));
             }
             catch (Exception ex)
             {

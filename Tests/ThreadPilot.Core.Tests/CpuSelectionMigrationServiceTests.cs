@@ -29,6 +29,44 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal(0b0101, service.BuildLegacyAffinityMaskIfRepresentable(result.Selection));
         }
 
+        [Theory]
+        [InlineData("GenuineIntel 12th Gen Intel(R) Core(TM) i9-12900K", false)]
+        [InlineData("Unknown", false)]
+        [InlineData("", false)]
+        public void ShouldRequireReview_BrandOnlyCountsWhenBothSidesKnowIt(string savedBrand, bool expected)
+        {
+            // The topology provider leaves the brand "Unknown"; a rule written with a brand on the same CPU was flagged.
+            var topology = CreateTopology(8, cpuBrand: "Unknown");
+            var service = new CpuSelectionMigrationService();
+            var selection = service.MigrateFromLegacyAffinityMask(0b11, topology).Selection;
+
+            var saved = topology.Signature with { CpuBrand = savedBrand };
+
+            Assert.Equal(expected, service.ShouldRequireReview(selection, saved, topology));
+        }
+
+        [Fact]
+        public void ShouldRequireReview_TwoKnownDifferentBrands_StillFlagged()
+        {
+            var topology = CreateTopology(8);
+            var service = new CpuSelectionMigrationService();
+            var selection = service.MigrateFromLegacyAffinityMask(0b11, topology).Selection;
+
+            Assert.True(service.ShouldRequireReview(selection, topology.Signature with { CpuBrand = "Another CPU" }, topology));
+        }
+
+        [Fact]
+        public void ShouldRequireReview_DifferentCpuShape_StillFlagged()
+        {
+            var topology = CreateTopology(8);
+            var service = new CpuSelectionMigrationService();
+            var selection = service.MigrateFromLegacyAffinityMask(0b11, topology).Selection;
+
+            var saved = topology.Signature with { CpuBrand = "Some Other CPU", LogicalProcessorCount = 16 };
+
+            Assert.True(service.ShouldRequireReview(selection, saved, topology));
+        }
+
         [Fact]
         public void MigrateFromLegacyAffinityMask_OnTopologyAbove64_DoesNotAliasCpu64ToCpu0()
         {
@@ -240,7 +278,7 @@ namespace ThreadPilot.Core.Tests
             Assert.Equal([false, true], deserialized.BoolMask.ToArray());
         }
 
-        private static CpuTopologySnapshot CreateTopology(int processorCount)
+        private static CpuTopologySnapshot CreateTopology(int processorCount, string cpuBrand = "Synthetic CPU")
         {
             var processors = Enumerable
                 .Range(0, processorCount)
@@ -251,7 +289,7 @@ namespace ThreadPilot.Core.Tests
                 processors,
                 signature: new CpuTopologySignature
                 {
-                    CpuBrand = "Synthetic CPU",
+                    CpuBrand = cpuBrand,
                     LogicalProcessorCount = processorCount,
                     PhysicalCoreCount = processorCount,
                     ProcessorGroupCount = Math.Max(1, (processorCount + 63) / 64),
