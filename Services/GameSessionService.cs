@@ -406,7 +406,7 @@ namespace ThreadPilot.Services
                 if (this.started && !this.disposed
                     && (this.Settings.GameBoostEnabled || this.startupRecovery != JournalRecoveryState.Complete))
                 {
-                    this.timer ??= new Timer(_ => TaskSafety.FireAndForget(this.TickAsync(), this.OnTickFailed), null, TickInterval, TickInterval);
+                    this.timer ??= new Timer(_ => TaskSafety.FireAndForget(this.RunTickAsync(), this.OnTickFailed), null, TickInterval, TickInterval);
                     return;
                 }
 
@@ -530,8 +530,15 @@ namespace ThreadPilot.Services
             await this.ApplyToSessionAsync(includeGame: true).ConfigureAwait(false);
         }
 
+        // A tick that completes clears the failure memory, so an error that comes back after a recovery is reported again.
+        internal async Task RunTickAsync()
+        {
+            await this.TickAsync().ConfigureAwait(false);
+            this.lastTickFailure = null;
+        }
+
         // A failing tick repeats every 3 s: Activity (and the log file) get each new error once, not every tick.
-        private void OnTickFailed(Exception ex)
+        internal void OnTickFailed(Exception ex)
         {
             this.logger.LogWarning(ex, "Game Boost tick failed");
             if (ex.Message != this.lastTickFailure)

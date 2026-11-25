@@ -99,6 +99,31 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task RepeatedTickFailure_IsReportedOnce_AndAgainAfterARecovery()
+        {
+            using var service = this.CreateService();
+            var error = new InvalidOperationException("boom");
+
+            service.OnTickFailed(error);
+            service.OnTickFailed(error);
+            await this.WaitForAuditCountAsync(1);
+
+            await service.RunTickAsync();
+            service.OnTickFailed(error);
+            await this.WaitForAuditCountAsync(2);
+        }
+
+        private async Task WaitForAuditCountAsync(int expected)
+        {
+            for (var i = 0; i < 100 && (await this.audit.GetEntriesAsync()).Count(e => e.Message == "Game Boost check failed") < expected; i++)
+            {
+                await Task.Delay(20);
+            }
+
+            Assert.Equal(expected, (await this.audit.GetEntriesAsync()).Count(e => e.Message == "Game Boost check failed"));
+        }
+
+        [Fact]
         public async Task NonGameForeground_IsNotReexaminedEveryTick_ButIsAfterAWhile()
         {
             this.foregroundPid = ChromePid;
