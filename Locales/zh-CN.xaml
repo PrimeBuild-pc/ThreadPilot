@@ -266,6 +266,9 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleModeLabel">CPU 分配模式</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulePreventSleep">该进程运行时阻止系统休眠</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">为此规则的核心选择已保存的 CPU 掩码。掩码在“CPU 掩码”页面中编辑。</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMaskLabel">CPU 掩码预设（设定核心；上方的模式决定使用 CPU 集或亲和性）</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMaskPlaceholder">保留当前核心</sys:String>
+    <sys:String x:Key="Rules_TopologyReviewWarning">这些规则固定的是另一颗 CPU 的核心，所选内容可能已与保存时含义不同：{0}。请在下方用已保存的掩码重新设置其核心。</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleSave">保存更改</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_NoSavedRules">尚无已保存的进程规则。在“进程”选项卡中右键点击某个进程并选择“规则”即可保存。</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">可执行文件</sys:String>

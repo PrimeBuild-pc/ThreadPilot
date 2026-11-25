@@ -266,6 +266,9 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleModeLabel">CPU assignment mode</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulePreventSleep">Keep the system awake while this process runs</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">Pick a saved CPU mask for this rule's cores. Masks are edited on the CPU masks page.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMaskLabel">CPU mask preset (sets the cores; the mode above decides CPU Sets or affinity)</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMaskPlaceholder">Keep the current cores</sys:String>
+    <sys:String x:Key="Rules_TopologyReviewWarning">These rules pin cores from a different CPU than the one running now, so what they select may not mean what it did when they were saved: {0}. Set their cores again from a saved mask below.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleSave">Save changes</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_NoSavedRules">No saved process rules yet. Right-click a process in the Process tab and choose Rules to save one.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">Executable</sys:String>

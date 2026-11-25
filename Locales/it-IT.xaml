@@ -266,6 +266,9 @@
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleModeLabel">Modalità di assegnazione CPU</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRulePreventSleep">Impedisci la sospensione mentre il processo è in esecuzione</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleEditorHint">Scegli una maschera CPU salvata per i core di questa regola. Le maschere si modificano nella pagina Maschere CPU.</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMaskLabel">Preset maschera CPU (imposta i core; la modalità sopra decide CPU Set o affinità)</sys:String>
+    <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleMaskPlaceholder">Mantieni i core attuali</sys:String>
+    <sys:String x:Key="Rules_TopologyReviewWarning">Queste regole fissano core di una CPU diversa da quella in uso, quindi la loro selezione potrebbe non significare più ciò che significava al salvataggio: {0}. Reimposta i loro core con una maschera salvata qui sotto.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_SavedRuleSave">Salva modifiche</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_NoSavedRules">Nessuna regola di processo salvata. Fai clic destro su un processo nella scheda Processi e scegli Regole per salvarne una.</sys:String>
     <sys:String x:Key="ProcessPowerPlanAssociationView_Executable">Eseguibile</sys:String>

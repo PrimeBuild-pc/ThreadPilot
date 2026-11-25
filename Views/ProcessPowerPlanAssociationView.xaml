@@ -146,6 +146,8 @@
                                   Width="330"
                                   Header="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleEditor}"
                                   VerticalAlignment="Top">
+                            <!-- Scrolls instead of cutting off Cores and Save when the window is short. -->
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <StackPanel IsEnabled="{Binding SelectedSavedProcessRule, Converter={StaticResource NullToBoolConverter}}">
                                 <TextBlock Text="{DynamicResource Rules_PendingChanges}" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,10"
                                            Visibility="{Binding HasPendingRuleChanges, Converter={StaticResource BoolToVisibilityConverter}}"/>
@@ -199,11 +201,35 @@
                                            FontWeight="SemiBold"
                                            TextWrapping="Wrap"
                                            Margin="0,0,0,6"/>
-                                <ComboBox ItemsSource="{Binding AvailableCoreMasks}"
-                                          ToolTip="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleEditorHint}"
-                                          SelectedItem="{Binding SavedRuleCoreMask, Mode=TwoWay}"
-                                          DisplayMemberPath="Name"
-                                          Margin="0,0,0,6"/>
+                                <!-- Masks are only a set of cores: the rule's CPU assignment mode above decides
+                                     whether they become CPU Sets, a hard affinity mask or ideal processors. -->
+                                <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleMaskLabel}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,3"/>
+                                <Grid Margin="0,0,0,6">
+                                    <ComboBox ItemsSource="{Binding AvailableCoreMasks}"
+                                              ToolTip="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleEditorHint}"
+                                              SelectedItem="{Binding SavedRuleCoreMask, Mode=TwoWay}"
+                                              DisplayMemberPath="Name"
+                                              AutomationProperties.Name="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleMaskLabel}"/>
+                                    <TextBlock Text="{DynamicResource ProcessPowerPlanAssociationView_SavedRuleMaskPlaceholder}"
+                                               IsHitTestVisible="False"
+                                               VerticalAlignment="Center"
+                                               Margin="12,0,36,0"
+                                               TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource TextSecondaryBrush}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SavedRuleCoreMask}" Value="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
 
                                 <CheckBox IsChecked="{Binding SavedRulePreventSleep, Mode=TwoWay}"
                                           Margin="0,0,0,10">
@@ -216,6 +242,7 @@
                                         Padding="10,4"
                                         HorizontalAlignment="Left"/>
                             </StackPanel>
+                            </ScrollViewer>
                         </GroupBox>
 
                         <Border Grid.Column="0"
