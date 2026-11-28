@@ -1,30 +1,30 @@
-# Code signing policy
+# Code-Signing Policy
 
 Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
 
-Published ThreadPilot releases are currently unsigned. The GitHub Actions integration has been tested with a self-signed SignPath certificate. Production signing starts after SignPath Foundation issues the release certificate and the integration is enabled.
+ThreadPilot releases remain unsigned until the SignPath Foundation application is approved and the integration is enabled.
 
 ## Scope
 
-Production signing covers the ThreadPilot Windows executable and Inno Setup installer built from the official public GitHub repository. The portable ZIP contains the signed executable. Third-party binaries and scripts are outside the signing configuration.
+Only official ThreadPilot release executables and installers produced from the public GitHub repository may be signed. Pull-request builds, local builds, forks, scripts, and third-party binaries are not signed by the project.
 
 ## Authorized releases
 
-- A production release must originate from a protected release tag in the official repository.
+- A signed build must originate from a protected release tag in the official repository.
 - The commit must pass the repository's required build, test, analyzer, and packaging checks.
 - Signing requests must be created by the GitHub release workflow through the approved SignPath integration.
-- A maintainer manually approves each production signing request.
+- Maintainer or SignPath approval is required wherever configured by the signing policy.
 - Checksums are generated only after signing and are published with the release.
 
 ## Team roles and approval
 
-The following roles apply to production release signing:
+The current repository team consists of one maintainer:
 
-- **Authors:** [PrimeBuild-pc](https://github.com/PrimeBuild-pc) maintains the release source and build workflow.
-- **Reviewers:** [PrimeBuild-pc](https://github.com/PrimeBuild-pc) reviews changes proposed by other contributors.
-- **Approvers:** [PrimeBuild-pc](https://github.com/PrimeBuild-pc) approves or rejects production signing requests in SignPath.
+- **Authors:** `@PrimeBuild-pc` may contribute directly to the official repository.
+- **Reviewers:** `@PrimeBuild-pc` reviews contributions from people who are not Authors.
+- **Approvers:** `@PrimeBuild-pc` manually approves or rejects every SignPath signing request.
 
-Production requests require manual approval. The separate test policy uses a self-signed certificate for workflow validation. A person must not approve an artifact whose source they cannot trace to the approved release commit.
+No signing request is auto-approved. If another maintainer is added, this section and `.github/CODEOWNERS` must be updated before granting repository or SignPath access. A person must not approve an unreviewed artifact whose source they cannot trace to the approved release commit.
 
 ## Account security
 
@@ -32,11 +32,7 @@ Every Author, Reviewer, and Approver must enable multi-factor authentication on 
 
 ## Key protection
 
-SignPath holds the signing key. GitHub Actions stores the token for the SignPath CI user as a repository secret. Signing requests use GitHub's trusted build integration to verify the artifact's origin.
-
-## Privacy
-
-See the [ThreadPilot privacy policy](PRIVACY.md) for what is stored locally and how update requests reach GitHub.
+ThreadPilot maintainers do not download, export, or commit the signing private key. SignPath controls the signing key. Integration credentials are restricted to a protected GitHub environment and are never exposed to pull requests from forks.
 
 ## Verification and transparency
 
