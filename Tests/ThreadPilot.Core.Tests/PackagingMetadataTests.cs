@@ -1,8 +1,6 @@
 namespace ThreadPilot.Core.Tests
 {
-    using System.Text.RegularExpressions;
-
-    public sealed partial class PackagingMetadataTests
+    public sealed class PackagingMetadataTests
     {
         private const string ReleaseVersion = "1.8.0";
         private const string ReleaseAssemblyVersion = "1.8.0.0";
@@ -17,7 +15,7 @@ namespace ThreadPilot.Core.Tests
             Assert.Contains("AppVersion={#MyAppVersion}", script, StringComparison.Ordinal);
             Assert.Contains("AppVerName={#MyAppName}", script, StringComparison.Ordinal);
             Assert.DoesNotContain("AppVerName={#MyAppName} {#MyAppVersion}", script, StringComparison.Ordinal);
-            Assert.Matches(MyAppVersionRegex(), script);
+            Assert.Contains($"#define MyAppVersion \"{ReleaseVersion}\"", script, StringComparison.Ordinal);
         }
 
         [Fact]
@@ -140,8 +138,5 @@ namespace ThreadPilot.Core.Tests
 
             throw new InvalidOperationException("Repository root could not be located.");
         }
-
-        [GeneratedRegex("#define MyAppVersion \"1\\.7\\.11\"", RegexOptions.CultureInvariant)]
-        private static partial Regex MyAppVersionRegex();
     }
 }
