@@ -132,6 +132,7 @@ namespace ThreadPilot.ViewModels
 
         partial void OnSelectedProcessChanged(ProcessModel? value)
         {
+            this.CpuSetDiagnosticText = string.Empty;
             this.SetCpuAssignmentMode(
                 this.settingsService?.Settings.DefaultCpuAssignmentMode ?? CpuAssignmentMode.Automatic,
                 overriddenByRule: false);
@@ -2342,7 +2343,6 @@ namespace ThreadPilot.ViewModels
             this.HasPendingAffinityEdits = false;
             this.currentSoftCpuAssignmentText = null;
             this.CoreMaskPickerHint = string.Empty;
-            this.CpuSetDiagnosticText = string.Empty;
             this.UpdateAffinityDisplayState();
 
             // Reset power plan to current system default

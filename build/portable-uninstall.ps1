@@ -30,7 +30,7 @@ if ($process.ExitCode -notin 0, 1) { exit $process.ExitCode }
 
 $rootPrefix = $root.TrimEnd('\') + '\'
 $left = @()
-foreach ($file in $files) {
+foreach ($file in $files | Where-Object Path -ne 'ThreadPilot.exe') {
     try {
         $path = [IO.Path]::GetFullPath([IO.Path]::Combine($root, [string]$file.Path))
         if (!$path.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) { throw 'Path outside the package' }
@@ -56,5 +56,9 @@ if ($left.Count) {
     exit 1
 }
 
+if ((Get-Sha256 $executable) -ne $binary.Sha256) {
+    throw 'ThreadPilot.exe changed during cleanup and was retained.'
+}
+Remove-Item -LiteralPath $executable
 Remove-Item -LiteralPath $manifest, $PSCommandPath
 exit $process.ExitCode

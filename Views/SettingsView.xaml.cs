@@ -30,7 +30,7 @@ namespace ThreadPilot.Views
             }
 
             app.ScheduleStoreCleanup(purge, restore);
-            await window.ShutdownForUpdateAsync();
+            await window.ShutdownForUninstallAsync();
         }
 
         internal void ShowUpdates()

@@ -6,6 +6,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using System.Security.Principal;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Windows;
 using Microsoft.Win32;
@@ -146,14 +147,34 @@ internal static partial class UninstallCleanup
                 var journal = Path.Combine(StoragePaths.AppDataRoot, "game_boost_journal.json");
                 if (restore)
                 {
-                    if (recoverGameBoost != null && File.Exists(journal) && !HasReparsePoint(journal))
+                    var failures = new List<string>();
+                    if (recoverGameBoost != null && File.Exists(journal))
                     {
-                        Attempt("Game Boost recovery", residuals, () => Task.Run(recoverGameBoost).GetAwaiter().GetResult());
-                        closeServices?.Invoke();
+                        Attempt("Game Boost recovery", failures, () =>
+                        {
+                            if (HasReparsePoint(journal))
+                            {
+                                throw new InvalidOperationException("Linked recovery journal was retained.");
+                            }
+
+                            Task.Run(recoverGameBoost).GetAwaiter().GetResult();
+                            closeServices?.Invoke();
+                            if (File.Exists(journal))
+                            {
+                                throw new InvalidOperationException("Recovery journal was retained.");
+                            }
+                        });
                     }
 
-                    Attempt("Windows registry recovery", residuals, () => RegistryTweakHistory.Restore(residuals));
-                    Attempt("Power plan and SysMain recovery", residuals, () => WindowsTweakHistory.Restore(residuals));
+                    Attempt("Windows registry recovery", failures, () => RegistryTweakHistory.Restore(residuals, failures));
+                    Attempt("Power plan and SysMain recovery", failures, () => WindowsTweakHistory.Restore(residuals, failures));
+                    if (failures.Count != 0)
+                    {
+                        residuals.AddRange(failures);
+                        Report(residuals, silent, fromStoreWindow);
+                        return 2;
+                    }
+
                     Attempt("ThreadPilot registry cleanup", residuals, () =>
                     {
                         const string appKey = @"SOFTWARE\ThreadPilot";
@@ -175,6 +196,19 @@ internal static partial class UninstallCleanup
                 {
                     residuals.Add("device_tweak_backups.json retained for older driver changes without a recorded last-written value.");
                 }
+
+                Attempt("Windows recovery for other accounts", residuals, () =>
+                {
+                    using var history = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\ThreadPilot");
+                    foreach (var section in new[] { "TweakHistory", "PowerSettings", "ServiceSettings", "ImportedPlans" })
+                    {
+                        using var entries = history?.OpenSubKey(section);
+                        if (entries?.GetSubKeyNames().Any(sid => sid != RegistryTweakHistory.CurrentUserSid) == true)
+                        {
+                            residuals.Add($"{section}: recovery data belonging to another Windows account was retained.");
+                        }
+                    }
+                });
 
                 var hadSettings = File.Exists(StoragePaths.SettingsFilePath);
                 if (purge)
@@ -390,8 +424,14 @@ internal static partial class UninstallCleanup
         string[] rootFiles = ["settings.json", "core_masks.json", "persistent_rules.json", "ui-state.json", "ui-state.json.tmp"];
         RemoveFrom(root, name => MatchesDataArtifact(name, candidate => rootFiles.Contains(candidate, StringComparer.OrdinalIgnoreCase)));
         RemoveFrom(Path.Combine(root, "Configuration"), name => MatchesDataArtifact(name, candidate => candidate.Equals("ProcessPowerPlanAssociations.json", StringComparison.OrdinalIgnoreCase)));
-        RemoveFrom(Path.Combine(root, "Profiles"), name => MatchesDataArtifact(name, candidate => candidate.EndsWith(".json", StringComparison.OrdinalIgnoreCase)));
-        RemoveFrom(Path.Combine(root, "Powerplans"), name => name.EndsWith(".pow", StringComparison.OrdinalIgnoreCase));
+        RemoveFrom(Path.Combine(root, "Profiles"), name => MatchesDataArtifact(name, candidate => candidate.EndsWith(".json", StringComparison.OrdinalIgnoreCase)),
+            verifyFile: path =>
+            {
+                using var stream = File.OpenRead(path);
+                return IsProcessProfile(stream);
+            });
+        // Existing .pow files have no ownership record that distinguishes app copies from user exports.
+        RemoveFrom(Path.Combine(root, "Powerplans"), _ => false);
         RemoveFrom(Path.Combine(local, "Logs"), name => AppLogName().IsMatch(name));
         RemoveFrom(temp, name => name.Equals("ThreadPilot_Debug.log", StringComparison.OrdinalIgnoreCase), removeDirectory: false);
 
@@ -414,7 +454,7 @@ internal static partial class UninstallCleanup
             });
         }
 
-        void RemoveFrom(string path, Func<string, bool> isOwnedFile, bool removeDirectory = true)
+        void RemoveFrom(string path, Func<string, bool> isOwnedFile, bool removeDirectory = true, Func<string, bool>? verifyFile = null)
         {
             Attempt(path, residuals, () =>
             {
@@ -437,7 +477,17 @@ internal static partial class UninstallCleanup
                         continue;
                     }
 
-                    Attempt(file.FullName, residuals, file.Delete);
+                    Attempt(file.FullName, residuals, () =>
+                    {
+                        if (verifyFile == null || verifyFile(file.FullName))
+                        {
+                            file.Delete();
+                        }
+                        else
+                        {
+                            residuals.Add($"{file.FullName}: ownership could not be verified.");
+                        }
+                    });
                 }
 
                 if (removeDirectory && !Directory.EnumerateFileSystemEntries(path).Any())
@@ -445,6 +495,24 @@ internal static partial class UninstallCleanup
                     Directory.Delete(path);
                 }
             });
+        }
+    }
+
+    internal static bool IsProcessProfile(Stream stream)
+    {
+        try
+        {
+            using var reader = new StreamReader(stream, leaveOpen: true);
+            using var profile = JsonDocument.Parse(reader.ReadToEnd());
+            var root = profile.RootElement;
+            return root.ValueKind == JsonValueKind.Object
+                && root.TryGetProperty("ProcessName", out var name) && name.ValueKind == JsonValueKind.String
+                && root.TryGetProperty("Priority", out var priority) && priority.ValueKind == JsonValueKind.Number
+                && root.TryGetProperty("ProcessorAffinity", out var affinity) && affinity.ValueKind == JsonValueKind.Number;
+        }
+        catch (JsonException)
+        {
+            return false;
         }
     }
 

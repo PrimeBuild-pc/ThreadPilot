@@ -710,7 +710,9 @@ namespace ThreadPilot
         // An update must not stop at the unsaved-settings prompt: the installer is already running.
         internal Task ShutdownForUpdateAsync() => this.PerformGracefulShutdownAsync(validateUnsavedChanges: false);
 
-        private async Task PerformGracefulShutdownAsync(bool validateUnsavedChanges = true)
+        internal Task ShutdownForUninstallAsync() => this.PerformGracefulShutdownAsync(validateUnsavedChanges: false, restoreDefaultPowerPlan: false);
+
+        private async Task PerformGracefulShutdownAsync(bool validateUnsavedChanges = true, bool restoreDefaultPowerPlan = true)
         {
             if (this.isPerformingShutdown)
             {
@@ -780,7 +782,7 @@ namespace ThreadPilot
                 }
 
                 // 3. Restore default power plan if configured
-                if (this.settingsService.Settings.RestoreDefaultPowerPlanOnExit)
+                if (restoreDefaultPowerPlan && this.settingsService.Settings.RestoreDefaultPowerPlanOnExit)
                 {
                     try
                     {

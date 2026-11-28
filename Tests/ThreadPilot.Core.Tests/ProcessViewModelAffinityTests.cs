@@ -226,6 +226,9 @@ namespace ThreadPilot.Core.Tests
             Assert.Contains("explicit override", viewModel.CpuSetDiagnosticText, StringComparison.Ordinal);
             Assert.Contains("TID 3: read denied.", viewModel.CpuSetDiagnosticText, StringComparison.Ordinal);
             Assert.Contains("not the CPU a thread is running on", viewModel.CpuSetDiagnosticText, StringComparison.Ordinal);
+
+            viewModel.SelectedProcess = new ProcessModel { ProcessId = 1235, Name = "Other Game", ProcessorAffinity = 3 };
+            Assert.Empty(viewModel.CpuSetDiagnosticText);
         }
 
         [Fact]

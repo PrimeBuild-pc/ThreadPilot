@@ -261,7 +261,7 @@ namespace ThreadPilot
                 this.uninstallShutdownSignal = UninstallCleanup.RegisterShutdown(() =>
                 {
                     this.Dispatcher.BeginInvoke(new Action(() =>
-                        TaskSafety.FireAndForget(mainWindow.ShutdownForUpdateAsync(), _ => { })));
+                        TaskSafety.FireAndForget(mainWindow.ShutdownForUninstallAsync(), _ => { })));
                 });
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException or System.IO.IOException)

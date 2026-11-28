@@ -848,7 +848,7 @@ namespace ThreadPilot.Services
             protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)
             {
                 using var pen = new Pen(colors.MenuBorder);
-                var inset = 10 * e.ToolStrip.DeviceDpi / 96;
+                var inset = 10 * (e.ToolStrip?.DeviceDpi ?? 96) / 96;
                 var y = e.Item.Height / 2;
                 e.Graphics.DrawLine(pen, inset, y, e.Item.Width - inset, y);
             }

@@ -52,7 +52,7 @@ internal static class RegistryTweakHistory
         }
     }
 
-    internal static void Restore(List<string> residuals)
+    internal static void Restore(List<string> residuals, List<string> failures)
     {
         lock (Gate)
         {
@@ -94,7 +94,7 @@ internal static class RegistryTweakHistory
                     }
                     catch (Exception ex)
                     {
-                        residuals.Add($"{id}: restore failed ({ex.Message}). Recovery entry retained.");
+                        failures.Add($"{id}: restore failed ({ex.Message}). Recovery entry retained.");
                     }
                 }
 

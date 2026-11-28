@@ -204,10 +204,11 @@ namespace ThreadPilot.Platforms.Windows
                 return false;
             }
 
+            // Windows reports only the primary group's mask. Outside that group the affinity is unknown.
             return processors.Any(processor =>
-                processor.Group != probe.AffinityGroup
-                || processor.LogicalProcessorNumber >= 64
-                || (probe.AffinityMask & (1UL << processor.LogicalProcessorNumber)) == 0);
+                processor.Group == probe.AffinityGroup
+                && (processor.LogicalProcessorNumber >= 64
+                    || (probe.AffinityMask & (1UL << processor.LogicalProcessorNumber)) == 0));
         }
     }
 

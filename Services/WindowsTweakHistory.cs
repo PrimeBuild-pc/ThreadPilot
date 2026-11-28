@@ -82,7 +82,7 @@ internal static class WindowsTweakHistory
         Store(history, "SysMain", new SysMainChange(original, desired, null));
     }
 
-    internal static void Restore(List<string> residuals)
+    internal static void Restore(List<string> residuals, List<string> failures)
     {
         RestoreSection("PowerSettings", (history, id) =>
         {
@@ -198,7 +198,7 @@ internal static class WindowsTweakHistory
                     }
                     catch (Exception ex)
                     {
-                        residuals.Add($"{id}: restore failed ({ex.Message}). Recovery entry retained.");
+                        failures.Add($"{id}: restore failed ({ex.Message}). Recovery entry retained.");
                     }
                 }
 

@@ -90,10 +90,11 @@ namespace ThreadPilot.Core.Tests
                 [new ProcessorRef(1, 0, 64)] = 20,
             });
             var observation = ThreadCpuSetDiagnosticClassifier.Classify(
-                ThreadCpuSetProbe.Override(7, [20, 10], null, (false, 0, 0)),
+                ThreadCpuSetProbe.Override(7, [20, 10], null, (true, 0, 0x2)),
                 mapping);
 
             Assert.Equal([(ushort)0, (ushort)1], observation.Processors.Select(processor => processor.Group));
+            Assert.False(observation.AffinityConflictsWithAssignment);
             var text = CpuSetDiagnosticFormatter.FormatProcessors(observation.Processors);
             Assert.Equal("G0:CPU 1, G1:CPU 0", text);
         }
