@@ -27,6 +27,7 @@ namespace ThreadPilot.Platforms.Windows
 
         private SafeProcessHandle? queryLimitedInfoHandle;
         private SafeProcessHandle? setLimitedInfoHandle;
+        private readonly int queryOpenError;
         private bool disposed = false;
 
         public ProcessCpuSetHandler(uint processId, string executableName, ILogger? logger = null)
@@ -52,11 +53,12 @@ namespace ThreadPilot.Platforms.Windows
                 ProcessAccessFlags.PROCESS_QUERY_LIMITED_INFORMATION,
                 false,
                 processId);
+            this.queryOpenError = 0;
 
             if (this.queryLimitedInfoHandle == null || this.queryLimitedInfoHandle.IsInvalid)
             {
-                var error = this.nativeApi.GetLastWin32Error();
-                this.logger?.LogWarning("Failed to open process {ProcessId} for querying: {Error}", processId, new Win32Exception(error).Message);
+                this.queryOpenError = this.nativeApi.GetLastWin32Error();
+                this.logger?.LogWarning("Failed to open process {ProcessId} for querying: {Error}", processId, new Win32Exception(this.queryOpenError).Message);
             }
         }
 
@@ -65,6 +67,27 @@ namespace ThreadPilot.Platforms.Windows
         public string ExecutableName => this.executableName;
 
         public bool IsValid => this.queryLimitedInfoHandle != null && !this.queryLimitedInfoHandle.IsInvalid;
+
+        internal CpuSetMapping Mapping => this.cpuSetMapping;
+
+        internal CpuSetIdRead ReadDefaultCpuSets()
+        {
+            if (!this.IsValid)
+            {
+                return new CpuSetIdRead(
+                    this.queryOpenError == 5 ? CpuSetReadKind.AccessDenied : CpuSetReadKind.Unavailable,
+                    [],
+                    this.queryOpenError);
+            }
+
+            var ids = this.TryGetDefaultCpuSetIds();
+            if (ids == null)
+            {
+                return new CpuSetIdRead(CpuSetReadKind.Unavailable, [], this.nativeApi.GetLastWin32Error());
+            }
+
+            return new CpuSetIdRead(ids.Count == 0 ? CpuSetReadKind.Empty : CpuSetReadKind.Read, ids, 0);
+        }
 
         public IReadOnlyList<int>? GetDefaultCpuSetLogicalProcessorIndexes()
         {

@@ -611,6 +611,15 @@
                                           DisplayMemberPath="Name"
                                           ToolTip="{DynamicResource ProcessView_RowMaskTooltip}"
                                           AutomationProperties.Name="{DynamicResource ProcessView_PendingCoreMask}"/>
+                                <TextBlock Grid.Column="0"
+                                           Margin="8,0,28,0"
+                                           VerticalAlignment="Center"
+                                           IsHitTestVisible="False"
+                                           Text="{Binding CoreMaskPickerHint}"
+                                           Foreground="{DynamicResource WarningTextBrush}"
+                                           FontSize="{StaticResource ProcessFontSmall}"
+                                           TextTrimming="CharacterEllipsis"
+                                           Visibility="{Binding CoreMaskPickerHint, Converter={x:Static converters:StringToVisibilityConverter.Instance}}"/>
                                 <Button Grid.Column="1"
                                         Margin="8,0,0,0"
                                         Command="{Binding CreateCustomMaskCommand}"
@@ -688,6 +697,18 @@
                                 <TextBlock Text="{Binding PendingAffinityText}" FontSize="{StaticResource ProcessFontSmall}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,16,2"/>
                             </WrapPanel>
                             <TextBlock Text="{Binding AffinityEditStateText}" FontSize="{StaticResource ProcessFontSmall}" Foreground="{DynamicResource WarningTextBrush}" TextWrapping="Wrap" Margin="0,0,0,2"/>
+                            <Button HorizontalAlignment="Left"
+                                    Margin="0,4,0,4"
+                                    Padding="8,4"
+                                    Content="{DynamicResource ProcessView_CpuSetDiagnostic}"
+                                    ToolTip="{DynamicResource ProcessView_CpuSetDiagnosticTooltip}"
+                                    Command="{Binding ReadCpuSetDiagnosticCommand}"/>
+                            <TextBlock Text="{Binding CpuSetDiagnosticText}"
+                                       FontSize="{StaticResource ProcessFontSmall}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,6"
+                                       Visibility="{Binding CpuSetDiagnosticText, Converter={x:Static converters:StringToVisibilityConverter.Instance}}"/>
                             <TextBlock FontSize="{StaticResource ProcessFontSmall}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8">
                                 <Run Text="{Binding TopologyStatus, Mode=OneWay}"/>
                                 <Run Text="·"/>

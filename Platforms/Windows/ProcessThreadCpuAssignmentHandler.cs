@@ -68,6 +68,59 @@ namespace ThreadPilot.Platforms.Windows
             });
         }
 
+        internal static ThreadCpuSetProbeResult ProbeSelectedCpuSets(int processId)
+        {
+            try
+            {
+                using var process = Process.GetProcessById(processId);
+                var probes = new List<ThreadCpuSetProbe>();
+                foreach (ProcessThread thread in process.Threads)
+                {
+                    probes.Add(ProbeThread(thread.Id));
+                }
+
+                return new ThreadCpuSetProbeResult(true, null, probes);
+            }
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or Win32Exception)
+            {
+                var error = ex is Win32Exception win32 ? win32.NativeErrorCode : 0;
+                return new ThreadCpuSetProbeResult(false, error == 0 ? null : error, []);
+            }
+        }
+
+        internal static ThreadCpuSetProbe ProbeThread(int threadId)
+        {
+            using var handle = NativeMethods.OpenThread(ThreadQueryLimitedInformation, false, (uint)threadId);
+            if (handle.IsInvalid)
+            {
+                return ThreadCpuSetProbe.OpenFailed(threadId, Marshal.GetLastWin32Error());
+            }
+
+            var affinity = ReadAffinity(handle);
+            var ideal = ReadIdeal(handle);
+            if (!NativeMethods.GetThreadSelectedCpuSets(handle, null, 0, out var required))
+            {
+                var error = Marshal.GetLastWin32Error();
+                if (error != 122 || required == 0)
+                {
+                    return ThreadCpuSetProbe.QueryFailed(threadId, error, ideal, affinity);
+                }
+            }
+
+            if (required == 0)
+            {
+                return ThreadCpuSetProbe.NoOverride(threadId, ideal, affinity);
+            }
+
+            var ids = new uint[required];
+            if (!NativeMethods.GetThreadSelectedCpuSets(handle, ids, required, out var filled))
+            {
+                return ThreadCpuSetProbe.QueryFailed(threadId, Marshal.GetLastWin32Error(), ideal, affinity);
+            }
+
+            return ThreadCpuSetProbe.Override(threadId, ids.Take((int)filled).ToArray(), ideal, affinity);
+        }
+
         public IReadOnlyList<int>? GetIdealProcessorIndexes()
         {
             try
@@ -201,6 +254,26 @@ namespace ThreadPilot.Platforms.Windows
                 : ThreadCpuAssignmentResult.Succeeded(applied);
         }
 
+        private static ProcessorRef? ReadIdeal(SafeWaitHandle handle)
+        {
+            if (!NativeMethods.GetThreadIdealProcessorEx(handle, out var processor))
+            {
+                return null;
+            }
+
+            return new ProcessorRef(processor.Group, processor.Number, (processor.Group * 64) + processor.Number);
+        }
+
+        private static (bool Read, ushort Group, ulong Mask) ReadAffinity(SafeWaitHandle handle)
+        {
+            if (!NativeMethods.GetThreadGroupAffinity(handle, out var affinity))
+            {
+                return (false, 0, 0);
+            }
+
+            return (true, affinity.Group, (ulong)affinity.Mask);
+        }
+
         private static ProcessorNumber ToProcessorNumber(ProcessorRef processor) =>
             new()
             {
@@ -246,6 +319,14 @@ namespace ThreadPilot.Platforms.Windows
             [LibraryImport("kernel32.dll", SetLastError = true)]
             [return: MarshalAs(UnmanagedType.Bool)]
             internal static partial bool GetThreadGroupAffinity(SafeWaitHandle thread, out GroupAffinity groupAffinity);
+
+            [LibraryImport("kernel32.dll", SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            internal static partial bool GetThreadSelectedCpuSets(
+                SafeWaitHandle thread,
+                uint[]? cpuSetIds,
+                uint cpuSetIdCount,
+                out uint requiredIdCount);
         }
     }
 

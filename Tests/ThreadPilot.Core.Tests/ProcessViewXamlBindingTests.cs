@@ -15,6 +15,16 @@ namespace ThreadPilot.Core.Tests
             "ProcessView.xaml");
 
         [Fact]
+        public void CpuSetDiagnostic_IsAReadOnlyDisplayNextToTheMaskPicker()
+        {
+            var serialized = File.ReadAllText(ProcessViewPath);
+            Assert.Contains("ReadCpuSetDiagnosticCommand", serialized, StringComparison.Ordinal);
+            Assert.Contains("CpuSetDiagnosticText", serialized, StringComparison.Ordinal);
+            Assert.Contains("CoreMaskPickerHint", serialized, StringComparison.Ordinal);
+            Assert.Contains("SelectedItem=\"{Binding SelectedCoreMask, Mode=TwoWay}\"", serialized, StringComparison.Ordinal);
+        }
+
+        [Fact]
         public void LastOperationMessageBinding_IsDisplayOnly()
         {
             var document = XDocument.Load(ProcessViewPath, LoadOptions.PreserveWhitespace);

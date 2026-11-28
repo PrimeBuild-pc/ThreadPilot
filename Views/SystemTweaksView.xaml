@@ -179,7 +179,7 @@
                                          Content="{DynamicResource GameBoost_Mode_Isolation}"
                                          IsChecked="{Binding GameBoostIsolation, Mode=TwoWay}"/>
                         </StackPanel>
-                        <TextBlock Text="{DynamicResource GameBoost_Mode_Description}"
+                        <TextBlock Text="{Binding GameBoostIsolationDescription}"
                                    FontSize="12"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextWrapping="Wrap"
