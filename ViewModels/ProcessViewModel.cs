@@ -53,6 +53,7 @@ namespace ThreadPilot.ViewModels
         private bool isApplyingFilter;
         private bool filterRefreshPending;
         private bool suppressCoreSelectionEvents;
+        private bool suppressCoreMaskPickerSync;
         private bool suppressCpuAssignmentModeChanges;
         private bool cpuAssignmentModeOverriddenByRule;
         private string? currentSoftCpuAssignmentText;
@@ -104,6 +105,12 @@ namespace ThreadPilot.ViewModels
 
         [ObservableProperty]
         private string affinityEditStateText = "Select a process to view its current Windows affinity.";
+
+        [ObservableProperty]
+        private string coreMaskPickerHint = string.Empty;
+
+        [ObservableProperty]
+        private string cpuSetDiagnosticText = string.Empty;
 
         [ObservableProperty]
         private bool isTopologyDetectionSuccessful = false;
