@@ -4,8 +4,8 @@ namespace ThreadPilot.Core.Tests
 
     public sealed partial class PackagingMetadataTests
     {
-        private const string ReleaseVersion = "1.7.11";
-        private const string ReleaseAssemblyVersion = "1.7.11.0";
+        private const string ReleaseVersion = "1.8.0";
+        private const string ReleaseAssemblyVersion = "1.8.0.0";
 
         [Fact]
         public void InnoInstaller_UsesStableDisplayNameAndSeparateVersionMetadata()

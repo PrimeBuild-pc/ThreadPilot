@@ -134,7 +134,7 @@ Free code signing provided by [SignPath.io](https://signpath.io), certificate by
 Published ThreadPilot releases are currently unsigned. Production signing will start after the certificate is activated and the signing workflow is enabled.
 
 [![Download Latest Stable](https://img.shields.io/badge/Download-Latest%20Stable-2ea44f?logo=github)](https://github.com/PrimeBuild-pc/ThreadPilot/releases/latest)
-**Stable releases include Game Boost** (off by default). It is not yet validated on real dual-CCD Ryzen and Intel hybrid CPUs; if you have one, see the [test steps and issue-reporting checklist](docs/releases/v1.7.8.md#help-us-test-dual-ccd-ryzen-and-intel-hybrid).
+**Stable releases include Game Boost** (off by default). CPU placement and restoration were validated on a real [Intel Core i9-12900K](docs/validation/intel-hybrid-12900k.md). [Testing on dual-CCD Ryzen and other Intel hybrid CPUs](https://github.com/PrimeBuild-pc/ThreadPilot/issues/133) is ongoing.
 
 Both channels use the same application/settings location. Export a configuration backup before switching; they are not separate side-by-side installations.
 
