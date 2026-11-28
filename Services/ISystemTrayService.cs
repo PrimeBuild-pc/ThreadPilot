@@ -32,6 +32,8 @@ namespace ThreadPilot.Services
 
         void Show();
 
+        void OpenMenu();
+
         void Hide();
 
         void UpdateTooltip(string tooltip);

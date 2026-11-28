@@ -189,8 +189,8 @@ begin
   if UninstallSilent then
   begin
     Parameters := Parameters + ' --silent';
-    if ExpandConstant('{param:PURGEDATA|0}') = '1' then
-      Parameters := Parameters + ' --purge-data';
+    if ExpandConstant('{param:PURGEDATA|1}') = '0' then
+      Parameters := Parameters + ' --keep-data';
     if ExpandConstant('{param:RESTOREWINDOWS|1}') = '0' then
       Parameters := Parameters + ' --keep-windows-changes';
   end;

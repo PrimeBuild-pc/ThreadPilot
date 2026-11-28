@@ -799,6 +799,7 @@
     <sys:String x:Key="SettingsView_ShortcutShowWindow">显示或隐藏 ThreadPilot</sys:String>
     <sys:String x:Key="SettingsView_ShortcutMonitoring">进程监控通知</sys:String>
     <sys:String x:Key="SettingsView_ShortcutPerformance">高性能通知</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutOpenTrayMenu">打开系统托盘菜单</sys:String>
     <sys:String x:Key="SettingsView_ShortcutTweaks">打开系统调整</sys:String>
     <sys:String x:Key="SettingsView_ShortcutKey">快捷键按键</sys:String>
     <sys:String x:Key="Settings_ShortcutUnavailable">无法使用 {0}。请选择包含修饰键且可用的组合。</sys:String>

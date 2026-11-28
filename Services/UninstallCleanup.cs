@@ -98,7 +98,7 @@ internal static partial class UninstallCleanup
     internal static int Run(string[] args, Func<Task>? recoverGameBoost = null, Action? closeServices = null, bool fromStoreWindow = false)
     {
         var silent = args.Contains("--silent");
-        var purge = args.Contains("--purge-data");
+        var purge = !args.Contains("--keep-data");
         var restore = !args.Contains("--keep-windows-changes");
         if (!silent && !fromStoreWindow && !TryChooseOptions("Uninstall ThreadPilot", out purge, out restore))
         {
@@ -154,6 +154,15 @@ internal static partial class UninstallCleanup
 
                     Attempt("Windows registry recovery", residuals, () => RegistryTweakHistory.Restore(residuals));
                     Attempt("Power plan and SysMain recovery", residuals, () => WindowsTweakHistory.Restore(residuals));
+                    Attempt("ThreadPilot registry cleanup", residuals, () =>
+                    {
+                        const string appKey = @"SOFTWARE\ThreadPilot";
+                        using var key = Registry.LocalMachine.OpenSubKey(appKey);
+                        if (key is { ValueCount: 0, SubKeyCount: 0 })
+                        {
+                            Registry.LocalMachine.DeleteSubKey(appKey, throwOnMissingSubKey: false);
+                        }
+                    });
                 }
 
                 if (File.Exists(journal))
@@ -378,9 +387,10 @@ internal static partial class UninstallCleanup
 
     private static void RemoveUserData(string root, string local, string temp, List<string> residuals)
     {
-        RemoveFrom(root, name => name is "settings.json" or "core_masks.json" or "persistent_rules.json" or "ui-state.json");
-        RemoveFrom(Path.Combine(root, "Configuration"), name => name.Equals("ProcessPowerPlanAssociations.json", StringComparison.OrdinalIgnoreCase));
-        RemoveFrom(Path.Combine(root, "Profiles"), name => name.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
+        string[] rootFiles = ["settings.json", "core_masks.json", "persistent_rules.json", "ui-state.json", "ui-state.json.tmp"];
+        RemoveFrom(root, name => MatchesDataArtifact(name, candidate => rootFiles.Contains(candidate, StringComparer.OrdinalIgnoreCase)));
+        RemoveFrom(Path.Combine(root, "Configuration"), name => MatchesDataArtifact(name, candidate => candidate.Equals("ProcessPowerPlanAssociations.json", StringComparison.OrdinalIgnoreCase)));
+        RemoveFrom(Path.Combine(root, "Profiles"), name => MatchesDataArtifact(name, candidate => candidate.EndsWith(".json", StringComparison.OrdinalIgnoreCase)));
         RemoveFrom(Path.Combine(root, "Powerplans"), name => name.EndsWith(".pow", StringComparison.OrdinalIgnoreCase));
         RemoveFrom(Path.Combine(local, "Logs"), name => AppLogName().IsMatch(name));
         RemoveFrom(temp, name => name.Equals("ThreadPilot_Debug.log", StringComparison.OrdinalIgnoreCase), removeDirectory: false);
@@ -436,6 +446,22 @@ internal static partial class UninstallCleanup
                 }
             });
         }
+    }
+
+    internal static bool MatchesDataArtifact(string name, Func<string, bool> matchesDataFile)
+    {
+        if (matchesDataFile(name))
+        {
+            return true;
+        }
+
+        if (name.EndsWith(".bak", StringComparison.OrdinalIgnoreCase))
+        {
+            return matchesDataFile(name[..^4]);
+        }
+
+        var temp = AtomicDataName().Match(name);
+        return temp.Success && matchesDataFile(temp.Groups[1].Value);
     }
 
     private static bool DirectoryExistsForCleanup(string path)
@@ -541,7 +567,7 @@ internal static partial class UninstallCleanup
                 residuals.Count == 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
         }
 
-        if (silent && (residuals.Count != 0 || legacyNote != null))
+        if (silent && residuals.Count != 0)
         {
             // Create a new admin-owned directory before writing from the elevated cleanup process.
             try
@@ -556,13 +582,16 @@ internal static partial class UninstallCleanup
         }
     }
 
+    [GeneratedRegex(@"^[.](.+)[.][0-9a-f]{32}[.]tmp$", RegexOptions.IgnoreCase)]
+    private static partial Regex AtomicDataName();
+
     [GeneratedRegex(@"^LorenzoMassafra[.]ThreadPilot_[0-9.]+_x64__2j208vxf88tt6$", RegexOptions.IgnoreCase)]
     private static partial Regex StoreTaskPackage();
 
     [GeneratedRegex(@"^ThreadPilot(?:_\d{8}_\d{6})?\.log$", RegexOptions.IgnoreCase)]
     private static partial Regex AppLogName();
 
-    [GeneratedRegex(@"^ThreadPilot-(?:task-|update-[0-9A-Za-z.+-]+-)[0-9a-f]{32}$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^ThreadPilot-(?:task-|uninstall-|update-[0-9A-Za-z.+-]+-)[0-9a-f]{32}$", RegexOptions.IgnoreCase)]
     private static partial Regex TempFolderName();
 
     [DllImport("user32.dll")]

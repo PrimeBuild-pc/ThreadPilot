@@ -53,9 +53,9 @@ namespace ThreadPilot
         internal void ScheduleStoreCleanup(bool purge, bool restore)
         {
             var args = new List<string> { UninstallCleanup.Argument };
-            if (purge)
+            if (!purge)
             {
-                args.Add("--purge-data");
+                args.Add("--keep-data");
             }
 
             if (!restore)

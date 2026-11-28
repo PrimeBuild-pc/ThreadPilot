@@ -799,6 +799,7 @@
     <sys:String x:Key="SettingsView_ShortcutShowWindow">Show or hide ThreadPilot</sys:String>
     <sys:String x:Key="SettingsView_ShortcutMonitoring">Monitoring notification</sys:String>
     <sys:String x:Key="SettingsView_ShortcutPerformance">High Performance notification</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutOpenTrayMenu">Open tray menu</sys:String>
     <sys:String x:Key="SettingsView_ShortcutTweaks">Open System Tweaks</sys:String>
     <sys:String x:Key="SettingsView_ShortcutKey">Shortcut key</sys:String>
     <sys:String x:Key="Settings_ShortcutUnavailable">Can't use {0}. Choose a key with a modifier and a combination that's available.</sys:String>

@@ -799,6 +799,7 @@
     <sys:String x:Key="SettingsView_ShortcutShowWindow">Mostrar u ocultar ThreadPilot</sys:String>
     <sys:String x:Key="SettingsView_ShortcutMonitoring">Notificación de supervisión</sys:String>
     <sys:String x:Key="SettingsView_ShortcutPerformance">Notificación de alto rendimiento</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutOpenTrayMenu">Abrir el menú del área de notificación</sys:String>
     <sys:String x:Key="SettingsView_ShortcutTweaks">Abrir ajustes del sistema</sys:String>
     <sys:String x:Key="SettingsView_ShortcutKey">Tecla del atajo</sys:String>
     <sys:String x:Key="Settings_ShortcutUnavailable">No se puede usar {0}. Elige una tecla con un modificador y una combinación disponible.</sys:String>
