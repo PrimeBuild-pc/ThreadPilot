@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.8.0 - Game Boost, tray and uninstall improvements
+
+- Validated Game Boost CPU placement and restoration on an Intel Core i9-12900K. Improved game detection, including Arma Reforger, and recorded session decisions in Activity and the diagnostic log.
+- Added read-only CPU Set diagnostics for individual threads alongside the process default. Fixed Windows Game Mode status and reduced work during process-list refresh.
+- Redesigned the Windows 11 tray menu and added a configurable shortcut and a persistent entry for detected updates.
+- Added uninstall options for app data and tracked Windows changes. Existing user exports are preserved.
+- Installer and portable executable are unsigned. [Full release notes](releases/v1.8.0.md).
+
 ## v1.7.11 - Start with Windows is opt-in
 
 - Start with Windows is off for new installs; saved settings keep their value. A one-time notice offers to turn it on or open Settings (all seven languages).
