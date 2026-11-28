@@ -55,7 +55,7 @@ namespace ThreadPilot.Core.Tests
 
             Assert.Contains("UninstallLogMode=overwrite", script, StringComparison.Ordinal);
             Assert.Contains("--prepare-uninstall", script, StringComparison.Ordinal);
-            Assert.Contains("{param:PURGEDATA|0}", script, StringComparison.Ordinal);
+            Assert.Contains("{param:PURGEDATA|1}", script, StringComparison.Ordinal);
             Assert.Contains("Type: dirifempty; Name: \"{app}\"", script, StringComparison.Ordinal);
             Assert.DoesNotContain("filesandordirs", script, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("{userappdata}", script, StringComparison.OrdinalIgnoreCase);

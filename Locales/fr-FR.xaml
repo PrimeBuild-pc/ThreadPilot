@@ -773,6 +773,7 @@
     <sys:String x:Key="SettingsView_ShortcutShowWindow">Afficher ou masquer ThreadPilot</sys:String>
     <sys:String x:Key="SettingsView_ShortcutMonitoring">Notification de surveillance</sys:String>
     <sys:String x:Key="SettingsView_ShortcutPerformance">Notification Performances élevées</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutOpenTrayMenu">Ouvrir le menu de la zone de notification</sys:String>
     <sys:String x:Key="SettingsView_ShortcutTweaks">Ouvrir les réglages système</sys:String>
     <sys:String x:Key="SettingsView_ShortcutKey">Touche du raccourci</sys:String>
     <sys:String x:Key="Settings_ShortcutUnavailable">Impossible d’utiliser {0}. Choisissez une touche avec un modificateur et une combinaison disponible.</sys:String>

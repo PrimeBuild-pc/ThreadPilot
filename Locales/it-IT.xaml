@@ -773,6 +773,7 @@
     <sys:String x:Key="SettingsView_ShortcutShowWindow">Mostra o nascondi ThreadPilot</sys:String>
     <sys:String x:Key="SettingsView_ShortcutMonitoring">Notifica di monitoraggio</sys:String>
     <sys:String x:Key="SettingsView_ShortcutPerformance">Notifica Prestazioni elevate</sys:String>
+    <sys:String x:Key="SettingsView_ShortcutOpenTrayMenu">Apri menu dell’area di notifica</sys:String>
     <sys:String x:Key="SettingsView_ShortcutTweaks">Apri Ottimizzazioni di sistema</sys:String>
     <sys:String x:Key="SettingsView_ShortcutKey">Tasto della scorciatoia</sys:String>
     <sys:String x:Key="Settings_ShortcutUnavailable">Impossibile usare {0}. Scegli un tasto con un modificatore e una combinazione disponibile.</sys:String>

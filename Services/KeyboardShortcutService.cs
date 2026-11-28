@@ -346,6 +346,13 @@ namespace ThreadPilot.Services
                     IsEnabled = true,
                     IsGlobal = true,
                 },
+                [ShortcutActions.OpenTrayMenu] = new KeyboardShortcut
+                {
+                    ActionName = ShortcutActions.OpenTrayMenu,
+                    Key = Key.F11,
+                    Modifiers = ModifierKeys.Control | ModifierKeys.Shift,
+                    Description = "Open tray menu",
+                },
                 [ShortcutActions.OpenTweaks] = new KeyboardShortcut
                 {
                     ActionName = ShortcutActions.OpenTweaks,
@@ -440,6 +447,7 @@ namespace ThreadPilot.Services
                 ShortcutActions.PowerPlanPowerSaver => "Switch to Power Saver power plan",
                 ShortcutActions.RefreshProcessList => "Refresh process list",
                 ShortcutActions.OpenSettings => "Open Settings tab",
+                ShortcutActions.OpenTrayMenu => "Open tray menu",
                 ShortcutActions.OpenTweaks => "Open System Tweaks tab",
                 ShortcutActions.ExitApplication => "Exit application",
                 _ => actionName,

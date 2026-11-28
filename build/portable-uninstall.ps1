@@ -1,4 +1,4 @@
-param([switch]$Silent, [switch]$PurgeData, [switch]$KeepWindowsChanges)
+param([switch]$Silent, [switch]$PurgeData, [switch]$KeepWindowsChanges, [switch]$KeepData)
 
 $ErrorActionPreference = 'Stop'
 function Get-Sha256([string]$path) {
@@ -23,7 +23,7 @@ if (!$binary -or (Get-Sha256 $executable) -ne $binary.Sha256) {
 
 $arguments = @('--prepare-uninstall')
 if ($Silent) { $arguments += '--silent' }
-if ($PurgeData) { $arguments += '--purge-data' }
+if ($KeepData -and !$PurgeData) { $arguments += '--keep-data' }
 if ($KeepWindowsChanges) { $arguments += '--keep-windows-changes' }
 $process = Start-Process -FilePath $executable -ArgumentList $arguments -WorkingDirectory $root -Wait -PassThru
 if ($process.ExitCode -notin 0, 1) { exit $process.ExitCode }

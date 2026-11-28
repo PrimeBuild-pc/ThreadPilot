@@ -157,6 +157,9 @@
                                                     <DataTrigger Binding="{Binding ActionName}" Value="PowerPlanHighPerformance">
                                                         <Setter Property="Content" Value="{DynamicResource SettingsView_ShortcutPerformance}"/>
                                                     </DataTrigger>
+                                                    <DataTrigger Binding="{Binding ActionName}" Value="OpenTrayMenu">
+                                                        <Setter Property="Content" Value="{DynamicResource SettingsView_ShortcutOpenTrayMenu}"/>
+                                                    </DataTrigger>
                                                     <DataTrigger Binding="{Binding ActionName}" Value="OpenTweaks">
                                                         <Setter Property="Content" Value="{DynamicResource SettingsView_ShortcutTweaks}"/>
                                                     </DataTrigger>

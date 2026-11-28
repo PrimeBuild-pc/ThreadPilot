@@ -1142,6 +1142,10 @@ namespace ThreadPilot
                     this.ShowWindowFromTray("Tweaks");
                     break;
 
+                case ShortcutActions.OpenTrayMenu:
+                    this.systemTrayService.OpenMenu();
+                    break;
+
                 case ShortcutActions.OpenSettings:
                     this.ShowWindowFromTray("Settings");
                     break;

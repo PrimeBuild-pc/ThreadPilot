@@ -105,6 +105,7 @@ namespace ThreadPilot.Services
         public const string PowerPlanPowerSaver = "PowerPlanPowerSaver";
         public const string RefreshProcessList = "RefreshProcessList";
         public const string OpenSettings = "OpenSettings";
+        public const string OpenTrayMenu = "OpenTrayMenu";
         public const string OpenTweaks = "OpenTweaks";
         public const string ExitApplication = "ExitApplication";
     }

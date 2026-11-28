@@ -42,6 +42,16 @@ internal static class RegistryTweakHistory
         }
     }
 
+    internal static RegistryValue? GetTrackedOriginal(RegistryKey root, string path, string name)
+    {
+        lock (Gate)
+        {
+            using var history = Registry.LocalMachine.OpenSubKey(HistoryPath + "\\" + CurrentUserSid);
+            var change = history == null ? null : ReadChange(history, $"{root.Name}|{path}|{name}");
+            return change != null && Read(root, path, name) == change.Written ? change.Original : null;
+        }
+    }
+
     internal static void Restore(List<string> residuals)
     {
         lock (Gate)

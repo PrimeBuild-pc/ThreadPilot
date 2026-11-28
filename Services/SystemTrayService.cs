@@ -4,6 +4,7 @@ namespace ThreadPilot.Services
     using System.Drawing;
     using System.Drawing.Drawing2D;
     using System.IO;
+    using System.Runtime.InteropServices;
     using System.Windows.Forms;
     using Microsoft.Extensions.Logging;
     using ThreadPilot.Helpers;
@@ -196,6 +197,26 @@ namespace ThreadPilot.Services
             this.contextMenu.Items.Add(this.exitMenuItem);
 
             this.ApplyContextMenuTheme();
+        }
+
+        public void OpenMenu()
+        {
+            if (this.contextMenu == null)
+            {
+                return;
+            }
+
+            if (this.contextMenu.Visible)
+            {
+                this.contextMenu.Close(ToolStripDropDownCloseReason.Keyboard);
+                return;
+            }
+
+            this.contextMenu.Show(Cursor.Position);
+            _ = SetForegroundWindow(this.contextMenu.Handle);
+            this.contextMenu.Focus();
+            this.contextMenu.Items.Cast<ToolStripItem>()
+                .FirstOrDefault(item => item.Available && item.Enabled && item.CanSelect)?.Select();
         }
 
         public void Show()
@@ -893,6 +914,10 @@ namespace ThreadPilot.Services
 
             public override Color MenuItemBorder => this.borderColor;
         }
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool SetForegroundWindow(IntPtr window);
 
         private static Font CreatePreferredMenuFont(float baseSize)
         {

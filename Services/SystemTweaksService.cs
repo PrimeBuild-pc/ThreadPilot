@@ -760,24 +760,8 @@ namespace ThreadPilot.Services
             }
 
             var backups = this.LoadRegistryBackups();
-            var changedBackups = false;
             try
             {
-                foreach (var target in targets)
-                {
-                    var backupKey = target.BackupKey;
-                    if (!backups.ContainsKey(backupKey))
-                    {
-                        backups[backupKey] = new RegistryValueBackup(target.Value, target.Kind);
-                        changedBackups = true;
-                    }
-                }
-
-                if (changedBackups)
-                {
-                    await SaveRegistryBackupsAsync(backups);
-                }
-
                 await WriteDriverRegistryTargetsAsync(
                     targets,
                     target =>
@@ -787,11 +771,19 @@ namespace ThreadPilot.Services
                             return enabledValue;
                         }
 
-                        // A user-writable backup may restore only values this tweak itself writes.
-                        return restoreOriginalWhenDisabled && backups.TryGetValue(target.BackupKey, out var backup)
-                            && (backup.Value == enabledValue || backup.Value == disabledValue)
-                            ? backup.Value
-                            : disabledValue;
+                        if (restoreOriginalWhenDisabled)
+                        {
+                            var original = RegistryTweakHistory.GetTrackedOriginal(Registry.LocalMachine, target.Path, target.ValueName);
+                            var originalValue = int.TryParse(original?.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var initialValue)
+                                ? initialValue
+                                : backups.GetValueOrDefault(target.BackupKey)?.Value;
+                            if (originalValue == enabledValue || originalValue == disabledValue)
+                            {
+                                return originalValue.Value;
+                            }
+                        }
+
+                        return disabledValue;
                     },
                     WriteDriverRegistryValue,
                     async () =>
@@ -893,14 +885,6 @@ namespace ThreadPilot.Services
                 this.logger.LogWarning(ex, "Could not load device tweak backups");
                 return new Dictionary<string, RegistryValueBackup>(StringComparer.OrdinalIgnoreCase);
             }
-        }
-
-        private static async Task SaveRegistryBackupsAsync(Dictionary<string, RegistryValueBackup> backups)
-        {
-            StoragePaths.EnsureAppDataDirectories();
-            await AtomicFileWriter.WriteAllTextAsync(
-                StoragePaths.DeviceTweakBackupsFilePath,
-                JsonSerializer.Serialize(backups, new JsonSerializerOptions { WriteIndented = true }));
         }
 
         private static bool TryReadAcPowerSetting(Guid settingGuid, out uint value, out string? error)
