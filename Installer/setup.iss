@@ -22,6 +22,8 @@
 AppId={{E8F7A3B2-5C4D-4E6F-8A9B-1C2D3E4F5A6B}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
+VersionInfoProductName={#MyAppName}
+VersionInfoProductTextVersion={#MyAppVersion}
 AppVerName={#MyAppName}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
