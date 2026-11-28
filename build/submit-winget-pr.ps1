@@ -36,7 +36,7 @@ if (-not (Test-Path -LiteralPath $ManifestSourcePath)) {
   throw "Manifest source path not found: $ManifestSourcePath"
 }
 
-$manifestFiles = Get-ChildItem -LiteralPath $ManifestSourcePath -Recurse -File -Filter '*.yaml'
+$manifestFiles = @(Get-ChildItem -LiteralPath $ManifestSourcePath -Recurse -File -Filter '*.yaml')
 if (-not $manifestFiles -or $manifestFiles.Count -eq 0) {
   throw "No winget manifest files found under $ManifestSourcePath"
 }
@@ -64,6 +64,9 @@ try {
 
   $branch = "threadpilot-$Version"
   & git checkout -B $branch
+  if ($LASTEXITCODE -ne 0) {
+    throw 'Failed to prepare the WinGet submission branch.'
+  }
 
   $packageParts = $PackageIdentifier.Split('.')
   if ($packageParts.Count -lt 2) {
@@ -91,18 +94,33 @@ try {
   }
 
   & git add $targetDir
-  & git status --short
+  if ($LASTEXITCODE -ne 0) {
+    throw 'Failed to stage the WinGet manifests.'
+  }
 
   $hasChanges = (& git diff --cached --name-only | Out-String).Trim()
+  if ($LASTEXITCODE -ne 0) {
+    throw 'Failed to inspect staged WinGet manifests.'
+  }
   if ([string]::IsNullOrWhiteSpace($hasChanges)) {
     Write-Host "No manifest changes detected for $Version. Nothing to submit."
     exit 0
   }
 
   & git commit -m "Add $PackageIdentifier version $Version"
-  & git push -u origin $branch --force
+  if ($LASTEXITCODE -ne 0) {
+    throw 'Failed to commit the WinGet manifests.'
+  }
+
+  & git push -u origin $branch --force-with-lease
+  if ($LASTEXITCODE -ne 0) {
+    throw 'Failed to push the WinGet submission branch.'
+  }
 
   $existingPr = (& gh pr list --repo microsoft/winget-pkgs --state open --head $branch --author $ForkOwner --json number | Out-String).Trim()
+  if ($LASTEXITCODE -ne 0) {
+    throw 'Failed to check for an existing WinGet pull request.'
+  }
   if (-not [string]::IsNullOrWhiteSpace($existingPr) -and $existingPr -ne '[]') {
     Write-Host "Winget PR already exists for branch $branch."
     exit 0
