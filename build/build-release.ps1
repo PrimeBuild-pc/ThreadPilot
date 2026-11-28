@@ -41,5 +41,3 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 & (Join-Path $PSScriptRoot "package-release-zips.ps1") -Version $Version -PublishDirectory $publishDir -OutputDirectory $outputRoot
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot "portable-uninstall.bat") -Destination (Join-Path $outputRoot "uninstall.bat") -Force
-Copy-Item -LiteralPath (Join-Path $projectRoot "LICENSE") -Destination (Join-Path $outputRoot "LICENSE.md") -Force

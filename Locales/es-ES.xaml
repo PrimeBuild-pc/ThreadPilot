@@ -453,7 +453,9 @@
     <sys:String x:Key="SettingsView_OpenDiscord">Abrir Discord</sys:String>
     <sys:String x:Key="SettingsView_IssuesDescription">Informa de errores o comportamientos inesperados mediante GitHub Issues.</sys:String>
     <sys:String x:Key="SettingsView_ReportIssue">Informar de un problema</sys:String>
-    <sys:String x:Key="SettingsView_About">Acerca de</sys:String>
+    <sys:String x:Key="SettingsView_CleanupBeforeUninstall">Limpiar antes de desinstalar</sys:String>
+    <sys:String x:Key="SettingsView_CleanupBeforeUninstallDescription">Elimina los datos externos y restaura Windows antes de quitar el paquete de Microsoft Store.</sys:String>
+    <sys:String x:Key="SettingsView_About">Actualizaciones e información</sys:String>
     <sys:String x:Key="SettingsView_Copyright">Copyright © 2026 PrimeBuild</sys:String>
     <sys:String x:Key="SettingsView_License">Licencia: AGPLv3</sys:String>
     <sys:String x:Key="SettingsView_CheckUpdates">Buscar actualizaciones</sys:String>
@@ -640,8 +642,9 @@
     <sys:String x:Key="SystemTray_SelectedProcessFormat">Seleccionado: {0}</sys:String>
     <sys:String x:Key="SystemTray_ApplyPendingToSelected">Aplicar configuraciones pendientes al proceso seleccionado</sys:String>
     <sys:String x:Key="SystemTray_ApplyPendingToProcessFormat">Aplicar configuraciones pendientes a {0}</sys:String>
-    <sys:String x:Key="SystemTray_PowerPlans">🔋 Planes de energía</sys:String>
-    <sys:String x:Key="SystemTray_Profiles">📋 Perfiles</sys:String>
+    <sys:String x:Key="SystemTray_PowerPlans">Planes de energía</sys:String>
+    <sys:String x:Key="SystemTray_Profiles">Perfiles</sys:String>
+    <sys:String x:Key="SystemTray_UpdateAvailable">Actualización disponible — v{0}</sys:String>
     <sys:String x:Key="SystemTray_Settings">Configuración</sys:String>
     <sys:String x:Key="SystemTray_Exit">Salir</sys:String>
     <sys:String x:Key="SystemTray_NoProfilesAvailable">No hay perfiles disponibles</sys:String>

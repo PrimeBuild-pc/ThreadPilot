@@ -10,6 +10,7 @@ namespace ThreadPilot.Views
         public SettingsView()
         {
             this.InitializeComponent();
+            this.StoreCleanupRow.Visibility = StoreDistribution.IsStoreBuild ? Visibility.Visible : Visibility.Collapsed;
             this.Loaded += this.SettingsView_Loaded;
         }
 
@@ -17,6 +18,29 @@ namespace ThreadPilot.Views
             : this()
         {
             this.DataContext = viewModel;
+        }
+
+        private async void StoreCleanup_Click(object sender, RoutedEventArgs e)
+        {
+            if (System.Windows.Application.Current is not App app
+                || Window.GetWindow(this) is not MainWindow window
+                || !UninstallCleanup.TryChooseOptions("Clean up ThreadPilot before uninstalling", out var purge, out var restore))
+            {
+                return;
+            }
+
+            app.ScheduleStoreCleanup(purge, restore);
+            await window.ShutdownForUpdateAsync();
+        }
+
+        internal void ShowUpdates()
+        {
+            this.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded,
+                new Action(() =>
+                {
+                    var position = this.UpdatesHeading.TranslatePoint(new System.Windows.Point(0, 0), this.SettingsScroll);
+                    this.SettingsScroll.ScrollToVerticalOffset(this.SettingsScroll.VerticalOffset + position.Y);
+                }));
         }
 
         private void SettingsView_Loaded(object sender, RoutedEventArgs e)

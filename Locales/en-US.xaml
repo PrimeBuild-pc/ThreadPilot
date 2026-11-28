@@ -453,7 +453,9 @@
     <sys:String x:Key="SettingsView_OpenDiscord">Open Discord</sys:String>
     <sys:String x:Key="SettingsView_IssuesDescription">Report bugs or unexpected behavior through GitHub Issues.</sys:String>
     <sys:String x:Key="SettingsView_ReportIssue">Report an issue</sys:String>
-    <sys:String x:Key="SettingsView_About">About</sys:String>
+    <sys:String x:Key="SettingsView_CleanupBeforeUninstall">Clean up before uninstalling</sys:String>
+    <sys:String x:Key="SettingsView_CleanupBeforeUninstallDescription">Remove external data and restore Windows before removing the Store package.</sys:String>
+    <sys:String x:Key="SettingsView_About">Updates and about</sys:String>
     <sys:String x:Key="SettingsView_Copyright">Copyright © 2026 PrimeBuild</sys:String>
     <sys:String x:Key="SettingsView_License">License: AGPLv3</sys:String>
     <sys:String x:Key="SettingsView_CheckUpdates">Check for updates</sys:String>
@@ -640,8 +642,9 @@
     <sys:String x:Key="SystemTray_SelectedProcessFormat">Selected: {0}</sys:String>
     <sys:String x:Key="SystemTray_ApplyPendingToSelected">Apply Pending Settings to Selected Process</sys:String>
     <sys:String x:Key="SystemTray_ApplyPendingToProcessFormat">Apply Pending Settings to {0}</sys:String>
-    <sys:String x:Key="SystemTray_PowerPlans">🔋 Power Plans</sys:String>
-    <sys:String x:Key="SystemTray_Profiles">📋 Profiles</sys:String>
+    <sys:String x:Key="SystemTray_PowerPlans">Power Plans</sys:String>
+    <sys:String x:Key="SystemTray_Profiles">Profiles</sys:String>
+    <sys:String x:Key="SystemTray_UpdateAvailable">Update available — v{0}</sys:String>
     <sys:String x:Key="SystemTray_Settings">Settings</sys:String>
     <sys:String x:Key="SystemTray_Exit">Exit</sys:String>
     <sys:String x:Key="SystemTray_NoProfilesAvailable">No profiles available</sys:String>

@@ -78,6 +78,7 @@ namespace ThreadPilot.Core.Tests
             var result = await harness.Service.CheckForUpdatesAsync(new UpdateCheckRequest(UpdateCheckTrigger.Startup));
 
             Assert.Equal(UpdateCheckStatus.UpdateAvailable, result.Status);
+            Assert.Same(result.Release, harness.Service.AvailableRelease);
             Assert.True(harness.ReleaseClient.RequestedReleases);
         }
 

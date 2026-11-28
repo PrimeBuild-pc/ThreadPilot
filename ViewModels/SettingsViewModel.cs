@@ -832,6 +832,18 @@ namespace ThreadPilot.ViewModels
             return result.Status == UpdateInstallStatus.Started ? null : result.Message;
         }
 
+        internal void SetAvailableUpdate(UpdateReleaseInfo? release)
+        {
+            this.availableUpdate = release;
+            this.IsUpdateAvailable = release != null;
+            if (release != null)
+            {
+                this.LatestUpdateVersion = $"v{release.Version}";
+            }
+
+            this.UpdateLastCheckedText();
+        }
+
         private async Task CheckUpdatesAsync()
         {
             try
@@ -853,9 +865,7 @@ namespace ThreadPilot.ViewModels
 
                 if (result.IsUpdateAvailable && result.Release != null)
                 {
-                    this.availableUpdate = result.Release;
-                    this.LatestUpdateVersion = $"v{result.Release.Version}";
-                    this.IsUpdateAvailable = true;
+                    this.SetAvailableUpdate(result.Release);
                     this.StatusMessage = this.GetLocalizedString("Settings_StatusNewVersionFormat", "New version available: {0}", result.Release.Version);
                     await this.notificationService.ShowNotificationAsync(
                         "Update available",

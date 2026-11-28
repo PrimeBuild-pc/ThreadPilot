@@ -453,7 +453,9 @@
     <sys:String x:Key="SettingsView_OpenDiscord">Apri Discord</sys:String>
     <sys:String x:Key="SettingsView_IssuesDescription">Segnala bug o comportamenti anomali tramite GitHub Issues.</sys:String>
     <sys:String x:Key="SettingsView_ReportIssue">Segnala un problema</sys:String>
-    <sys:String x:Key="SettingsView_About">Informazioni</sys:String>
+    <sys:String x:Key="SettingsView_CleanupBeforeUninstall">Pulisci prima di disinstallare</sys:String>
+    <sys:String x:Key="SettingsView_CleanupBeforeUninstallDescription">Rimuovi i dati esterni e ripristina Windows prima di rimuovere il pacchetto Store.</sys:String>
+    <sys:String x:Key="SettingsView_About">Aggiornamenti e informazioni</sys:String>
     <sys:String x:Key="SettingsView_Copyright">Copyright © 2026 PrimeBuild</sys:String>
     <sys:String x:Key="SettingsView_License">Licenza: AGPLv3</sys:String>
     <sys:String x:Key="SettingsView_CheckUpdates">Controlla gli aggiornamenti</sys:String>
@@ -640,8 +642,9 @@
     <sys:String x:Key="SystemTray_SelectedProcessFormat">Selezionato: {0}</sys:String>
     <sys:String x:Key="SystemTray_ApplyPendingToSelected">Applica le impostazioni in sospeso al processo selezionato</sys:String>
     <sys:String x:Key="SystemTray_ApplyPendingToProcessFormat">Applica impostazioni in sospeso a {0}</sys:String>
-    <sys:String x:Key="SystemTray_PowerPlans">🔋 Piani di alimentazione</sys:String>
-    <sys:String x:Key="SystemTray_Profiles">📋 Profili</sys:String>
+    <sys:String x:Key="SystemTray_PowerPlans">Piani di alimentazione</sys:String>
+    <sys:String x:Key="SystemTray_Profiles">Profili</sys:String>
+    <sys:String x:Key="SystemTray_UpdateAvailable">Aggiornamento disponibile — v{0}</sys:String>
     <sys:String x:Key="SystemTray_Settings">Impostazioni</sys:String>
     <sys:String x:Key="SystemTray_Exit">Esci</sys:String>
     <sys:String x:Key="SystemTray_NoProfilesAvailable">Nessun profilo disponibile</sys:String>

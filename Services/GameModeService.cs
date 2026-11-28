@@ -55,14 +55,17 @@ namespace ThreadPilot.Services
 
             try
             {
-                using var key = Registry.CurrentUser.CreateSubKey(this.gameBarKeyPath, writable: true);
-                if (key == null)
+                if (this.gameBarKeyPath == DefaultGameBarKeyPath)
                 {
-                    this.logger.LogWarning("GameBar registry key not found, cannot modify Game Mode");
-                    return false;
+                    RegistryTweakHistory.Write(Registry.CurrentUser, this.gameBarKeyPath, GameModeValueName,
+                        enabled ? 1 : 0, RegistryValueKind.DWord);
+                }
+                else
+                {
+                    using var key = Registry.CurrentUser.CreateSubKey(this.gameBarKeyPath, writable: true);
+                    key.SetValue(GameModeValueName, enabled ? 1 : 0, RegistryValueKind.DWord);
                 }
 
-                key.SetValue(GameModeValueName, enabled ? 1 : 0, RegistryValueKind.DWord);
                 this.logger.LogInformation("Set Windows Game Mode to {State}", enabled ? "enabled" : "disabled");
                 return true;
             }

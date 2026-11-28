@@ -33,12 +33,28 @@ try {
         try {
             $extras = [ordered]@{
                 "uninstall.bat" = Join-Path $PSScriptRoot "portable-uninstall.bat"
+                "uninstall.ps1" = Join-Path $PSScriptRoot "portable-uninstall.ps1"
                 "LICENSE.md" = Join-Path $projectRoot "LICENSE"
             }
             foreach ($extra in $extras.GetEnumerator()) {
                 $existing = $archive.GetEntry($extra.Key)
                 if ($existing) { $existing.Delete() }
                 $null = [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $extra.Value, $extra.Key)
+            }
+            # Hash distributed files so a renamed or replaced user file is preserved.
+            $manifestEntry = $archive.CreateEntry("uninstall-files.json")
+            $files = @(Get-ChildItem -LiteralPath $publish -File -Recurse | ForEach-Object {
+                [ordered]@{
+                    Path = $_.FullName.Substring($publish.TrimEnd('\', '/').Length + 1)
+                    Sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+                }
+            })
+            $files += [ordered]@{ Path = "LICENSE.md"; Sha256 = (Get-FileHash -LiteralPath (Join-Path $projectRoot "LICENSE") -Algorithm SHA256).Hash }
+            $writer = [IO.StreamWriter]::new($manifestEntry.Open())
+            try {
+                $writer.Write((ConvertTo-Json -InputObject $files -Compress))
+            } finally {
+                $writer.Dispose()
             }
         } finally {
             $archive.Dispose()

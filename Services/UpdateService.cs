@@ -25,6 +25,10 @@ namespace ThreadPilot.Services
         private readonly SemaphoreSlim checkGate = new(1, 1);
         private readonly SemaphoreSlim installGate = new(1, 1);
 
+        public UpdateReleaseInfo? AvailableRelease { get; private set; }
+
+        public event EventHandler? AvailableReleaseChanged;
+
         public UpdateService(
             GitHubUpdateChecker updateChecker,
             IApplicationSettingsService settingsService,
@@ -82,7 +86,10 @@ namespace ThreadPilot.Services
                     return new UpdateCheckResult(UpdateCheckStatus.Failed, currentVersion, null, "Unable to determine the latest ThreadPilot release.");
                 }
 
-                if (release.Version > currentVersion)
+                this.AvailableRelease = release.Version > currentVersion ? release : null;
+                this.AvailableReleaseChanged?.Invoke(this, EventArgs.Empty);
+
+                if (this.AvailableRelease != null)
                 {
                     this.logger.LogInformation(
                         "ThreadPilot update available: current {CurrentVersion}, latest {LatestVersion}",

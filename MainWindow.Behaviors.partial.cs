@@ -626,6 +626,8 @@ namespace ThreadPilot
                 this.systemTrayService.ExitRequested += this.OnExitRequested;
                 this.systemTrayService.MonitoringToggleRequested += this.OnMonitoringToggleRequested;
                 this.systemTrayService.SettingsRequested += this.OnSettingsRequested;
+                this.systemTrayService.UpdatesRequested += this.OnUpdatesRequested;
+                this.serviceProvider.GetRequiredService<IUpdateService>().AvailableReleaseChanged += this.OnAvailableReleaseChanged;
                 this.systemTrayService.PowerPlanChangeRequested += this.OnPowerPlanChangeRequested;
                 this.systemTrayService.ProfileApplicationRequested += this.OnProfileApplicationRequested;
                 this.systemTrayService.PerformanceDashboardRequested += this.OnPerformanceDashboardRequested;
@@ -934,6 +936,22 @@ namespace ThreadPilot
                     this.Localize("Notification_AutomationMonitoringToggleFailed", "Failed to toggle automation monitoring."),
                     ex);
             }
+        }
+
+        private void OnAvailableReleaseChanged(object? sender, EventArgs e)
+        {
+            this.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var release = this.serviceProvider.GetRequiredService<IUpdateService>().AvailableRelease;
+                this.systemTrayService.SetAvailableUpdate(release?.Version.ToString());
+                this.settingsViewModel.SetAvailableUpdate(release);
+            }));
+        }
+
+        private void OnUpdatesRequested(object? sender, EventArgs e)
+        {
+            this.ShowWindowFromTray("Settings");
+            this.SettingsView.ShowUpdates();
         }
 
         private void OnSettingsRequested(object? sender, EventArgs e)
@@ -2332,6 +2350,8 @@ namespace ThreadPilot
             this.systemTrayService.ExitRequested -= this.OnExitRequested;
             this.systemTrayService.MonitoringToggleRequested -= this.OnMonitoringToggleRequested;
             this.systemTrayService.SettingsRequested -= this.OnSettingsRequested;
+            this.systemTrayService.UpdatesRequested -= this.OnUpdatesRequested;
+            this.serviceProvider.GetRequiredService<IUpdateService>().AvailableReleaseChanged -= this.OnAvailableReleaseChanged;
             this.systemTrayService.PowerPlanChangeRequested -= this.OnPowerPlanChangeRequested;
             this.systemTrayService.ProfileApplicationRequested -= this.OnProfileApplicationRequested;
             this.systemTrayService.PerformanceDashboardRequested -= this.OnPerformanceDashboardRequested;

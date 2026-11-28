@@ -72,6 +72,10 @@ namespace ThreadPilot.Services
 
     public interface IUpdateService
     {
+        UpdateReleaseInfo? AvailableRelease { get; }
+
+        event EventHandler? AvailableReleaseChanged;
+
         Task<UpdateCheckResult> CheckForUpdatesAsync(UpdateCheckRequest request, CancellationToken cancellationToken = default);
 
         Task<UpdateInstallResult> DownloadAndInstallAsync(UpdateReleaseInfo release, CancellationToken cancellationToken = default);

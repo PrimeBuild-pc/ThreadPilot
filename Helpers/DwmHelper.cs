@@ -13,6 +13,13 @@ namespace ThreadPilot.Helpers
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int dwAttribute, ref int pvAttribute, int cbAttribute);
 
+        internal static void RoundPopupCorners(IntPtr handle)
+        {
+            const int windowCornerPreference = 33;
+            var roundSmall = 3;
+            _ = DwmSetWindowAttribute(handle, windowCornerPreference, ref roundSmall, sizeof(int));
+        }
+
         public static void ApplyWindowCaptionTheme(Window window, bool useDarkTheme)
         {
             ArgumentNullException.ThrowIfNull(window);

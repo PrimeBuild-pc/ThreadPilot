@@ -42,6 +42,8 @@ ArchitecturesInstallIn64BitMode=x64compatible
 ArchitecturesAllowed=x64compatible
 MinVersion=10.0.17763
 UninstallDisplayIcon={app}\{#MyAppExeName}
+; Replace the legacy uninstall log, which contained unconditional recursive AppData deletion.
+UninstallLogMode=overwrite
 DisableReadyPage=yes
 ; Always Program Files: ThreadPilot runs elevated, and only there can a non-admin program not replace it.
 ; Installs in another folder move here on upgrade (see MovePreviousInstall below).
@@ -68,18 +70,6 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 ; /THREADPILOTUPDATE=1 and relaunch ThreadPilot after the replacement completes.
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Flags: nowait; Check: IsThreadPilotUpdate
-
-; ThreadPilot user data is preserved during install/update. Inno removes installed
-; files and shortcuts automatically only when the generated uninstaller runs.
-; Per-user AppData cleanup is limited to the account context used by uninstall.
-[UninstallRun]
-Filename: "taskkill.exe"; Parameters: "/IM ""{#MyAppExeName}"" /F"; Flags: runhidden waituntilterminated; RunOnceId: "UninstallKillThreadPilot"
-Filename: "schtasks.exe"; Parameters: "/Delete /TN ""ThreadPilot_Launch"" /F"; Flags: runhidden waituntilterminated; RunOnceId: "UninstallRemoveThreadPilotLaunchTask"
-Filename: "schtasks.exe"; Parameters: "/Delete /TN ""ThreadPilot_Startup"" /F"; Flags: runhidden waituntilterminated; RunOnceId: "UninstallRemoveThreadPilotStartupTask"
-Filename: "reg.exe"; Parameters: "delete ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v ""ThreadPilot"" /f"; Flags: runhidden waituntilterminated; RunOnceId: "UninstallRemoveThreadPilotRunEntry"
-
-[UninstallDelete]
-Type: filesandordirs; Name: "{userappdata}\ThreadPilot"
 
 [Code]
 const
@@ -182,6 +172,32 @@ procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
     MovePreviousInstall();
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  Parameters: string;
+  ExitCode: Integer;
+begin
+  if CurUninstallStep <> usUninstall then
+    exit;
+
+  Parameters := '--prepare-uninstall';
+  if UninstallSilent then
+  begin
+    Parameters := Parameters + ' --silent';
+    if ExpandConstant('{param:PURGEDATA|0}') = '1' then
+      Parameters := Parameters + ' --purge-data';
+    if ExpandConstant('{param:RESTOREWINDOWS|1}') = '0' then
+      Parameters := Parameters + ' --keep-windows-changes';
+  end;
+
+  if not Exec(ExpandConstant('{app}\{#MyAppExeName}'), Parameters, ExpandConstant('{app}'),
+      SW_SHOWNORMAL, ewWaitUntilTerminated, ExitCode) then
+    RaiseException('Could not start ThreadPilot cleanup.');
+  Log(Format('ThreadPilot cleanup exit code: %d. Silent residual reports are in Windows Temp\ThreadPilot-uninstall-*.', [ExitCode]));
+  if (ExitCode <> 0) and (ExitCode <> 1) then
+    Abort;
 end;
 
 function IsThreadPilotUpdate(): Boolean;

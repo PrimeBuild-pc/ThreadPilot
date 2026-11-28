@@ -453,7 +453,9 @@
     <sys:String x:Key="SettingsView_OpenDiscord">打开 Discord</sys:String>
     <sys:String x:Key="SettingsView_IssuesDescription">通过 GitHub Issues 报告错误或异常行为。</sys:String>
     <sys:String x:Key="SettingsView_ReportIssue">报告问题</sys:String>
-    <sys:String x:Key="SettingsView_About">关于应用</sys:String>
+    <sys:String x:Key="SettingsView_CleanupBeforeUninstall">卸载前清理</sys:String>
+    <sys:String x:Key="SettingsView_CleanupBeforeUninstallDescription">移除 Microsoft Store 软件包之前，清除外部数据并还原 Windows 设置。</sys:String>
+    <sys:String x:Key="SettingsView_About">更新和关于</sys:String>
     <sys:String x:Key="SettingsView_Copyright">版权所有 © 2026 PrimeBuild</sys:String>
     <sys:String x:Key="SettingsView_License">软件授权: AGPLv3</sys:String>
     <sys:String x:Key="SettingsView_CheckUpdates">检查新版本</sys:String>
@@ -640,8 +642,9 @@
     <sys:String x:Key="SystemTray_SelectedProcessFormat">已选择: {0}</sys:String>
     <sys:String x:Key="SystemTray_ApplyPendingToSelected">应用待处理设置到所选进程</sys:String>
     <sys:String x:Key="SystemTray_ApplyPendingToProcessFormat">应用待处理设置到 {0}</sys:String>
-    <sys:String x:Key="SystemTray_PowerPlans">🔋 电源计划</sys:String>
-    <sys:String x:Key="SystemTray_Profiles">📋 配置文件</sys:String>
+    <sys:String x:Key="SystemTray_PowerPlans">电源计划</sys:String>
+    <sys:String x:Key="SystemTray_Profiles">配置文件</sys:String>
+    <sys:String x:Key="SystemTray_UpdateAvailable">有可用更新 — v{0}</sys:String>
     <sys:String x:Key="SystemTray_Settings">应用设置</sys:String>
     <sys:String x:Key="SystemTray_Exit">退出程序</sys:String>
     <sys:String x:Key="SystemTray_NoProfilesAvailable">无可用配置文件</sys:String>
