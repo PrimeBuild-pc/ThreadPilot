@@ -71,6 +71,9 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Flags: nowait; Check: IsThreadPilotUpdate
 
+[UninstallDelete]
+Type: dirifempty; Name: "{app}"
+
 [Code]
 const
   LegacyBetaUninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A2A4C8B5-4A9A-4B1B-93F4-5F8B1C7E8C2A}_is1';
@@ -192,6 +195,7 @@ begin
       Parameters := Parameters + ' --keep-windows-changes';
   end;
 
+  Log('ThreadPilot cleanup options: ' + Parameters);
   if not Exec(ExpandConstant('{app}\{#MyAppExeName}'), Parameters, ExpandConstant('{app}'),
       SW_SHOWNORMAL, ewWaitUntilTerminated, ExitCode) then
     RaiseException('Could not start ThreadPilot cleanup.');

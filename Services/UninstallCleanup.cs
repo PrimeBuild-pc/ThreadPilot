@@ -258,7 +258,7 @@ internal static partial class UninstallCleanup
                     {
                         task = folder.GetTask(name);
                     }
-                    catch (COMException ex) when (ex.HResult == unchecked((int)0x80070002))
+                    catch (Exception ex) when (ex.HResult == unchecked((int)0x80070002))
                     {
                         return;
                     }
@@ -316,19 +316,36 @@ internal static partial class UninstallCleanup
 
     private static void RemoveData(List<string> residuals)
     {
+        var roaming = StoragePaths.AppDataRoot;
+        var local = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ThreadPilot");
+        var temp = Path.GetTempPath();
         Attempt("User data", residuals, () =>
         {
             using var identity = WindowsIdentity.GetCurrent();
-            // Use the limited half of a UAC split token for user-writable paths.
-            // A concurrent junction replacement must never give this deletion administrative access.
-            if (GetTokenInformation(identity.AccessToken, 19, out var linkedToken, IntPtr.Size, out _))
+            // Use the interactive user's shell token. A linked UAC token can be limited to identification.
+            _ = GetWindowThreadProcessId(GetShellWindow(), out var shellPid);
+            if (shellPid == 0)
             {
-                using var limited = new SafeAccessTokenHandle(linkedToken);
-                WindowsIdentity.RunImpersonated(limited, () => RemoveUserData(residuals));
+                throw new InvalidOperationException("No interactive shell token is available.");
             }
-            else
+
+            using var shell = Process.GetProcessById((int)shellPid);
+            const uint tokenDuplicateAndQuery = 0x0002 | 0x0008;
+            if (!OpenProcessToken(shell.SafeHandle, tokenDuplicateAndQuery, out var token))
             {
-                RemoveUserData(residuals);
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+            }
+
+            using (token)
+            using (var shellIdentity = new WindowsIdentity(token.DangerousGetHandle()))
+            {
+                if (shellIdentity.User != identity.User
+                    || new WindowsPrincipal(shellIdentity).IsInRole(WindowsBuiltInRole.Administrator))
+                {
+                    throw new InvalidOperationException("The shell does not have a limited token for this user.");
+                }
+
+                WindowsIdentity.RunImpersonated(token, () => RemoveUserData(roaming, local, temp, residuals));
             }
         });
         Attempt("Update and task temporary folders", residuals, () =>
@@ -359,22 +376,20 @@ internal static partial class UninstallCleanup
 
     }
 
-    private static void RemoveUserData(List<string> residuals)
+    private static void RemoveUserData(string root, string local, string temp, List<string> residuals)
     {
-        var root = StoragePaths.AppDataRoot;
-        var local = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ThreadPilot");
         RemoveFrom(root, name => name is "settings.json" or "core_masks.json" or "persistent_rules.json" or "ui-state.json");
-        RemoveFrom(StoragePaths.ConfigurationDirectory, name => name.Equals("ProcessPowerPlanAssociations.json", StringComparison.OrdinalIgnoreCase));
-        RemoveFrom(StoragePaths.ProfilesDirectory, name => name.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
-        RemoveFrom(StoragePaths.PowerPlansDirectory, name => name.EndsWith(".pow", StringComparison.OrdinalIgnoreCase));
+        RemoveFrom(Path.Combine(root, "Configuration"), name => name.Equals("ProcessPowerPlanAssociations.json", StringComparison.OrdinalIgnoreCase));
+        RemoveFrom(Path.Combine(root, "Profiles"), name => name.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
+        RemoveFrom(Path.Combine(root, "Powerplans"), name => name.EndsWith(".pow", StringComparison.OrdinalIgnoreCase));
         RemoveFrom(Path.Combine(local, "Logs"), name => AppLogName().IsMatch(name));
-        RemoveFrom(Path.GetTempPath(), name => name.Equals("ThreadPilot_Debug.log", StringComparison.OrdinalIgnoreCase), removeDirectory: false);
+        RemoveFrom(temp, name => name.Equals("ThreadPilot_Debug.log", StringComparison.OrdinalIgnoreCase), removeDirectory: false);
 
         foreach (var path in new[] { root, local })
         {
             Attempt(path, residuals, () =>
             {
-                if (!Directory.Exists(path))
+                if (!DirectoryExistsForCleanup(path))
                 {
                     return;
                 }
@@ -393,7 +408,7 @@ internal static partial class UninstallCleanup
         {
             Attempt(path, residuals, () =>
             {
-                if (!Directory.Exists(path))
+                if (!DirectoryExistsForCleanup(path))
                 {
                     return;
                 }
@@ -420,6 +435,18 @@ internal static partial class UninstallCleanup
                     Directory.Delete(path);
                 }
             });
+        }
+    }
+
+    private static bool DirectoryExistsForCleanup(string path)
+    {
+        try
+        {
+            return (File.GetAttributes(path) & FileAttributes.Directory) != 0;
+        }
+        catch (Exception ex) when (ex is DirectoryNotFoundException or FileNotFoundException)
+        {
+            return false;
         }
     }
 
@@ -538,9 +565,15 @@ internal static partial class UninstallCleanup
     [GeneratedRegex(@"^ThreadPilot-(?:task-|update-[0-9A-Za-z.+-]+-)[0-9a-f]{32}$", RegexOptions.IgnoreCase)]
     private static partial Regex TempFolderName();
 
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetShellWindow();
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+
     [DllImport("advapi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool GetTokenInformation(SafeAccessTokenHandle token, int type, out IntPtr information, int size, out int returned);
+    private static extern bool OpenProcessToken(SafeProcessHandle process, uint access, out SafeAccessTokenHandle token);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
     private static extern int GetPackagesByPackageFamily(string family, ref uint count, IntPtr fullNames, ref uint bufferLength, IntPtr buffer);
