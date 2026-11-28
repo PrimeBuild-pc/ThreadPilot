@@ -48,20 +48,17 @@ jobs:
         shell: pwsh
         env:
           REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          DOTNET_NOLOGO: "true"
         run: |
-          $refName = $env:REF_NAME
-          if ($refName -match '^v\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') {
-            $version = $refName.TrimStart('v')
-            $tag = $refName
+          $version = (& dotnet msbuild ThreadPilot.csproj -nologo -getProperty:Version | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0 -or $version -notmatch '^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') {
+            throw "Unable to resolve a valid release version from ThreadPilot.csproj."
           }
-          else {
-            [xml]$project = Get-Content "ThreadPilot.csproj"
-            $version = $project.Project.PropertyGroup.Version
-            if ([string]::IsNullOrWhiteSpace($version)) {
-              throw "Unable to resolve version from tag or ThreadPilot.csproj"
-            }
 
-            $tag = "v$version"
+          $tag = "v$version"
+          if ($env:REF_TYPE -eq 'tag' -and $env:REF_NAME -cne $tag) {
+            throw "Tag '$env:REF_NAME' does not match project version '$version'."
           }
 
           $prerelease = $version.Contains('-').ToString().ToLowerInvariant()
