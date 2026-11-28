@@ -132,6 +132,7 @@ namespace ThreadPilot.ViewModels
 
         partial void OnSelectedProcessChanged(ProcessModel? value)
         {
+            this.CpuSetDiagnosticText = string.Empty;
             this.SetCpuAssignmentMode(
                 this.settingsService?.Settings.DefaultCpuAssignmentMode ?? CpuAssignmentMode.Automatic,
                 overriddenByRule: false);
@@ -537,6 +538,7 @@ namespace ThreadPilot.ViewModels
             }
 
             this.UpdateAffinityDisplayState();
+            this.SyncCoreMaskPickerToDisplayedCores();
         }
 
         private long CalculateAffinityMask()
@@ -1193,10 +1195,81 @@ namespace ThreadPilot.ViewModels
 
         partial void OnSelectedCoreMaskChanged(CoreMask? oldValue, CoreMask? newValue)
         {
-            if (newValue == null)
+            if (this.suppressCoreMaskPickerSync || newValue == null)
+            {
                 return;
+            }
 
-            UpdateCoreSelectionsFromMask(newValue);
+            this.UpdateCoreSelectionsFromMask(newValue);
+        }
+
+        private void SyncCoreMaskPickerToDisplayedCores()
+        {
+            if (this.HasPendingAffinityEdits || this.CpuCores.Count == 0)
+            {
+                return;
+            }
+
+            var match = this.FindMaskMatchingDisplayedCores();
+            this.SetDisplayedCoreMask(match);
+            var cpuSetsAreActive = this.currentSoftCpuAssignmentText != null
+                && this.SelectedCpuAssignmentMode == CpuAssignmentMode.CpuSets;
+            this.CoreMaskPickerHint = match == null && cpuSetsAreActive && this.SelectedProcess != null
+                ? this.UiText(
+                    "ProcessView_CpuSetsNotAMask",
+                    "CPU Sets are active. This is not the All Cores mask.")
+                : string.Empty;
+        }
+
+        private CoreMask? FindMaskMatchingDisplayedCores()
+        {
+            if (this.SelectedCoreMask != null && this.MaskMatchesDisplayedCores(this.SelectedCoreMask))
+            {
+                return this.SelectedCoreMask;
+            }
+
+            return this.AvailableCoreMasks.FirstOrDefault(this.MaskMatchesDisplayedCores);
+        }
+
+        private bool MaskMatchesDisplayedCores(CoreMask mask)
+        {
+            if (mask.BoolMask.Count == 0)
+            {
+                return false;
+            }
+
+            foreach (var core in this.CpuCores)
+            {
+                if (core.LogicalCoreId < 0 || core.LogicalCoreId >= mask.BoolMask.Count)
+                {
+                    return false;
+                }
+
+                if (core.IsSelected != mask.BoolMask[core.LogicalCoreId])
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void SetDisplayedCoreMask(CoreMask? mask)
+        {
+            if (ReferenceEquals(this.SelectedCoreMask, mask))
+            {
+                return;
+            }
+
+            this.suppressCoreMaskPickerSync = true;
+            try
+            {
+                this.SelectedCoreMask = mask;
+            }
+            finally
+            {
+                this.suppressCoreMaskPickerSync = false;
+            }
         }
 
         private void UpdateCoreSelectionsFromMask(CoreMask mask)
@@ -2269,6 +2342,7 @@ namespace ThreadPilot.ViewModels
 
             this.HasPendingAffinityEdits = false;
             this.currentSoftCpuAssignmentText = null;
+            this.CoreMaskPickerHint = string.Empty;
             this.UpdateAffinityDisplayState();
 
             // Reset power plan to current system default

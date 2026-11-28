@@ -53,24 +53,24 @@ namespace ThreadPilot.Core.Tests
             var root = FindRepositoryRoot();
             var script = File.ReadAllText(Path.Combine(root, "Installer", "setup.iss"));
 
-            Assert.Contains("[UninstallDelete]", script, StringComparison.Ordinal);
-            Assert.Contains("Name: \"{userappdata}\\ThreadPilot\"", script, StringComparison.Ordinal);
-            Assert.Contains("ThreadPilot user data is preserved during install/update", script, StringComparison.Ordinal);
-            Assert.Contains("ThreadPilot_Launch", script, StringComparison.Ordinal);
-            Assert.Contains("ThreadPilot_Startup", script, StringComparison.Ordinal);
+            Assert.Contains("UninstallLogMode=overwrite", script, StringComparison.Ordinal);
+            Assert.Contains("--prepare-uninstall", script, StringComparison.Ordinal);
+            Assert.Contains("{param:PURGEDATA|1}", script, StringComparison.Ordinal);
+            Assert.Contains("Type: dirifempty; Name: \"{app}\"", script, StringComparison.Ordinal);
+            Assert.DoesNotContain("filesandordirs", script, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("{userappdata}", script, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("[InstallDelete]", script, StringComparison.Ordinal);
-            Assert.DoesNotContain("Name: \"{userappdata}\"", script, StringComparison.Ordinal);
+            Assert.DoesNotContain("taskkill.exe", script, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]
-        public void LocalPortablePackages_UseOneUninstallerForCurrentAndLegacyStartupTasks()
+        public void LocalAndPublishedPortablePackages_UseTheSameManifestAndUninstaller()
         {
             var root = FindRepositoryRoot();
-            var uninstaller = Path.Combine(root, "build", "portable-uninstall.bat");
-            AssertFileContains(uninstaller, "ThreadPilot_Launch");
-            AssertFileContains(uninstaller, "ThreadPilot_Startup");
+            AssertFileContains(Path.Combine(root, "build", "portable-uninstall.ps1"), "uninstall-files.json");
             AssertFileContains(Path.Combine(root, "build", "package-release-zips.ps1"), "portable-uninstall.bat");
             AssertFileContains(Path.Combine(root, "build", "build-release.ps1"), "package-release-zips.ps1");
+            AssertFileContains(Path.Combine(root, ".github", "workflows", "release.yml"), "package-release-zips.ps1");
         }
 
         [Fact]

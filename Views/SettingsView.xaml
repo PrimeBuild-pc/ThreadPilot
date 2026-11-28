@@ -59,7 +59,7 @@
                        Style="{StaticResource PageSubtitleTextStyle}"/>
         </StackPanel>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer x:Name="SettingsScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel MaxWidth="980" HorizontalAlignment="Stretch" Margin="0,0,12,12">
 
                 <!-- General -->
@@ -156,6 +156,9 @@
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding ActionName}" Value="PowerPlanHighPerformance">
                                                         <Setter Property="Content" Value="{DynamicResource SettingsView_ShortcutPerformance}"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding ActionName}" Value="OpenTrayMenu">
+                                                        <Setter Property="Content" Value="{DynamicResource SettingsView_ShortcutOpenTrayMenu}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding ActionName}" Value="OpenTweaks">
                                                         <Setter Property="Content" Value="{DynamicResource SettingsView_ShortcutTweaks}"/>
@@ -417,8 +420,17 @@
                     </DockPanel>
                 </Border>
 
+                <Border x:Name="StoreCleanupRow" Style="{StaticResource SettingRowStyle}" Visibility="Collapsed">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Margin="16,0,0,0"
+                                Content="{DynamicResource SettingsView_CleanupBeforeUninstall}" Click="StoreCleanup_Click"/>
+                        <TextBlock Style="{StaticResource DescriptionStyle}"
+                                   Text="{DynamicResource SettingsView_CleanupBeforeUninstallDescription}"/>
+                    </DockPanel>
+                </Border>
+
                 <!-- Updates and about -->
-                <TextBlock Text="{DynamicResource SettingsView_About}" Style="{StaticResource SectionHeaderStyle}"/>
+                <TextBlock x:Name="UpdatesHeading" Text="{DynamicResource SettingsView_About}" Style="{StaticResource SectionHeaderStyle}"/>
                 <Border Style="{StaticResource SettingRowStyle}">
                     <DockPanel>
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">

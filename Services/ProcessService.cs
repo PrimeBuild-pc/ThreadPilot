@@ -1133,30 +1133,20 @@ namespace ThreadPilot.Services
                 try
                 {
                     var imageKeyPath = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\" + imageName;
-                    using (var legacyKey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(imageKeyPath, writable: true))
+                    var priorityValue = priority switch
                     {
-                        // Earlier versions wrote this value, which Windows never reads.
-                        legacyKey?.DeleteValue("PriorityClass", false);
-                    }
-
-                    using var key = Microsoft.Win32.Registry.LocalMachine.CreateSubKey(imageKeyPath + @"\PerfOptions");
-                    if (enable)
-                    {
-                        int priorityValue = priority switch
-                        {
-                            ProcessPriorityClass.Idle => 1,
-                            ProcessPriorityClass.BelowNormal => 5,
-                            ProcessPriorityClass.AboveNormal => 6,
-                            ProcessPriorityClass.High => 3,
-                            _ => 2, // Normal
-                        };
-
-                        key.SetValue("CpuPriorityClass", priorityValue, Microsoft.Win32.RegistryValueKind.DWord);
-                    }
-                    else
-                    {
-                        key.DeleteValue("CpuPriorityClass", false);
-                    }
+                        ProcessPriorityClass.Idle => 1,
+                        ProcessPriorityClass.BelowNormal => 5,
+                        ProcessPriorityClass.AboveNormal => 6,
+                        ProcessPriorityClass.High => 3,
+                        _ => 2,
+                    };
+                    RegistryTweakHistory.Write(
+                        Microsoft.Win32.Registry.LocalMachine,
+                        imageKeyPath + @"\PerfOptions",
+                        "CpuPriorityClass",
+                        enable ? priorityValue : null,
+                        Microsoft.Win32.RegistryValueKind.DWord);
 
                     this.AuditProcessOperation("SetProcessPriority", process.Name, success: true);
 

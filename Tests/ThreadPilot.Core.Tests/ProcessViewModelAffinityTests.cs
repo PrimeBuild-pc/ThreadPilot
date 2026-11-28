@@ -3,6 +3,7 @@ namespace ThreadPilot.Core.Tests
     using Microsoft.Extensions.Logging.Abstractions;
     using Moq;
     using ThreadPilot.Models;
+    using ThreadPilot.Platforms.Windows;
     using ThreadPilot.Services;
     using ThreadPilot.ViewModels;
 
@@ -170,6 +171,67 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public void SelectingProcessWithCpuSets_DoesNotLeaveTheAllCoresMaskSelected()
+        {
+            var processService = CreateRunningProcessService(cpuSets: [0]);
+            var allCores = CoreMask.CreateAllCoresMask(2);
+            var masks = new System.Collections.ObjectModel.ObservableCollection<CoreMask> { allCores };
+            var coreMaskService = new Mock<ICoreMaskService>(MockBehavior.Loose);
+            coreMaskService.SetupGet(service => service.AvailableMasks).Returns(masks);
+            coreMaskService.SetupGet(service => service.DefaultMask).Returns(allCores);
+            using var viewModel = CreateViewModel(
+                processService.Object,
+                new Mock<IGameModeService>(MockBehavior.Loose).Object,
+                cpuTopologyProvider: null,
+                coreMaskService: coreMaskService.Object);
+            viewModel.CpuTopology = CreateTwoCoreTopology();
+            viewModel.CpuCores = new System.Collections.ObjectModel.ObservableCollection<CpuCoreModel>(viewModel.CpuTopology.LogicalCores);
+            viewModel.AvailableCoreMasks = masks;
+            viewModel.SelectedCoreMask = allCores;
+
+            viewModel.SelectedProcess = new ProcessModel { ProcessId = 1234, Name = "Game", ProcessorAffinity = 3 };
+
+            Assert.True(SpinWait.SpinUntil(
+                () => viewModel.SelectedCoreMask == null && viewModel.CoreMaskPickerHint.Contains("All Cores", StringComparison.Ordinal),
+                TimeSpan.FromSeconds(2)),
+                viewModel.CoreMaskPickerHint);
+            Assert.False(viewModel.HasPendingAffinityEdits);
+            Assert.True(viewModel.CpuCores[0].IsSelected);
+            Assert.False(viewModel.CpuCores[1].IsSelected);
+        }
+
+        [Fact]
+        public void ReadCpuSetDiagnostic_ShowsOverrideSeparatelyFromDeniedReads()
+        {
+            var processService = CreateRunningProcessService(cpuSets: []);
+            using var viewModel = CreateViewModel(processService.Object, new Mock<IGameModeService>(MockBehavior.Loose).Object, cpuTopologyProvider: null);
+            viewModel.SelectedProcess = new ProcessModel { ProcessId = 1234, Name = "Game", ProcessorAffinity = 3 };
+            var mapping = CpuSetMapping.Create(new Dictionary<ProcessorRef, uint> { [new ProcessorRef(0, 1, 1)] = 10 });
+            viewModel.CpuSetDiagnosticSource = new FakeCpuSetDiagnosticSource(
+                ThreadCpuSetDiagnosticClassifier.Combine(
+                    new CpuSetIdRead(CpuSetReadKind.Read, [10], 0),
+                    new ThreadCpuSetProbeResult(
+                        true,
+                        null,
+                        [
+                            ThreadCpuSetProbe.NoOverride(1, null, (false, 0, 0)),
+                            ThreadCpuSetProbe.Override(2, [10], null, (false, 0, 0)),
+                            ThreadCpuSetProbe.OpenFailed(3, 5),
+                        ]),
+                    mapping));
+
+            viewModel.ReadCpuSetDiagnosticCommand.Execute(null);
+
+            Assert.True(SpinWait.SpinUntil(() => viewModel.CpuSetDiagnosticText.Contains("TID 2", StringComparison.Ordinal), TimeSpan.FromSeconds(2)), viewModel.CpuSetDiagnosticText);
+            Assert.Contains("explicit override", viewModel.CpuSetDiagnosticText, StringComparison.Ordinal);
+            Assert.Contains("TID 3: read denied.", viewModel.CpuSetDiagnosticText, StringComparison.Ordinal);
+            Assert.Contains("not the CPU a thread is running on", viewModel.CpuSetDiagnosticText, StringComparison.Ordinal);
+
+            viewModel.SelectedProcess = new ProcessModel { ProcessId = 1235, Name = "Other Game", ProcessorAffinity = 3 };
+            Assert.Empty(viewModel.CpuSetDiagnosticText);
+        }
+
+        [Fact]
         public void SelectingProcessWithoutCpuSets_SaysWindowsPicksTheCores()
         {
             var processService = CreateRunningProcessService(cpuSets: []);
@@ -202,7 +264,8 @@ namespace ThreadPilot.Core.Tests
             IGameModeService gameModeService,
             ICpuTopologyProvider? cpuTopologyProvider,
             IApplicationSettingsService? settingsService = null,
-            IGameSessionService? gameSessionService = null)
+            IGameSessionService? gameSessionService = null,
+            ICoreMaskService? coreMaskService = null)
         {
             var virtualizedProcessService = new Mock<IVirtualizedProcessService>(MockBehavior.Loose);
             virtualizedProcessService.SetupProperty(
@@ -213,7 +276,7 @@ namespace ThreadPilot.Core.Tests
             var powerPlanService = new Mock<IPowerPlanService>(MockBehavior.Loose);
             var notificationService = new Mock<INotificationService>(MockBehavior.Loose);
             var systemTrayService = new Mock<ISystemTrayService>(MockBehavior.Loose);
-            var coreMaskService = new Mock<ICoreMaskService>(MockBehavior.Loose);
+            coreMaskService ??= new Mock<ICoreMaskService>(MockBehavior.Loose).Object;
             var associationService = new Mock<IProcessPowerPlanAssociationService>(MockBehavior.Loose);
 
             return new ProcessViewModel(
@@ -225,12 +288,24 @@ namespace ThreadPilot.Core.Tests
                 powerPlanService.Object,
                 notificationService.Object,
                 systemTrayService.Object,
-                coreMaskService.Object,
+                coreMaskService,
                 associationService.Object,
                 gameModeService,
                 cpuTopologyProvider: cpuTopologyProvider,
                 settingsService: settingsService,
                 gameSessionService: gameSessionService);
+        }
+
+        private sealed class FakeCpuSetDiagnosticSource : ICpuSetDiagnosticSource
+        {
+            private readonly ProcessCpuSetDiagnostic diagnostic;
+
+            public FakeCpuSetDiagnosticSource(ProcessCpuSetDiagnostic diagnostic)
+            {
+                this.diagnostic = diagnostic;
+            }
+
+            public ProcessCpuSetDiagnostic Read(int processId, string name) => this.diagnostic;
         }
 
         private static CpuTopologyModel CreateTwoCoreTopology()

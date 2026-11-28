@@ -16,6 +16,10 @@ namespace ThreadPilot.Services
 
         event EventHandler? SettingsRequested;
 
+        event EventHandler? UpdatesRequested;
+
+        void SetAvailableUpdate(string? version);
+
         event EventHandler<PowerPlanChangeRequestedEventArgs>? PowerPlanChangeRequested;
 
         event EventHandler<ProfileApplicationRequestedEventArgs>? ProfileApplicationRequested;
@@ -27,6 +31,8 @@ namespace ThreadPilot.Services
         void Initialize();
 
         void Show();
+
+        void OpenMenu();
 
         void Hide();
 

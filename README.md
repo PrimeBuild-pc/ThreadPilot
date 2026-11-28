@@ -144,6 +144,20 @@ Get-FileHash .\ThreadPilot_v<version>_Setup.exe -Algorithm SHA256
 Get-FileHash .\ThreadPilot_v<version>_Portable.zip -Algorithm SHA256
 ```
 
+**Tray keyboard shortcut**. Edit **Open tray menu** under **Settings → Global shortcuts**. New installations use **Ctrl+Shift+F11**. In an existing shortcut configuration, enable the new action and choose a combination.
+
+#### Uninstall
+
+- **Setup EXE**. Use **Settings → Apps → Installed apps → ThreadPilot → Uninstall**. The confirmation offers data removal and restoration of tracked Windows settings. Both options start selected. In-place setup keeps your data.
+- **Portable ZIP**. Run `uninstall.bat` in the extracted folder. The script checks the packaged file hashes and leaves exports and changed files in place. The containing folder is kept.
+- **Microsoft Store**. In ThreadPilot, open **Settings → Clean up before uninstalling**. Then uninstall ThreadPilot in Windows Settings. The Store removal handles the package. The ThreadPilot cleanup handles external data, the startup task and eligible Windows changes.
+
+For unattended EXE removal use the registered uninstaller with `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART`. It attempts Windows recovery and removes app data by default. Set `/PURGEDATA=0` to keep app data or `/RESTOREWINDOWS=0` to keep Windows changes. Silent cleanup warnings are written to `%WINDIR%\Temp\ThreadPilot-uninstall-*\cleanup.log`.
+
+For unattended portable removal run `uninstall.bat -Silent` from an elevated shell. Use `-KeepData` to preserve app data and `-KeepWindowsChanges` to skip Windows recovery. Exit code 1 indicates residual files or changes. Exit code 2 means the app could not prepare for removal.
+
+Cleanup retains shared data when it detects another distribution. It also retains user data when the elevated Windows account differs from the interactive account. Windows changes without reliable provenance and failed restore entries appear in the last cleanup report. Existing exports in user-chosen locations remain in place.
+
 Compare the result with `SHA256SUMS.txt` from the same release.
 
 ## 🖼️ Screenshots

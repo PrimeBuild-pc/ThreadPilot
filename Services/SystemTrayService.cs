@@ -2,9 +2,12 @@ namespace ThreadPilot.Services
 {
     using System;
     using System.Drawing;
+    using System.Drawing.Drawing2D;
     using System.IO;
+    using System.Runtime.InteropServices;
     using System.Windows.Forms;
     using Microsoft.Extensions.Logging;
+    using ThreadPilot.Helpers;
     using ThreadPilot.Models;
     using MediaSolidColorBrush = System.Windows.Media.SolidColorBrush;
 
@@ -17,6 +20,8 @@ namespace ThreadPilot.Services
         private ToolStripMenuItem? selectedProcessMenuItem;
         private ToolStripMenuItem? monitoringToggleMenuItem;
         private ToolStripMenuItem? settingsMenuItem;
+        private ToolStripMenuItem? updateMenuItem;
+        private string? updateVersion;
         private ToolStripMenuItem? powerPlansMenuItem;
         private ToolStripMenuItem? profilesMenuItem;
         private ToolStripMenuItem? performanceMenuItem;
@@ -30,7 +35,6 @@ namespace ThreadPilot.Services
         private TrayIconState currentIconState = TrayIconState.Normal;
         private bool isDarkTheme = true;
         private Font? menuFont;
-        private Point lastContextMenuOpenPoint = Point.Empty;
         private bool disposed = false;
 
         public event EventHandler? QuickApplyRequested;
@@ -42,6 +46,8 @@ namespace ThreadPilot.Services
         public event EventHandler<MonitoringToggleEventArgs>? MonitoringToggleRequested;
 
         public event EventHandler? SettingsRequested;
+
+        public event EventHandler? UpdatesRequested;
 
         public event EventHandler<PowerPlanChangeRequestedEventArgs>? PowerPlanChangeRequested;
 
@@ -90,7 +96,7 @@ namespace ThreadPilot.Services
 
                 // Set up event handlers
                 this.notifyIcon.DoubleClick += this.OnTrayIconDoubleClick;
-                this.notifyIcon.MouseUp += this.OnTrayIconMouseUp;
+                this.notifyIcon.ContextMenuStrip = this.contextMenu;
 
                 // Set initial icon state
                 this.UpdateTrayIcon(TrayIconState.Normal);
@@ -107,6 +113,12 @@ namespace ThreadPilot.Services
         private void CreateContextMenu()
         {
             this.contextMenu = new ContextMenuStrip();
+            this.contextMenu.Opening += (_, _) => this.ApplyContextMenuTheme();
+            this.contextMenu.Opened += (_, _) => DwmHelper.RoundPopupCorners(this.contextMenu.Handle);
+            this.updateMenuItem = new ToolStripMenuItem();
+            this.updateMenuItem.Click += (_, _) => this.UpdatesRequested?.Invoke(this, EventArgs.Empty);
+            this.contextMenu.Items.Add(this.updateMenuItem);
+            this.SetAvailableUpdate(this.updateVersion);
             this.menuFont = CreatePreferredMenuFont(this.contextMenu.Font.Size);
             this.contextMenu.Font = this.menuFont;
 
@@ -160,11 +172,13 @@ namespace ThreadPilot.Services
             this.contextMenu.Items.Add(new ToolStripSeparator());
 
             // Power Plans submenu
-            this.powerPlansMenuItem = new ToolStripMenuItem(this.Localize("SystemTray_PowerPlans", "ðŸ”‹ Power Plans"));
+            this.powerPlansMenuItem = new ToolStripMenuItem(this.Localize("SystemTray_PowerPlans", "Power Plans"));
+            this.powerPlansMenuItem.DropDownOpened += (_, _) => DwmHelper.RoundPopupCorners(this.powerPlansMenuItem.DropDown.Handle);
             this.contextMenu.Items.Add(this.powerPlansMenuItem);
 
             // Profiles submenu
-            this.profilesMenuItem = new ToolStripMenuItem(this.Localize("SystemTray_Profiles", "ðŸ“‹ Profiles"));
+            this.profilesMenuItem = new ToolStripMenuItem(this.Localize("SystemTray_Profiles", "Profiles"));
+            this.profilesMenuItem.DropDownOpened += (_, _) => DwmHelper.RoundPopupCorners(this.profilesMenuItem.DropDown.Handle);
             this.contextMenu.Items.Add(this.profilesMenuItem);
 
             this.contextMenu.Items.Add(new ToolStripSeparator());
@@ -183,6 +197,26 @@ namespace ThreadPilot.Services
             this.contextMenu.Items.Add(this.exitMenuItem);
 
             this.ApplyContextMenuTheme();
+        }
+
+        public void OpenMenu()
+        {
+            if (this.contextMenu == null)
+            {
+                return;
+            }
+
+            if (this.contextMenu.Visible)
+            {
+                this.contextMenu.Close(ToolStripDropDownCloseReason.Keyboard);
+                return;
+            }
+
+            this.contextMenu.Show(Cursor.Position);
+            _ = SetForegroundWindow(this.contextMenu.Handle);
+            this.contextMenu.Focus();
+            this.contextMenu.Items.Cast<ToolStripItem>()
+                .FirstOrDefault(item => item.Available && item.Enabled && item.CanSelect)?.Select();
         }
 
         public void Show()
@@ -249,28 +283,15 @@ namespace ThreadPilot.Services
             this.ShowMainWindowRequested?.Invoke(this, EventArgs.Empty);
         }
 
-        private void OnTrayIconMouseUp(object? sender, MouseEventArgs e)
+        public void SetAvailableUpdate(string? version)
         {
-            if (e.Button != MouseButtons.Right || this.contextMenu == null)
+            this.updateVersion = version;
+            if (this.updateMenuItem != null)
             {
-                return;
+                this.updateMenuItem.Text = string.Format(
+                    this.Localize("SystemTray_UpdateAvailable", "Update available — v{0}"), version);
+                this.updateMenuItem.Visible = version != null;
             }
-
-            var cursorPosition = Cursor.Position;
-            var workingArea = Screen.FromPoint(cursorPosition.IsEmpty ? this.lastContextMenuOpenPoint : cursorPosition).WorkingArea;
-            var openPoint = SystemTrayMenuPlacement.ResolveMenuOpenPoint(
-                cursorPosition,
-                this.lastContextMenuOpenPoint,
-                Rectangle.Empty,
-                workingArea);
-            this.lastContextMenuOpenPoint = openPoint;
-
-            if (this.contextMenu.Visible)
-            {
-                this.contextMenu.Close(ToolStripDropDownCloseReason.CloseCalled);
-            }
-
-            this.contextMenu.Show(openPoint, ToolStripDropDownDirection.Default);
         }
 
         private void OnQuickApplyClick(object? sender, EventArgs e)
@@ -542,7 +563,7 @@ namespace ThreadPilot.Services
 
                 if (this.notifyIcon != null)
                 {
-                    this.notifyIcon.MouseUp -= this.OnTrayIconMouseUp;
+                    this.notifyIcon.ContextMenuStrip = null;
                     this.notifyIcon.Visible = false;
                     this.notifyIcon.Dispose();
                     this.notifyIcon = null;
@@ -601,6 +622,7 @@ namespace ThreadPilot.Services
 
         private void UpdateLocalizedMenuText()
         {
+            this.SetAvailableUpdate(this.updateVersion);
             if (this.notifyIcon != null)
             {
                 this.notifyIcon.Text = this.Localize("MainWindow_Title", "ThreadPilot - Process & Power Plan Manager");
@@ -623,12 +645,12 @@ namespace ThreadPilot.Services
 
             if (this.powerPlansMenuItem != null)
             {
-                this.powerPlansMenuItem.Text = this.Localize("SystemTray_PowerPlans", "ðŸ”‹ Power Plans");
+                this.powerPlansMenuItem.Text = this.Localize("SystemTray_PowerPlans", "Power Plans");
             }
 
             if (this.profilesMenuItem != null)
             {
-                this.profilesMenuItem.Text = this.Localize("SystemTray_Profiles", "ðŸ“‹ Profiles");
+                this.profilesMenuItem.Text = this.Localize("SystemTray_Profiles", "Profiles");
             }
 
             if (this.settingsMenuItem != null)
@@ -734,7 +756,15 @@ namespace ThreadPilot.Services
             Color borderColor;
             Color disabledColor;
 
-            if (this.isDarkTheme)
+            if (SystemInformation.HighContrast)
+            {
+                backgroundColor = SystemColors.Menu;
+                foregroundColor = SystemColors.MenuText;
+                selectionColor = SystemColors.Highlight;
+                borderColor = SystemColors.MenuText;
+                disabledColor = SystemColors.GrayText;
+            }
+            else if (this.isDarkTheme)
             {
                 // Force stable dark palette for WinForms tray menu even if XAML resources are unavailable.
                 backgroundColor = Color.FromArgb(28, 28, 30);
@@ -747,20 +777,26 @@ namespace ThreadPilot.Services
             {
                 backgroundColor = ResolveColorFromResource("SurfaceAltBrush", SystemColors.Menu);
                 foregroundColor = ResolveColorFromResource("TextPrimaryBrush", SystemColors.MenuText);
-                selectionColor = ResolveColorFromResource("SoftSelectionBackgroundBrush", SystemColors.Highlight);
+                selectionColor = ResolveColorFromResource("SoftSelectionBackgroundBrush", Color.FromArgb(224, 233, 243));
                 borderColor = ResolveColorFromResource("BorderBrush", SystemColors.ControlDark);
                 disabledColor = ResolveColorFromResource("TextDisabledBrush", SystemColors.GrayText);
             }
 
-            this.contextMenu.RenderMode = ToolStripRenderMode.Professional;
-            this.contextMenu.Renderer = new ToolStripProfessionalRenderer(new TrayMenuColorTable(backgroundColor, selectionColor, borderColor));
+            ToolStripRenderer renderer = SystemInformation.HighContrast
+                ? new HighContrastTrayMenuRenderer()
+                : new TrayMenuRenderer(new TrayMenuColorTable(backgroundColor, selectionColor, borderColor));
+            this.contextMenu.Renderer = renderer;
             this.contextMenu.BackColor = backgroundColor;
             this.contextMenu.ForeColor = foregroundColor;
 
-            ApplyMenuItemTheme(this.contextMenu.Items, backgroundColor, foregroundColor, disabledColor);
+            ApplyMenuItemTheme(this.contextMenu.Items, renderer, backgroundColor, foregroundColor, disabledColor);
+            if (!SystemInformation.HighContrast && this.updateMenuItem != null)
+            {
+                this.updateMenuItem.ForeColor = this.isDarkTheme ? Color.FromArgb(167, 206, 255) : Color.FromArgb(0, 75, 141);
+            }
         }
 
-        private static void ApplyMenuItemTheme(ToolStripItemCollection items, Color backColor, Color foreColor, Color disabledColor)
+        private static void ApplyMenuItemTheme(ToolStripItemCollection items, ToolStripRenderer renderer, Color backColor, Color foreColor, Color disabledColor)
         {
             foreach (ToolStripItem item in items)
             {
@@ -769,19 +805,81 @@ namespace ThreadPilot.Services
                     continue;
                 }
 
+                var dpi = item.Owner?.DeviceDpi ?? 96;
+                item.Padding = new Padding(10 * dpi / 96, 5 * dpi / 96, 10 * dpi / 96, 5 * dpi / 96);
                 item.BackColor = backColor;
                 item.ForeColor = item.Enabled ? foreColor : disabledColor;
 
                 if (item is ToolStripMenuItem menuItem)
                 {
+                    menuItem.DropDown.Renderer = renderer;
                     menuItem.DropDown.BackColor = backColor;
                     menuItem.DropDown.ForeColor = foreColor;
 
                     if (menuItem.DropDownItems.Count > 0)
                     {
-                        ApplyMenuItemTheme(menuItem.DropDownItems, backColor, foreColor, disabledColor);
+                        ApplyMenuItemTheme(menuItem.DropDownItems, renderer, backColor, foreColor, disabledColor);
                     }
                 }
+            }
+        }
+
+        private sealed class HighContrastTrayMenuRenderer : ToolStripSystemRenderer
+        {
+            protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
+            {
+                if (e.Item.Selected && e.Item.Enabled)
+                {
+                    e.TextColor = SystemColors.HighlightText;
+                }
+
+                base.OnRenderItemText(e);
+            }
+        }
+
+        private sealed class TrayMenuRenderer(TrayMenuColorTable colors) : ToolStripProfessionalRenderer(colors)
+        {
+            protected override void OnRenderArrow(ToolStripArrowRenderEventArgs e)
+            {
+                e.ArrowColor = e.Item?.ForeColor ?? SystemColors.MenuText;
+                base.OnRenderArrow(e);
+            }
+
+            protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)
+            {
+                using var pen = new Pen(colors.MenuBorder);
+                var inset = 10 * (e.ToolStrip?.DeviceDpi ?? 96) / 96;
+                var y = e.Item.Height / 2;
+                e.Graphics.DrawLine(pen, inset, y, e.Item.Width - inset, y);
+            }
+
+            protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+            {
+                if (!e.Item.Selected && !e.Item.Pressed)
+                {
+                    return;
+                }
+
+                var dpi = e.Item.Owner?.DeviceDpi ?? 96;
+                var bounds = new Rectangle(Point.Empty, e.Item.Size);
+                bounds.Inflate(-4 * dpi / 96, -2 * dpi / 96);
+                var radius = 8 * dpi / 96;
+                if (bounds.Width <= radius || bounds.Height <= radius)
+                {
+                    return;
+                }
+
+                using var path = new GraphicsPath();
+                path.AddArc(bounds.Left, bounds.Top, radius, radius, 180, 90);
+                path.AddArc(bounds.Right - radius, bounds.Top, radius, radius, 270, 90);
+                path.AddArc(bounds.Right - radius, bounds.Bottom - radius, radius, radius, 0, 90);
+                path.AddArc(bounds.Left, bounds.Bottom - radius, radius, radius, 90, 90);
+                path.CloseFigure();
+                using var brush = new SolidBrush(colors.MenuItemSelected);
+                var smoothing = e.Graphics.SmoothingMode;
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                e.Graphics.FillPath(brush, path);
+                e.Graphics.SmoothingMode = smoothing;
             }
         }
 
@@ -816,6 +914,10 @@ namespace ThreadPilot.Services
 
             public override Color MenuItemBorder => this.borderColor;
         }
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool SetForegroundWindow(IntPtr window);
 
         private static Font CreatePreferredMenuFont(float baseSize)
         {

@@ -198,6 +198,8 @@ namespace ThreadPilot.Services
 
         /// <summary>Stops watching and restores everything Game Boost changed.</summary>
         Task StopAsync();
+
+        Task RecoverForUninstallAsync();
     }
 
     /// <summary>
@@ -351,6 +353,20 @@ namespace ThreadPilot.Services
                 this.started = true;
                 this.stopped = false;
                 this.SyncTimer();
+            }
+            finally
+            {
+                this.stateLock.Release();
+            }
+        }
+
+        public async Task RecoverForUninstallAsync()
+        {
+            await this.stateLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                this.startupRecovery = JournalRecoveryState.ReadPending;
+                await this.RecoverStartupJournalAsync(logReadFailure: true).ConfigureAwait(false);
             }
             finally
             {

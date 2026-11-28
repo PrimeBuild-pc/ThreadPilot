@@ -38,6 +38,10 @@ namespace ThreadPilot.ViewModels
         private string gameBoostDecisionText = string.Empty;
 
         [ObservableProperty]
+        private string gameBoostIsolationDescription =
+            "Isolation also moves more secondary apps (launcher helpers, media players, office apps) and puts the selected background apps in efficiency mode (EcoQoS). On this CPU Windows still places the game.";
+
+        [ObservableProperty]
         private string gameBoostManualGamesText = string.Empty;
 
         [ObservableProperty]
@@ -152,6 +156,21 @@ namespace ThreadPilot.ViewModels
             var decision = await this.gameSessionService.GetDecisionAsync();
             var game = decision.GameSelection?.GlobalLogicalProcessorIndexes.Count ?? 0;
             var background = decision.BackgroundSelection?.GlobalLogicalProcessorIndexes.Count ?? 0;
+            var isolation = decision.Kind switch
+            {
+                GameBoostTopologyKind.IntelHybrid => this.Localize(
+                    "GameBoost_Isolation_Intel",
+                    "Isolation also moves more secondary apps (launcher helpers, media players, office apps), puts the selected background apps in efficiency mode (EcoQoS) and keeps the game on the P-cores."),
+                GameBoostTopologyKind.AmdSymmetricMultiL3 => this.Localize(
+                    "GameBoost_Isolation_AmdEqual",
+                    "Isolation also moves more secondary apps (launcher helpers, media players, office apps), puts the selected background apps in efficiency mode (EcoQoS) and, on CPUs with two equal CCDs, keeps the game on CCD0."),
+                GameBoostTopologyKind.AmdAsymmetricCache => this.Localize(
+                    "GameBoost_Isolation_AmdVCache",
+                    "Isolation also moves more secondary apps (launcher helpers, media players, office apps), puts the selected background apps in efficiency mode (EcoQoS) and keeps the game on the CCD with 3D V-Cache."),
+                _ => this.Localize(
+                    "GameBoost_Isolation_Generic",
+                    "Isolation also moves more secondary apps (launcher helpers, media players, office apps) and puts the selected background apps in efficiency mode (EcoQoS). On this CPU Windows still places the game."),
+            };
             var text = decision.Kind switch
             {
                 GameBoostTopologyKind.AmdAsymmetricCache => this.Localize(
@@ -178,7 +197,11 @@ namespace ThreadPilot.ViewModels
                     "On this CPU Windows decides the cores; Game Boost only applies the optional priority."),
             };
 
-            await InvokeOnUiAsync(() => this.GameBoostDecisionText = text);
+            await InvokeOnUiAsync(() =>
+            {
+                this.GameBoostDecisionText = text;
+                this.GameBoostIsolationDescription = isolation;
+            });
         }
 
         private static List<string> SplitLines(string text) =>

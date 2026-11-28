@@ -626,6 +626,8 @@ namespace ThreadPilot
                 this.systemTrayService.ExitRequested += this.OnExitRequested;
                 this.systemTrayService.MonitoringToggleRequested += this.OnMonitoringToggleRequested;
                 this.systemTrayService.SettingsRequested += this.OnSettingsRequested;
+                this.systemTrayService.UpdatesRequested += this.OnUpdatesRequested;
+                this.serviceProvider.GetRequiredService<IUpdateService>().AvailableReleaseChanged += this.OnAvailableReleaseChanged;
                 this.systemTrayService.PowerPlanChangeRequested += this.OnPowerPlanChangeRequested;
                 this.systemTrayService.ProfileApplicationRequested += this.OnProfileApplicationRequested;
                 this.systemTrayService.PerformanceDashboardRequested += this.OnPerformanceDashboardRequested;
@@ -708,7 +710,9 @@ namespace ThreadPilot
         // An update must not stop at the unsaved-settings prompt: the installer is already running.
         internal Task ShutdownForUpdateAsync() => this.PerformGracefulShutdownAsync(validateUnsavedChanges: false);
 
-        private async Task PerformGracefulShutdownAsync(bool validateUnsavedChanges = true)
+        internal Task ShutdownForUninstallAsync() => this.PerformGracefulShutdownAsync(validateUnsavedChanges: false, restoreDefaultPowerPlan: false);
+
+        private async Task PerformGracefulShutdownAsync(bool validateUnsavedChanges = true, bool restoreDefaultPowerPlan = true)
         {
             if (this.isPerformingShutdown)
             {
@@ -778,7 +782,7 @@ namespace ThreadPilot
                 }
 
                 // 3. Restore default power plan if configured
-                if (this.settingsService.Settings.RestoreDefaultPowerPlanOnExit)
+                if (restoreDefaultPowerPlan && this.settingsService.Settings.RestoreDefaultPowerPlanOnExit)
                 {
                     try
                     {
@@ -934,6 +938,22 @@ namespace ThreadPilot
                     this.Localize("Notification_AutomationMonitoringToggleFailed", "Failed to toggle automation monitoring."),
                     ex);
             }
+        }
+
+        private void OnAvailableReleaseChanged(object? sender, EventArgs e)
+        {
+            this.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var release = this.serviceProvider.GetRequiredService<IUpdateService>().AvailableRelease;
+                this.systemTrayService.SetAvailableUpdate(release?.Version.ToString());
+                this.settingsViewModel.SetAvailableUpdate(release);
+            }));
+        }
+
+        private void OnUpdatesRequested(object? sender, EventArgs e)
+        {
+            this.ShowWindowFromTray("Settings");
+            this.SettingsView.ShowUpdates();
         }
 
         private void OnSettingsRequested(object? sender, EventArgs e)
@@ -1122,6 +1142,10 @@ namespace ThreadPilot
 
                 case ShortcutActions.OpenTweaks:
                     this.ShowWindowFromTray("Tweaks");
+                    break;
+
+                case ShortcutActions.OpenTrayMenu:
+                    this.systemTrayService.OpenMenu();
                     break;
 
                 case ShortcutActions.OpenSettings:
@@ -2332,6 +2356,8 @@ namespace ThreadPilot
             this.systemTrayService.ExitRequested -= this.OnExitRequested;
             this.systemTrayService.MonitoringToggleRequested -= this.OnMonitoringToggleRequested;
             this.systemTrayService.SettingsRequested -= this.OnSettingsRequested;
+            this.systemTrayService.UpdatesRequested -= this.OnUpdatesRequested;
+            this.serviceProvider.GetRequiredService<IUpdateService>().AvailableReleaseChanged -= this.OnAvailableReleaseChanged;
             this.systemTrayService.PowerPlanChangeRequested -= this.OnPowerPlanChangeRequested;
             this.systemTrayService.ProfileApplicationRequested -= this.OnProfileApplicationRequested;
             this.systemTrayService.PerformanceDashboardRequested -= this.OnPerformanceDashboardRequested;

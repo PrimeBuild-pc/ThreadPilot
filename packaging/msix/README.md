@@ -40,7 +40,7 @@ Two independent builds were compared: all uncompressed entries, including execut
 - `allowElevation`: preserves the app's current launch/runtime elevation. Microsoft requires advance justification and approval under strict criteria. Follow the contact route in the official capability documentation; no approval or contact has been made by this build.
 - `unvirtualizedResources`: both RegistryWriteVirtualization and FileSystemWriteVirtualization are disabled. HKCU tweaks must affect the actual operating system rather than a private package hive; state and undo files must be visible to the existing elevated/non-elevated child processes and survive uninstall. This is another restricted capability requiring review; Microsoft explicitly warns approval is uncommon. Do not remove it merely to hide real behavior.
 
-System changes and external data persist after package removal. Uninstalling MSIX does not revert tweaks, power plans, downloaded tools, scheduled tasks or global backups. Restore the changes through the app first, save evidence/backups, then uninstall and reset the test VM.
+System changes and unvirtualized data can persist after package removal. Open **Settings → Clean up before uninstalling** in ThreadPilot, review the cleanup report, then remove the package through Windows Settings. The in-app command shuts down monitoring and Game Boost, removes its verified startup task, restores eligible recorded changes and offers to remove external per-user data.
 
 ## Channel-specific behavior
 
@@ -49,7 +49,7 @@ System changes and external data persist after package removal. Uninstalling MSI
 - Existing migration sources beside the executable are read-only inputs; no user data is included in the MSIX.
 - The Store build creates one task, `ThreadPilot_Store_Startup`, and only while "Start with Windows" is on (off for new installs, in every channel). It is **not elevated** (`/RL LIMITED`) and runs `%windir%\explorer.exe shell:AppsFolder\<package family name>!App`: normal package activation, so the app gets package identity and Windows shows the UAC prompt at sign-in. A packaged exe started by path has no identity and can fail to load files MSIX shares between packages (seen as `FileNotFoundException: WinRT.Runtime`). The UAC-free `ThreadPilot_Store_Launch` task is never created by the Store build; a leftover one is deleted. The EXE channel keeps its own `ThreadPilot_Launch`/`ThreadPilot_Startup`.
 - The activation target (package family name and app ID) does not change across updates. Each elevated start with autostart on re-registers the startup task if it is missing or still in the older run-the-exe-by-path form. A sideloaded update 1.7.11.0 → 1.7.12.0 was exercised on a host; a Store-delivered update has not been. Custom package volumes outside Program Files are not supported by the existing protected-path check.
-- The existing EXE-channel settings are shared. Back them up before testing; do not run the EXE and MSIX simultaneously. The EXE uninstaller may remove shared app data.
+- The existing EXE-channel settings are shared. Back them up before testing; do not run the EXE and MSIX simultaneously. Cleanup retains shared data and Windows changes when both installed channels are detected.
 - All GitHub update checks and EXE installer execution are blocked by the Store channel, including a guard in the installer service itself.
 
 The EXE/portable build defaults and existing installer workflows are preserved; Store behavior is selected only with `StorePackage=true` / `MSIX_STORE`.

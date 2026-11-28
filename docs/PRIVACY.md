@@ -18,12 +18,12 @@ Email: primebuild.official@gmail.com. Website: https://primebuild.website. Bug r
 
 ## Uninstalling ThreadPilot
 
-Uninstalling the app (including the Microsoft Store edition) removes its program files but does **not** undo changes ThreadPilot made to Windows. Switch the tweaks and per-process "registry priority" options back in ThreadPilot **before** uninstalling. What can remain:
+With the current EXE installer or portable uninstaller, you can remove app data and request restoration of tracked Windows changes. Both options start selected. Use **Settings → Clean up before uninstalling** in the Microsoft Store edition, then remove the package through Windows Settings. This cleanup is available in builds that include the new uninstaller.
 
-- Registry priority entries: `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\<program>\PerfOptions\CpuPriorityClass`.
-- Tweaked values: Prefetch, Power Throttling, MMCSS Games scheduling, Ethernet and GPU driver properties, power-scheme AC values, mouse, menu-delay and Game Mode values, and the start type of the SysMain service.
-- Scheduled tasks `ThreadPilot_Launch`, `ThreadPilot_Startup`, `ThreadPilot_Store_Launch` and `ThreadPilot_Store_Startup`. Since 1.7.11 they exist only while "Start with Windows" is on (off by default for new installs); turning it off removes them. The Microsoft Store edition creates only `ThreadPilot_Store_Startup`, which is not elevated: Windows shows the UAC prompt at sign-in. Turn it off before uninstalling, or delete them in Task Scheduler as administrator.
-- Power plans imported into Windows (remove with the Power Plans page or `powercfg /delete`).
-- Local data: `%APPDATA%\ThreadPilot` (settings, rules, profiles, tweak backups) and `%LOCALAPPDATA%\ThreadPilot\Logs`. Delete them after restoring.
+Cleanup preserves user exports, shared data used by another installation, and settings changed after ThreadPilot wrote them. Power plan files with no ownership record remain in place. Cleanup reports any retained data or failed operations. If recovery fails, retry cleanup before removing the program.
 
-This policy describes ThreadPilot 1.7.11. Material changes to data collection or network behavior will be documented before release.
+For ThreadPilot 1.7.11 and earlier, turn off tweaks, registry priority and Start with Windows in the app before removing it. Windows changes and imported power plans from older builds can require manual restoration because those versions did not save a verifiable baseline for every change. The Store edition can also leave the startup task and data outside the package if you uninstall it directly from Windows Settings.
+
+App data is stored under `%APPDATA%\ThreadPilot` and logs under `%LOCALAPPDATA%\ThreadPilot\Logs`. Review recovery data before removing these folders manually.
+
+Material changes to data collection or network behavior will be documented before release.

@@ -24,6 +24,8 @@ namespace ThreadPilot.Platforms.Windows
 
         public bool IsEmpty => this.cpuSetIdsByProcessor.Count == 0;
 
+        public IReadOnlyList<uint> CpuSetIds => this.processorsByCpuSetId.Keys.OrderBy(id => id).ToArray();
+
         public static CpuSetMapping Create(IReadOnlyDictionary<ProcessorRef, uint> cpuSetIdsByProcessor)
         {
             ArgumentNullException.ThrowIfNull(cpuSetIdsByProcessor);
