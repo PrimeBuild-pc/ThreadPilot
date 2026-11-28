@@ -6,14 +6,16 @@ namespace ThreadPilot.Services
     {
         private const int MaxEntries = 1000;
         private readonly ILogger<ActivityAuditService> logger;
+        private readonly IEnhancedLoggingService? fileLog;
         private readonly object syncRoot = new();
         private readonly List<ActivityAuditEntry> entries = new();
 
         public event EventHandler<ActivityAuditEntry>? EntryAdded;
 
-        public ActivityAuditService(ILogger<ActivityAuditService> logger)
+        public ActivityAuditService(ILogger<ActivityAuditService> logger, IEnhancedLoggingService? fileLog = null)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.fileLog = fileLog;
         }
 
         public Task LogInfoAsync(string category, string message, string? details = null) =>
@@ -66,11 +68,11 @@ namespace ThreadPilot.Services
             return Task.CompletedTask;
         }
 
-        private Task AddEntryAsync(string category, ActivityAuditSeverity severity, string message, string? details)
+        private async Task AddEntryAsync(string category, ActivityAuditSeverity severity, string message, string? details)
         {
             if (string.IsNullOrWhiteSpace(message))
             {
-                return Task.CompletedTask;
+                return;
             }
 
             var entry = new ActivityAuditEntry
@@ -98,7 +100,22 @@ namespace ThreadPilot.Services
                 entry.Severity,
                 entry.Message);
             this.EntryAdded?.Invoke(this, entry);
-            return Task.CompletedTask;
+
+            // The Activity page keeps only this run in memory; the log file is what survives a restart or a bug report.
+            if (this.fileLog != null)
+            {
+                try
+                {
+                    await this.fileLog.LogSystemEventAsync(
+                        $"ActivityAudit/{entry.Category}",
+                        entry.Details == null ? $"{entry.Category}: {entry.Message}" : $"{entry.Category}: {entry.Message} ({entry.Details})",
+                        ToLogLevel(severity)).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    this.logger.LogDebug(ex, "Could not copy an activity entry to the log file");
+                }
+            }
         }
 
         private static LogLevel ToLogLevel(ActivityAuditSeverity severity) =>

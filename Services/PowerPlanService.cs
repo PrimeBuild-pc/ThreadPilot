@@ -56,6 +56,11 @@ namespace ThreadPilot.Services
         {
             StoragePaths.EnsureAppDataDirectories();
 
+            if (StoreDistribution.IsStoreBuild)
+            {
+                return StoragePaths.PowerPlansDirectory;
+            }
+
             // Check portable mode first (Powerplans folder next to EXE)
             var exeDir = AppContext.BaseDirectory;
             var portablePath = Path.Combine(exeDir, "Powerplans");
@@ -279,16 +284,9 @@ namespace ThreadPilot.Services
 
             try
             {
-                var result = await this.RunPowerCfgAsync("/import", normalizedPath).ConfigureAwait(false);
-
-                if (result.ExitCode != 0)
+                if (!await WindowsTweakHistory.ImportPlanAsync(normalizedPath, this.processRunner).ConfigureAwait(false))
                 {
-                    this.logger.LogWarning(
-                        "Power plan import failed for '{Path}' with exit code {ExitCode}. stderr: {StdErr}",
-                        normalizedPath,
-                        result.ExitCode,
-                        result.StandardError);
-
+                    this.logger.LogWarning("Windows could not import the power plan from {Path}", normalizedPath);
                     return false;
                 }
 

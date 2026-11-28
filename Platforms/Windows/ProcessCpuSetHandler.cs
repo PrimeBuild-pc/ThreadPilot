@@ -27,6 +27,7 @@ namespace ThreadPilot.Platforms.Windows
 
         private SafeProcessHandle? queryLimitedInfoHandle;
         private SafeProcessHandle? setLimitedInfoHandle;
+        private readonly int queryOpenError;
         private bool disposed = false;
 
         public ProcessCpuSetHandler(uint processId, string executableName, ILogger? logger = null)
@@ -52,11 +53,12 @@ namespace ThreadPilot.Platforms.Windows
                 ProcessAccessFlags.PROCESS_QUERY_LIMITED_INFORMATION,
                 false,
                 processId);
+            this.queryOpenError = 0;
 
             if (this.queryLimitedInfoHandle == null || this.queryLimitedInfoHandle.IsInvalid)
             {
-                var error = this.nativeApi.GetLastWin32Error();
-                this.logger?.LogWarning("Failed to open process {ProcessId} for querying: {Error}", processId, new Win32Exception(error).Message);
+                this.queryOpenError = this.nativeApi.GetLastWin32Error();
+                this.logger?.LogWarning("Failed to open process {ProcessId} for querying: {Error}", processId, new Win32Exception(this.queryOpenError).Message);
             }
         }
 
@@ -65,6 +67,27 @@ namespace ThreadPilot.Platforms.Windows
         public string ExecutableName => this.executableName;
 
         public bool IsValid => this.queryLimitedInfoHandle != null && !this.queryLimitedInfoHandle.IsInvalid;
+
+        internal CpuSetMapping Mapping => this.cpuSetMapping;
+
+        internal CpuSetIdRead ReadDefaultCpuSets()
+        {
+            if (!this.IsValid)
+            {
+                return new CpuSetIdRead(
+                    this.queryOpenError == 5 ? CpuSetReadKind.AccessDenied : CpuSetReadKind.Unavailable,
+                    [],
+                    this.queryOpenError);
+            }
+
+            var ids = this.TryGetDefaultCpuSetIds();
+            if (ids == null)
+            {
+                return new CpuSetIdRead(CpuSetReadKind.Unavailable, [], this.nativeApi.GetLastWin32Error());
+            }
+
+            return new CpuSetIdRead(ids.Count == 0 ? CpuSetReadKind.Empty : CpuSetReadKind.Read, ids, 0);
+        }
 
         public IReadOnlyList<int>? GetDefaultCpuSetLogicalProcessorIndexes()
         {
@@ -377,7 +400,7 @@ namespace ThreadPilot.Platforms.Windows
             }
 
             this.logger?.LogWarning(errorMessage);
-            return this.CreateNativeFailureResult(operationName, error, errorMessage);
+            return this.CreateNativeFailureResult(operationName, error, errorMessage, handleOpened: true);
         }
 
         private bool VerifyCpuSetIds(uint[] expected, uint expectedCount)
@@ -458,21 +481,31 @@ namespace ThreadPilot.Platforms.Windows
             return unavailable;
         }
 
+        // handleOpened: Windows granted the handle, then refused the call made with it. ThreadPilot always runs
+        // elevated, so that is a kernel callback (anti-cheat, anti-tamper) stripping rights, not missing admin rights.
         private CpuSetApplyResult CreateNativeFailureResult(
             string operationName,
             int win32ErrorCode,
-            string? technicalMessage = null)
+            string? technicalMessage = null,
+            bool handleOpened = false)
         {
             var message = technicalMessage ??
                 $"Could not {operationName} for '{this.executableName}' (PID: {this.pid}): {new Win32Exception(win32ErrorCode).Message}";
             var accessDenied = win32ErrorCode == 5;
+            var protectedLikely = accessDenied && handleOpened;
+            var userMessage = ProcessOperationUserMessages.CpuSetsUnavailable;
+            if (accessDenied)
+            {
+                userMessage = protectedLikely ? ProcessOperationUserMessages.AntiCheatProtectedLikely : ProcessOperationUserMessages.AccessDenied;
+            }
 
             return CpuSetApplyResult.Failed(
                 accessDenied ? AffinityApplyErrorCodes.AccessDenied : AffinityApplyErrorCodes.NativeApplyFailed,
-                accessDenied ? ProcessOperationUserMessages.AccessDenied : ProcessOperationUserMessages.CpuSetsUnavailable,
+                userMessage,
                 message,
                 win32ErrorCode,
-                isAccessDenied: accessDenied);
+                isAccessDenied: accessDenied,
+                isAntiCheatLikely: protectedLikely);
         }
 
         private static CpuSetMapping GetCpuSetMapping(IProcessCpuSetNativeApi nativeApi)

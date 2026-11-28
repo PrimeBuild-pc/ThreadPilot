@@ -20,7 +20,6 @@ namespace ThreadPilot.Services
     public class SystemTweaksService : ISystemTweaksService
     {
         private static readonly string ScExecutablePath = Path.Combine(Environment.SystemDirectory, "sc.exe");
-        private static readonly Regex ServiceNameRegex = new("^[A-Za-z0-9_.-]+$", RegexOptions.Compiled);
         private static readonly TimeSpan ExternalCommandTimeout = TimeSpan.FromSeconds(20);
         private static readonly Guid ProcessorSettingsSubgroupGuid = new("54533251-82be-4824-96c1-47b60b740d00");
         private static readonly Guid CoreParkingSettingGuid = new("0cc5b647-c1df-4637-891a-dec35c318583");
@@ -137,28 +136,22 @@ namespace ThreadPilot.Services
             }
 
             values = GetPointerPrecisionValues(enabled, values);
-            var notified = NativeMethods.SystemParametersInfo(
-                NativeMethods.SpiSetMouse,
-                0,
-                values,
-                NativeMethods.SpifUpdateIniFile | NativeMethods.SpifSendChange);
-            if (!notified)
-            {
-                this.logger.LogWarning(
-                    "Windows did not apply pointer precision immediately: {Error}",
-                    new Win32Exception(Marshal.GetLastWin32Error()).Message);
-            }
-
             try
             {
-                using var key = Registry.CurrentUser.CreateSubKey(@"Control Panel\Mouse", writable: true);
-                key.SetValue("MouseThreshold1", values[0].ToString(CultureInfo.InvariantCulture), RegistryValueKind.String);
-                key.SetValue("MouseThreshold2", values[1].ToString(CultureInfo.InvariantCulture), RegistryValueKind.String);
-                key.SetValue("MouseSpeed", values[2].ToString(CultureInfo.InvariantCulture), RegistryValueKind.String);
+                const string path = @"Control Panel\Mouse";
+                RegistryTweakHistory.Write(Registry.CurrentUser, path, "MouseThreshold1", values[0].ToString(CultureInfo.InvariantCulture), RegistryValueKind.String);
+                RegistryTweakHistory.Write(Registry.CurrentUser, path, "MouseThreshold2", values[1].ToString(CultureInfo.InvariantCulture), RegistryValueKind.String);
+                RegistryTweakHistory.Write(Registry.CurrentUser, path, "MouseSpeed", values[2].ToString(CultureInfo.InvariantCulture), RegistryValueKind.String);
             }
             catch (Exception ex)
             {
                 this.logger.LogWarning(ex, "Could not persist pointer precision settings.");
+                return false;
+            }
+
+            if (!NativeMethods.SystemParametersInfo(NativeMethods.SpiSetMouse, 0, values, NativeMethods.SpifSendChange))
+            {
+                this.logger.LogWarning("Windows did not apply pointer precision immediately: {Error}", new Win32Exception(Marshal.GetLastWin32Error()).Message);
                 return false;
             }
 
@@ -420,26 +413,7 @@ namespace ThreadPilot.Services
                     return false;
                 }
 
-                using var serviceController = new ServiceController("SysMain");
-                if (!await this.SetServiceStartModeAsync("SysMain", enabled ? ServiceStartMode.Automatic : ServiceStartMode.Disabled))
-                {
-                    this.logger.LogError("Failed to set SysMain startup mode");
-                    return false;
-                }
-
-                serviceController.Refresh();
-
-                if (enabled && serviceController.Status == ServiceControllerStatus.Stopped)
-                {
-                    serviceController.Start();
-                    serviceController.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(30));
-                }
-                else if (!enabled && (serviceController.Status == ServiceControllerStatus.Running || serviceController.Status == ServiceControllerStatus.Paused))
-                {
-                    serviceController.Stop();
-                    serviceController.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(30));
-                }
-
+                await WindowsTweakHistory.SetSysMainAsync(enabled);
                 var status = await this.GetSysMainStatusAsync();
                 this.TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("SysMain", status));
 
@@ -501,7 +475,7 @@ namespace ThreadPilot.Services
                 }
 
                 // Set EnablePrefetcher: 0 = disabled, 3 = enabled for both applications and boot
-                key.SetValue("EnablePrefetcher", enabled ? 3 : 0, RegistryValueKind.DWord);
+                RegistryTweakHistory.Write(Registry.LocalMachine, @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters", "EnablePrefetcher", enabled ? 3 : 0, RegistryValueKind.DWord);
 
                 var status = await this.GetPrefetchStatusAsync();
                 this.TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("Prefetch", status));
@@ -569,7 +543,7 @@ namespace ThreadPilot.Services
                 }
 
                 // Set PowerThrottlingOff: 1 = throttling disabled, 0 = throttling enabled
-                key.SetValue("PowerThrottlingOff", enabled ? 1 : 0, RegistryValueKind.DWord);
+                RegistryTweakHistory.Write(Registry.LocalMachine, @"SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", enabled ? 1 : 0, RegistryValueKind.DWord);
 
                 var status = await this.GetPowerThrottlingStatusAsync();
                 this.TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("PowerThrottling", status));
@@ -631,7 +605,7 @@ namespace ThreadPilot.Services
                     return false;
                 }
 
-                key.SetValue(SchedulingCategoryValueName, GetHighSchedulingCategoryRegistryValue(enabled), RegistryValueKind.String);
+                RegistryTweakHistory.Write(Registry.LocalMachine, GamesSchedulingKeyPath, SchedulingCategoryValueName, GetHighSchedulingCategoryRegistryValue(enabled), RegistryValueKind.String);
 
                 var status = await this.GetHighSchedulingCategoryStatusAsync();
                 this.TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("HighSchedulingCategory", status));
@@ -645,34 +619,6 @@ namespace ThreadPilot.Services
                 this.logger.LogError(ex, "Error setting High Scheduling Category to {Enabled}", enabled);
                 return false;
             }
-        }
-
-        private async Task<bool> SetServiceStartModeAsync(string serviceName, ServiceStartMode mode)
-        {
-            if (!ServiceNameRegex.IsMatch(serviceName))
-            {
-                this.logger.LogWarning("Rejected invalid service name format: {ServiceName}", serviceName);
-                return false;
-            }
-
-            var startModeValue = mode switch
-            {
-                ServiceStartMode.Automatic => "auto",
-                ServiceStartMode.Manual => "demand",
-                ServiceStartMode.Disabled => "disabled",
-                _ => "demand",
-            };
-
-            var result = await RunProcessAsync(ScExecutablePath, $"config \"{serviceName}\" start= {startModeValue}");
-            if (result.ExitCode != 0)
-            {
-                this.logger.LogWarning(
-                    "Failed to update service start mode for {ServiceName}. ExitCode={ExitCode}, Error={Error}",
-                    serviceName, result.ExitCode, result.StandardError);
-                return false;
-            }
-
-            return true;
         }
 
         internal static string GetHighSchedulingCategoryRegistryValue(bool enabled) =>
@@ -814,24 +760,8 @@ namespace ThreadPilot.Services
             }
 
             var backups = this.LoadRegistryBackups();
-            var changedBackups = false;
             try
             {
-                foreach (var target in targets)
-                {
-                    var backupKey = target.BackupKey;
-                    if (!backups.ContainsKey(backupKey))
-                    {
-                        backups[backupKey] = new RegistryValueBackup(target.Value, target.Kind);
-                        changedBackups = true;
-                    }
-                }
-
-                if (changedBackups)
-                {
-                    await SaveRegistryBackupsAsync(backups);
-                }
-
                 await WriteDriverRegistryTargetsAsync(
                     targets,
                     target =>
@@ -841,11 +771,19 @@ namespace ThreadPilot.Services
                             return enabledValue;
                         }
 
-                        // A user-writable backup may restore only values this tweak itself writes.
-                        return restoreOriginalWhenDisabled && backups.TryGetValue(target.BackupKey, out var backup)
-                            && (backup.Value == enabledValue || backup.Value == disabledValue)
-                            ? backup.Value
-                            : disabledValue;
+                        if (restoreOriginalWhenDisabled)
+                        {
+                            var original = RegistryTweakHistory.GetTrackedOriginal(Registry.LocalMachine, target.Path, target.ValueName);
+                            var originalValue = int.TryParse(original?.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var initialValue)
+                                ? initialValue
+                                : backups.GetValueOrDefault(target.BackupKey)?.Value;
+                            if (originalValue == enabledValue || originalValue == disabledValue)
+                            {
+                                return originalValue.Value;
+                            }
+                        }
+
+                        return disabledValue;
                     },
                     WriteDriverRegistryValue,
                     async () =>
@@ -918,9 +856,13 @@ namespace ThreadPilot.Services
         {
             using var key = Registry.LocalMachine.OpenSubKey(target.Path, writable: true)
                 ?? throw new IOException($"Device registry key '{target.Path}' is no longer available.");
-            key.SetValue(target.ValueName, target.Kind == RegistryValueKind.String
-                ? value.ToString(CultureInfo.InvariantCulture)
-                : value, target.Kind);
+            object written = target.Kind switch
+            {
+                RegistryValueKind.String => value.ToString(CultureInfo.InvariantCulture),
+                RegistryValueKind.QWord => (long)value,
+                _ => value,
+            };
+            RegistryTweakHistory.Write(Registry.LocalMachine, target.Path, target.ValueName, written, target.Kind);
         }
 
         private Dictionary<string, RegistryValueBackup> LoadRegistryBackups()
@@ -945,14 +887,6 @@ namespace ThreadPilot.Services
             }
         }
 
-        private static async Task SaveRegistryBackupsAsync(Dictionary<string, RegistryValueBackup> backups)
-        {
-            StoragePaths.EnsureAppDataDirectories();
-            await AtomicFileWriter.WriteAllTextAsync(
-                StoragePaths.DeviceTweakBackupsFilePath,
-                JsonSerializer.Serialize(backups, new JsonSerializerOptions { WriteIndented = true }));
-        }
-
         private static bool TryReadAcPowerSetting(Guid settingGuid, out uint value, out string? error)
             => TryReadAcPowerSetting(ProcessorSettingsSubgroupGuid, settingGuid, out value, out error);
 
@@ -968,6 +902,11 @@ namespace ThreadPilot.Services
                 return false;
             }
 
+            return TryReadAcPowerSetting(schemeGuid, subgroupGuid, settingGuid, out value, out error);
+        }
+
+        private static bool TryReadAcPowerSetting(Guid schemeGuid, Guid subgroupGuid, Guid settingGuid, out uint value, out string? error)
+        {
             var result = NativeMethods.PowerReadAcValueIndex(
                 IntPtr.Zero,
                 ref schemeGuid,
@@ -998,6 +937,29 @@ namespace ThreadPilot.Services
                 return false;
             }
 
+            if (!TryReadAcPowerSetting(schemeGuid, subgroupGuid, settingGuid, out var current, out error))
+            {
+                return false;
+            }
+
+            if (current == value)
+            {
+                return true;
+            }
+
+            WindowsTweakHistory.RecordPowerSetting(schemeGuid, subgroupGuid, settingGuid, current, value);
+            if (!TryWriteAcPowerSetting(schemeGuid, subgroupGuid, settingGuid, value, activate: true, out error)
+                || !TryReadAcPowerSetting(schemeGuid, subgroupGuid, settingGuid, out current, out error) || current != value)
+            {
+                return false;
+            }
+
+            WindowsTweakHistory.ConfirmPowerSetting(schemeGuid, subgroupGuid, settingGuid, value);
+            return true;
+        }
+
+        private static bool TryWriteAcPowerSetting(Guid schemeGuid, Guid subgroupGuid, Guid settingGuid, uint value, bool activate, out string? error)
+        {
             var writeResult = NativeMethods.PowerWriteAcValueIndex(
                 IntPtr.Zero,
                 ref schemeGuid,
@@ -1010,7 +972,7 @@ namespace ThreadPilot.Services
                 return false;
             }
 
-            var activateResult = NativeMethods.PowerSetActiveScheme(IntPtr.Zero, ref schemeGuid);
+            var activateResult = activate ? NativeMethods.PowerSetActiveScheme(IntPtr.Zero, ref schemeGuid) : 0;
             if (activateResult != 0)
             {
                 error = new Win32Exception((int)activateResult).Message;
@@ -1021,7 +983,34 @@ namespace ThreadPilot.Services
             return true;
         }
 
-        private static bool TryGetActivePowerScheme(out Guid schemeGuid, out string? error)
+        internal static bool RestorePowerSetting(Guid scheme, Guid subgroup, Guid setting, uint original, uint written, uint? previousWritten)
+        {
+            if (!TryReadAcPowerSetting(scheme, subgroup, setting, out var current, out var error))
+            {
+                throw new InvalidOperationException(error);
+            }
+
+            if (current == original)
+            {
+                return true;
+            }
+
+            if (current != written && current != previousWritten)
+            {
+                return false;
+            }
+
+            if (!TryGetActivePowerScheme(out var active, out error)
+                || !TryWriteAcPowerSetting(scheme, subgroup, setting, original, activate: active == scheme, out error)
+                || !TryReadAcPowerSetting(scheme, subgroup, setting, out current, out error) || current != original)
+            {
+                throw new InvalidOperationException(error ?? "The previous power setting could not be verified.");
+            }
+
+            return true;
+        }
+
+        internal static bool TryGetActivePowerScheme(out Guid schemeGuid, out string? error)
         {
             schemeGuid = Guid.Empty;
             var result = NativeMethods.PowerGetActiveScheme(IntPtr.Zero, out var schemePointer);
@@ -1183,7 +1172,7 @@ namespace ThreadPilot.Services
                 }
 
                 // Set MenuShowDelay: 0 = no delay, 400 = default delay
-                key.SetValue("MenuShowDelay", enabled ? "400" : "0", RegistryValueKind.String);
+                RegistryTweakHistory.Write(Registry.CurrentUser, @"Control Panel\Desktop", "MenuShowDelay", enabled ? "400" : "0", RegistryValueKind.String);
 
                 var status = await this.GetMenuShowDelayStatusAsync();
                 this.TweakStatusChanged?.Invoke(this, new TweakStatusChangedEventArgs("MenuShowDelay", status));

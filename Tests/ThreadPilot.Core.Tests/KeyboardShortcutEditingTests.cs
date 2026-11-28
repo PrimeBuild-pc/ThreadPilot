@@ -90,6 +90,22 @@ namespace ThreadPilot.Core.Tests
             Assert.Empty(await service.GetRegisteredShortcutsAsync());
         }
 
+        [Fact]
+        public async Task OpenTrayMenuShortcut_CanBeReassignedAndApplied()
+        {
+            using var service = CreateService();
+            await service.LoadShortcutsFromSettingsAsync();
+            var shortcuts = service.GetConfiguredShortcuts().ToList();
+            var tray = shortcuts.Single(binding => binding.ActionName == ShortcutActions.OpenTrayMenu);
+            tray.Key = Key.F10;
+            tray.Modifiers = ModifierKeys.Control | ModifierKeys.Alt;
+
+            Assert.Null(await service.ApplyAndSaveAsync(shortcuts, () => Task.CompletedTask));
+            var applied = (await service.GetRegisteredShortcutsAsync())[ShortcutActions.OpenTrayMenu];
+            Assert.Equal(Key.F10, applied.Key);
+            Assert.Equal(ModifierKeys.Control | ModifierKeys.Alt, applied.Modifiers);
+        }
+
         private static KeyboardShortcutService CreateService(ApplicationSettingsModel? settings = null, Key blockedKey = Key.None)
         {
             var profile = new Mock<IApplicationSettingsService>();

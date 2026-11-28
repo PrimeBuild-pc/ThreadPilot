@@ -53,6 +53,31 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task IsolationDescription_OnIntelDoesNotCiteCcd0()
+        {
+            var settings = new ApplicationSettingsModel();
+            var settingsService = new Mock<IApplicationSettingsService>();
+            settingsService.SetupGet(service => service.Settings).Returns(settings);
+            var session = new Mock<IGameSessionService>();
+            session.Setup(service => service.GetDecisionAsync())
+                .ReturnsAsync(new GameBoostDecision(GameBoostTopologyKind.IntelHybrid, null, null));
+            var localization = new Mock<ILocalizationService>();
+            localization.Setup(service => service.GetString(It.IsAny<string>())).Returns((string key) => key);
+            var viewModel = new SystemTweaksViewModel(
+                new Mock<ISystemTweaksService>().Object,
+                new Mock<INotificationService>().Object,
+                localization.Object,
+                NullLogger<SystemTweaksViewModel>.Instance,
+                settingsService: settingsService.Object,
+                gameSessionService: session.Object);
+
+            await viewModel.LoadGameBoostAsync();
+
+            Assert.Contains("P-cores", viewModel.GameBoostIsolationDescription, StringComparison.Ordinal);
+            Assert.DoesNotContain("CCD0", viewModel.GameBoostIsolationDescription, StringComparison.Ordinal);
+        }
+
+        [Fact]
         public void TweaksView_HasGameBoostCard()
         {
             var serialized = XDocument.Load(RepositoryFile("Views", "SystemTweaksView.xaml")).ToString(SaveOptions.DisableFormatting);
@@ -61,13 +86,15 @@ namespace ThreadPilot.Core.Tests
             Assert.Contains("{Binding GameBoostIsolation, Mode=TwoWay}", serialized, StringComparison.Ordinal);
             Assert.Contains("{Binding SaveGameBoostListsCommand}", serialized, StringComparison.Ordinal);
             Assert.Contains("{Binding GameBoostDecisionText}", serialized, StringComparison.Ordinal);
+            Assert.Contains("{Binding GameBoostIsolationDescription}", serialized, StringComparison.Ordinal);
+            Assert.DoesNotContain("GameBoost_Mode_Description", serialized, StringComparison.Ordinal);
         }
 
         [Fact]
         public void EveryLocale_HasTheGameBoostKeys()
         {
             var english = GameBoostKeys("en-US");
-            Assert.Equal(19, english.Count);
+            Assert.Equal(23, english.Count);
             foreach (var language in new[] { "it-IT", "de-DE", "es-ES", "fr-FR", "ru-RU", "zh-CN" })
             {
                 Assert.Equal(english, GameBoostKeys(language));

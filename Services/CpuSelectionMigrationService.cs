@@ -80,7 +80,7 @@ namespace ThreadPilot.Services
             // of those would train the user to ignore the warning. What actually changes the
             // meaning of "core 9" is a different chip or a different shape of one.
             if (savedSignature != null &&
-                (!string.Equals(savedSignature.CpuBrand, currentTopology.Signature.CpuBrand, StringComparison.OrdinalIgnoreCase) ||
+                (IsDifferentKnownBrand(savedSignature.CpuBrand, currentTopology.Signature.CpuBrand) ||
                  savedSignature.LogicalProcessorCount != currentTopology.Signature.LogicalProcessorCount ||
                  savedSignature.PhysicalCoreCount != currentTopology.Signature.PhysicalCoreCount ||
                  savedSignature.ProcessorGroupCount != currentTopology.Signature.ProcessorGroupCount))
@@ -91,6 +91,15 @@ namespace ThreadPilot.Services
             var currentProcessors = currentTopology.LogicalProcessors.ToHashSet();
             return selection.LogicalProcessors.Any(processor => !currentProcessors.Contains(processor));
         }
+
+        // The topology provider does not fill in the brand ("Unknown"), so a brand only counts when both sides
+        // have one; otherwise any rule written with a brand (a hand-edited file, an import) was flagged on the
+        // very CPU it was made for. Core counts and the processor list still catch a real CPU change.
+        private static bool IsDifferentKnownBrand(string? saved, string? current) =>
+            IsKnownBrand(saved) && IsKnownBrand(current) && !string.Equals(saved, current, StringComparison.OrdinalIgnoreCase);
+
+        private static bool IsKnownBrand(string? brand) =>
+            !string.IsNullOrWhiteSpace(brand) && !string.Equals(brand, "Unknown", StringComparison.OrdinalIgnoreCase);
 
         public ProcessProfileSnapshot MigrateProcessProfile(
             ProcessProfileSnapshot profile,

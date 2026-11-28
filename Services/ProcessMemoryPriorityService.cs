@@ -135,7 +135,8 @@ namespace ThreadPilot.Services
                     MemoryPriorityInformationSize))
                 {
                     return Task.FromResult(this.FromLastError(
-                        "SetProcessInformation(ProcessMemoryPriority) failed."));
+                        "SetProcessInformation(ProcessMemoryPriority) failed.",
+                        handleOpened: true));
                 }
 
                 return Task.FromResult(ProcessOperationResult.Succeeded(
@@ -386,7 +387,7 @@ namespace ThreadPilot.Services
                 state.StateMask = mode == ProcessEfficiencyMode.On ? state.StateMask | speed : state.StateMask & ~speed;
                 if (!this.nativeApi.SetPowerThrottling(handle, ref state))
                 {
-                    return Task.FromResult(this.FromLastError("SetProcessInformation(ProcessPowerThrottling) failed.", FailureMessage));
+                    return Task.FromResult(this.FromLastError("SetProcessInformation(ProcessPowerThrottling) failed.", FailureMessage, handleOpened: true));
                 }
 
                 return Task.FromResult(ProcessOperationResult.Succeeded(
@@ -450,15 +451,23 @@ namespace ThreadPilot.Services
                 UnsupportedUserMessage,
                 technicalMessage);
 
+        // handleOpened: the handle was granted and the call made with it was refused; see ProcessCpuSetHandler.
         private ProcessOperationResult FromLastError(
             string context,
-            string failureMessage = "ThreadPilot could not apply the memory priority change.")
+            string failureMessage = "ThreadPilot could not apply the memory priority change.",
+            bool handleOpened = false)
         {
             var error = this.nativeApi.GetLastWin32Error();
             var technicalMessage = $"{context} Win32 error {error}.";
 
             return error switch
             {
+                5 when handleOpened => ProcessOperationResult.Failed(
+                    AffinityApplyErrorCodes.AntiCheatOrProtectedProcessLikely,
+                    ProcessOperationUserMessages.AntiCheatProtectedLikely,
+                    technicalMessage,
+                    isAccessDenied: true,
+                    isAntiCheatLikely: true),
                 5 => ProcessOperationResult.Failed(
                     AffinityApplyErrorCodes.AccessDenied,
                     ProcessOperationUserMessages.AccessDenied,

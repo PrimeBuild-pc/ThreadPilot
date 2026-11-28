@@ -25,6 +25,51 @@ namespace ThreadPilot.Core.Tests
         }
 
         [Fact]
+        public async Task LateVerification_PriorityStillSet_RecordsLateVerifiedState()
+        {
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var processService = CreateRetryProcessService(ProcessPriorityClass.High);
+            var service = CreateLateService(processService.Object, audit);
+
+            await service.VerifyDelayedAsync(CreateVerifiedResult(), CreateProcess(), "ProcessStarted");
+
+            var entries = await audit.GetEntriesAsync();
+            Assert.Equal(3, entries.Count);
+            Assert.Contains(entries, entry => entry.Details?.Contains("Phase: late") == true && entry.Message.Contains("Verified saved priority"));
+            processService.Verify(x => x.SetProcessPriority(It.IsAny<ProcessModel>(), It.IsAny<ProcessPriorityClass>(), It.IsAny<ProcessPriorityWriteSource>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task LateVerification_GameResetsPriorityAfterStartup_ReappliesItOnce()
+        {
+            // Early checks pass, the game later puts itself back to Normal (seen once with Assetto Corsa Competizione).
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var processService = CreateRetryProcessService(
+                ProcessPriorityClass.High, ProcessPriorityClass.High, ProcessPriorityClass.Normal, ProcessPriorityClass.Normal, ProcessPriorityClass.High, ProcessPriorityClass.High);
+            var service = CreateLateService(processService.Object, audit);
+
+            await service.VerifyDelayedAsync(CreateVerifiedResult(), CreateProcess(), "ProcessStarted");
+            var entries = await WaitForAuditAsync(audit, "PersistentRulePriorityRetryVerified");
+
+            Assert.Contains(entries, entry => entry.Details?.Contains("PersistentRulePriorityRevertedAfterApply") == true && entry.Details.Contains("Phase: late"));
+            processService.Verify(x => x.SetProcessPriority(It.IsAny<ProcessModel>(), ProcessPriorityClass.High, ProcessPriorityWriteSource.PersistentRuleRetry), Times.Once);
+        }
+
+        [Fact]
+        public async Task LateVerification_ProcessAlreadyExited_StaysQuiet()
+        {
+            var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
+            var processService = CreateRetryProcessService(ProcessPriorityClass.High);
+            processService.Setup(x => x.IsProcessStillRunning(It.IsAny<ProcessModel>())).ReturnsAsync(false);
+            var service = CreateLateService(processService.Object, audit);
+
+            await service.VerifyDelayedAsync(CreateVerifiedResult(), CreateProcess(), "ProcessStarted");
+
+            Assert.Equal(2, (await audit.GetEntriesAsync()).Count);
+            processService.Verify(x => x.RefreshProcessInfo(It.IsAny<ProcessModel>()), Times.Exactly(2));
+        }
+
+        [Fact]
         public async Task DelayedVerification_PriorityRevertsToNormal_RecordsReversion()
         {
             var audit = new ActivityAuditService(NullLogger<ActivityAuditService>.Instance);
@@ -195,6 +240,18 @@ namespace ThreadPilot.Core.Tests
                 [TimeSpan.Zero, TimeSpan.Zero],
                 TimeSpan.Zero,
                 delayAsync ?? ((_, _) => Task.CompletedTask));
+
+        private static PersistentRulePriorityVerificationService CreateLateService(IProcessService processService, IActivityAuditService audit) =>
+            new(
+                processService,
+                NullLogger<PersistentRulePriorityVerificationService>.Instance,
+                audit,
+                new FakePersistentProcessRuleStore([CreateRule()]),
+                new PersistentProcessRuleMatcher(),
+                [TimeSpan.Zero, TimeSpan.Zero],
+                TimeSpan.Zero,
+                (_, _) => Task.CompletedTask,
+                lateDelay: TimeSpan.FromSeconds(90));
 
         private static Mock<IProcessService> CreateProcessService(params ProcessPriorityClass[] observedPriorities)
         {

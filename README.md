@@ -75,6 +75,23 @@ ThreadPilot started as an open-source alternative to [Process Lasso](https://bit
 - CI-backed build validation and package-manager distribution.
 - Windows 11 native visual refresh with neutral Fluent surfaces and refined card-based layouts.
 
+### Performance footprint
+
+The v1.7.8 optimization was measured in a Release build on a Ryzen 7 5800X3D, with about 200 running processes and the Processes page open where applicable. CPU percentages are **percentages of one logical CPU**, not of the whole processor. These are measurements from one system, not a guarantee for every workload.
+
+| Measurement | Before optimization | v1.7.8 |
+|---|---:|---:|
+| Window open, idle | ~25–30% of one core | ~2.3% of one core (about **91–92% less**) |
+| Minimized to tray | ~2% of one core | 0 ms CPU in 90 s (0–0.03% of one core) |
+| Tray wake-ups (context switches/s) | ~275 | 0–10 |
+| Startup CPU time (first 15–20 s) | ~8.4–9.9 s | ~6.0 s |
+| Main window appearance | ~1.3 s | ~1.3 s |
+| During a game, Game Boost Isolation in tray | ~0.42–0.62% of one core | ~0.10–0.15% of one core |
+| Restore after the game closes | ~1.4–3 s | ~0.05–0.1 s |
+| Steady-state private memory | ~225 MB | ~220–230 MB (roughly unchanged) |
+
+See the [v1.7.8 performance notes](docs/releases/v1.7.8.md#performance-before-and-after) for details. These figures describe ThreadPilot's own footprint, not a claimed FPS improvement.
+
 ## 📦 Install
 
 ### Install with WinGet
@@ -126,6 +143,20 @@ Optional checksum verification:
 Get-FileHash .\ThreadPilot_v<version>_Setup.exe -Algorithm SHA256
 Get-FileHash .\ThreadPilot_v<version>_Portable.zip -Algorithm SHA256
 ```
+
+**Tray keyboard shortcut**. Edit **Open tray menu** under **Settings → Global shortcuts**. New installations use **Ctrl+Shift+F11**. In an existing shortcut configuration, enable the new action and choose a combination.
+
+#### Uninstall
+
+- **Setup EXE**. Use **Settings → Apps → Installed apps → ThreadPilot → Uninstall**. The confirmation offers data removal and restoration of tracked Windows settings. Both options start selected. In-place setup keeps your data.
+- **Portable ZIP**. Run `uninstall.bat` in the extracted folder. The script checks the packaged file hashes and leaves exports and changed files in place. The containing folder is kept.
+- **Microsoft Store**. In ThreadPilot, open **Settings → Clean up before uninstalling**. Then uninstall ThreadPilot in Windows Settings. The Store removal handles the package. The ThreadPilot cleanup handles external data, the startup task and eligible Windows changes.
+
+For unattended EXE removal use the registered uninstaller with `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART`. It attempts Windows recovery and removes app data by default. Set `/PURGEDATA=0` to keep app data or `/RESTOREWINDOWS=0` to keep Windows changes. Silent cleanup warnings are written to `%WINDIR%\Temp\ThreadPilot-uninstall-*\cleanup.log`.
+
+For unattended portable removal run `uninstall.bat -Silent` from an elevated shell. Use `-KeepData` to preserve app data and `-KeepWindowsChanges` to skip Windows recovery. Exit code 1 indicates residual files or changes. Exit code 2 means the app could not prepare for removal.
+
+Cleanup retains shared data when it detects another distribution. It also retains user data when the elevated Windows account differs from the interactive account. Windows changes without reliable provenance and failed restore entries appear in the last cleanup report. Existing exports in user-chosen locations remain in place.
 
 Compare the result with `SHA256SUMS.txt` from the same release.
 
@@ -257,6 +288,12 @@ Build release artifacts with the project script:
 - Change history is tracked in [`docs/CHANGELOG.md`](docs/CHANGELOG.md).
 - Coverage focuses on business/application code and excludes generated build artifacts.
 
+## ❓ FAQ
+
+### Why is ThreadPilot written in C# instead of Rust?
+
+ThreadPilot uses C#/.NET and WPF for its Windows desktop interface and integrates with Windows APIs to manage processes. Windows still schedules the workloads: rewriting the app in Rust would not by itself make games faster or guarantee a measurable FPS gain. The [performance measurements above](#performance-footprint) show the app's measured overhead after the v1.7.8 optimization, although memory usage and other workloads can still be improved. A rewrite would also require rebuilding the interface, Windows integrations and their tests. The project therefore prioritizes profiling and targeted improvements; a different implementation can be considered if measurements reveal a concrete need.
+
 ## 🧭 Project Documentation
 
 - [`docs/README.md`](docs/README.md)
@@ -282,6 +319,8 @@ Build release artifacts with the project script:
 Contributions are welcome. Before opening a pull request, please read [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) and [`docs/CODE_OF_CONDUCT.md`](docs/CODE_OF_CONDUCT.md).
 
 For bugs, feature requests, or packaging issues, open a GitHub issue with reproduction steps and your Windows version.
+
+Support: [primebuild.official@gmail.com](mailto:primebuild.official@gmail.com) · [primebuild.website](https://primebuild.website). What stays on the system after uninstalling is listed in [`docs/PRIVACY.md`](docs/PRIVACY.md).
 
 ## 📄 License
 

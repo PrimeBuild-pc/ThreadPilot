@@ -24,6 +24,9 @@ namespace ThreadPilot
         private const string LaunchedViaTaskArgument = "--launched-via-task";
 
         private Mutex? singleInstanceMutex;
+        private EventWaitHandle? uninstallShutdownSignal;
+        private string[]? storeCleanupArguments;
+        private bool serviceProviderDisposed;
         private int uiExceptionDialogOpen;
         private DateTime lastUiExceptionDialogUtc = DateTime.MinValue;
 
@@ -39,13 +42,43 @@ namespace ThreadPilot
             this.ServiceProvider = services.BuildServiceProvider();
 
             // Validate service configuration
-            ServiceConfiguration.ValidateServiceConfiguration(this.ServiceProvider);
+            if (!Environment.GetCommandLineArgs().Contains(UninstallCleanup.Argument))
+            {
+                ServiceConfiguration.ValidateServiceConfiguration(this.ServiceProvider);
+            }
         }
 
 
 
+        internal void ScheduleStoreCleanup(bool purge, bool restore)
+        {
+            var args = new List<string> { UninstallCleanup.Argument };
+            if (!purge)
+            {
+                args.Add("--keep-data");
+            }
+
+            if (!restore)
+            {
+                args.Add("--keep-windows-changes");
+            }
+
+            this.storeCleanupArguments = args.ToArray();
+        }
+
         protected override void OnStartup(StartupEventArgs e)
         {
+            if (e.Args.Contains(UninstallCleanup.Argument))
+            {
+                this.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                var result = UninstallCleanup.Run(
+                    e.Args,
+                    () => this.ServiceProvider.GetRequiredService<IGameSessionService>().RecoverForUninstallAsync(),
+                    this.DisposeServiceProvider);
+                this.Shutdown(result);
+                return;
+            }
+
             // Parse command line arguments early so special startup modes can short-circuit normal flow.
             var startupMode = StartupMode.Parse(e.Args);
             bool effectiveStartMinimized = false;
@@ -198,23 +231,22 @@ namespace ThreadPilot
 
             if (isRunningAsAdministrator)
             {
-                // Off the UI thread and in this order: the launch-task pass deletes tasks pointing outside Program
-                // Files, then autostart is restored for this copy if the user asked for it (e.g. right after a
-                // portable copy installed itself in Program Files).
+                // Off the UI thread. Both scheduled tasks (logon and UAC-free launch) exist only while the user
+                // has autostart on: EnsureAutostartAsync re-points them at this copy (after an update or a portable
+                // copy installing itself in Program Files); otherwise the launch task is removed.
                 var autostartService = this.ServiceProvider.GetRequiredService<IAutostartService>();
                 var wantsAutostart = loadedSettings?.AutostartWithWindows == true;
                 var autostartMinimized = loadedSettings?.StartMinimized ?? true;
                 TaskSafety.FireAndForget(
                     Task.Run(async () =>
                     {
-                        if (!await elevatedTaskService.EnsureLaunchTaskAsync())
-                        {
-                            logger.LogInformation("Elevated launch task not available; the next launch will ask for elevation.");
-                        }
-
                         if (wantsAutostart)
                         {
                             await autostartService.EnsureAutostartAsync(autostartMinimized);
+                        }
+                        else
+                        {
+                            await elevatedTaskService.RemoveLaunchTaskAsync();
                         }
 
                         new UpdateTempDirectoryProvider().CleanupStale(TimeSpan.FromDays(1));
@@ -224,6 +256,19 @@ namespace ThreadPilot
 
             var mainWindow = this.ServiceProvider.GetRequiredService<MainWindow>();
             this.MainWindow = mainWindow;
+            try
+            {
+                this.uninstallShutdownSignal = UninstallCleanup.RegisterShutdown(() =>
+                {
+                    this.Dispatcher.BeginInvoke(new Action(() =>
+                        TaskSafety.FireAndForget(mainWindow.ShutdownForUninstallAsync(), _ => { })));
+                });
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or System.IO.IOException)
+            {
+                logger.LogWarning(ex, "Could not register graceful close for uninstall");
+            }
+
 
             // Handle startup behavior with comprehensive error handling
             try
@@ -372,7 +417,12 @@ namespace ThreadPilot
             this.DispatcherUnhandledException -= this.OnDispatcherUnhandledException;
             TaskScheduler.UnobservedTaskException -= this.OnUnobservedTaskException;
 
+            this.uninstallShutdownSignal?.Dispose();
             this.DisposeServiceProvider();
+            if (this.storeCleanupArguments != null)
+            {
+                UninstallCleanup.Run(this.storeCleanupArguments, fromStoreWindow: true);
+            }
 
             if (this.singleInstanceMutex != null)
             {
@@ -393,12 +443,13 @@ namespace ThreadPilot
 
         private void DisposeServiceProvider()
         {
-            if (this.ServiceProvider is not IDisposable disposableProvider)
+            if (this.serviceProviderDisposed || this.ServiceProvider is not IDisposable disposableProvider)
             {
                 return;
             }
 
             var logger = this.ServiceProvider.GetService<ILogger<App>>();
+            this.serviceProviderDisposed = true;
             try
             {
                 disposableProvider.Dispose();
